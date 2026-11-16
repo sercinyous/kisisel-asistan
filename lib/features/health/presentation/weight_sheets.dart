@@ -123,7 +123,6 @@ class WeightHistorySheet extends ConsumerStatefulWidget {
         isScrollControlled: true,
         useSafeArea: true,
         showDragHandle: true,
-        backgroundColor: AppColors.surface,
         shape: const RoundedRectangleBorder(
           borderRadius:
               BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
@@ -234,7 +233,7 @@ class _WeightHistorySheetState extends ConsumerState<WeightHistorySheet> {
                               IconButton(
                                 tooltip: 'Sil',
                                 onPressed: () => _delete(entry),
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.delete_outline_rounded,
                                   color: AppColors.textMuted,
                                 ),

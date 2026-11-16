@@ -403,7 +403,7 @@ Not: Riverpod'da süren bir `build` sırasında `state` atanırsa `provider.futu
 testlerde kesin sonucu görmek için `pumpEventQueue()` / `pumpAndSettle()` sonrası `container.read(provider)` okuyun.
 
 ## 5. Tasarım dili (kullanıcı kararı — tüm dilimler için bağlayıcı)
-- Saf OLED siyah zemin (`AppColors.background` = #000000); açık tema yok.
+- Saf OLED siyah zemin (`AppColors.background` = #000000) varsayılandır; açık tema için bkz. `SPEC_FAZ3.md` §10.
 - Kartlar Bento Grid: `lib/core/widgets/bento.dart` → `BentoGrid(children: [BentoCell(span: 1|2, child: BentoCard(...))])`.
   Ekranlardaki kartlar elle `Container` yerine `BentoCard` ile kurulur; yarım genişlikte iki kart
   yan yana (span 1 + span 1), tam genişlik kart span 2.

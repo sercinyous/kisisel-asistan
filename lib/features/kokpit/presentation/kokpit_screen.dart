@@ -132,7 +132,7 @@ class KokpitScreen extends ConsumerWidget {
                 foregroundColor: AppColors.textSecondary,
                 selectedBackgroundColor: AppColors.surfaceHigh,
                 selectedForegroundColor: AppColors.accent,
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadii.inner),
                 ),

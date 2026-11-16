@@ -193,7 +193,7 @@ class OpsItemMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<bool>(
       tooltip: 'Seçenekler',
-      icon: const Icon(Icons.more_vert_rounded, color: AppColors.textMuted),
+      icon: Icon(Icons.more_vert_rounded, color: AppColors.textMuted),
       onSelected: (edit) => edit ? onEdit() : onDelete(),
       itemBuilder: (context) => const [
         PopupMenuItem(value: true, child: Text('Düzenle')),
@@ -239,7 +239,6 @@ Future<bool> showOpsSheet(BuildContext context, Widget sheet) async {
     isScrollControlled: true,
     useSafeArea: true,
     showDragHandle: true,
-    backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
     ),
@@ -384,7 +383,7 @@ class OpsPickerRow extends StatelessWidget {
           IconButton(
             tooltip: 'Temizle',
             onPressed: onClear,
-            icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
+            icon: Icon(Icons.close_rounded, color: AppColors.textMuted),
           ),
       ],
     );

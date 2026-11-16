@@ -171,16 +171,20 @@ class HealthListRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.icon,
-    this.color = AppColors.textSecondary,
+    Color? color,
     this.value,
     this.valueMuted = false,
     this.trailing,
     this.onTap,
-  });
+  }) : _color = color;
 
   /// Boşsa ikon yerine aynı genişlikte girinti bırakılır (alt satır).
   final IconData? icon;
-  final Color color;
+  final Color? _color;
+
+  /// Verilmezse etkin temanın ikincil metin rengi.
+  Color get color => _color ?? AppColors.textSecondary;
+
   final String title;
   final String subtitle;
   final String? value;

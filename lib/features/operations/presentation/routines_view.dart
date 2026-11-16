@@ -252,8 +252,8 @@ class _RoutineRow extends StatelessWidget {
               ),
             ),
             if (!routine.notify)
-              const Padding(
-                padding: EdgeInsets.only(left: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
                 child: Icon(
                   Icons.notifications_off_outlined,
                   size: 18,

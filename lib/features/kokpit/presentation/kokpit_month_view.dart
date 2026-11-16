@@ -824,7 +824,7 @@ class _MonthTaskTile extends StatelessWidget {
             ),
           ),
           if (done)
-            const SizedBox(
+            SizedBox(
               width: 48,
               height: 48,
               child: Icon(
@@ -837,7 +837,7 @@ class _MonthTaskTile extends StatelessWidget {
             IconButton(
               onPressed: onComplete,
               tooltip: 'Tamamlandı olarak işaretle',
-              icon: const Icon(Icons.check_circle_outline_rounded,
+              icon: Icon(Icons.check_circle_outline_rounded,
                   color: AppColors.textSecondary),
             )
           else

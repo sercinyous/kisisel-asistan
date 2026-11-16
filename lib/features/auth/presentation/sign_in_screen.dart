@@ -66,7 +66,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.dashboard_rounded,
+                      Icon(Icons.dashboard_rounded,
                           size: 44, color: AppColors.accent),
                       const SizedBox(height: 20),
                       Text(

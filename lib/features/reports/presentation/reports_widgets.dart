@@ -356,7 +356,7 @@ class ReportAiCard extends ConsumerWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline_rounded,
                   size: 18,
                   color: AppColors.danger,
@@ -376,7 +376,7 @@ class ReportAiCard extends ConsumerWidget {
           FilledButton(
             onPressed: busy ? null : () => runRegeneration(ref, kind, date),
             child: busy
-                ? const Row(
+                ? Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox.square(
@@ -386,8 +386,8 @@ class ReportAiCard extends ConsumerWidget {
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      SizedBox(width: 10),
-                      Flexible(child: Text('Oluşturuluyor…')),
+                      const SizedBox(width: 10),
+                      const Flexible(child: Text('Oluşturuluyor…')),
                     ],
                   )
                 : Text(buttonLabel),
@@ -526,7 +526,7 @@ class ReportListCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right_rounded,
                         size: 20,
                         color: AppColors.textMuted,
