@@ -1,23 +1,202 @@
-# Codemagic CI/CD — iOS Ad-Hoc (.ipa) derlemesi
+# Codemagic CI/CD — iOS derlemeleri
 #
-# Codemagic tarafında bir kez yapılacaklar:
-#  1) Teams > Code signing identities:
-#       - iOS Distribution sertifikası (.p12)
-#       - Ad-Hoc provisioning profile (HealthKit yetkisi açık App ID için,
-#         cihaz UDID'in profile ekli olmalı)
-#  2) Environment variables > "app_secrets" grubu (hepsi Secure):
-#       SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_API_KEY
-#  3) Aşağıdaki BUNDLE_ID değerini kendi App ID'nle değiştir
-#     (iki yerde: ios_signing.bundle_identifier ve vars.BUNDLE_ID).
+# İki iş akışı var:
+#   ios-testflight : App Store Connect'e yükler; TestFlight ile iPhone'a kurulur.
+#                    main dalına her push'ta çalışır. ÖNERİLEN yol.
+#   ios-adhoc      : Ad-Hoc .ipa üretir (UDID'si profile eklenmiş cihazlar için).
+#                    Yalnızca elle başlatılır.
+#
+# Bir kez yapılacaklar (ayrıntı: README > "TestFlight ile test"):
+#  1) App Store Connect > Kullanıcılar ve Erişim > Entegrasyonlar > App Store Connect API:
+#     "App Manager" rolüyle bir anahtar oluştur (.p8 dosyası bir kez indirilebilir).
+#  2) Codemagic > Team settings > Team integrations > Developer Portal:
+#     anahtarı ekle ve adını aşağıdaki "integrations.app_store_connect" değeriyle aynı yap.
+#  3) Codemagic > Team settings > Code signing identities:
+#     iOS Distribution sertifikasını ekle (yoksa Codemagic orada oluşturabilir), ardından
+#     "Fetch profiles" ile BUNDLE_ID için App Store (ve istersen Ad-Hoc) profilini çek.
+#  4) Codemagic > Environment variables > "app_secrets" grubu (hepsi Secure):
+#     SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_API_KEY
+#  5) Aşağıdaki "vars" bloğunda BUNDLE_ID ve APP_STORE_APPLE_ID değerlerini doldur
+#     (imzalama ayarları BUNDLE_ID'yi buradan okur; başka yerde değiştirmek gerekmez).
 #
 # ios/ klasörünü depoya koymak gerekmez: yoksa derleme sırasında BUNDLE_ID ile
 # üretilir ve tool/configure_ios.sh ile yapılandırılır. Depoda varsa o kullanılır.
 
+definitions:
+  # Kendi App ID'n ve App Store Connect'teki uygulamanın sayısal Apple ID'si.
+  vars: &app_vars
+    BUNDLE_ID: &bundle_id com.ornek.kisiselAsistan
+    APP_STORE_APPLE_ID: "0000000000"
+
+  machine: &machine
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+  scripts:
+    - &verify_env
+      name: Ortam değişkenlerini doğrula
+      script: |
+        #!/usr/bin/env bash
+        set -e
+        for key in SUPABASE_URL SUPABASE_ANON_KEY GEMINI_API_KEY; do
+          if [ -z "${!key}" ]; then
+            echo "Eksik ortam değişkeni: $key (app_secrets grubuna ekle)"
+            exit 1
+          fi
+        done
+        case "$BUNDLE_ID" in
+          com.ornek.*) echo "HATA: codemagic.yaml içindeki BUNDLE_ID hâlâ örnek değer." >&2; exit 1 ;;
+        esac
+
+    # ios/ depoda tutulmuyorsa burada üretilir (Mac gerekmez). --org, BUNDLE_ID'nin
+    # son parçası hariç kısmıdır; depoda ios/ varsa bu adım hiçbir şey yapmaz.
+    # Sıra önemli: Podfile ve eklenti kayıtları bir sonraki "flutter pub get" ile oluşur.
+    - &create_ios
+      name: iOS projesini oluştur (ios/ depoda yoksa)
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        if [ -f ios/Runner.xcodeproj/project.pbxproj ]; then
+          echo "ios/ depoda var; yeniden oluşturulmadı."
+          exit 0
+        fi
+        BUNDLE_ID="${BUNDLE_ID:-}"
+        ORG="${BUNDLE_ID%.*}"
+        if [ -z "$ORG" ] || [ "$ORG" = "$BUNDLE_ID" ]; then
+          echo "HATA: BUNDLE_ID 'com.sirket.uygulama' biçiminde olmalı (şu an: '$BUNDLE_ID')." >&2
+          exit 1
+        fi
+        # flutter create, pubspec.lock'u yalnızca SDK'nın sabitlediği sürümlerle
+        # yeniden yazar (depodaki kilitli sürümler kaybolur); depodaki hâli korunur.
+        KEEP="$(mktemp -d)"
+        cp pubspec.lock "$KEEP/"
+        flutter create --no-pub --platforms=ios --org "$ORG" --project-name kisisel_asistan .
+        cp "$KEEP/pubspec.lock" pubspec.lock
+
+    - &pub_get
+      name: Bağımlılıkları yükle
+      script: flutter pub get
+
+    - &configure_ios
+      name: iOS projesini yapılandır (HealthKit, Info.plist)
+      script: bash tool/configure_ios.sh
+
+    # Uygulamanın kimliği (dosyadaki en kısa kimlik) BUNDLE_ID yapılır; ona bağlı
+    # kimlikler (RunnerTests) aynı önekle güncellenir ki eski önekte kalmasın.
+    - &set_bundle_id
+      name: Bundle ID'yi ayarla
+      script: |
+        #!/usr/bin/env bash
+        set -euo pipefail
+        PBXPROJ=ios/Runner.xcodeproj/project.pbxproj
+        perl -0777 -pi -e '
+          my @ids = /PRODUCT_BUNDLE_IDENTIFIER = "?([^";]+)"?;/g;
+          my ($old) = sort { length($a) <=> length($b) } @ids;
+          s/(PRODUCT_BUNDLE_IDENTIFIER = )"?\Q$old\E((?:\.[^";]+)?)"?;/$1$ENV{BUNDLE_ID}$2;/g
+            if defined $old;
+        ' "$PBXPROJ"
+        if ! grep -qF "PRODUCT_BUNDLE_IDENTIFIER = ${BUNDLE_ID};" "$PBXPROJ"; then
+          echo "HATA: Bundle ID (${BUNDLE_ID}) project.pbxproj dosyasına yazılamadı." >&2
+          exit 1
+        fi
+        STALE="$(grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*;' "$PBXPROJ" \
+          | grep -vF "PRODUCT_BUNDLE_IDENTIFIER = ${BUNDLE_ID};" \
+          | grep -vF "PRODUCT_BUNDLE_IDENTIFIER = ${BUNDLE_ID}." || true)"
+        if [ -n "$STALE" ]; then
+          echo "HATA: BUNDLE_ID ile başlamayan kimlik kaldı:" >&2
+          echo "$STALE" >&2
+          exit 1
+        fi
+        grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*;' "$PBXPROJ" | sort | uniq -c
+
+    - &analyze
+      name: Statik analiz
+      script: flutter analyze --no-fatal-infos
+
+    - &tests
+      name: Testler
+      script: |
+        if [ -d test ]; then flutter test; else echo "test klasörü yok, atlandı"; fi
+
+    - &use_profiles
+      name: İmzalama profillerini projeye uygula
+      script: xcode-project use-profiles
+
+  artifacts: &artifacts
+    - build/ios/ipa/*.ipa
+    - /tmp/xcodebuild_logs/*.log
+    - flutter_drive.log
+
 workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    <<: *machine
+    integrations:
+      # Codemagic'te App Store Connect API anahtarına verdiğin ad.
+      app_store_connect: kisisel-asistan-asc
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - app_secrets
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: *bundle_id
+      vars: *app_vars
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      cancel_previous_builds: true
+
+    scripts:
+      - *verify_env
+      - *create_ios
+      - *pub_get
+      - *configure_ios
+      - *set_bundle_id
+      - *analyze
+      - *tests
+      - *use_profiles
+      # TestFlight, aynı sürümde aynı yapı numarasını ikinci kez kabul etmez:
+      # App Store Connect'teki en son numaranın bir fazlası kullanılır.
+      - name: App Store IPA derle
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [ "$APP_STORE_APPLE_ID" = "0000000000" ]; then
+            echo "HATA: codemagic.yaml içindeki APP_STORE_APPLE_ID hâlâ örnek değer." >&2
+            exit 1
+          fi
+          LATEST="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)"
+          case "$LATEST" in ''|*[!0-9]*) LATEST=0 ;; esac
+          NEXT=$((LATEST + 1))
+          echo "Yapı numarası: $NEXT"
+          flutter build ipa --release \
+            --build-number="$NEXT" \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY"
+
+    artifacts: *artifacts
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Dahili test grubu (kendi hesabın) inceleme beklemez; yapı işlendikten sonra
+        # TestFlight'ta görünür. Dış test grupları için true yapılıp beta_groups eklenir.
+        submit_to_testflight: false
+
   ios-adhoc:
     name: iOS Ad-Hoc
-    instance_type: mac_mini_m2
-    max_build_duration: 45
+    <<: *machine
 
     environment:
       flutter: stable
@@ -27,97 +206,18 @@ workflows:
         - app_secrets
       ios_signing:
         distribution_type: ad_hoc
-        bundle_identifier: com.ornek.kisiselAsistan
-      vars:
-        BUNDLE_ID: com.ornek.kisiselAsistan
-
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
-          source: true
+        bundle_identifier: *bundle_id
+      vars: *app_vars
 
     scripts:
-      - name: Ortam değişkenlerini doğrula
-        script: |
-          #!/usr/bin/env bash
-          set -e
-          for key in SUPABASE_URL SUPABASE_ANON_KEY GEMINI_API_KEY; do
-            if [ -z "${!key}" ]; then
-              echo "Eksik ortam değişkeni: $key (app_secrets grubuna ekle)"
-              exit 1
-            fi
-          done
-
-      # ios/ depoda tutulmuyorsa burada üretilir (Mac gerekmez). --org, BUNDLE_ID'nin
-      # son parçası hariç kısmıdır; depoda ios/ varsa bu adım hiçbir şey yapmaz.
-      # Sıra önemli: Podfile ve eklenti kayıtları bir sonraki "flutter pub get" ile oluşur.
-      - name: iOS projesini oluştur (ios/ depoda yoksa)
-        script: |
-          #!/usr/bin/env bash
-          set -euo pipefail
-          if [ -f ios/Runner.xcodeproj/project.pbxproj ]; then
-            echo "ios/ depoda var; yeniden oluşturulmadı."
-            exit 0
-          fi
-          BUNDLE_ID="${BUNDLE_ID:-}"
-          ORG="${BUNDLE_ID%.*}"
-          if [ -z "$ORG" ] || [ "$ORG" = "$BUNDLE_ID" ]; then
-            echo "HATA: BUNDLE_ID 'com.sirket.uygulama' biçiminde olmalı (şu an: '$BUNDLE_ID')." >&2
-            exit 1
-          fi
-          # flutter create, pubspec.lock'u yalnızca SDK'nın sabitlediği sürümlerle
-          # yeniden yazar (depodaki kilitli sürümler kaybolur); depodaki hâli korunur.
-          KEEP="$(mktemp -d)"
-          cp pubspec.lock "$KEEP/"
-          flutter create --no-pub --platforms=ios --org "$ORG" --project-name kisisel_asistan .
-          cp "$KEEP/pubspec.lock" pubspec.lock
-
-      - name: Bağımlılıkları yükle
-        script: flutter pub get
-
-      - name: iOS projesini yapılandır (HealthKit, Info.plist)
-        script: bash tool/configure_ios.sh
-
-      # Uygulamanın kimliği (dosyadaki en kısa kimlik) BUNDLE_ID yapılır; ona bağlı
-      # kimlikler (RunnerTests) aynı önekle güncellenir ki eski önekte kalmasın.
-      - name: Bundle ID'yi ayarla
-        script: |
-          #!/usr/bin/env bash
-          set -euo pipefail
-          PBXPROJ=ios/Runner.xcodeproj/project.pbxproj
-          perl -0777 -pi -e '
-            my @ids = /PRODUCT_BUNDLE_IDENTIFIER = "?([^";]+)"?;/g;
-            my ($old) = sort { length($a) <=> length($b) } @ids;
-            s/(PRODUCT_BUNDLE_IDENTIFIER = )"?\Q$old\E((?:\.[^";]+)?)"?;/$1$ENV{BUNDLE_ID}$2;/g
-              if defined $old;
-          ' "$PBXPROJ"
-          if ! grep -qF "PRODUCT_BUNDLE_IDENTIFIER = ${BUNDLE_ID};" "$PBXPROJ"; then
-            echo "HATA: Bundle ID (${BUNDLE_ID}) project.pbxproj dosyasına yazılamadı." >&2
-            exit 1
-          fi
-          STALE="$(grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*;' "$PBXPROJ" \
-            | grep -vF "PRODUCT_BUNDLE_IDENTIFIER = ${BUNDLE_ID};" \
-            | grep -vF "PRODUCT_BUNDLE_IDENTIFIER = ${BUNDLE_ID}." || true)"
-          if [ -n "$STALE" ]; then
-            echo "HATA: BUNDLE_ID ile başlamayan kimlik kaldı:" >&2
-            echo "$STALE" >&2
-            exit 1
-          fi
-          grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*;' "$PBXPROJ" | sort | uniq -c
-
-      - name: Statik analiz
-        script: flutter analyze --no-fatal-infos
-
-      - name: Testler
-        script: |
-          if [ -d test ]; then flutter test; else echo "test klasörü yok, atlandı"; fi
-
-      - name: İmzalama profillerini projeye uygula
-        script: xcode-project use-profiles
-
+      - *verify_env
+      - *create_ios
+      - *pub_get
+      - *configure_ios
+      - *set_bundle_id
+      - *analyze
+      - *tests
+      - *use_profiles
       - name: Ad-Hoc IPA derle
         script: |
           flutter build ipa --release \
@@ -127,7 +227,4 @@ workflows:
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY"
 
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
+    artifacts: *artifacts
