@@ -191,7 +191,7 @@ KAYIT TÜRLERİ
    - assignee: görev ekipten birine aitse ya da onunla yapılacaksa o kişinin adı; yoksa null.
    - priority: "acil", "önemli", "hemen" gibi ifadelerde "high"; aksi halde "medium"; "bir ara", "fırsat olunca" gibi ifadelerde "low".
    - due_at: işin/görüşmenin zamanı. Tarih yoksa null. Tarih var ama saat yoksa saati 09:00 yaz; bu saat şu andan önceyse şu andan 1 saat sonrasını yaz.
-   - remind_at: belirli bir saat verildiyse due_at ile aynı; kullanıcı "X dakika önce hatırlat" dediyse ona göre. Saat yoksa null.
+   - remind_at: yalnızca kullanıcı açıkça bir hatırlatma zamanı söylediyse ("X dakika önce hatırlat", "sabah 9'da hatırlat") o an; söylemediyse null.
 2. routines — DÜZENLİ TEKRARLAYAN iş ("her gün", "her pazartesi", "hafta içi her sabah", "her ayın 15'i", "ayda bir", "her ay sonu").
    - frequency: ayın belirli bir gününde yapılan iş "monthly"; haftanın belirli günlerinde ya da her gün yapılan iş "weekly".
    - days_of_week: yalnızca "weekly" için; ISO gün numaraları (1 = Pazartesi ... 7 = Pazar). Her gün [1,2,3,4,5,6,7], hafta içi [1,2,3,4,5]. "monthly" için [1,2,3,4,5,6,7] yaz.

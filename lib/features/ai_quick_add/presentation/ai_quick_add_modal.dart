@@ -580,7 +580,7 @@ class _PreviewList extends StatelessWidget {
           subtitle: [
             if (t.assignee != null) 'İlgili: ${t.assignee}',
             if (t.dueAt != null) AppDates.relativeDayTime(t.dueAt!),
-            if (t.remindAt != null) 'Hatırlatma açık',
+            if (t.dueAt != null || t.remindAt != null) 'Hatırlatma açık',
             if (t.dueAt == null && t.assignee == null) 'Tarihsiz görev',
           ].join(' · '),
           onRemove: enabled ? () => onRemove(ParsedKind.task, i) : null,

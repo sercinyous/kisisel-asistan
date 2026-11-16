@@ -10,10 +10,19 @@ final quickAddRepositoryProvider = Provider<QuickAddRepository>(
 
 /// Kaydedilen görevlerden bildirim planlamak için gereken alanlar.
 class SavedTask {
-  const SavedTask({required this.id, required this.title, this.remindAt});
+  const SavedTask({
+    required this.id,
+    required this.title,
+    this.dueAt,
+    this.remindAt,
+  });
 
   final String id;
   final String title;
+  final DateTime? dueAt;
+
+  /// Kullanıcının açıkça istediği hatırlatma anı; yoksa bildirim terminden
+  /// ayarlardaki süre kadar önce planlanır.
   final DateTime? remindAt;
 }
 
@@ -64,11 +73,13 @@ class QuickAddRepository {
     if (rawTasks is List) {
       for (final row in rawTasks) {
         if (row is! Map) continue;
-        final remind = row['remind_at'] ?? row['due_at'];
+        final due = row['due_at'];
+        final remind = row['remind_at'];
         tasks.add(
           SavedTask(
             id: row['id'] as String,
             title: row['title'] as String,
+            dueAt: due is String ? DateTime.tryParse(due) : null,
             remindAt: remind is String ? DateTime.tryParse(remind) : null,
           ),
         );

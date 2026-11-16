@@ -506,7 +506,14 @@ class DemoQuickAddRepository implements QuickAddRepository {
           remindAt: t.remindAt?.toLocal(),
         ),
       );
-      saved.add(SavedTask(id: id, title: t.title, remindAt: t.remindAt));
+      saved.add(
+        SavedTask(
+          id: id,
+          title: t.title,
+          dueAt: t.dueAt,
+          remindAt: t.remindAt,
+        ),
+      );
     }
     for (final r in entry.routines) {
       _data.routines.routines.add(
@@ -840,7 +847,8 @@ ParsedEntry demoParse(String input, QuickAddMode mode, {DateTime? now}) {
       'priority': RegExp(r'acil|önemli|hemen').hasMatch(s) ? 'high' : 'medium',
       'assignee': assignee,
       'due_at': due?.toIso8601String(),
-      'remind_at': due?.toIso8601String(),
+      // Gerçek talimattaki gibi: ayrı bir hatırlatma zamanı söylenmedi.
+      'remind_at': null,
     });
   }
 

@@ -6,7 +6,9 @@ import '../../../core/widgets/app_bottom_bar.dart';
 import '../../ai_quick_add/domain/quick_add_mode.dart';
 import '../../ai_quick_add/presentation/ai_quick_add_modal.dart';
 import '../../ai_quick_add/presentation/quick_add_mode_sheet.dart';
+import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/health_screen.dart';
+import '../../health/presentation/healthkit_card.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_screen.dart';
 import '../../operations/presentation/operations_screen.dart';
@@ -52,7 +54,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
     super.dispose();
   }
 
-  /// Uygulama öne geldiğinde gün değişmiş olabilir: Kokpit'i tazele.
+  /// Uygulama öne geldiğinde gün değişmiş olabilir: "bugün"e göre hesaplanan
+  /// her şeyi (Kokpit, Ay özeti, Sağlık sekmesi) tazele.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
@@ -60,7 +63,15 @@ class _HomeShellState extends ConsumerState<HomeShell>
     ref.invalidate(todayOccurrencesProvider);
     ref.invalidate(upcomingRemindersProvider);
     ref.invalidate(todayNutritionProvider);
-    ref.invalidate(healthTodayProvider);
+    // Ay özetinin durum rozetleri ve rutin yüzdesi bugüne göre hesaplanır.
+    ref.invalidate(monthOverviewProvider);
+    // Sağlık sekmesinin pencereleri (son N gün, bu hafta, bugünün öğünleri)
+    // de bugüne göre açılır.
+    final container = ProviderScope.containerOf(context, listen: false);
+    invalidateHealthData(container);
+    // HealthKit yeniden okunur; 7 günlük adım grafiği okuma yedeklendikten
+    // sonra tazelenir (önce tazelenirse bugünün satırı eksik kalır).
+    resyncHealthKit(container);
   }
 
   Future<void> _openQuickAdd() async {

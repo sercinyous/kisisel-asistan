@@ -169,6 +169,8 @@ int? averageSteps(Iterable<DailyHealthMetric> days) {
 /// gösteren tüm sağlayıcıları tazeler: Sağlık sekmesi, Kokpit'in beslenme
 /// özeti ve Ay özeti. await sonrası `WidgetRef` kullanılamayacağı için
 /// kapsayıcı alır (`ProviderScope.containerOf(context, listen: false)`).
+/// Bu sağlayıcılar pencerelerini "bugün"e göre açtığı için uygulama öne
+/// geldiğinde de çağrılır (gün değişmiş olabilir).
 void invalidateHealthData(ProviderContainer container) {
   container
     ..invalidate(weightSeriesProvider)

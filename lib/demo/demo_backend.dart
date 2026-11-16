@@ -61,7 +61,12 @@ class FakeQuickAddRepository implements QuickAddRepository {
     return QuickAddResult(
       tasks: [
         for (final (i, t) in entry.tasks.indexed)
-          SavedTask(id: 'task-$i', title: t.title, remindAt: t.remindAt),
+          SavedTask(
+            id: 'task-$i',
+            title: t.title,
+            dueAt: t.dueAt,
+            remindAt: t.remindAt,
+          ),
       ],
       nutritionCount: entry.nutrition.length,
       workoutCount: entry.workouts.length,
