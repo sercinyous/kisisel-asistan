@@ -109,7 +109,7 @@ void main() {
       expect(
         captured.url.toString(),
         'https://generativelanguage.googleapis.com/v1beta/models/'
-        'gemini-2.5-flash:generateContent',
+        'gemini-3.8-flash:generateContent',
       );
       expect(captured.headers['x-goog-api-key'], 'test-key');
       expect(captured.headers['content-type'],
@@ -153,8 +153,8 @@ void main() {
     test('generationConfig: JSON modu + responseSchema', () {
       final config = body['generationConfig'] as Map<String, dynamic>;
       expect(config['responseMimeType'], 'application/json');
-      expect(config['temperature'], 0.1);
-      expect(config['thinkingConfig'], {'thinkingBudget': 0});
+      expect(config.containsKey('temperature'), isFalse);
+      expect(config['thinkingConfig'], {'thinkingLevel': 'low'});
       expect((config['responseSchema'] as Map)['type'], 'OBJECT');
     });
   });
@@ -488,7 +488,7 @@ void main() {
       400: 'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
       401: 'Gemini API anahtarı geçersiz ya da yetkisiz.',
       403: 'Gemini API anahtarı geçersiz ya da yetkisiz.',
-      404: 'Gemini modeli bulunamadı: gemini-2.5-flash',
+      404: 'Gemini modeli bulunamadı: gemini-3.8-flash',
     };
 
     for (final MapEntry(key: status, value: message) in cases.entries) {

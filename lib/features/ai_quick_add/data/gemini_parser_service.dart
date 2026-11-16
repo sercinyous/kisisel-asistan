@@ -47,7 +47,7 @@ class AiParseException implements Exception {
 class GeminiParserService {
   GeminiParserService({
     required String apiKey,
-    String model = 'gemini-2.5-flash',
+    String model = 'gemini-3.8-flash',
     http.Client? client,
     Duration timeout = const Duration(seconds: 30),
     UserSettings settings = const UserSettings.defaults(),
@@ -102,13 +102,15 @@ class GeminiParserService {
       systemInstruction: _instructionFor(now ?? DateTime.now()),
       userText: text,
       generationConfig: {
-        'temperature': 0.1,
-        'maxOutputTokens': 4096,
+        // Sıcaklık verilmez: Gemini 3 serisinde 1.0'ın altı döngüye sokabiliyor.
+        // Gemini 3 serisinde düşünme belirteçleri de bu sınıra sayılır.
+        'maxOutputTokens': 8192,
         'responseMimeType': 'application/json',
         'responseSchema': _mode == QuickAddMode.work
             ? _workSchema
             : _healthSchema,
-        'thinkingConfig': {'thinkingBudget': 0},
+        // Gemini 3 serisi bütçe yerine düzey alır; en düşük desteklenen "low".
+        'thinkingConfig': {'thinkingLevel': 'low'},
       },
     );
 
@@ -142,9 +144,9 @@ Sana verilen haftalık metrikleri Türkçe, sade ve dürüst bir dille değerlen
 Biçim: düz metin, en fazla 120 kelime. Önce iş/operasyon tarafını, sonra spor/beslenme tarafını bir-iki cümleyle özetle; ardından gelecek hafta için en fazla 3 somut öneri ver. Yalnızca verilen sayılara dayan, veri uydurma. Tıbbi tavsiye verme.''',
       userText: 'Haftalık metrikler (JSON):\n${jsonEncode(metrics)}',
       generationConfig: {
-        'temperature': 0.5,
-        'maxOutputTokens': 1024,
-        'thinkingConfig': {'thinkingBudget': 0},
+        'maxOutputTokens': 2048,
+        // Gemini 3 serisi bütçe yerine düzey alır; en düşük desteklenen "low".
+        'thinkingConfig': {'thinkingLevel': 'low'},
       },
     );
     return raw.trim();

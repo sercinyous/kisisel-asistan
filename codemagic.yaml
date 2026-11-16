@@ -16,6 +16,8 @@
 #     "Fetch profiles" ile BUNDLE_ID için App Store (ve istersen Ad-Hoc) profilini çek.
 #  4) Codemagic > Environment variables > "app_secrets" grubu (hepsi Secure):
 #     SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_API_KEY
+#     İsteğe bağlı GEMINI_MODEL: Google bir modeli kaldırınca kod değiştirmeden
+#     yeni model adını buradan ver (varsayılan gemini-3.8-flash).
 #  5) Aşağıdaki "vars" bloğunda BUNDLE_ID ve APP_STORE_APPLE_ID değerlerini doldur
 #     (imzalama ayarları BUNDLE_ID'yi buradan okur; başka yerde değiştirmek gerekmez).
 #
@@ -191,7 +193,8 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY"
+            --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY" \
+            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}"
 
     artifacts: *artifacts
 
@@ -233,6 +236,7 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY"
+            --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY" \
+            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}"
 
     artifacts: *artifacts

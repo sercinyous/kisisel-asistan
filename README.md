@@ -3,7 +3,7 @@
 App Store Connect adı: **Ritim: Rutin, İş ve Sağlık** · iPhone'da görünen ad: **Ritim**
 
 Tek kullanıcılı, iOS Ad-Hoc dağıtımlı Flutter uygulaması.
-Flutter · Riverpod · Supabase · Gemini (`gemini-2.5-flash`) · HealthKit · yerel bildirimler.
+Flutter · Riverpod · Supabase · Gemini (`gemini-3.8-flash`) · HealthKit · yerel bildirimler.
 
 ## Özellikler
 
@@ -168,7 +168,7 @@ yine gösterir. Kurulum bir kez yapılır:
    ```bash
    supabase secrets set GEMINI_API_KEY=AI-STUDIO-ANAHTARIN CRON_SECRET=URETTIGIN-DEGER
    ```
-   İsteğe bağlı: `GEMINI_MODEL` (varsayılan `gemini-2.5-flash`).
+   İsteğe bağlı: `GEMINI_MODEL` (varsayılan `gemini-3.8-flash`).
 4. **Fonksiyonu dağıt.** Kimliği fonksiyonun kendisi doğrular (zamanlayıcı gizli anahtarı ya da kullanıcı
    oturumu), bu yüzden geçidin JWT denetimi kapatılır:
    ```bash

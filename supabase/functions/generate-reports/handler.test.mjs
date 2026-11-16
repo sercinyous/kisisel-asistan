@@ -36,7 +36,7 @@ function setup(overrides = {}) {
     store,
     cronSecret: "cron-gizli",
     geminiApiKey: "gemini-anahtar",
-    geminiModel: "gemini-2.5-flash",
+    geminiModel: "gemini-3.8-flash",
     fetch: async (url, init) => {
       calls.fetch.push({ url, init });
       return fetchImpl(url, init);
@@ -132,7 +132,7 @@ test("Gemini isteği: uç nokta, anahtar başlıkta, zaman aşımı sinyali", as
   await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
   assert.equal(calls.fetch.length, 1);
   const { url, init } = calls.fetch[0];
-  assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+  assert.equal(url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent");
   assert.equal(init.method, "POST");
   assert.equal(init.headers["x-goog-api-key"], "gemini-anahtar");
   assert.ok(!url.includes("gemini-anahtar"));
