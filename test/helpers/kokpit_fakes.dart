@@ -115,6 +115,11 @@ class KokpitHarness {
       of: find.byType(SegmentedButton<KokpitView>),
       matching: find.text(label),
     );
+    // Liste tembel kurulur: aşağı kaydırılmışsa seçici ağaçta olmaz, önce başa dön.
+    if (segment.evaluate().isEmpty) {
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 5000));
+      await tester.pumpAndSettle();
+    }
     await tester.ensureVisible(segment);
     await tester.pumpAndSettle();
     await tester.tap(segment);

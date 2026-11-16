@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
+import '../../operations/presentation/operations_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/gemini_parser_service.dart';
@@ -204,5 +205,9 @@ class QuickAddController
       ref.invalidate(monthOverviewProvider);
     }
     if (wroteRoutines || wroteTasks) ref.invalidate(notificationSyncProvider);
+    // Operasyon sekmesinin kendi listeleri de bayatlamasın.
+    if (wroteRoutines) ref.invalidate(opsRoutinesProvider);
+    if (wroteTasks) ref.invalidate(opsTasksProvider);
+    if (result.noteCount > 0) ref.invalidate(opsNotesProvider);
   }
 }
