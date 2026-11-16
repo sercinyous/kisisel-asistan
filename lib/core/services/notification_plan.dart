@@ -99,8 +99,13 @@ List<PlannedNotification> buildNotificationPlan({
     // "Hatırlat" kapalı görev, termini olsa da bildirim almaz.
     if (t.isDone || !t.notify) continue;
     final due = t.dueAt;
-    final when = t.remindAt ??
+    var when = t.remindAt ??
         due?.subtract(Duration(minutes: settings.eventRemindMinutes));
+    // Hatırlatma anı çoktan geçmiş ama randevu hâlâ ileride ("20 dk sonra
+    // toplantı", ayar 30 dk): hiç haber vermemek yerine randevu anında haber ver.
+    if (when != null && !when.isAfter(now) && due != null && due.isAfter(now)) {
+      when = due;
+    }
     if (when == null || !when.isAfter(now)) continue;
     plan.add(
       PlannedNotification(

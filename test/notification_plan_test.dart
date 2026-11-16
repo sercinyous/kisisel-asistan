@@ -130,7 +130,7 @@ void main() {
       tasks: [
         task('a', due: DateTime(2026, 11, 17, 15), remind: DateTime(2026, 11, 17, 12)),
         task('b', due: DateTime(2026, 11, 17, 15)),
-        task('c', due: DateTime(2026, 11, 16, 10, 30)),
+        task('c', due: DateTime(2026, 11, 16, 9)),
         task('d', due: DateTime(2026, 11, 18, 15), status: 'done'),
         task('e'),
       ],
@@ -139,6 +139,22 @@ void main() {
     expect(result[0].fireAt, DateTime(2026, 11, 17, 12));
     expect(result[1].fireAt, DateTime(2026, 11, 17, 14, 15));
     expect(result[1].kind, PlannedKind.task);
+  });
+
+  test('görev: hatırlatma anı geçmiş ama termin ileride ise termin anında', () {
+    // Şimdi 10:00, ayar 45 dk: 10:30 randevusunun hatırlatması 09:45'te kalır.
+    final result = plan(
+      settings: defaults.copyWith(eventRemindMinutes: 45),
+      tasks: [
+        task('yakin', due: DateTime(2026, 11, 16, 10, 30)),
+        task('acik', due: DateTime(2026, 11, 16, 11), remind: DateTime(2026, 11, 16, 9)),
+        task('gecti', due: DateTime(2026, 11, 16, 9, 59)),
+      ],
+    );
+    expect({for (final p in result) p.sourceId: p.fireAt}, {
+      'yakin': DateTime(2026, 11, 16, 10, 30),
+      'acik': DateTime(2026, 11, 16, 11),
+    });
   });
 
   test('sessiz saatler gece yarısını aşar: aralıktaki bildirim bitişe ertelenir', () {
