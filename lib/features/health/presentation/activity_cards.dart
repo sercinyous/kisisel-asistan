@@ -26,7 +26,7 @@ class WorkoutWeekCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const BentoLabel(
+          BentoLabel(
             icon: Icons.fitness_center_rounded,
             label: 'Antrenman',
             color: AppColors.fitness,
@@ -131,12 +131,12 @@ class _DayMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (day.isDone) {
-      return const DecoratedBox(
+      return DecoratedBox(
         decoration:
             BoxDecoration(color: AppColors.fitness, shape: BoxShape.circle),
         child: SizedBox.square(
           dimension: _size,
-          child: Icon(Icons.check_rounded, size: 12, color: AppColors.background),
+          child: Icon(Icons.check_rounded, size: 12, color: AppColors.onAccent),
         ),
       );
     }
@@ -149,13 +149,13 @@ class _DayMark extends StatelessWidget {
         child: const SizedBox.square(dimension: _size),
       );
     }
-    return const SizedBox.square(
+    return SizedBox.square(
       dimension: _size,
       child: Center(
         child: DecoratedBox(
           decoration:
               BoxDecoration(color: AppColors.border, shape: BoxShape.circle),
-          child: SizedBox.square(dimension: 6),
+          child: const SizedBox.square(dimension: 6),
         ),
       ),
     );
@@ -173,7 +173,7 @@ class StepsWeekCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const BentoLabel(
+          BentoLabel(
             icon: Icons.directions_walk_rounded,
             label: 'Adım',
             color: AppColors.ops,
@@ -256,12 +256,12 @@ class _StepsBody extends StatelessWidget {
                   barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
                       fitInsideHorizontally: true,
-                      getTooltipColor: (_) => AppColors.surfaceHigh,
+                      getTooltipColor: (_) => AppColors.inverseSurface,
                       getTooltipItem: (group, _, rod, __) => BarTooltipItem(
                         '${DateFormat('EEE', AppDates.locale).format(days[group.x].day)}: '
                         '${HealthFormat.count(rod.toY)}',
-                        const TextStyle(
-                          color: AppColors.textPrimary,
+                        TextStyle(
+                          color: AppColors.onInverseSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

@@ -346,3 +346,87 @@ Widget testinde tipik override listesine `reportsRepositoryProvider` (R) eklenir
   yalnızca `--update-goldens` ile çalışır; olağan `flutter test` çalışmasında atlanır.
 - **Demo**: `FakeReportsRepository.regenerateDelay` ve `DemoData.seed(now, regenerateDelay:)`; tarayıcı demosunda
   "Raporu oluştur" 900 ms sürer.
+
+## 9. Açık tema
+
+Koyu tema (saf OLED siyah) varsayılandır ve bu çalışmayla tek pikseli değişmemiştir; yanına açık (beyaz) tema eklendi.
+
+**Dosyalar** (`lib/core/theme/`)
+- `app_theme.dart` — `AppPalette` (değişmez; `AppPalette.dark`, `AppPalette.light`, `AppPalette.of(brightness)`),
+  `AppColors` (etkin paleti okuyan statik getter'lar; `AppColors.palette` etkin palet), `AppTheme.dark` /
+  `AppTheme.light` / `AppTheme.of(palette)`. İki `ThemeData` tek fonksiyondan (`_build(palette)`) çıkar: tipografi,
+  yarıçaplar ve bileşen temaları aynıdır, yalnızca palet değişir.
+- `theme_mode.dart` — `enum AppThemeMode { system, light, dark }` (`label`, `parse`, `resolve(platform)`,
+  `fallback = dark`), `ThemeModeStore` (`shared_preferences`, anahtar `theme_mode`; her okuma/yazma try/catch +
+  2 sn zaman aşımı, hata olursa koyu), `themeModeProvider` (`Notifier`; `select(mode)` hemen uygular, sonra yazar),
+  `initialThemeModeProvider`, `loadInitialThemeMode()`.
+- `app_theme_scope.dart` — `AppThemeScope(mode, builder)`: uygulamanın kökü.
+
+**Mekanizma**
+1. `main()` ve `main_demo.dart`, `runApp`'ten önce `loadInitialThemeMode()` çağırır: saklanan tercih okunur,
+   `AppColors.palette` ayarlanır ve değer `initialThemeModeProvider` override'ı olarak verilir. İlk kare doğru
+   temayla çizilir (koyudan açığa sıçrama yok).
+2. `KisiselAsistanApp` → `AppThemeScope(mode: ref.watch(themeModeProvider))` → `MaterialApp(theme: ...)`.
+   Kapsam, tercihi `MediaQuery.platformBrightnessOf` ile çözer; "Sistem" seçiliyken cihaz ayarı uygulama açıkken
+   değişirse aynı build yeniden çalışır.
+3. Etkin parlaklık değişince kapsam kendi build'i içinde: `AppColors.palette`'i değiştirir, alt ağaçtaki **her**
+   `Element`'i `markNeedsBuild()` ve her `RenderObject`'i `markNeedsPaint()` ile işaretler, `MaterialApp`'e yeni
+   `ThemeData`'yı verir (`themeAnimationDuration: Duration.zero`). Böylece `const` kurulmuş, `Theme.of` çağırmayan
+   bileşenler ve rengi boyama anında okuyan çizerler de aynı karede yeni paleti alır. Öğeler yerinde kaldığı için
+   gezinme yığını, kaydırma konumu ve form durumu korunur. (Çerçeve, kurulmakta olan öğenin torunlarının bu
+   aşamada işaretlenmesine izin verir.)
+4. Durum çubuğu: kökte `AnnotatedRegion<SystemUiOverlayStyle>` ve `AppBarTheme.systemOverlayStyle`
+   (`palette.overlayStyle`): koyu temada açık, açık temada koyu ikonlar.
+5. Ayarlar > **Görünüm** (en üstte): `SegmentedButton` Sistem | Açık | Koyu (`Key('settings-theme-mode')`).
+   Cihaz tercihidir: hemen uygulanır, "Kaydet"i etkinleştirmez, Supabase'e yazılmaz.
+
+**Kurallar**
+- Renk yalnızca `AppColors.<rol>` ile okunur ve **`const` içine alınmaz**, `static final`/`late final` alanda
+  tutulmaz. Varsayılan parametre gerekiyorsa `Color?` alınıp build'de `?? AppColors.<rol>` yapılır (`BentoLabel`,
+  `HealthListRow`).
+- `lib/` içinde `app_theme.dart` dışında `Color(0x...)`, `Colors.black`, `Colors.white` yoktur.
+- Alt sayfa zemini çağrı anında verilmez; `bottomSheetTheme`'den gelir (sayfa açıkken tema değişirse güncellenir).
+- Testler süreç genelindeki paleti sıfırlar: `tearDown(() => AppColors.palette = AppPalette.dark)`.
+
+**Palet rolleri**
+
+| Rol | Kullanım | Koyu | Açık |
+|---|---|---|---|
+| `background` | sayfa zemini | `#000000` | `#FFFFFF` |
+| `surface` | Bento kart, alt sayfa | `#0E0E10` | `#F4F4F6` |
+| `surfaceHigh` | giriş alanı, çubuk izi, ipucu | `#18181B` | `#E7E7EC` |
+| `border` | ince kenarlık, ayraç | `#222226` | `#E0E0E6` |
+| `textPrimary` | ana metin | `#F2F4F8` | `#0B0B0F` |
+| `textSecondary` | ikincil metin | `#A1A1AA` | `#4E4E57` |
+| `textMuted` | soluk metin | `#71717A` | `#696974` |
+| `accent` | ana vurgu | `#5EEAD4` | `#0E736B` |
+| `ops` | operasyon | `#7AA7FF` | `#1D5BD6` |
+| `fitness` | spor | `#FF8A65` | `#B83D00` |
+| `nutrition` | beslenme | `#B9F27C` | `#41740E` |
+| `warning` | uyarı | `#FBBF24` | `#985700` |
+| `danger` | hata, gecikme | `#FF6B6B` | `#C81E28` |
+| `onAccent` | vurgu dolgusu üstündeki işaret | `#000000` | `#FFFFFF` |
+| `onPrimary` / `onSecondary` / `onError` | dolu buton yazısı | `#04201B` / `#07142E` / `#2B0606` | `#FFFFFF` |
+| `controlOutline` | anahtar topuzu, bölmeli buton kenarı (`outline`) | `#222226` | `#8A8A96` |
+| `controlOutlineSoft` | çip kenarlığı (`outlineVariant`) | `#FFFFFF` | `#C6C6CE` |
+| `controlContent` | etiket, ikon, onay kutusu kenarı (`onSurfaceVariant`) | `#F2F4F8` | `#4E4E57` |
+| `controlFill` | kapalı anahtar izi, saat kadranı (`surfaceContainerHighest`) | `#0E0E10` | `#E7E7EC` |
+| `inverseSurface` / `onInverseSurface` | bildirim çubuğu, grafik ipucu | `#18181B` / `#F2F4F8` | `#1F1F24` / `#FFFFFF` |
+| `scrim` | alt sayfa arkası karartma | siyah %60 | siyah %32 |
+| `shadow` | alt bar gölgesi | siyah %35 | siyah %12 |
+| `glass` / `glassBorder` | alt bar cam dolgusu / kenarlığı | `surfaceHigh` %72 / `textPrimary` %14 | beyaz %78 / siyah %10 |
+| `navSelected` | seçili sekme kapsülü | `textPrimary` %16 | siyah %8 |
+
+Açık temada vurgular koyulaştırılmıştır; metin ve grafik rengi olarak beyaz üstünde okunur.
+`test/app_palette_test.dart` iki palet için WCAG kontrastını zorunlu tutar: `textPrimary` ≥ 7, `textSecondary` ≥ 4.5,
+`textMuted` ≥ 3 (zemin, kart ve giriş alanı üstünde); altı vurgu rengi ≥ 4.5 (zemin, kart ve giriş alanı üstünde);
+`onAccent` her vurgu dolgusunda ≥ 4.5.
+
+**Testler**
+- `test/app_palette_test.dart` — kontrast, koyu paletin değişmediği, iki temanın aynı fonksiyondan çıktığı.
+- `test/theme_mode_test.dart` — `parse`/`resolve`, saklama, bozuk ya da yanıt vermeyen depoda koyuya düşme.
+- `test/widget/theme_switch_test.dart` — `const` bileşenin yeniden kurulup boyanması; Ayarlar, `HomeShell` üstünde
+  açıkken tema değişince rota yığını, kaydırma ve form durumunun korunması; "Sistem" modunun
+  `platformBrightnessTestValue`'yu izlemesi; Ayarlar'da "Açık"a dokununca zeminin değişip tercihin yazılması.
+- `test/screenshots/app_screens_test.dart` — aynı akış iki temada: 01–15 koyu, 16–30 açık (`NN_acik_<ad>.png`).
+  Açık çekimde gölgeler cihazdaki gibi bulanık çizilir (`debugDisableShadows = false`).

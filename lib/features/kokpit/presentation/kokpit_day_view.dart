@@ -147,7 +147,7 @@ class _NutritionCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.local_fire_department_rounded,
+              Icon(Icons.local_fire_department_rounded,
                   size: 18, color: AppColors.nutrition),
               const SizedBox(width: 6),
               Text('Kalori', style: theme.textTheme.labelLarge),
@@ -316,7 +316,7 @@ class _StepsCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const BentoLabel(
+          BentoLabel(
             icon: Icons.directions_walk_rounded,
             label: 'Adım',
             color: AppColors.fitness,
@@ -361,7 +361,7 @@ class _SleepCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const BentoLabel(
+          BentoLabel(
             icon: Icons.bedtime_rounded,
             label: 'Uyku',
             color: AppColors.ops,
@@ -381,7 +381,7 @@ class _SleepCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.bolt_rounded,
+                Icon(Icons.bolt_rounded,
                     size: 15, color: AppColors.textSecondary),
                 const SizedBox(width: 4),
                 Text(
@@ -759,15 +759,15 @@ class _ReminderTile extends StatelessWidget {
             ),
           ),
           if (task.priority == 'high')
-            const Padding(
-              padding: EdgeInsets.only(left: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
               child: Icon(Icons.priority_high_rounded,
                   size: 18, color: AppColors.danger),
             ),
           IconButton(
             onPressed: onComplete,
             tooltip: 'Tamamlandı olarak işaretle',
-            icon: const Icon(Icons.check_circle_outline_rounded,
+            icon: Icon(Icons.check_circle_outline_rounded,
                 color: AppColors.textSecondary),
           ),
         ],

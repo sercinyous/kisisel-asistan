@@ -190,7 +190,7 @@ class _DailyReportGrid extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const BentoLabel(
+                BentoLabel(
                   icon: Icons.restaurant_rounded,
                   label: 'Beslenme',
                   color: AppColors.nutrition,
@@ -235,7 +235,7 @@ class _DailyReportGrid extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const BentoLabel(
+                BentoLabel(
                   icon: Icons.favorite_rounded,
                   label: 'Sağlık',
                   color: AppColors.accent,

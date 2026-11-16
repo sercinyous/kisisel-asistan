@@ -90,7 +90,7 @@ class BentoCard extends StatelessWidget {
       color: color,
       shape: RoundedRectangleBorder(
         borderRadius: radius,
-        side: const BorderSide(color: AppColors.border, width: 0.5),
+        side: BorderSide(color: AppColors.border, width: 0.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -107,14 +107,17 @@ class BentoLabel extends StatelessWidget {
     super.key,
     required this.icon,
     required this.label,
-    this.color = AppColors.textSecondary,
+    Color? color,
     this.trailing,
-  });
+  }) : _color = color;
 
   final IconData icon;
   final String label;
-  final Color color;
+  final Color? _color;
   final String? trailing;
+
+  /// Verilmezse etkin temanın ikincil metin rengi.
+  Color get color => _color ?? AppColors.textSecondary;
 
   @override
   Widget build(BuildContext context) {

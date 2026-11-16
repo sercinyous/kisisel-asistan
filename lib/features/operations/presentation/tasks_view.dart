@@ -224,11 +224,11 @@ class _TaskRow extends StatelessWidget {
                           TextSpan(
                             text: ' · ${AppDates.relativeDayTime(when)}',
                             style: overdue
-                                ? const TextStyle(color: AppColors.danger)
+                                ? TextStyle(color: AppColors.danger)
                                 : null,
                           ),
                         if (task.priority == 'high')
-                          const TextSpan(
+                          TextSpan(
                             text: ' · Yüksek',
                             style: TextStyle(color: AppColors.danger),
                           ),

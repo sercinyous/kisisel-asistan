@@ -1,4 +1,5 @@
 // Önizleme için gerçek ekran görüntüleri üretir (örnek veriyle).
+// Koyu tema: 01–15; açık tema aynı akışla 16–30 (`NN_acik_<ad>.png`).
 // Çalıştırma: flutter test --update-goldens test/screenshots/app_screens_test.dart
 @Tags(['screenshots'])
 library;
@@ -12,6 +13,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
+import 'package:kisisel_asistan/core/theme/theme_mode.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/demo/demo_data.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/gemini_parser_service.dart';
@@ -39,7 +41,14 @@ void main() {
     await loadRealFonts();
   });
 
-  testWidgets('ekran görüntüleri', (tester) async {
+  // Açık temada dosya adı: numara 15 kaydırılır, araya "acik" eklenir.
+  String lightName(String name) =>
+      '${int.parse(name.substring(0, 2)) + 15}_acik_${name.substring(3)}';
+
+  Future<void> capture(WidgetTester tester, {required bool light}) async {
+    AppColors.palette = light ? AppPalette.light : AppPalette.dark;
+    addTearDown(() => AppColors.palette = AppPalette.dark);
+
     // Tarayıcı demosuyla aynı örnek veri: önizleme ile demo aynı görünür.
     final now = DateTime.now();
     final today = AppDates.startOfDay(now);
@@ -47,7 +56,7 @@ void main() {
 
     // Aile adı olmayan stil testte kare çizen "FlutterTest" yazı tipine düşer
     // (cihazda sistem yazı tipidir); buton etiketleri okunsun diye Roboto verilir.
-    final base = AppTheme.dark;
+    final base = light ? AppTheme.light : AppTheme.dark;
     final theme = base.copyWith(
       filledButtonTheme: FilledButtonThemeData(
         style: base.filledButtonTheme.style?.copyWith(
@@ -96,6 +105,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(
+            light ? AppThemeMode.light : AppThemeMode.dark,
+          ),
           geminiParserServiceProvider.overrideWith((ref, mode) => parser),
           quickAddRepositoryProvider
               .overrideWithValue(RecordingQuickAddRepository()),
@@ -139,7 +151,7 @@ void main() {
       await tester.pumpAndSettle();
       await expectLater(
         find.byType(MaterialApp),
-        matchesGoldenFile('out/$name.png'),
+        matchesGoldenFile('out/${light ? lightName(name) : name}.png'),
       );
     }
 
@@ -211,9 +223,29 @@ void main() {
     await shot('14_raporlar_gunluk');
     await tester.drag(scrollOf(ReportsScreen), const Offset(0, -600));
     await shot('15_raporlar_gunluk_alt');
-  },
-      // Görüntüler bugünün tarihine ve saatine bağlıdır; kayıtlı PNG'lerle
-      // karşılaştırmak ertesi gün yanlış alarm verir. Bu dosya yalnızca
-      // --update-goldens ile görüntü üretmek için çalışır.
-      skip: !autoUpdateGoldenFiles);
+  }
+
+  // Görüntüler bugünün tarihine ve saatine bağlıdır; kayıtlı PNG'lerle
+  // karşılaştırmak ertesi gün yanlış alarm verir. Bu dosya yalnızca
+  // --update-goldens ile görüntü üretmek için çalışır.
+  testWidgets(
+    'ekran görüntüleri',
+    (tester) => capture(tester, light: false),
+    skip: !autoUpdateGoldenFiles,
+  );
+
+  testWidgets(
+    'ekran görüntüleri (açık tema)',
+    (tester) async {
+      // Testlerde gölgeler düz çizilir; beyaz zeminde alt barın gölgesi
+      // cihazdaki gibi (bulanık) görünsün diye burada açılır.
+      debugDisableShadows = false;
+      try {
+        await capture(tester, light: true);
+      } finally {
+        debugDisableShadows = true;
+      }
+    },
+    skip: !autoUpdateGoldenFiles,
+  );
 }

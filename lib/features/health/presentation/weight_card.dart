@@ -247,14 +247,14 @@ class _WeightChart extends StatelessWidget {
         touchTooltipData: LineTouchTooltipData(
           fitInsideHorizontally: true,
           fitInsideVertically: true,
-          getTooltipColor: (_) => AppColors.surfaceHigh,
+          getTooltipColor: (_) => AppColors.inverseSurface,
           getTooltipItems: (touched) => [
             for (final spot in touched)
               LineTooltipItem(
                 '${dayFormat.format(start.add(Duration(minutes: (spot.x * 1440).round())))}\n'
                 '${HealthFormat.kg(spot.y)} kg',
-                const TextStyle(
-                  color: AppColors.textPrimary,
+                TextStyle(
+                  color: AppColors.onInverseSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),

@@ -68,7 +68,7 @@ class AppBottomBar extends StatelessWidget {
             borderRadius: radius,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35),
+                color: AppColors.shadow,
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -82,10 +82,10 @@ class AppBottomBar extends StatelessWidget {
                 height: height,
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceHigh.withValues(alpha: 0.72),
+                  color: AppColors.glass,
                   borderRadius: radius,
                   border: Border.all(
-                    color: AppColors.textPrimary.withValues(alpha: 0.14),
+                    color: AppColors.glassBorder,
                     width: 0.8,
                   ),
                 ),
@@ -148,8 +148,8 @@ class _TabButton extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected
-                    ? AppColors.textPrimary.withValues(alpha: 0.16)
-                    : AppColors.textPrimary.withValues(alpha: 0),
+                    ? AppColors.navSelected
+                    : AppColors.navSelected.withValues(alpha: 0),
                 borderRadius: BorderRadius.circular(26),
               ),
               child: AnimatedSwitcher(
@@ -188,7 +188,7 @@ class _CreateButton extends StatelessWidget {
             HapticFeedback.lightImpact();
             onTap();
           },
-          child: const Center(
+          child: Center(
             child: SizedBox(
               height: 52,
               child: Icon(

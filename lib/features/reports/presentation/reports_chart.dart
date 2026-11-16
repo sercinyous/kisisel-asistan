@@ -37,12 +37,12 @@ class ReportDailyCompletionCard extends StatelessWidget {
           show: rate != null,
           text: '${rate ?? ''}',
           offset: const Offset(0, 2),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 9,
             height: 1,
             fontWeight: FontWeight.w600,
             color: AppColors.textSecondary,
-            fontFeatures: [FontFeature.tabularFigures()],
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       );
@@ -54,13 +54,13 @@ class ReportDailyCompletionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const BentoLabel(
+          BentoLabel(
             icon: Icons.bar_chart_rounded,
             label: 'Günlük tamamlama',
             color: AppColors.ops,
           ),
           const SizedBox(height: 8),
-          const Wrap(
+          Wrap(
             spacing: 16,
             runSpacing: 4,
             children: [
@@ -100,7 +100,7 @@ class ReportDailyCompletionCard extends StatelessWidget {
                           barTouchData: const BarTouchData(enabled: false),
                           gridData: const FlGridData(show: false),
                           borderData: FlBorderData(
-                            border: const Border(
+                            border: Border(
                               bottom: BorderSide(color: AppColors.border),
                             ),
                           ),

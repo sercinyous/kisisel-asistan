@@ -18,6 +18,11 @@ Alt bar beş slotludur; beşi de gerçek ekrandır:
 - **Ayarlar** (Kokpit'ten): hedefler, bildirim tercihleri, sessiz saatler, ekip, bağlantı durumu.
   Ekranı açmak bildirim izni istemez; izin yalnızca "İzin iste" ile ya da bildirimler eşitlenirken sorulur.
 
+**Görünüm**: koyu (saf OLED siyah, varsayılan) ve açık (beyaz) tema. Ayarlar > Görünüm'den Sistem / Açık /
+Koyu seçilir; seçim hemen uygulanır, cihazda saklanır (Supabase'e yazılmaz) ve "Sistem" iPhone'un açık/koyu
+ayarını uygulama açıkken de izler. İki temanın ekran görüntüleri: `test/screenshots/out/` (01–15 koyu,
+16–30 açık).
+
 ## Klasör mimarisi (feature-first)
 
 ```
@@ -48,7 +53,8 @@ kisisel_asistan/
     │   ├── config/
     │   │   ├── env.dart                # --dart-define anahtarları
     │   │   └── app_targets.dart        # görev/not kategori listeleri
-    │   ├── theme/app_theme.dart        # koyu tema, renk sistemi
+    │   ├── theme/                      # app_theme.dart (koyu + açık palet, AppColors),
+    │   │                               # theme_mode.dart (tercih), app_theme_scope.dart (kök)
     │   ├── utils/date_utils.dart
     │   ├── widgets/                    # bento.dart, app_bottom_bar.dart
     │   └── services/
