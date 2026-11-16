@@ -47,6 +47,14 @@ definitions:
         case "$BUNDLE_ID" in
           com.ornek.*) echo "HATA: codemagic.yaml içindeki BUNDLE_ID hâlâ örnek değer." >&2; exit 1 ;;
         esac
+        # Uygulama adresi kendisi düzeltir; yine de yanlış değeri görünür kılmak için uyar.
+        case "$SUPABASE_URL" in
+          https://*) ;;
+          *) echo "HATA: SUPABASE_URL https:// ile başlamalı (ör. https://xxxx.supabase.co)." >&2; exit 1 ;;
+        esac
+        if [ -n "$(printf '%s' "$SUPABASE_URL" | sed -E 's#^https://[^/]+/?##')" ]; then
+          echo "UYARI: SUPABASE_URL bir yol içeriyor; uygulama yalnızca https://alan-adı kısmını kullanır."
+        fi
 
     # ios/ depoda tutulmuyorsa burada üretilir (Mac gerekmez). --org, BUNDLE_ID'nin
     # son parçası hariç kısmıdır; depoda ios/ varsa bu adım hiçbir şey yapmaz.
