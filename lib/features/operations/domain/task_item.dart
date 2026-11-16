@@ -11,6 +11,7 @@ class TaskItem {
     this.dueAt,
     this.remindAt,
     this.completedAt,
+    this.notify = true,
   });
 
   final String id;
@@ -23,6 +24,9 @@ class TaskItem {
   final DateTime? dueAt;
   final DateTime? remindAt;
   final DateTime? completedAt;
+
+  /// Kapalıysa görev için bildirim planlanmaz (formdaki "Hatırlat").
+  final bool notify;
 
   bool get isDone => status == 'done';
 
@@ -51,6 +55,7 @@ class TaskItem {
         dueAt: _date(map['due_at']),
         remindAt: _date(map['remind_at']),
         completedAt: _date(map['completed_at']),
+        notify: map['notify'] as bool? ?? true,
       );
 
   /// Formdan düzenlenebilen sütunlar. Durum ve tamamlanma zamanı
@@ -63,6 +68,7 @@ class TaskItem {
         'assignee': _blankToNull(assignee),
         'due_at': dueAt?.toUtc().toIso8601String(),
         'remind_at': remindAt?.toUtc().toIso8601String(),
+        'notify': notify,
       };
 
   /// `clear*` bayrakları ilgili alanı boşaltır (null vermek "değiştirme" demektir).
@@ -76,6 +82,7 @@ class TaskItem {
     DateTime? dueAt,
     DateTime? remindAt,
     DateTime? completedAt,
+    bool? notify,
     bool clearDescription = false,
     bool clearAssignee = false,
     bool clearDueAt = false,
@@ -93,6 +100,7 @@ class TaskItem {
         dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
         remindAt: clearRemindAt ? null : (remindAt ?? this.remindAt),
         completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+        notify: notify ?? this.notify,
       );
 
   static DateTime? _date(Object? value) =>

@@ -204,4 +204,36 @@ void main() {
     expect(tasks.reopenedIds, ['t2']);
     await drainSnackBar(tester);
   });
+
+  testWidgets('"Hatırlat" kapatılan görev notify = false ve hatırlatmasız kaydedilir',
+      (tester) async {
+    await pumpScreen(tester);
+    await tester.tap(
+      find.text('Haftalık vardiya çizelgesini yayınla ve ekibe duyur'),
+    );
+    await tester.pumpAndSettle();
+
+    final toggle = find.byKey(const Key('task-remind'));
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Kaydet'));
+    await tester.pumpAndSettle();
+
+    final saved = tasks.tasks.firstWhere((t) => t.id == 't1');
+    expect(saved.notify, isFalse);
+    expect(saved.remindAt, isNull);
+    expect(saved.dueAt, DateTime(2099, 1, 5, 15));
+
+    // Yeniden açıldığında anahtar kapalı görünür.
+    await tester.tap(
+      find.text('Haftalık vardiya çizelgesini yayınla ve ekibe duyur'),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(toggle);
+    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+    await drainSnackBar(tester);
+  });
 }

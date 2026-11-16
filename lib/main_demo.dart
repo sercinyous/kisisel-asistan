@@ -52,7 +52,10 @@ Future<void> main() async {
   await initializeDateFormatting(AppDates.locale);
   await _loadFonts();
 
-  final data = DemoData.seed(DateTime.now());
+  final data = DemoData.seed(
+    DateTime.now(),
+    regenerateDelay: const Duration(milliseconds: 900),
+  );
   final base = AppTheme.dark;
 
   runApp(

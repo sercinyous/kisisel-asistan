@@ -9,7 +9,8 @@ void main() {
   final now = DateTime(2026, 11, 16, 10);
   const defaults = UserSettings.defaults();
 
-  TaskItem task(String id, {DateTime? due, DateTime? remind, String status = 'todo'}) =>
+  TaskItem task(String id,
+          {DateTime? due, DateTime? remind, String status = 'todo', bool notify = true}) =>
       TaskItem(
         id: id,
         title: 'Görev $id',
@@ -18,6 +19,7 @@ void main() {
         status: status,
         dueAt: due,
         remindAt: remind,
+        notify: notify,
       );
 
   Routine monthly(String id, int day, {int? hour, int? minute}) => Routine(
@@ -182,5 +184,33 @@ void main() {
     expect(result.length, maxPendingNotifications);
     expect(result.first.sourceId, 't0');
     expect(result.last.sourceId, 't63');
+  });
+
+  group('görev hatırlatması kapalı (notify = false)', () {
+    final due = DateTime(2026, 11, 17, 15);
+
+    test('termini olsa da bildirim planlanmaz', () {
+      expect(plan(tasks: [task('t1', due: due, notify: false)]), isEmpty);
+    });
+
+    test('kayıtlı hatırlatma saati olsa da planlanmaz', () {
+      final remind = due.subtract(const Duration(minutes: 30));
+      expect(
+        plan(tasks: [task('t1', due: due, remind: remind, notify: false)]),
+        isEmpty,
+      );
+    });
+
+    test('açık görev etkilenmez: termin − varsayılan süre', () {
+      final result = plan(tasks: [
+        task('kapali', due: due, notify: false),
+        task('acik', due: due),
+      ]);
+      expect(result.map((p) => p.key), ['task:acik']);
+      expect(
+        result.single.fireAt,
+        due.subtract(Duration(minutes: defaults.eventRemindMinutes)),
+      );
+    });
   });
 }

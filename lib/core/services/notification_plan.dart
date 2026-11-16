@@ -96,7 +96,8 @@ List<PlannedNotification> buildNotificationPlan({
   }
 
   for (final t in tasks) {
-    if (t.isDone) continue;
+    // "Hatırlat" kapalı görev, termini olsa da bildirim almaz.
+    if (t.isDone || !t.notify) continue;
     final due = t.dueAt;
     final when = t.remindAt ??
         due?.subtract(Duration(minutes: settings.eventRemindMinutes));

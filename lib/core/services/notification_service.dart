@@ -107,6 +107,20 @@ class NotificationService {
     _ready = true;
   }
 
+  /// İzin durumunu pencere açmadan okur; Ayarlar ekranı yalnızca durumu
+  /// göstereceği için izin istemez.
+  Future<bool> hasPermission() async {
+    if (!_ready) return false;
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      return (await ios.checkPermissions())?.isEnabled ?? false;
+    }
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.areNotificationsEnabled() ?? false;
+  }
+
   /// iOS izin penceresini gösterir (daha önce yanıtlandıysa sessizce döner).
   Future<bool> requestPermission() async {
     if (!_ready) return false;

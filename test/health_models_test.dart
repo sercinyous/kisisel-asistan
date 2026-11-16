@@ -144,6 +144,20 @@ void main() {
       expect(map.containsKey('id'), isFalse);
     });
 
+    test('notify: varsayılan açık; yazılır, okunur, kopyada korunur', () {
+      expect(task.notify, isTrue);
+      expect(task.toWriteMap()['notify'], isTrue);
+
+      final off = task.copyWith(notify: false);
+      expect(off.toWriteMap()['notify'], isFalse);
+      expect(off.copyWith(title: 'x').notify, isFalse);
+
+      const row = {'id': 't9', 'title': 'Eski satır'};
+      // Sütunu olmayan (eski) satır bildirimli sayılır.
+      expect(TaskItem.fromMap(row).notify, isTrue);
+      expect(TaskItem.fromMap({...row, 'notify': false}).notify, isFalse);
+    });
+
     test('scheduledAt: termin, yoksa hatırlatma', () {
       expect(task.scheduledAt, DateTime(2026, 11, 20, 10));
       expect(task.copyWith(clearDueAt: true).scheduledAt,

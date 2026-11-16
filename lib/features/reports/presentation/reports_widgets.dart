@@ -1,0 +1,544 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/bento.dart';
+import '../../kokpit/presentation/kokpit_providers.dart';
+import '../../kokpit/presentation/kokpit_widgets.dart';
+import 'reports_format.dart';
+import 'reports_providers.dart';
+import 'reports_state.dart';
+
+const List<FontFeature> _tabular = [FontFeature.tabularFigures()];
+
+/// Dönem seçici: ‹ etiket ›. [onNext] `null` ise ileri gidilemez (gelecek).
+class ReportPeriodSwitcher extends StatelessWidget {
+  const ReportPeriodSwitcher({
+    super.key,
+    required this.label,
+    required this.onPrevious,
+    required this.onNext,
+    required this.previousTooltip,
+    required this.nextTooltip,
+    this.caption,
+  });
+
+  final String label;
+  final VoidCallback onPrevious;
+  final VoidCallback? onNext;
+  final String previousTooltip;
+  final String nextTooltip;
+
+  /// Etiketin altındaki kısa not ("Bu hafta", "Bugün").
+  final String? caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onPrevious,
+          tooltip: previousTooltip,
+          icon: const Icon(Icons.chevron_left_rounded),
+          color: AppColors.textSecondary,
+        ),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium,
+              ),
+              if (caption != null)
+                Text(
+                  caption!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: AppColors.textMuted),
+                ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: onNext,
+          tooltip: nextTooltip,
+          icon: const Icon(Icons.chevron_right_rounded),
+          color: AppColors.textSecondary,
+          disabledColor: AppColors.border,
+        ),
+      ],
+    );
+  }
+}
+
+/// Yüzde kartı (İş / Form): büyük yüzde, kısa döküm ve ilerleme çubuğu.
+class ReportRateCard extends StatelessWidget {
+  const ReportRateCard({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.rate,
+    required this.caption,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  /// 0..100; veri yoksa `null`.
+  final int? rate;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return BentoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          BentoLabel(icon: icon, label: label, color: color),
+          const SizedBox(height: 6),
+          Text(
+            ReportsFormat.rate(rate),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+              fontFeatures: _tabular,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            caption,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 10),
+          KokpitBar(value: (rate ?? 0) / 100, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+/// Izgaradaki tek sayı: küçük etiket + değer. Dar sütunda küçülür, taşmaz.
+class ReportStat extends StatelessWidget {
+  const ReportStat({super.key, required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            label,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: theme.textTheme.titleMedium?.copyWith(fontFeatures: _tabular),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Üçer sütunluk sayı ızgarası.
+class ReportStatGrid extends StatelessWidget {
+  const ReportStatGrid({super.key, required this.stats});
+
+  final List<ReportStat> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    const columns = 3;
+    return Column(
+      children: [
+        for (var start = 0; start < stats.length; start += columns) ...[
+          if (start > 0) const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = start; i < start + columns; i++) ...[
+                if (i > start) const SizedBox(width: 12),
+                Expanded(
+                  child: i < stats.length ? stats[i] : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Hedefli sayı satırı: etiket, değer, "/ hedef" ve ilerleme çubuğu.
+class ReportTargetRow extends StatelessWidget {
+  const ReportTargetRow({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.color,
+    this.target,
+    this.progress,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  /// "/ 2.000 kcal"; hedef yoksa `null`.
+  final String? target;
+
+  /// 0..1; hedef yoksa `null` (çubuk çizilmez).
+  final double? progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              value,
+              style:
+                  theme.textTheme.titleMedium?.copyWith(fontFeatures: _tabular),
+            ),
+            if (target != null) ...[
+              const SizedBox(width: 4),
+              Text(
+                target!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.textMuted,
+                  fontFeatures: _tabular,
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (progress != null) ...[
+          const SizedBox(height: 6),
+          KokpitBar(value: progress!, color: color, height: 6),
+        ],
+      ],
+    );
+  }
+}
+
+/// Yapay zekâ değerlendirme kartı ve (yeniden) oluşturma düğmesi.
+class ReportAiCard extends ConsumerWidget {
+  const ReportAiCard({
+    super.key,
+    required this.kind,
+    required this.date,
+    required this.title,
+    required this.emptyMessage,
+    required this.emptyHint,
+    required this.exists,
+    this.status = ReportAiStatus.pending,
+    this.summary,
+    this.generatedAt,
+  });
+
+  final ReportKind kind;
+
+  /// Dönem başı: haftalıkta Pazartesi, günlükte gün başı.
+  final DateTime date;
+  final String title;
+
+  /// Rapor yokken gösterilen başlık ve açıklama.
+  final String emptyMessage;
+  final String emptyHint;
+
+  /// Bu dönem için rapor satırı var mı?
+  final bool exists;
+  final ReportAiStatus status;
+  final String? summary;
+  final DateTime? generatedAt;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final ReportTarget target = (kind: kind, date: date);
+    final busy = ref.watch(
+      reportRegenerationProvider.select((s) => s.busy.contains(target)),
+    );
+    final error = ref.watch(
+      reportRegenerationProvider.select((s) => s.errors[target]),
+    );
+    final text = status == ReportAiStatus.ok ? summary : null;
+
+    final String buttonLabel;
+    if (error != null) {
+      buttonLabel = 'Tekrar dene';
+    } else if (exists) {
+      buttonLabel = 'Raporu yeniden oluştur';
+    } else {
+      buttonLabel = 'Raporu oluştur';
+    }
+
+    return BentoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BentoLabel(
+            icon: Icons.auto_awesome_rounded,
+            label: title,
+            color: AppColors.accent,
+            trailing: 'AI',
+          ),
+          const SizedBox(height: 10),
+          if (!exists)
+            _Notice(title: emptyMessage, detail: emptyHint)
+          else if (text != null)
+            _SummaryText(
+              parts: ReportsFormat.splitSummary(
+                text,
+                withSuggestions: kind == ReportKind.weekly,
+              ),
+            )
+          else if (status == ReportAiStatus.pending)
+            const _Notice(
+              title: 'Yorum hazırlanıyor',
+              detail: 'Sayılar hazır. Yorum gelmezse raporu yeniden oluştur.',
+            )
+          else
+            const _Notice(
+              title: 'Yorum üretilemedi',
+              detail: 'Sayılar kaydedildi. Yorum için raporu yeniden oluştur.',
+            ),
+          if (exists && generatedAt != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Oluşturuldu: ${AppDates.relativeDayTime(
+                generatedAt!,
+                now: ref.watch(kokpitClockProvider),
+              )}',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 18,
+                  color: AppColors.danger,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    error,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: AppColors.danger),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: busy ? null : () => runRegeneration(ref, kind, date),
+            child: busy
+                ? const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Flexible(child: Text('Oluşturuluyor…')),
+                    ],
+                  )
+                : Text(buttonLabel),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Notice extends StatelessWidget {
+  const _Notice({required this.title, required this.detail});
+
+  final String title;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          detail,
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryText extends StatelessWidget {
+  const _SummaryText({required this.parts});
+
+  final SummaryParts parts;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted =
+        theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(parts.body, style: theme.textTheme.bodyMedium),
+        for (final suggestion in parts.suggestions)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('•', style: muted),
+                const SizedBox(width: 8),
+                Expanded(child: Text(suggestion, style: muted)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// [ReportListCard] satırı.
+class ReportListEntry {
+  const ReportListEntry({
+    required this.key,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final Key key;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+}
+
+/// Geçmiş raporların dokunulabilir listesi (tek kart, ayraçlı satırlar).
+class ReportListCard extends StatelessWidget {
+  const ReportListCard({super.key, required this.icon, required this.entries});
+
+  final IconData icon;
+  final List<ReportListEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return BentoCard(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        children: [
+          for (final (index, entry) in entries.indexed) ...[
+            if (index > 0)
+              const Divider(
+                height: 1,
+                thickness: 0.5,
+                indent: AppSpacing.cardPadding,
+                endIndent: AppSpacing.cardPadding,
+              ),
+            InkWell(
+              key: entry.key,
+              onTap: entry.onTap,
+              child: ConstrainedBox(
+                // Dokunma hedefi en az 44pt.
+                constraints: const BoxConstraints(minHeight: 56),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.cardPadding,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(icon, size: 20, color: AppColors.ops),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.title,
+                              style: theme.textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              entry.subtitle,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontFeatures: _tabular,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: AppColors.textMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

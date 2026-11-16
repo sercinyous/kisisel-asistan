@@ -75,6 +75,9 @@ class FakeNotificationService implements NotificationService {
   FakeNotificationService({this.permissionGranted = true});
 
   bool permissionGranted;
+
+  /// İzin penceresinin kaç kez istendiği ([hasPermission] saymaz).
+  int permissionRequests = 0;
   final List<ReminderSchedule> scheduled = [];
   final List<String> cancelled = [];
   int resyncCount = 0;
@@ -87,7 +90,13 @@ class FakeNotificationService implements NotificationService {
   Future<void> init() async {}
 
   @override
-  Future<bool> requestPermission() async => permissionGranted;
+  Future<bool> hasPermission() async => permissionGranted;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return permissionGranted;
+  }
 
   @override
   Future<void> scheduleReminder(ReminderSchedule reminder) async {
@@ -319,6 +328,7 @@ class FakeTasksRepository implements TasksRepository {
     String? assignee,
     DateTime? dueAt,
     DateTime? remindAt,
+    bool notify = true,
   }) async {
     if (writeError != null) throw writeError!;
     final task = TaskItem(
@@ -331,6 +341,7 @@ class FakeTasksRepository implements TasksRepository {
       assignee: assignee,
       dueAt: dueAt,
       remindAt: remindAt,
+      notify: notify,
     );
     tasks = [...tasks, task];
     return task;
@@ -665,6 +676,7 @@ class FakeReportsRepository implements ReportsRepository {
     List<DailyReport>? daily,
     this.weeklyBuilder,
     this.dailyBuilder,
+    this.regenerateDelay = Duration.zero,
   })  : weekly = weekly ?? [],
         daily = daily ?? [];
 
@@ -676,6 +688,9 @@ class FakeReportsRepository implements ReportsRepository {
 
   /// [regenerate] sırasında günün raporunu üretir.
   DailyReport Function(DateTime day)? dailyBuilder;
+
+  /// [regenerate] bu kadar bekler; demoda butonun meşgul hâli görünsün diye.
+  final Duration regenerateDelay;
 
   /// Doluysa okumalar bu hatayı fırlatır.
   Object? fetchError;
@@ -740,6 +755,9 @@ class FakeReportsRepository implements ReportsRepository {
         : AppDates.startOfDay(date);
     regenerated.add((kind: kind, date: target));
     if (regenerateGate != null) await regenerateGate!.future;
+    if (regenerateDelay > Duration.zero) {
+      await Future<void>.delayed(regenerateDelay);
+    }
     if (regenerateError != null) throw regenerateError!;
     switch (kind) {
       case ReportKind.weekly:

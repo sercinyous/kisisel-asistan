@@ -10,3 +10,10 @@ insert into public.weekly_reports
   (user_id, week_start, tasks_total, tasks_done, task_completion_rate, ai_summary, metrics)
 values
   ('eeeeeeee-0000-0000-0000-000000000005', '2026-09-21', 5, 4, 80, 'eski özet', '{"eski": true}');
+
+-- Sürüm 2'de notify sütunu yoktu: "Hatırlat" kapalı görev = termin var, hatırlatma yok.
+insert into public.tasks (user_id, title, due_at, remind_at, source) values
+  ('eeeeeeee-0000-0000-0000-000000000005', 'eski-kapali', '2026-10-01 09:00+03', null, 'manual'),
+  ('eeeeeeee-0000-0000-0000-000000000005', 'eski-acik', '2026-10-01 09:00+03', '2026-10-01 08:30+03', 'manual'),
+  ('eeeeeeee-0000-0000-0000-000000000005', 'eski-ai', '2026-10-01 09:00+03', null, 'ai'),
+  ('eeeeeeee-0000-0000-0000-000000000005', 'eski-tarihsiz', null, null, 'manual');

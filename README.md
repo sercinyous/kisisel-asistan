@@ -3,6 +3,21 @@
 Tek kullanıcılı, iOS Ad-Hoc dağıtımlı Flutter uygulaması.
 Flutter · Riverpod · Supabase · Gemini (`gemini-2.5-flash`) · HealthKit · yerel bildirimler.
 
+## Özellikler
+
+Alt bar beş slotludur; beşi de gerçek ekrandır:
+
+- **Kokpit**: günün rutinleri, yaklaşan görevler, beslenme ve HealthKit özeti; ay takvimi ve ay özeti.
+- **Operasyon**: görevler (isteğe bağlı hatırlatma), sabitler (günlük/haftalık/aylık rutinler), notlar.
+- **+ (AI giriş)**: serbest metni Gemini ile ayrıştırır (görev, öğün, antrenman, kilo, not, rutin),
+  önizletir ve tek transaction'da kaydeder.
+- **Sağlık**: kilo grafiği (30/90 gün, hedef çizgisi, ölçüm ekleme/silme), haftalık antrenman planı ve
+  7 günlük adım, bugünün öğünleri ve antrenman günlüğü (ekle/düzenle/sil), HealthKit durumu.
+- **Raporlar**: sunucuda otomatik üretilen **haftalık** ve **günlük** raporlar; iş/form yüzdeleri,
+  günlük tamamlama grafiği, ortalamalar, AI değerlendirmesi, geçmiş listesi ve "Raporu yeniden oluştur".
+- **Ayarlar** (Kokpit'ten): hedefler, bildirim tercihleri, sessiz saatler, ekip, bağlantı durumu.
+  Ekranı açmak bildirim izni istemez; izin yalnızca "İzin iste" ile ya da bildirimler eşitlenirken sorulur.
+
 ## Klasör mimarisi (feature-first)
 
 ```
@@ -12,16 +27,22 @@ kisisel_asistan/
 ├── codemagic.yaml                      # iOS Ad-Hoc .ipa derlemesi
 ├── dart_defines.example.json           # yerel derleme anahtar şablonu
 ├── supabase/
-│   └── schema.sql                      # tablolar, indeksler, RLS, RPC, seed
+│   ├── schema.sql                      # tablolar, indeksler, RLS, RPC, rapor fonksiyonları, seed
+│   ├── cron.sql                        # otomatik raporların zamanlaması (pg_cron)
+│   ├── functions/generate-reports/     # Edge Function: rapor üretimi (Deno)
+│   └── tests/                          # şema ve rapor fonksiyonu testleri (yerel PostgreSQL)
 ├── ios_setup/
 │   ├── Info.plist.additions.xml        # Info.plist'e eklenecek anahtarlar
 │   └── Runner.entitlements             # HealthKit yetkisi
 ├── tool/
 │   └── configure_ios.sh                # ios/ klasörünü otomatik yapılandırır
-├── preview/
-│   └── operasyon-merkezi-onizleme.html # tarayıcı önizlemesi (örnek veri)
+├── preview/                            # onaylanan ekran taslakları (HTML)
+├── test/
+│   └── screenshots/                    # örnek veriyle ekran görüntüsü üretimi (out/*.png)
 └── lib/
     ├── main.dart                       # başlatma: Supabase, bildirim, tarih
+    ├── main_demo.dart                  # tarayıcı demosu (bellekte örnek veri, sunucu yok)
+    ├── demo/                           # demo_backend.dart (sahte depolar), demo_data.dart
     ├── app.dart                        # MaterialApp + yapılandırma hata ekranı
     ├── core/
     │   ├── config/
@@ -29,15 +50,16 @@ kisisel_asistan/
     │   │   └── app_targets.dart        # görev/not kategori listeleri
     │   ├── theme/app_theme.dart        # koyu tema, renk sistemi
     │   ├── utils/date_utils.dart
-    │   ├── widgets/module_roadmap_view.dart
+    │   ├── widgets/                    # bento.dart, app_bottom_bar.dart
     │   └── services/
     │       ├── supabase_providers.dart # client + oturum akışı
     │       ├── health_service.dart     # HealthKit: adım, uyku, aktif kalori
     │       ├── notification_service.dart # saatli hatırlatma + rutin bildirimi
+    │       ├── notification_plan.dart  # bekleyen bildirim planı (saf mantık)
     │       └── notification_sync.dart  # bekleyen bildirimleri veritabanıyla eşitler
     └── features/
         ├── auth/presentation/          # auth_gate.dart, sign_in_screen.dart
-        ├── shell/presentation/         # home_shell.dart (4 sekme + AI butonu)
+        ├── shell/presentation/         # home_shell.dart (5 slot: 4 sekme + AI butonu)
         ├── kokpit/
         │   ├── domain/kokpit_models.dart
         │   ├── data/kokpit_repository.dart
@@ -58,11 +80,17 @@ kisisel_asistan/
         │   ├── domain/                 # task_item.dart, note_item.dart
         │   ├── data/                   # tasks_repository.dart, notes_repository.dart
         │   └── presentation/           # operations_screen.dart
-        ├── health/
-        │   ├── domain/health_models.dart
+        ├── health/                     # Sağlık sekmesi
+        │   ├── domain/health_models.dart   # ölçüm, kilo, öğün (NutritionLog), antrenman (WorkoutLog)
         │   ├── data/health_repository.dart
-        │   └── presentation/           # health_screen.dart
-        └── reports/                    # sekme
+        │   └── presentation/           # health_providers.dart, health_screen.dart, weight_card.dart,
+        │                               # activity_cards.dart, meals_section.dart, workouts_section.dart,
+        │                               # *_form_sheet.dart, healthkit_card.dart
+        └── reports/                    # Raporlar sekmesi (günlük ve haftalık)
+            ├── domain/report_models.dart
+            ├── data/reports_repository.dart
+            └── presentation/           # reports_providers.dart, reports_state.dart, reports_screen.dart,
+                                        # reports_weekly_view.dart, reports_daily_view.dart, reports_chart.dart
 ```
 
 Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (repository) → `presentation/` (provider + ekran).
@@ -90,6 +118,98 @@ Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (re
    flutter run --dart-define-from-file=dart_defines.json
    ```
 
+## Otomatik raporlar
+
+Günlük ve haftalık raporlar sunucuda, uygulama kapalıyken de üretilir:
+
+```
+pg_cron ──HTTP──▶ Edge Function generate-reports ──▶ Gemini
+  her gün 23:45 İstanbul          → o günün günlük raporu   (daily_reports)
+  her Pazartesi 07:00 İstanbul    → biten haftanın raporu   (weekly_reports)
+Uygulama "Raporu yeniden oluştur" ──▶ aynı fonksiyon (kullanıcı oturumuyla)
+```
+
+Sayılar veritabanında hesaplanır (`report_daily_metrics`, `report_weekly_metrics`); Gemini yalnızca yorum
+metnini yazar. Gemini yanıt vermezse rapor sayılarla kaydedilir (`ai_status = 'failed'`), uygulama sayıları
+yine gösterir. Kurulum bir kez yapılır:
+
+1. **Şemayı güncelle**: SQL Editor'da `supabase/schema.sql` dosyasını (yeniden) çalıştır. Var olan veriyi
+   silmez; rapor tablolarını ve fonksiyonlarını ekler.
+2. **Supabase CLI'yi projeye bağla** (bilgisayarında, bu klasörde; `PROJE-REF` proje ayarlarındaki
+   "Reference ID"):
+   ```bash
+   supabase login
+   ```
+   ```bash
+   supabase link --project-ref PROJE-REF
+   ```
+3. **Gizli anahtarları ver.** `CRON_SECRET` için uzun, rastgele bir değer üret (örn. `openssl rand -hex 32`)
+   ve bir yere not et; 5. adımda aynısı gerekecek. `SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY`
+   fonksiyona Supabase tarafından kendiliğinden verilir, elle eklenmez.
+   ```bash
+   supabase secrets set GEMINI_API_KEY=AI-STUDIO-ANAHTARIN CRON_SECRET=URETTIGIN-DEGER
+   ```
+   İsteğe bağlı: `GEMINI_MODEL` (varsayılan `gemini-2.5-flash`).
+4. **Fonksiyonu dağıt.** Kimliği fonksiyonun kendisi doğrular (zamanlayıcı gizli anahtarı ya da kullanıcı
+   oturumu), bu yüzden geçidin JWT denetimi kapatılır:
+   ```bash
+   supabase functions deploy generate-reports --no-verify-jwt
+   ```
+5. **Vault değerlerini koy** (SQL Editor; kendi değerlerinle, bir kez):
+   ```sql
+   select vault.create_secret('https://PROJE-REF.supabase.co', 'project_url');
+   select vault.create_secret('URETTIGIN-DEGER', 'cron_secret');
+   ```
+6. **Zamanlamayı kur**: SQL Editor'da `supabase/cron.sql` dosyasını çalıştır. Sonunda iki iş listelenir
+   (`kisisel-asistan-gunluk-rapor`, `kisisel-asistan-haftalik-rapor`). Dosya yeniden çalıştırılabilir.
+7. **Bir kez elle dene** (tüm kullanıcılar için bugünün günlük raporu):
+   ```bash
+   curl -X POST "https://PROJE-REF.supabase.co/functions/v1/generate-reports" \
+     -H "Content-Type: application/json" \
+     -H "x-cron-secret: URETTIGIN-DEGER" \
+     -d '{"kind":"daily"}'
+   ```
+   Beklenen yanıt: `{"ok":true,"kind":"daily","date":"2026-11-16","users":1,"failed":0,"ai_failed":0}`.
+   `ai_failed` 1 ise rapor yazılmış ama Gemini yorumu üretilememiştir (anahtarı ve kotayı kontrol et).
+   Haftalık için gövde `{"kind":"weekly"}`; belirli bir gün/hafta için `"date":"2026-11-09"` eklenir
+   (gelecek tarih reddedilir). Sonuç: `select * from daily_reports order by report_date desc limit 1;`
+
+Notlar:
+- Rapor günü ve haftası `user_settings.timezone` (varsayılan `Europe/Istanbul`) saat dilimine göre kesilir.
+  `cron.sql` içindeki saatler UTC'dir ve İstanbul'a göre ayarlıdır; başka dilimde yaşıyorsan iki
+  zamanlamayı değiştir.
+- Uygulama rapor tablolarını yalnızca okur; satırları fonksiyon `service_role` ile yazar. Bu anahtar
+  yalnızca sunucudadır, uygulamaya konmaz.
+- Adım ve uyku, uygulama açıldığında HealthKit'ten eşitlenir; gün içinde uygulama hiç açılmadıysa o günün
+  raporunda bu alanlar boş kalır. "Raporu yeniden oluştur" eşitlemeden sonra sayıları günceller.
+- Zamanlayıcı çağrılarının sonucu: `select * from net._http_response order by created desc limit 5;`
+  İş geçmişi: `select * from cron.job_run_details order by start_time desc limit 5;`
+- Doğrulama durumu: `schema.sql` ve rapor fonksiyonları yerel PostgreSQL 16'da sınandı
+  (`supabase/tests/run_local.sh`); fonksiyonun mantığı ve istek akışı Node ile sınandı
+  (`node --experimental-strip-types --test supabase/functions/generate-reports/*.test.mjs`).
+  **Gerçek bir Supabase projesinde denenmedi:** `index.ts` (Deno + supabase-js bağlantısı) yalnızca tür
+  denetiminden geçti, çalıştırılmadı; `cron.sql` (pg_cron, pg_net, Vault) ve yukarıdaki `supabase` CLI
+  komutları bu ortamda çalıştırılamadı. İlk kurulumda 7. adımdaki elle denemeyi mutlaka yap.
+
+## Tarayıcı demosu ve ekran görüntüleri
+
+Sunucu olmadan, örnek veriyle (bugünün öğünleri, antrenmanlar, 90 günlük kilo serisi, 3 haftalık ve
+7 günlük rapor) çalışan demo. Depoda `web/` klasörü tutulmaz; deneme için ayrı bir kopyada üretilir:
+
+```bash
+flutter create --platforms=web --project-name kisisel_asistan .
+```
+```bash
+flutter build web -t lib/main_demo.dart --release --no-web-resources-cdn --no-wasm-dry-run
+```
+
+Ekran görüntüleri aynı örnek veriyle üretilir (`test/screenshots/out/*.png`). Görüntüler günün tarihine
+bağlı olduğu için bu test olağan `flutter test` çalışmasında atlanır, yalnızca şu komutla çalışır:
+
+```bash
+flutter test --update-goldens test/screenshots/app_screens_test.dart
+```
+
 ## Ad-Hoc dağıtım (Codemagic)
 
 1. developer.apple.com: App ID oluştur (HealthKit yetkisi açık), iPhone'unun UDID'ini Devices'a ekle,
@@ -102,6 +222,8 @@ Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (re
 
 ## Bilinmesi gerekenler
 
+- **Rapor yorumları için Gemini anahtarı sunucudadır** (Edge Function secret); aşağıdaki not yalnızca
+  AI hızlı giriş için geçerlidir.
 - **Gemini anahtarı uygulamanın içinde.** Tek kişilik Ad-Hoc dağıtım için kabul edilebilir; .ipa başka
   birine verilirse anahtar çıkarılabilir. Google AI Studio'da anahtara kota sınırı koy. Daha sıkı güvenlik
   için çağrı bir Supabase Edge Function arkasına alınabilir.
@@ -117,7 +239,13 @@ Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (re
   `monthly_lead_days` gün önce Gün ekranına düşer, günü geçince gecikmiş görünür, ay bitince kapanır.
   `routine_completions.completed_on` dönem anahtarıdır: günlük/haftalıkta o gün, aylıkta ayın 1'i.
 - **Şema yükseltmesi**: `supabase/schema.sql` yeniden çalıştırılabilir; eski sürümle kurulmuş veritabanını
-  veriyi silmeden yükseltir (yeni sütunlar, `user_settings`, iki örnek aylık iş).
+  veriyi silmeden yükseltir (yeni sütunlar, `user_settings`, iki örnek aylık iş, rapor tabloları,
+  `tasks.notify`). **Bu sürümü kurmadan önce şemayı yeniden çalıştır**: uygulama görev kaydederken
+  `notify` sütununu yazar.
+- **Görev hatırlatması**: formdaki "Hatırlat" kapalıysa (`tasks.notify = false`) görev termini olsa da
+  bildirim almaz. AI ile eklenen görevler bildirimlidir. Yükseltmede, eski formda hatırlatması kapalı
+  kaydedilmiş görevler (elle eklenmiş, termini var, hatırlatma saati yok) bir kez kapalıya çevrilir.
 - **iOS, HealthKit okuma izninin reddini uygulamaya bildirmez**; reddedilirse değerler 0 görünür.
 - **Ek tablolar**: istenen 6 tabloya ek olarak `routine_completions` (dönem bazlı tamamlanma),
-  `daily_health_metrics` (HealthKit günlük özeti) ve `user_settings` (kullanıcı başına tek satır) vardır.
+  `daily_health_metrics` (HealthKit günlük özeti), `user_settings` (kullanıcı başına tek satır) ve
+  `daily_reports` (günlük rapor) vardır.

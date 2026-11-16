@@ -149,11 +149,31 @@ create table if not exists public.tasks (
   assignee      text,
   due_at        timestamptz,
   remind_at     timestamptz,
+  -- false: "Hatırlat" kapalı; termini olsa da bildirim planlanmaz.
+  notify        boolean not null default true,
   completed_at  timestamptz,
   source        text not null default 'manual' check (source in ('manual', 'ai')),
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
+do $$
+begin
+  -- notify sütunu sürüm 3'te eklendi. Eski formda "Hatırlat" kapalı kaydedilen
+  -- görev (termin var, hatırlatma saati yok) yalnızca sütun eklenirken, bir kez
+  -- kapalıya çevrilir; AI girişleri hatırlatma saati olmadan da bildirimlidir.
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tasks'
+      and column_name = 'notify'
+  ) then
+    alter table public.tasks add column notify boolean not null default true;
+
+    update public.tasks set notify = false
+    where source = 'manual' and due_at is not null and remind_at is null;
+  end if;
+end;
+$$;
 
 -- ---------------------------------------------------------------------
 -- 3) notes — toplantı / fikir / kategori bazlı hızlı notlar
@@ -476,10 +496,11 @@ begin
   end if;
 
   with ins as (
-    insert into tasks (user_id, title, description, category, priority, assignee, due_at, remind_at, source)
+    -- AI ile eklenen görev her zaman bildirimlidir (notify = true).
+    insert into tasks (user_id, title, description, category, priority, assignee, due_at, remind_at, notify, source)
     select v_uid, x.title, x.description,
            coalesce(x.category, 'Kişisel'), coalesce(x.priority, 'medium'),
-           x.assignee, x.due_at, x.remind_at, 'ai'
+           x.assignee, x.due_at, x.remind_at, true, 'ai'
     from jsonb_to_recordset(coalesce(payload -> 'tasks', '[]'::jsonb))
       as x(title text, description text, category text, priority text,
            assignee text, due_at timestamptz, remind_at timestamptz)

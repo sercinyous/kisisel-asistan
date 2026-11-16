@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/health_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../../core/services/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -365,8 +366,11 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       );
   }
 
-  void _recheckNotifications() {
-    ref
+  /// İzin yalnızca kullanıcı butona basınca istenir; ekranı açmak sormaz.
+  Future<void> _requestNotifications() async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    await container.read(notificationServiceProvider).requestPermission();
+    container
       ..invalidate(notificationPermissionProvider)
       ..invalidate(notificationSyncProvider);
   }
@@ -771,10 +775,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           title: 'Bildirim izni',
           status: permissionText,
           statusColor: permissionColor,
-          actionLabel: 'Yeniden dene',
+          actionLabel: 'İzin iste',
           onAction: permission.isLoading || permission.valueOrNull == true
               ? null
-              : _recheckNotifications,
+              : _requestNotifications,
         ),
       ],
     );

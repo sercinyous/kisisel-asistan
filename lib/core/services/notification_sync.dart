@@ -10,10 +10,10 @@ import 'notification_service.dart';
 
 export 'notification_plan.dart';
 
-/// Bildirim izninin güncel durumu. iOS'ta daha önce yanıtlandıysa pencere
-/// açılmaz, yalnızca mevcut karar döner.
+/// Bildirim izninin güncel durumu. Yalnızca okur; izin penceresi açmaz
+/// (Ayarlar'ı açmak kullanıcıya izin sorusu göstermemeli).
 final notificationPermissionProvider = FutureProvider<bool>(
-  (ref) => ref.watch(notificationServiceProvider).requestPermission(),
+  (ref) => ref.watch(notificationServiceProvider).hasPermission(),
 );
 
 /// Bekleyen bildirimleri ayarlar ve veritabanıyla eşitler.
