@@ -25,8 +25,8 @@
 definitions:
   # Kendi App ID'n ve App Store Connect'teki uygulamanın sayısal Apple ID'si.
   vars: &app_vars
-    BUNDLE_ID: &bundle_id com.ornek.kisiselAsistan
-    APP_STORE_APPLE_ID: "0000000000"
+    BUNDLE_ID: &bundle_id com.sercinyous.kisiselasistan
+    APP_STORE_APPLE_ID: "6835616926"
 
   machine: &machine
     instance_type: mac_mini_m2
