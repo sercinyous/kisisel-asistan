@@ -24,6 +24,7 @@ import 'features/health/data/health_repository.dart';
 import 'features/kokpit/data/kokpit_repository.dart';
 import 'features/operations/data/notes_repository.dart';
 import 'features/operations/data/tasks_repository.dart';
+import 'features/reports/data/reports_repository.dart';
 import 'features/routines/data/routines_repository.dart';
 import 'features/settings/data/settings_repository.dart';
 import 'features/shell/presentation/home_shell.dart';
@@ -79,6 +80,7 @@ Future<void> main() async {
         notesRepositoryProvider.overrideWithValue(data.notes),
         healthRepositoryProvider.overrideWithValue(data.health),
         kokpitRepositoryProvider.overrideWithValue(data.kokpit),
+        reportsRepositoryProvider.overrideWithValue(data.reports),
         healthServiceProvider.overrideWithValue(
           FakeHealthService(
             HealthSnapshot(

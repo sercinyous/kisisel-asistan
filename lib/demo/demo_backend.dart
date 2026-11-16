@@ -14,6 +14,7 @@ import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/operations/domain/note_item.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
+import 'package:kisisel_asistan/features/reports/data/reports_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
@@ -125,18 +126,35 @@ class FakeHealthService implements HealthService {
 }
 
 /// Supabase'e gitmeyen Kokpit deposu (yalnızca günün beslenme özeti).
+/// [health] verilirse özet o deponun öğün kayıtlarından hesaplanır; böylece
+/// Sağlık sekmesinde eklenen öğün Kokpit'e de yansır (demo).
 class FakeKokpitRepository implements KokpitRepository {
-  FakeKokpitRepository({this.nutrition = const NutritionSummary(), this.error});
+  FakeKokpitRepository({
+    this.nutrition = const NutritionSummary(),
+    this.error,
+    this.health,
+  });
 
   NutritionSummary nutrition;
 
   /// Doluysa okuma bu hatayı fırlatır.
   Object? error;
 
+  FakeHealthRepository? health;
+
   @override
   Future<NutritionSummary> fetchNutritionFor(DateTime day) async {
     if (error != null) throw error!;
-    return nutrition;
+    final source = health;
+    if (source == null) return nutrition;
+    final logs = await source.fetchNutritionLogs(day);
+    return NutritionSummary(
+      calories: logs.fold<double>(0, (sum, l) => sum + l.calories),
+      proteinG: logs.fold<double>(0, (sum, l) => sum + l.proteinG),
+      carbsG: logs.fold<double>(0, (sum, l) => sum + l.carbsG),
+      fatG: logs.fold<double>(0, (sum, l) => sum + l.fatG),
+      entryCount: logs.length,
+    );
   }
 }
 
@@ -421,27 +439,42 @@ class FakeNotesRepository implements NotesRepository {
   }
 }
 
-/// Bellekte çalışan sağlık deposu.
+/// Bellekte çalışan sağlık deposu. Yazmalar [nutritionLogs], [workouts] ve
+/// [weights] üzerinde gerçekten uygulanır; sonraki okumalar güncel durumu görür.
 class FakeHealthRepository implements HealthRepository {
   FakeHealthRepository({
     List<DailyHealthMetric>? metrics,
     List<WeightEntry>? weights,
     List<DailyNutritionTotal>? nutrition,
+    List<NutritionLog>? nutritionLogs,
+    List<WorkoutLog>? workouts,
   })  : metrics = metrics ?? [],
         weights = weights ?? [],
-        nutrition = nutrition ?? [];
+        nutrition = nutrition ?? [],
+        nutritionLogs = nutritionLogs ?? [],
+        workouts = workouts ?? [];
 
   List<DailyHealthMetric> metrics;
   List<WeightEntry> weights;
+
+  /// Hazır gün toplamları (kalem kalem kaydı olmayan geçmiş günler için).
+  /// [fetchNutritionTotals] bunlara [nutritionLogs]'un toplamını ekler.
   List<DailyNutritionTotal> nutrition;
+  List<NutritionLog> nutritionLogs;
+  List<WorkoutLog> workouts;
 
   /// Doluysa okumalar bu hatayı fırlatır.
   Object? fetchError;
+
+  /// Doluysa yazmalar (öğün, antrenman, kilo) bu hatayı fırlatır.
+  Object? writeError;
 
   /// Doluysa [upsertHealthMetrics] bu hatayı fırlatır.
   Object? upsertError;
 
   final List<HealthSnapshot> upsertedHealth = [];
+  final List<String> deletedIds = [];
+  int _nextId = 1;
 
   @override
   Future<List<DailyHealthMetric>> fetchDailyMetrics(
@@ -472,10 +505,111 @@ class FakeHealthRepository implements HealthRepository {
     DateTime to,
   ) async {
     if (fetchError != null) throw fetchError!;
-    return [
+    final byDay = <DateTime, DailyNutritionTotal>{
       for (final n in nutrition)
-        if (!n.day.isBefore(AppDates.startOfDay(from)) && n.day.isBefore(to)) n,
-    ]..sort((a, b) => a.day.compareTo(b.day));
+        if (!n.day.isBefore(AppDates.startOfDay(from)) && n.day.isBefore(to))
+          n.day: n,
+    };
+    for (final log in nutritionLogs) {
+      if (log.eatenAt.isBefore(from) || !log.eatenAt.isBefore(to)) continue;
+      final day = AppDates.startOfDay(log.eatenAt);
+      final sum = byDay[day] ?? DailyNutritionTotal(day: day);
+      byDay[day] = DailyNutritionTotal(
+        day: day,
+        calories: sum.calories + log.calories,
+        proteinG: sum.proteinG + log.proteinG,
+        carbsG: sum.carbsG + log.carbsG,
+        fatG: sum.fatG + log.fatG,
+        entryCount: sum.entryCount + 1,
+      );
+    }
+    return byDay.values.toList()..sort((a, b) => a.day.compareTo(b.day));
+  }
+
+  @override
+  Future<List<NutritionLog>> fetchNutritionLogs(DateTime day) async {
+    if (fetchError != null) throw fetchError!;
+    final start = AppDates.startOfDay(day);
+    final end = AppDates.endOfDay(day);
+    return [
+      for (final log in nutritionLogs)
+        if (!log.eatenAt.isBefore(start) && log.eatenAt.isBefore(end)) log,
+    ]..sort((a, b) => a.eatenAt.compareTo(b.eatenAt));
+  }
+
+  @override
+  Future<NutritionLog> createNutritionLog(NutritionLog log) async {
+    if (writeError != null) throw writeError!;
+    final created = log.copyWith(id: 'nutrition-${_nextId++}', source: 'manual');
+    nutritionLogs = [...nutritionLogs, created];
+    return created;
+  }
+
+  @override
+  Future<NutritionLog> updateNutritionLog(NutritionLog log) async {
+    if (writeError != null) throw writeError!;
+    nutritionLogs = [
+      for (final l in nutritionLogs) l.id == log.id ? log : l,
+    ];
+    return log;
+  }
+
+  @override
+  Future<void> deleteNutritionLog(String id) async {
+    if (writeError != null) throw writeError!;
+    deletedIds.add(id);
+    nutritionLogs = nutritionLogs.where((l) => l.id != id).toList();
+  }
+
+  @override
+  Future<List<WorkoutLog>> fetchWorkouts(DateTime from, DateTime to) async {
+    if (fetchError != null) throw fetchError!;
+    return [
+      for (final w in workouts)
+        if (!w.loggedAt.isBefore(from) && w.loggedAt.isBefore(to)) w,
+    ]..sort((a, b) => b.loggedAt.compareTo(a.loggedAt));
+  }
+
+  @override
+  Future<WorkoutLog> createWorkout(WorkoutLog workout) async {
+    if (writeError != null) throw writeError!;
+    final created =
+        workout.copyWith(id: 'workout-${_nextId++}', source: 'manual');
+    workouts = [...workouts, created];
+    return created;
+  }
+
+  @override
+  Future<WorkoutLog> updateWorkout(WorkoutLog workout) async {
+    if (writeError != null) throw writeError!;
+    workouts = [for (final w in workouts) w.id == workout.id ? workout : w];
+    return workout;
+  }
+
+  @override
+  Future<void> deleteWorkout(String id) async {
+    if (writeError != null) throw writeError!;
+    deletedIds.add(id);
+    workouts = workouts.where((w) => w.id != id).toList();
+  }
+
+  @override
+  Future<WeightEntry> addWeight(double weightKg, {DateTime? at}) async {
+    if (writeError != null) throw writeError!;
+    final entry = WeightEntry(
+      id: 'weight-${_nextId++}',
+      weightKg: weightKg,
+      loggedAt: at ?? DateTime.now(),
+    );
+    weights = [...weights, entry];
+    return entry;
+  }
+
+  @override
+  Future<void> deleteWeight(String id) async {
+    if (writeError != null) throw writeError!;
+    deletedIds.add(id);
+    weights = weights.where((w) => w.id != id).toList();
   }
 
   @override
@@ -519,5 +653,111 @@ class FakeSettingsRepository implements SettingsRepository {
     saved.add(value);
     settings = value;
     return value;
+  }
+}
+
+/// Bellekte çalışan rapor deposu. Gerçekte raporları sunucu üretir; burada
+/// [regenerate], [weeklyBuilder] / [dailyBuilder] verilmişse onların ürettiği
+/// raporu listeye yazar (yoksa yalnızca çağrıyı kaydeder).
+class FakeReportsRepository implements ReportsRepository {
+  FakeReportsRepository({
+    List<WeeklyReport>? weekly,
+    List<DailyReport>? daily,
+    this.weeklyBuilder,
+    this.dailyBuilder,
+  })  : weekly = weekly ?? [],
+        daily = daily ?? [];
+
+  List<WeeklyReport> weekly;
+  List<DailyReport> daily;
+
+  /// [regenerate] sırasında haftanın (Pazartesi) raporunu üretir.
+  WeeklyReport Function(DateTime weekStart)? weeklyBuilder;
+
+  /// [regenerate] sırasında günün raporunu üretir.
+  DailyReport Function(DateTime day)? dailyBuilder;
+
+  /// Doluysa okumalar bu hatayı fırlatır.
+  Object? fetchError;
+
+  /// Doluysa [regenerate] bu hatayı fırlatır (rapor değişmez).
+  Object? regenerateError;
+
+  /// Doluysa [regenerate] bu tamamlanana kadar bekler.
+  Completer<void>? regenerateGate;
+
+  /// [regenerate] çağrıları; `date` haftalıkta Pazartesi'ye indirgenmiştir.
+  final List<({ReportKind kind, DateTime date})> regenerated = [];
+
+  @override
+  Future<WeeklyReport?> fetchWeekly(DateTime weekStart) async {
+    if (fetchError != null) throw fetchError!;
+    final monday = AppDates.weekStart(weekStart);
+    for (final report in weekly) {
+      if (report.weekStart == monday) return report;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<WeeklyReport>> fetchWeeklyList({int limit = 12}) async {
+    if (fetchError != null) throw fetchError!;
+    final sorted = [...weekly]
+      ..sort((a, b) => b.weekStart.compareTo(a.weekStart));
+    return sorted.take(limit).toList();
+  }
+
+  @override
+  Future<DailyReport?> fetchDaily(DateTime day) async {
+    if (fetchError != null) throw fetchError!;
+    final target = AppDates.startOfDay(day);
+    for (final report in daily) {
+      if (report.reportDate == target) return report;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<DailyReport>> fetchDailyList(DateTime from, DateTime to) async {
+    if (fetchError != null) throw fetchError!;
+    final start = AppDates.startOfDay(from);
+    final end = AppDates.startOfDay(to);
+    return [
+      for (final report in daily)
+        if (!report.reportDate.isBefore(start) &&
+            !report.reportDate.isAfter(end))
+          report,
+    ]..sort((a, b) => b.reportDate.compareTo(a.reportDate));
+  }
+
+  @override
+  Future<void> regenerate({
+    required ReportKind kind,
+    required DateTime date,
+  }) async {
+    final target = kind == ReportKind.weekly
+        ? AppDates.weekStart(date)
+        : AppDates.startOfDay(date);
+    regenerated.add((kind: kind, date: target));
+    if (regenerateGate != null) await regenerateGate!.future;
+    if (regenerateError != null) throw regenerateError!;
+    switch (kind) {
+      case ReportKind.weekly:
+        final build = weeklyBuilder;
+        if (build == null) return;
+        weekly = [
+          for (final r in weekly)
+            if (r.weekStart != target) r,
+          build(target),
+        ];
+      case ReportKind.daily:
+        final build = dailyBuilder;
+        if (build == null) return;
+        daily = [
+          for (final r in daily)
+            if (r.reportDate != target) r,
+          build(target),
+        ];
+    }
   }
 }

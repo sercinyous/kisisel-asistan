@@ -101,4 +101,23 @@ void main() {
       expect(at(23, 59), 'İyi akşamlar');
     });
   });
+
+  group('weekStart / addDays', () {
+    test('haftanın Pazartesi gece yarısı', () {
+      expect(AppDates.weekStart(DateTime(2026, 11, 16, 14, 30)),
+          DateTime(2026, 11, 16)); // Pazartesi
+      expect(AppDates.weekStart(DateTime(2026, 11, 18)), DateTime(2026, 11, 16));
+      expect(AppDates.weekStart(DateTime(2026, 11, 22, 23, 59)),
+          DateTime(2026, 11, 16)); // Pazar
+    });
+    test('ay ve yıl sınırını aşar', () {
+      expect(AppDates.weekStart(DateTime(2026, 11, 1)), DateTime(2026, 10, 26));
+      expect(AppDates.weekStart(DateTime(2027, 1, 1)), DateTime(2026, 12, 28));
+    });
+    test('addDays takvim günü ekler', () {
+      expect(AppDates.addDays(DateTime(2026, 11, 30), 1), DateTime(2026, 12, 1));
+      expect(AppDates.addDays(DateTime(2026, 3, 1), -1), DateTime(2026, 2, 28));
+      expect(AppDates.addDays(DateTime(2026, 11, 16), 7), DateTime(2026, 11, 23));
+    });
+  });
 }

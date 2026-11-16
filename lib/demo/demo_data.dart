@@ -3,9 +3,9 @@ import '../features/ai_quick_add/data/quick_add_repository.dart';
 import '../features/ai_quick_add/domain/parsed_entry.dart';
 import '../features/ai_quick_add/domain/quick_add_mode.dart';
 import '../features/health/data/health_repository.dart';
-import '../features/kokpit/domain/kokpit_models.dart';
 import '../features/operations/domain/note_item.dart';
 import '../features/operations/domain/task_item.dart';
+import '../features/reports/domain/report_models.dart';
 import '../features/routines/domain/routine.dart';
 import 'demo_backend.dart';
 
@@ -18,6 +18,7 @@ class DemoData {
     required this.health,
     required this.kokpit,
     required this.settings,
+    required this.reports,
   });
 
   final FakeRoutinesRepository routines;
@@ -26,6 +27,7 @@ class DemoData {
   final FakeHealthRepository health;
   final FakeKokpitRepository kokpit;
   final FakeSettingsRepository settings;
+  final FakeReportsRepository reports;
 
   int _seq = 0;
   String nextId(String prefix) => '$prefix-demo-${_seq++}';
@@ -75,6 +77,92 @@ class DemoData {
           dueAt: due,
           remindAt: due.subtract(const Duration(minutes: 30)),
         );
+
+    final thisWeek = AppDates.weekStart(today);
+    final health = FakeHealthRepository(
+      // Son 40 gün: Ay özeti ve 7 günlük adım grafiği ay başında da dolu olsun.
+      metrics: [
+        for (var back = 39; back >= 0; back--)
+          _demoMetric(AppDates.addDays(today, -back)),
+      ],
+      // 90 günde 86.2 → 83.6 kg; üç günde bir ölçüm, küçük dalgalanmayla.
+      weights: [
+        for (var back = 90; back >= 3; back -= 3)
+          WeightEntry(
+            id: 'w-$back',
+            weightKg: double.parse(
+              (83.6 + back * 0.029 + ((back ~/ 3) % 3 - 1) * 0.15)
+                  .toStringAsFixed(1),
+            ),
+            loggedAt: AppDates.addDays(today, -back).add(
+              const Duration(hours: 8),
+            ),
+          ),
+        WeightEntry(
+          id: 'w-0',
+          weightKg: 83.6,
+          loggedAt: today.add(const Duration(hours: 8)),
+        ),
+      ],
+      // Geçmiş günler toplam olarak; bugünün öğünleri kalem kalem.
+      nutrition: [
+        for (var back = 39; back >= 1; back--)
+          _demoNutrition(AppDates.addDays(today, -back)),
+      ],
+      nutritionLogs: [
+        NutritionLog(
+          id: 'n-1',
+          mealType: 'breakfast',
+          foodName: 'Yulaf ezmesi',
+          quantityText: '70 gr',
+          calories: 264,
+          proteinG: 9,
+          carbsG: 46,
+          fatG: 5,
+          eatenAt: today.add(const Duration(hours: 8, minutes: 10)),
+        ),
+        NutritionLog(
+          id: 'n-2',
+          mealType: 'breakfast',
+          foodName: 'Yumurta',
+          quantityText: '2 adet',
+          calories: 156,
+          proteinG: 13,
+          carbsG: 1,
+          fatG: 11,
+          eatenAt: today.add(const Duration(hours: 8, minutes: 10)),
+        ),
+        NutritionLog(
+          id: 'n-3',
+          mealType: 'lunch',
+          foodName: 'Tavuk göğsü',
+          quantityText: '200 gr',
+          calories: 330,
+          proteinG: 62,
+          carbsG: 0,
+          fatG: 7,
+          eatenAt: today.add(const Duration(hours: 13, minutes: 5)),
+          source: 'ai',
+        ),
+        NutritionLog(
+          id: 'n-4',
+          mealType: 'lunch',
+          foodName: 'Tam çavdar ekmeği',
+          quantityText: '2 dilim',
+          calories: 130,
+          proteinG: 5,
+          carbsG: 24,
+          fatG: 2,
+          eatenAt: today.add(const Duration(hours: 13, minutes: 5)),
+          source: 'ai',
+        ),
+      ],
+      // Son iki haftanın antrenmanları (plan günlerine göre; birkaçı kaçmış).
+      workouts: [
+        for (var back = 13; back >= 1; back--)
+          if (_demoWorkout(AppDates.addDays(today, -back)) case final w?) w,
+      ],
+    );
 
     return DemoData._(
       routines: FakeRoutinesRepository(
@@ -137,52 +225,255 @@ class DemoData {
           createdAt: now,
         ),
       ]),
-      health: FakeHealthRepository(
-        metrics: [
-          for (var d = 1; d <= now.day; d++)
-            DailyHealthMetric(
-              day: DateTime(now.year, now.month, d),
-              steps: 6200 + (d * 517) % 4800,
-              activeKcal: 320 + (d * 37) % 260,
-              sleepMinutes: 390 + (d * 23) % 90,
-            ),
-        ],
-        weights: [
-          WeightEntry(
-            id: 'w1',
-            weightKg: 84.5,
-            loggedAt: DateTime(now.year, now.month, 1, 8),
-          ),
-          WeightEntry(
-            id: 'w2',
-            weightKg: 83.6,
-            loggedAt: today.add(const Duration(hours: 8)),
-          ),
-        ],
-        nutrition: [
-          for (var d = 1; d <= now.day; d++)
-            DailyNutritionTotal(
-              day: DateTime(now.year, now.month, d),
-              calories: 1850 + (d * 61) % 320,
-              proteinG: 150 + (d * 7) % 30,
-              carbsG: 170,
-              fatG: 60,
-              entryCount: 4,
-            ),
-        ],
-      ),
-      kokpit: FakeKokpitRepository(
-        nutrition: const NutritionSummary(
-          calories: 1240,
-          proteinG: 96,
-          carbsG: 118,
-          fatG: 38,
-          entryCount: 3,
-        ),
-      ),
+      health: health,
+      // Kokpit'in beslenme özeti Sağlık sekmesindeki öğün kayıtlarından gelir.
+      kokpit: FakeKokpitRepository(health: health),
       settings: FakeSettingsRepository(),
+      reports: FakeReportsRepository(
+        // Bu hafta (kısmi) + önceki iki hafta.
+        weekly: [
+          for (var back = 2; back >= 0; back--)
+            demoWeeklyReport(AppDates.addDays(thisWeek, -7 * back), now),
+        ],
+        // Dünle biten 7 gün; bugünün raporu henüz üretilmemiş görünür.
+        daily: [
+          for (var back = 7; back >= 1; back--)
+            demoDailyReport(AppDates.addDays(today, -back), now),
+        ],
+        weeklyBuilder: (weekStart) => demoWeeklyReport(weekStart, DateTime.now()),
+        dailyBuilder: (day) => demoDailyReport(day, DateTime.now()),
+      ),
     );
   }
+}
+
+// --- Demo sayıları: tarihe bağlıdır, sayfa her açıldığında aynı çıkar. --------
+
+int _seed(DateTime day) => day.month * 31 + day.day;
+
+DailyHealthMetric _demoMetric(DateTime day) {
+  final d = _seed(day);
+  return DailyHealthMetric(
+    day: day,
+    steps: 6200 + (d * 517) % 4800,
+    activeKcal: 320 + (d * 37) % 260,
+    sleepMinutes: 390 + (d * 23) % 90,
+  );
+}
+
+DailyNutritionTotal _demoNutrition(DateTime day) {
+  final d = _seed(day);
+  return DailyNutritionTotal(
+    day: day,
+    calories: 1850.0 + (d * 61) % 320,
+    proteinG: 146.0 + (d * 7) % 34,
+    carbsG: 170,
+    fatG: 60,
+    entryCount: 4,
+  );
+}
+
+/// Plan: ağırlık Pzt/Sal/Per/Cum, kickboks Çar, koşu Cmt, halı saha Paz.
+/// Her dört günden biri kaçmış sayılır (`null`).
+WorkoutLog? _demoWorkout(DateTime day) {
+  if (_seed(day) % 4 == 0) return null;
+  final (type, title, hour, minutes, kcal, km) = switch (day.weekday) {
+    DateTime.wednesday => ('kickboxing', 'Kickboks', 19, 60, 540, null),
+    DateTime.saturday => ('running', 'Koşu', 10, 40, 420, 6.5),
+    DateTime.sunday => ('football', 'Halı saha', 20, 60, 480, null),
+    _ => ('weights', 'Ağırlık antrenmanı', 19, 45, 310, null),
+  };
+  return WorkoutLog(
+    id: 'wo-${AppDates.ymd(day)}',
+    workoutType: type,
+    title: title,
+    durationMin: minutes,
+    distanceKm: km,
+    caloriesBurned: kcal,
+    loggedAt: day.add(Duration(hours: hour, minutes: 30)),
+  );
+}
+
+/// Sunucunun ürettiği `metrics` biçiminde bir günün sayıları. Gelecek gün
+/// boştur (oranlar `null`).
+Map<String, dynamic> _demoDayJson(DateTime day, DateTime today) {
+  if (day.isAfter(today)) {
+    return {
+      'date': AppDates.ymd(day),
+      'work_rate': null,
+      'form_rate': null,
+      'calories': 0,
+      'protein_g': 0,
+      'steps': 0,
+      'sleep_minutes': 0,
+      'workouts': 0,
+    };
+  }
+  final d = _seed(day);
+  final metric = _demoMetric(day);
+  final nutrition = _demoNutrition(day);
+  final workedOut = _demoWorkout(day) != null;
+  // Hedef 170 g; eşik %90 = 153 g.
+  final proteinHit = nutrition.proteinG >= 153;
+  return {
+    'date': AppDates.ymd(day),
+    'work_rate': 58 + (d * 13) % 40,
+    'form_rate': ((workedOut ? 1 : 0) + (proteinHit ? 1 : 0)) * 50,
+    'calories': nutrition.calories,
+    'protein_g': nutrition.proteinG,
+    'steps': metric.steps,
+    'sleep_minutes': metric.sleepMinutes,
+    'workouts': workedOut ? 1 : 0,
+  };
+}
+
+const Map<String, dynamic> _demoTargets = {
+  'calories': 2000,
+  'protein_g': 170,
+  'steps': 10000,
+  'sleep_minutes': 450,
+};
+
+/// Demo haftalık raporu ([weekStart] Pazartesi). İçinde bulunulan haftada
+/// yalnızca geçen günler sayılır.
+WeeklyReport demoWeeklyReport(DateTime weekStart, DateTime now) {
+  final today = AppDates.startOfDay(now);
+  final days = [
+    for (var i = 0; i < 7; i++)
+      _demoDayJson(AppDates.addDays(weekStart, i), today),
+  ];
+  final elapsed = days.where((d) => d['work_rate'] != null).toList();
+  final n = elapsed.length;
+  int sum(String key) =>
+      elapsed.fold<num>(0, (total, d) => total + (d[key] as num)).round();
+  int avg(String key) => n == 0 ? 0 : (sum(key) / n).round();
+
+  final workouts = sum('workouts');
+  final proteinDays = elapsed.where((d) => (d['protein_g'] as num) >= 153).length;
+  final calorieDays = elapsed
+      .where((d) =>
+          (d['calories'] as num) >= 1700 && (d['calories'] as num) <= 2200)
+      .length;
+  final tasksTotal = n == 0 ? 0 : 5 + n;
+  final tasksDone = (tasksTotal * avg('work_rate') / 100).round();
+  final routinesPlanned = n * 7;
+  final routinesDone = (routinesPlanned * avg('work_rate') / 100).round();
+  // Haftada yaklaşık 0.2 kg iniş: demo kilo serisiyle aynı eğim.
+  final weeksAgo = AppDates.weekStart(today).difference(weekStart).inDays ~/ 7;
+  final endKg = 83.6 + weeksAgo * 0.2;
+
+  final metrics = <String, dynamic>{
+    'period': {
+      'start': AppDates.ymd(weekStart),
+      'end': AppDates.ymd(AppDates.addDays(weekStart, 6)),
+    },
+    'work': {
+      'tasks_total': tasksTotal,
+      'tasks_done': tasksDone,
+      'routines_planned': routinesPlanned,
+      'routines_done': routinesDone,
+      'rate': n == 0 ? null : avg('work_rate'),
+    },
+    'form': {
+      'workouts_planned': n,
+      'workouts_done': workouts,
+      'protein_days_hit': proteinDays,
+      'calorie_days_in_range': calorieDays,
+      'rate': n == 0 ? null : (100 * (workouts + proteinDays) / (2 * n)).round(),
+    },
+    'nutrition': {
+      'calories': avg('calories'),
+      'protein_g': avg('protein_g'),
+      'carbs_g': n == 0 ? 0 : 170,
+      'fat_g': n == 0 ? 0 : 60,
+      'days_logged': n,
+    },
+    'health': {
+      'steps': avg('steps'),
+      'sleep_minutes': avg('sleep_minutes'),
+      'active_kcal': n == 0 ? 0 : 430,
+      'days_with_data': n,
+    },
+    'weight': {
+      'start_kg': n == 0 ? null : endKg + 0.2,
+      'end_kg': n == 0 ? null : endKg,
+      'change_kg': n == 0 ? null : -0.2,
+    },
+    'targets': _demoTargets,
+    'days': days,
+  };
+  final parsed = ReportMetrics.fromJson(metrics);
+  return WeeklyReport(
+    weekStart: weekStart,
+    metrics: parsed,
+    aiSummary: n == 0
+        ? null
+        : 'İş tarafında ${(parsed.workRate ?? 0) >= 75 ? 'güçlü' : 'orta'} bir hafta: '
+            'görevlerin $tasksDone / $tasksTotal kadarı kapandı, rutinler '
+            '%${parsed.routineRate ?? 0} düzeyinde. Form tarafında $workouts antrenman '
+            'yapıldı, protein hedefi $proteinDays gün tuttu.\n'
+            'Kaçan antrenmanı sabaha al.\n'
+            'Öğle öğününe 30 g protein ekle.\n'
+            'Hafta sonu için uyku saatini sabitle.',
+    aiStatus: n == 0 ? ReportAiStatus.failed : ReportAiStatus.ok,
+    generatedAt: now,
+  );
+}
+
+/// Demo günlük raporu.
+DailyReport demoDailyReport(DateTime day, DateTime now) {
+  final today = AppDates.startOfDay(now);
+  final json = _demoDayJson(day, today);
+  final metric = _demoMetric(day);
+  final d = _seed(day);
+  final workedOut = json['workouts'] == 1;
+  final proteinHit = (json['protein_g'] as num) >= 153;
+  final calories = json['calories'] as num;
+  final tasksTotal = 1 + d % 3;
+  final workRate = json['work_rate'] as int? ?? 0;
+  final metrics = <String, dynamic>{
+    'period': {'start': AppDates.ymd(day), 'end': AppDates.ymd(day)},
+    'work': {
+      'tasks_total': tasksTotal,
+      'tasks_done': (tasksTotal * workRate / 100).round(),
+      'routines_planned': 7,
+      'routines_done': (7 * workRate / 100).round(),
+      'rate': json['work_rate'],
+    },
+    'form': {
+      'workouts_planned': 1,
+      'workouts_done': json['workouts'],
+      'protein_days_hit': proteinHit ? 1 : 0,
+      'calorie_days_in_range': calories >= 1700 && calories <= 2200 ? 1 : 0,
+      'rate': json['form_rate'],
+    },
+    'nutrition': {
+      'calories': calories,
+      'protein_g': json['protein_g'],
+      'carbs_g': 170,
+      'fat_g': 60,
+      'days_logged': 1,
+    },
+    'health': {
+      'steps': metric.steps,
+      'sleep_minutes': metric.sleepMinutes,
+      'active_kcal': metric.activeKcal,
+      'days_with_data': 1,
+    },
+    'weight': {'start_kg': null, 'end_kg': null, 'change_kg': null},
+    'targets': _demoTargets,
+  };
+  return DailyReport(
+    reportDate: day,
+    metrics: ReportMetrics.fromJson(metrics),
+    aiSummary: 'İşlerin %$workRate kadarı tamamlandı. '
+        '${workedOut ? 'Antrenman yapıldı' : 'Antrenman kaçtı'}, protein hedefi '
+        '${proteinHit ? 'tuttu' : 'biraz altında kaldı'}. '
+        '${metric.steps} adım ve ${metric.sleepMinutes ~/ 60} sa '
+        '${metric.sleepMinutes % 60} dk uyku ile gün dengeli geçti.',
+    aiStatus: ReportAiStatus.ok,
+    generatedAt: now,
+  );
 }
 
 /// `quick_add_entries` yerine: kalemleri bellekteki depolara uygular.
@@ -247,16 +538,35 @@ class DemoQuickAddRepository implements QuickAddRepository {
         ),
       );
     }
-    if (entry.nutrition.isNotEmpty) {
-      final old = _data.kokpit.nutrition;
-      double sum(double start, double Function(ParsedNutrition) pick) =>
-          entry.nutrition.fold(start, (total, n) => total + pick(n));
-      _data.kokpit.nutrition = NutritionSummary(
-        calories: sum(old.calories, (n) => n.calories),
-        proteinG: sum(old.proteinG, (n) => n.proteinG),
-        carbsG: sum(old.carbsG, (n) => n.carbsG),
-        fatG: sum(old.fatG, (n) => n.fatG),
-        entryCount: old.entryCount + entry.nutrition.length,
+    for (final n in entry.nutrition) {
+      _data.health.nutritionLogs.add(
+        NutritionLog(
+          id: _data.nextId('nutrition'),
+          mealType: n.mealType,
+          foodName: n.foodName,
+          quantityText: n.quantityText,
+          calories: n.calories,
+          proteinG: n.proteinG,
+          carbsG: n.carbsG,
+          fatG: n.fatG,
+          eatenAt: n.eatenAt?.toLocal() ?? DateTime.now(),
+          source: 'ai',
+        ),
+      );
+    }
+    for (final w in entry.workouts) {
+      _data.health.workouts.add(
+        WorkoutLog(
+          id: _data.nextId('workout'),
+          workoutType: w.workoutType,
+          title: w.title,
+          durationMin: w.durationMin,
+          distanceKm: w.distanceKm,
+          caloriesBurned: w.caloriesBurned,
+          notes: w.notes,
+          loggedAt: w.performedAt?.toLocal() ?? DateTime.now(),
+          source: 'ai',
+        ),
       );
     }
     return QuickAddResult(

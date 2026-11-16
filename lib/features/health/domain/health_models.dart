@@ -150,3 +150,207 @@ class MonthHealthSummary {
     );
   }
 }
+
+/// `nutrition_logs` satırı (bir öğün kalemi). Alanlar tablo sütunlarıyla bire birdir.
+class NutritionLog {
+  const NutritionLog({
+    required this.id,
+    required this.foodName,
+    required this.eatenAt,
+    this.mealType = 'snack',
+    this.quantityText,
+    this.calories = 0,
+    this.proteinG = 0,
+    this.carbsG = 0,
+    this.fatG = 0,
+    this.source = 'manual',
+  });
+
+  /// Veritabanı check listesi (gösterim sırası: kahvaltı → ara öğün).
+  static const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
+
+  // Veritabanı check sınırları; formlar aynı sınırlarla doğrular.
+  static const int foodNameMaxLength = 200;
+
+  /// `numeric(7,1)`: kalori üst sınırı.
+  static const double caloriesMax = 99999.9;
+
+  /// `numeric(6,1)`: makro üst sınırı.
+  static const double macroMax = 9999.9;
+
+  final String id;
+
+  /// 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  final String mealType;
+  final String foodName;
+  final String? quantityText;
+  final double calories;
+  final double proteinG;
+  final double carbsG;
+  final double fatG;
+
+  /// Yerel saat.
+  final DateTime eatenAt;
+
+  /// 'manual' | 'ai'
+  final String source;
+
+  factory NutritionLog.fromMap(Map<String, dynamic> map) => NutritionLog(
+        id: map['id'] as String,
+        mealType: map['meal_type'] as String? ?? 'snack',
+        foodName: map['food_name'] as String? ?? '',
+        quantityText: map['quantity_text'] as String?,
+        calories: (map['calories'] as num?)?.toDouble() ?? 0,
+        proteinG: (map['protein_g'] as num?)?.toDouble() ?? 0,
+        carbsG: (map['carbs_g'] as num?)?.toDouble() ?? 0,
+        fatG: (map['fat_g'] as num?)?.toDouble() ?? 0,
+        eatenAt: DateTime.parse(map['eaten_at'] as String).toLocal(),
+        source: map['source'] as String? ?? 'manual',
+      );
+
+  /// Düzenlenebilir sütunlar (insert ve update için; id/user_id/source içermez).
+  Map<String, dynamic> toWriteMap() => {
+        'meal_type': mealType,
+        'food_name': foodName,
+        'quantity_text': quantityText,
+        'calories': calories,
+        'protein_g': proteinG,
+        'carbs_g': carbsG,
+        'fat_g': fatG,
+        'eaten_at': eatenAt.toUtc().toIso8601String(),
+      };
+
+  NutritionLog copyWith({
+    String? id,
+    String? mealType,
+    String? foodName,
+    String? quantityText,
+    bool clearQuantityText = false,
+    double? calories,
+    double? proteinG,
+    double? carbsG,
+    double? fatG,
+    DateTime? eatenAt,
+    String? source,
+  }) =>
+      NutritionLog(
+        id: id ?? this.id,
+        mealType: mealType ?? this.mealType,
+        foodName: foodName ?? this.foodName,
+        quantityText:
+            clearQuantityText ? null : quantityText ?? this.quantityText,
+        calories: calories ?? this.calories,
+        proteinG: proteinG ?? this.proteinG,
+        carbsG: carbsG ?? this.carbsG,
+        fatG: fatG ?? this.fatG,
+        eatenAt: eatenAt ?? this.eatenAt,
+        source: source ?? this.source,
+      );
+}
+
+/// `fitness_logs` içindeki bir antrenman (log_type = 'workout').
+/// Alanlar tablo sütunlarıyla bire birdir.
+class WorkoutLog {
+  const WorkoutLog({
+    required this.id,
+    required this.loggedAt,
+    this.workoutType = 'other',
+    this.title,
+    this.durationMin,
+    this.distanceKm,
+    this.caloriesBurned,
+    this.notes,
+    this.source = 'manual',
+  });
+
+  /// Veritabanı check listesi.
+  static const workoutTypes = [
+    'weights',
+    'kickboxing',
+    'running',
+    'football',
+    'other',
+  ];
+
+  // Veritabanı check sınırları; formlar aynı sınırlarla doğrular.
+  static const int durationMinMin = 1;
+  static const int durationMinMax = 600;
+
+  /// `numeric(6,2)`: mesafe üst sınırı.
+  static const double distanceKmMax = 9999.99;
+
+  final String id;
+
+  /// 'weights' | 'kickboxing' | 'running' | 'football' | 'other'
+  final String workoutType;
+  final String? title;
+  final int? durationMin;
+  final double? distanceKm;
+  final int? caloriesBurned;
+  final String? notes;
+
+  /// Yerel saat.
+  final DateTime loggedAt;
+
+  /// 'manual' | 'ai' | 'healthkit'
+  final String source;
+
+  factory WorkoutLog.fromMap(Map<String, dynamic> map) => WorkoutLog(
+        id: map['id'] as String,
+        workoutType: map['workout_type'] as String? ?? 'other',
+        title: map['title'] as String?,
+        durationMin: (map['duration_min'] as num?)?.toInt(),
+        distanceKm: (map['distance_km'] as num?)?.toDouble(),
+        caloriesBurned: (map['calories_burned'] as num?)?.toInt(),
+        notes: map['notes'] as String?,
+        loggedAt: DateTime.parse(map['logged_at'] as String).toLocal(),
+        source: map['source'] as String? ?? 'manual',
+      );
+
+  /// Düzenlenebilir sütunlar (insert ve update için; id/user_id/source içermez).
+  Map<String, dynamic> toWriteMap() => {
+        'log_type': 'workout',
+        'workout_type': workoutType,
+        'title': title,
+        'duration_min': durationMin,
+        'distance_km': distanceKm,
+        'calories_burned': caloriesBurned,
+        'notes': notes,
+        'logged_at': loggedAt.toUtc().toIso8601String(),
+      };
+
+  WorkoutLog copyWith({
+    String? id,
+    String? workoutType,
+    String? title,
+    bool clearTitle = false,
+    int? durationMin,
+    bool clearDurationMin = false,
+    double? distanceKm,
+    bool clearDistanceKm = false,
+    int? caloriesBurned,
+    bool clearCaloriesBurned = false,
+    String? notes,
+    bool clearNotes = false,
+    DateTime? loggedAt,
+    String? source,
+  }) =>
+      WorkoutLog(
+        id: id ?? this.id,
+        workoutType: workoutType ?? this.workoutType,
+        title: clearTitle ? null : title ?? this.title,
+        durationMin: clearDurationMin ? null : durationMin ?? this.durationMin,
+        distanceKm: clearDistanceKm ? null : distanceKm ?? this.distanceKm,
+        caloriesBurned:
+            clearCaloriesBurned ? null : caloriesBurned ?? this.caloriesBurned,
+        notes: clearNotes ? null : notes ?? this.notes,
+        loggedAt: loggedAt ?? this.loggedAt,
+        source: source ?? this.source,
+      );
+}
+
+/// Kilo ölçümünün veritabanı check sınırları (`fitness_logs.weight_kg`).
+abstract final class WeightLimits {
+  static const double minKg = 30;
+  static const double maxKg = 250;
+}
