@@ -1,4 +1,6 @@
-# Kişisel Asistan & Operasyon Merkezi
+# Ritim — Kişisel Asistan & Operasyon Merkezi
+
+App Store Connect adı: **Ritim: Rutin, İş ve Sağlık** · iPhone'da görünen ad: **Ritim**
 
 Tek kullanıcılı, iOS Ad-Hoc dağıtımlı Flutter uygulaması.
 Flutter · Riverpod · Supabase · Gemini (`gemini-2.5-flash`) · HealthKit · yerel bildirimler.
@@ -241,8 +243,9 @@ Uygulama App Store Connect'e yüklenir, iPhone'a **TestFlight** uygulamasından 
    App IDs > App. Bundle ID'yi açıkça yaz (ör. `com.adsoyad.kisiselasistan`) ve **HealthKit**
    yetkisini işaretle. Bu kimlik sonradan değiştirilemez.
 2. **Uygulama kaydı** — appstoreconnect.apple.com > Uygulamalar > **+** > Yeni Uygulama:
-   platform iOS, ad (mağazada benzersiz olmalı, ör. "Operasyon Merkezi Kişisel"; iPhone'da görünen
-   ad yine "Operasyon"), dil Türkçe, Bundle ID'yi listeden seç, SKU serbest (ör. `kisisel-asistan`).
+   platform iOS, ad (mağazada benzersiz olmalı; bu proje için "Ritim: Rutin, İş ve Sağlık", iPhone'da
+   görünen ad "Ritim"), dil Türkçe, Bundle ID'yi listeden seç, SKU serbest (ör. `kisiselasistan-ios`),
+   Kullanıcı Erişimi **Tam Erişim** (sınırlı erişimde Codemagic'in API anahtarı uygulamayı göremeyebilir).
    Kaydedince Uygulama Bilgileri sayfasındaki **Apple ID** (sayısal) değerini not et.
 3. **Dahili test grubu** — uygulamanın TestFlight sekmesi > Dahili Test > **+**: bir grup aç,
    kendini ekle ve "Yapıları otomatik dağıt" seçeneğini aç.
@@ -265,7 +268,7 @@ Uygulama App Store Connect'e yüklenir, iPhone'a **TestFlight** uygulamasından 
 7. **Derle** — `main`'e push et ya da Codemagic'te **iOS TestFlight** iş akışını başlat. Yapı
    numarası App Store Connect'teki son numaranın bir fazlası olur.
 8. **Kur** — yükleme bitince Apple yapıyı işler (genellikle 5–30 dk) ve e-posta gönderir. iPhone'da
-   TestFlight uygulamasını aç, Kişisel Asistan'ı kur.
+   TestFlight uygulamasını aç, Ritim'i kur.
 
 **Kurulumdan önce Supabase hazır olmalı** (Kurulum > 3. adım ve "Otomatik raporlar"): uygulama
 açılınca giriş ekranı gelir ve Supabase'deki kullanıcınla giriş yapılır.

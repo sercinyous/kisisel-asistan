@@ -70,7 +70,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           size: 44, color: AppColors.accent),
                       const SizedBox(height: 20),
                       Text(
-                        'Operasyon Merkezi',
+                        'Ritim',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.headlineMedium,
                       ),

@@ -118,7 +118,7 @@ class _DemoApp extends ConsumerWidget {
 
   Widget _app(BuildContext context, ThemeData base) {
     return MaterialApp(
-      title: 'Operasyon Merkezi Demo',
+      title: 'Ritim Demo',
       debugShowCheckedModeBanner: false,
       theme: base.copyWith(
         textTheme: base.textTheme.apply(fontFamily: 'Roboto'),

@@ -20,7 +20,7 @@ class KisiselAsistanApp extends ConsumerWidget {
 
   Widget _app(BuildContext context, ThemeData theme) {
     return MaterialApp(
-      title: 'Operasyon Merkezi',
+      title: 'Ritim',
       debugShowCheckedModeBanner: false,
       theme: theme,
       // AppColors anında değişir; tema da aynı karede geçsin.
