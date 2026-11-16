@@ -6,6 +6,7 @@ import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/domain/kokpit_models.dart';
 import 'package:kisisel_asistan/features/reports/data/reports_repository.dart';
+import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 
 void main() {
   final day = DateTime(2026, 11, 16);
@@ -95,6 +96,73 @@ void main() {
       expect(health.nutritionLogs, isEmpty);
       expect(health.workouts, isEmpty);
       expect(health.weights, isEmpty);
+    });
+  });
+
+  // Gerçek veritabanında aynı işi routines_frequency_changed tetikleyicisi
+  // yapar (supabase/tests/reports_test.sql). Dönem anahtarı günlükte "o gün",
+  // aylıkta "ayın 1'i" olduğu için eski işaret yeni sıklıkta yanlış okunur.
+  group('FakeRoutinesRepository: sıklık değişince işaretler sıfırlanır', () {
+    final first = DateTime(2026, 11);
+    const daily = Routine(id: 'r1', title: 'Fatura kontrolü');
+    const other = Routine(id: 'r2', title: 'Dokunulmayan');
+
+    FakeRoutinesRepository seeded(Routine edited) => FakeRoutinesRepository(
+          routines: [edited, other],
+          completions: [
+            RoutineCompletionKey('r1', first),
+            RoutineCompletionKey('r2', first),
+          ],
+        );
+
+    test('günlük → aylık: ayın 1\'indeki günlük işaret dönemi yapılmış göstermez',
+        () async {
+      final repo = seeded(daily);
+      await repo.update(
+        daily.copyWith(frequency: RoutineFrequency.monthly, dayOfMonth: 20),
+      );
+
+      expect(repo.completions, {RoutineCompletionKey('r2', first)});
+      final month = monthlyForMonth(
+        await repo.fetchActive(),
+        await repo.fetchCompletions(first, DateTime(2026, 11, 30)),
+        2026,
+        11,
+        DateTime(2026, 11, 10),
+      );
+      expect(month.single.routine.id, 'r1');
+      expect(month.single.completed, isFalse);
+      expect(month.single.status, OccurrenceStatus.upcoming);
+    });
+
+    test('aylık → günlük: aylık işaret ayın 1\'ini yapılmış göstermez',
+        () async {
+      final monthly = daily.copyWith(
+        frequency: RoutineFrequency.monthly,
+        dayOfMonth: 20,
+      );
+      final repo = seeded(monthly);
+      await repo.update(
+        monthly.copyWith(frequency: RoutineFrequency.weekly),
+      );
+
+      final day = occurrencesForDay(
+        await repo.fetchActive(),
+        await repo.fetchCompletions(first, first),
+        first,
+      );
+      expect(
+        {for (final o in day) o.routine.id: o.completed},
+        {'r1': false, 'r2': true},
+      );
+    });
+
+    test('sıklık aynı kalan düzenleme işaretleri korur', () async {
+      final repo = seeded(daily);
+      await repo.update(daily.copyWith(title: 'Fatura', daysOfWeek: [1, 3]));
+
+      expect(repo.completions, hasLength(2));
+      expect(repo.routines.first.title, 'Fatura');
     });
   });
 

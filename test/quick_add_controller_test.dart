@@ -416,7 +416,67 @@ void main() {
 
       final reminder = harness.notifications.scheduled.single;
       expect(reminder.title, 'Duhan ile vardiya planı');
-      expect(reminder.when.toUtc(), DateTime.utc(2099, 1, 5, 12));
+      // 15:00 (+03:00) randevu, varsayılan 30 dk önce.
+      expect(reminder.when.toUtc(), DateTime.utc(2099, 1, 5, 11, 30));
+    });
+
+    group('randevu bildirimi "randevu kaç dk önce" ayarına uyar', () {
+      Future<DateTime> reminderFor(
+        Map<String, dynamic> task, {
+        required int minutes,
+      }) async {
+        harness.settings.settings = const UserSettings.defaults()
+            .copyWith(eventRemindMinutes: minutes);
+        respond(QuickAddMode.work, {
+          'tasks': [task],
+        });
+        final controller = controllerFor(QuickAddMode.work);
+        // Ayarlar yüklensin.
+        await pumpEventQueue();
+        await controller.parse('metin');
+        expect(await controller.save(), isTrue);
+        return harness.notifications.scheduled.single.when.toUtc();
+      }
+
+      test('hatırlatma zamanı söylenmemişse termin − ayar', () async {
+        expect(
+          await reminderFor(_task, minutes: 45),
+          DateTime.utc(2099, 1, 5, 11, 15),
+        );
+        // Veritabanına hatırlatma saati yazılmaz; plan da aynı kuralı uygular.
+        final saved = harness.repository.saved.single.tasks.single;
+        expect(saved.remindAt, isNull);
+        expect(saved.toJson()['remind_at'], isNull);
+      });
+
+      test('model termini remind_at olarak yinelese de ayar uygulanır',
+          () async {
+        expect(
+          await reminderFor(
+            {..._task, 'remind_at': '2099-01-05T15:00:00+03:00'},
+            minutes: 45,
+          ),
+          DateTime.utc(2099, 1, 5, 11, 15),
+        );
+      });
+
+      test('ayar 0 ise bildirim randevu anındadır', () async {
+        expect(
+          await reminderFor(_task, minutes: 0),
+          DateTime.utc(2099, 1, 5, 12),
+        );
+      });
+
+      test('kullanıcının söylediği hatırlatma zamanı ayarın önüne geçer',
+          () async {
+        expect(
+          await reminderFor(
+            {..._task, 'remind_at': '2099-01-05T13:00:00+03:00'},
+            minutes: 45,
+          ),
+          DateTime.utc(2099, 1, 5, 10),
+        );
+      });
     });
 
     test('bildirimler kapalıysa görev bildirimi planlanmaz', () async {

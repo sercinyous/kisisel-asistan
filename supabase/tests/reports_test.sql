@@ -481,5 +481,70 @@ select t.eq('service_role tüm raporları görür',
 select t.eq('authenticated kendi görevlerini hâlâ okur',
   to_jsonb(t.as_role('authenticated', :A, 'select count(*) from public.tasks')), '7'::jsonb);
 
+-- ---------------------------------------------------------------------
+-- Sıklık değişimi (B). completed_on günlükte "o gün", aylıkta "ayın 1'i"dir;
+-- sıklık değişince eski işaretler yeni sıklıkta yanlış dönemi yapılmış
+-- göstermesin diye silinir (routines_frequency_changed). Güncellemeler
+-- uygulamanın yaptığı gibi authenticated rolüyle (RLS altında) çalıştırılır.
+-- ---------------------------------------------------------------------
+insert into public.routines (id, user_id, title, category, frequency, days_of_week, day_of_month, created_at)
+values
+  ('00000000-0000-0000-0000-0000000000f1', :B, 'F1 fatura kontrolü', 'finans', 'weekly', '{1,2,3,4,5,6,7}', null, '2026-08-01 09:00+03'),
+  ('00000000-0000-0000-0000-0000000000f2', :B, 'F2 dokunulmayan', 'kisisel', 'weekly', '{1,2,3,4,5,6,7}', null, '2026-08-01 09:00+03'),
+  ('00000000-0000-0000-0000-0000000000f3', :B, 'F3 aylık', 'finans', 'monthly', '{1,2,3,4,5,6,7}', 20, '2026-08-01 09:00+03');
+insert into public.routine_completions (user_id, routine_id, completed_on) values
+  (:B, '00000000-0000-0000-0000-0000000000f1', '2026-09-01'),   -- günlük işaret, ayın 1'i
+  (:B, '00000000-0000-0000-0000-0000000000f1', '2026-09-02'),
+  (:B, '00000000-0000-0000-0000-0000000000f2', '2026-09-01'),
+  (:B, '00000000-0000-0000-0000-0000000000f3', '2026-09-01');   -- aylık işaret, Eylül dönemi
+
+-- Uygulama her düzenlemede frequency sütununu da gönderir; değer aynıysa işaretler durur.
+select t.eq('sıklık aynı: düzenleme (authenticated) bir satırı günceller',
+  to_jsonb(t.as_role('authenticated', :B,
+    $q$with u as (update public.routines set title = 'F1 fatura', frequency = 'weekly'
+                  where id = '00000000-0000-0000-0000-0000000000f1' returning 1)
+       select count(*) from u$q$)),
+  '1'::jsonb);
+select t.eq('sıklık aynı: işaretler durur',
+  to_jsonb((select count(*) from public.routine_completions where user_id = :B)), '4'::jsonb);
+
+-- Günlük → aylık (ayın 12'si): 1 Eylül'deki günlük işaret Eylül dönemi sayılmamalı.
+select t.eq('günlük → aylık: düzenleme (authenticated) bir satırı günceller',
+  to_jsonb(t.as_role('authenticated', :B,
+    $q$with u as (update public.routines set frequency = 'monthly', day_of_month = 12
+                  where id = '00000000-0000-0000-0000-0000000000f1' returning 1)
+       select count(*) from u$q$)),
+  '1'::jsonb);
+select t.eq('günlük → aylık: yalnızca o rutinin işaretleri silinir',
+  (select jsonb_agg(routine_id order by routine_id) from public.routine_completions where user_id = :B),
+  '["00000000-0000-0000-0000-0000000000f2", "00000000-0000-0000-0000-0000000000f3"]'::jsonb);
+-- 12 Eylül: F1 (aylık, günü bugün) + F2 (günlük) planlı; hiçbiri yapılmadı.
+select t.eq('günlük → aylık: aylık dönem yapılmış sayılmaz',
+  public.report_daily_metrics(:B, '2026-09-12') -> 'work',
+  '{"tasks_total": 0, "tasks_done": 0, "routines_planned": 2, "routines_done": 0, "rate": 0}'::jsonb);
+
+-- Aylık → günlük: Eylül dönem işareti 1 Eylül gününü yapılmış göstermemeli.
+select t.eq('aylık → günlük: düzenleme (authenticated) bir satırı günceller',
+  to_jsonb(t.as_role('authenticated', :B,
+    $q$with u as (update public.routines set frequency = 'weekly', day_of_month = null
+                  where id = '00000000-0000-0000-0000-0000000000f3' returning 1)
+       select count(*) from u$q$)),
+  '1'::jsonb);
+-- 1 Eylül: F2 + F3 (artık günlük) planlı; yalnızca F2 işaretli. F1 aylık, günü 12.
+select t.eq('aylık → günlük: aylık işaret ayın 1''ini yapılmış göstermez',
+  public.report_daily_metrics(:B, '2026-09-01') -> 'work',
+  '{"tasks_total": 0, "tasks_done": 0, "routines_planned": 2, "routines_done": 1, "rate": 50}'::jsonb);
+
+-- Başka kullanıcının rutini RLS yüzünden güncellenemez; işaretleri de durur.
+select t.eq('başkasının rutini güncellenmez',
+  to_jsonb(t.as_role('authenticated', :A,
+    $q$with u as (update public.routines set frequency = 'monthly', day_of_month = 5
+                  where id = '00000000-0000-0000-0000-0000000000f2' returning 1)
+       select count(*) from u$q$)),
+  '0'::jsonb);
+select t.eq('başkasının rutini: işaret durur',
+  to_jsonb((select count(*) from public.routine_completions
+            where routine_id = '00000000-0000-0000-0000-0000000000f2')), '1'::jsonb);
+
 drop schema t cascade;
 \echo RAPOR TESTLERI GECTI

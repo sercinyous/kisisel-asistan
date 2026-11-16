@@ -270,6 +270,35 @@ void main() {
     expect(reminder.when.toUtc(), DateTime.utc(2099, 1, 5, 11, 45));
   });
 
+  testWidgets(
+      'saatli görev, hatırlatma saati yazılmasa da "Hatırlatma açık" görünür',
+      (tester) async {
+    gemini.handler = (_) async => ParsedEntry.fromJson(const {
+          'tasks': [
+            {
+              'title': 'Duhan ile vardiya planı',
+              'category': 'Ekip',
+              'priority': 'medium',
+              'due_at': '2099-01-05T15:00:00+03:00',
+            },
+            {'title': 'Süt al'},
+          ],
+        });
+    await openModal(tester);
+    await typeAndParse(tester, 'Duhan ile toplantı, süt al');
+
+    // Bildirim terminden ayardaki süre kadar önce planlanır; önizleme de
+    // bunu söyler. Tarihsiz görevde hatırlatma yoktur.
+    expect(find.textContaining('Hatırlatma açık'), findsOneWidget);
+    expect(find.text('Tarihsiz görev'), findsOneWidget);
+
+    await tester.tap(find.text('2 kaydı kaydet'));
+    await tester.pumpAndSettle();
+    final reminder = notifications.scheduled.single;
+    expect(reminder.title, 'Duhan ile vardiya planı');
+    expect(reminder.when.toUtc(), DateTime.utc(2099, 1, 5, 11, 30));
+  });
+
   testWidgets('son kalem de çıkarılınca metin girişine döner', (tester) async {
     gemini.handler = (_) async => ParsedEntry.fromJson(const {
           'notes': [

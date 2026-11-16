@@ -256,6 +256,14 @@ class FakeRoutinesRepository implements RoutinesRepository {
   @override
   Future<Routine> update(Routine routine) async {
     if (writeError != null) throw writeError!;
+    // Veritabanındaki routines_frequency_changed tetikleyicisinin karşılığı:
+    // dönem anahtarının anlamı sıklığa bağlı olduğu için eski işaretler silinir.
+    final frequencyChanged = routines.any(
+      (r) => r.id == routine.id && r.frequency != routine.frequency,
+    );
+    if (frequencyChanged) {
+      completions.removeWhere((c) => c.routineId == routine.id);
+    }
     routines = [
       for (final r in routines) r.id == routine.id ? routine : r,
     ];

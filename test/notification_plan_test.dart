@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/notification_plan.dart';
+import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
@@ -211,6 +212,46 @@ void main() {
         result.single.fireAt,
         due.subtract(Duration(minutes: defaults.eventRemindMinutes)),
       );
+    });
+  });
+
+  group('AI girişiyle eklenen randevu', () {
+    final due = DateTime(2026, 11, 17, 15);
+    final settings = defaults.copyWith(eventRemindMinutes: 45);
+
+    /// Model çıktısı → ParsedTask → `quick_add_entries` satırı (notify = true).
+    TaskItem aiRow(Object? remindAt) {
+      final json = ParsedTask.fromJson({
+        'title': 'Duhan ile vardiya planı',
+        'category': 'Ekip',
+        'priority': 'medium',
+        'due_at': due.toUtc().toIso8601String(),
+        'remind_at': remindAt,
+      })!
+          .toJson();
+      return TaskItem.fromMap({...json, 'id': 'ai-1', 'notify': true});
+    }
+
+    test('hatırlatma zamanı söylenmemişse termin − ayardaki süre', () {
+      final result = plan(settings: settings, tasks: [aiRow(null)]);
+      expect(result.single.fireAt, DateTime(2026, 11, 17, 14, 15));
+    });
+
+    test('model termini remind_at olarak yinelese de süre uygulanır', () {
+      final result = plan(
+        settings: settings,
+        tasks: [aiRow(due.toUtc().toIso8601String())],
+      );
+      expect(result.single.fireAt, DateTime(2026, 11, 17, 14, 15));
+    });
+
+    test('kullanıcının söylediği hatırlatma zamanı korunur', () {
+      final remind = DateTime(2026, 11, 17, 9);
+      final result = plan(
+        settings: settings,
+        tasks: [aiRow(remind.toUtc().toIso8601String())],
+      );
+      expect(result.single.fireAt, remind);
     });
   });
 }
