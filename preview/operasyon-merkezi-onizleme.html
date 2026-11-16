@@ -24,6 +24,7 @@
   figcaption strong { display: block; font-size: 14.5px; font-weight: 600; }
   figcaption span { font-size: 13px; color: var(--text-2); }
   h2 { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); margin: 0 0 12px; font-weight: 600; }
+ .sec { font-size: 13px; margin: 8px 0 -8px; color: var(--text-2); }
   ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; max-width: 75ch; }
   li { display: grid; grid-template-columns: 92px 1fr; gap: 12px; font-size: 13.5px; }
   li time { color: var(--text-3); font-variant-numeric: tabular-nums; }
@@ -33,9 +34,10 @@
 <div class="wrap">
   <header>
     <h1>Operasyon Merkezi</h1>
-    <p>Uygulamanın kendi koduyla, Flutter'ın çizdiği gerçek ekranlar (390×844, iPhone boyutu). Dokunup gezmek için <a href="https://claude.ai/artifact/RykoTQHFy139sZ7sumRGjZ">tıklanabilir demo</a>.</p>
+    <p>Koyu ve açık temada, uygulamanın kendi koduyla, Flutter'ın çizdiği gerçek ekranlar (390×844, iPhone boyutu). Dokunup gezmek için <a href="https://claude.ai/artifact/RykoTQHFy139sZ7sumRGjZ">tıklanabilir demo</a>.</p>
   </header>
   <div class="note"><b>Örnek veri.</b> Sayılar, görevler ve raporlar gösterim için konmuş örneklerdir; Supabase, HealthKit ve Gemini bağlı değildir. Yazı tipi iPhone'da San Francisco olur, burada Roboto görünür.</div>
+  <h2 class="sec">Koyu tema (varsayılan)</h2>
   <section class="grid">
     <figure><img src="shots/01_kokpit_gun.png" alt="Kokpit · Gün" width="780" height="1688" loading="lazy"><figcaption><strong>Kokpit · Gün</strong><span>Kalori ve makrolar, adım ve uyku, bugünün rutinleri.</span></figcaption></figure>
     <figure><img src="shots/02_kokpit_ay.png" alt="Kokpit · Ay" width="780" height="1688" loading="lazy"><figcaption><strong>Kokpit · Ay</strong><span>Takvim ve aylık sabitler: Yapıldı / Bekliyor / Gecikti.</span></figcaption></figure>
@@ -53,13 +55,31 @@
     <figure><img src="shots/14_raporlar_gunluk.png" alt="Raporlar · Günlük" width="780" height="1688" loading="lazy"><figcaption><strong>Raporlar · Günlük</strong><span>O günün iş ve form özeti, hedeflerle karşılaştırma.</span></figcaption></figure>
     <figure><img src="shots/15_raporlar_gunluk_alt.png" alt="Raporlar · Günlük (devamı)" width="780" height="1688" loading="lazy"><figcaption><strong>Raporlar · Günlük (devamı)</strong><span>AI günlük değerlendirme ve son 7 gün.</span></figcaption></figure>
   </section>
+  <h2 class="sec">Açık tema</h2>
+  <section class="grid">
+    <figure><img src="shots/16_acik_kokpit_gun.png" alt="Açık tema, Kokpit · Gün" width="780" height="1688" loading="lazy"><figcaption><strong>Kokpit · Gün</strong></figcaption></figure>
+    <figure><img src="shots/17_acik_kokpit_ay.png" alt="Açık tema, Kokpit · Ay" width="780" height="1688" loading="lazy"><figcaption><strong>Kokpit · Ay</strong></figcaption></figure>
+    <figure><img src="shots/18_acik_kokpit_ay_alt.png" alt="Açık tema, Kokpit · Ay (devamı)" width="780" height="1688" loading="lazy"><figcaption><strong>Kokpit · Ay (devamı)</strong></figcaption></figure>
+    <figure><img src="shots/19_acik_giris_secimi.png" alt="Açık tema, + · Giriş seçimi" width="780" height="1688" loading="lazy"><figcaption><strong>+ · Giriş seçimi</strong></figcaption></figure>
+    <figure><img src="shots/20_acik_saglik_girisi.png" alt="Açık tema, Sağlık ve beslenme girişi" width="780" height="1688" loading="lazy"><figcaption><strong>Sağlık ve beslenme girişi</strong></figcaption></figure>
+    <figure><img src="shots/21_acik_operasyon_gorevler.png" alt="Açık tema, Operasyon · Görevler" width="780" height="1688" loading="lazy"><figcaption><strong>Operasyon · Görevler</strong></figcaption></figure>
+    <figure><img src="shots/22_acik_operasyon_sabitler.png" alt="Açık tema, Operasyon · Sabitler" width="780" height="1688" loading="lazy"><figcaption><strong>Operasyon · Sabitler</strong></figcaption></figure>
+    <figure><img src="shots/23_acik_ayarlar.png" alt="Açık tema, Ayarlar" width="780" height="1688" loading="lazy"><figcaption><strong>Ayarlar</strong></figcaption></figure>
+    <figure><img src="shots/24_acik_saglik.png" alt="Açık tema, Sağlık" width="780" height="1688" loading="lazy"><figcaption><strong>Sağlık</strong></figcaption></figure>
+    <figure><img src="shots/25_acik_saglik_ogunler.png" alt="Açık tema, Sağlık · Öğünler" width="780" height="1688" loading="lazy"><figcaption><strong>Sağlık · Öğünler</strong></figcaption></figure>
+    <figure><img src="shots/26_acik_saglik_antrenman.png" alt="Açık tema, Sağlık · Antrenman günlüğü" width="780" height="1688" loading="lazy"><figcaption><strong>Sağlık · Antrenman günlüğü</strong></figcaption></figure>
+    <figure><img src="shots/27_acik_raporlar_haftalik.png" alt="Açık tema, Raporlar · Haftalık" width="780" height="1688" loading="lazy"><figcaption><strong>Raporlar · Haftalık</strong></figcaption></figure>
+    <figure><img src="shots/28_acik_raporlar_haftalik_alt.png" alt="Açık tema, Raporlar · Haftalık (devamı)" width="780" height="1688" loading="lazy"><figcaption><strong>Raporlar · Haftalık (devamı)</strong></figcaption></figure>
+    <figure><img src="shots/29_acik_raporlar_gunluk.png" alt="Açık tema, Raporlar · Günlük" width="780" height="1688" loading="lazy"><figcaption><strong>Raporlar · Günlük</strong></figcaption></figure>
+    <figure><img src="shots/30_acik_raporlar_gunluk_alt.png" alt="Açık tema, Raporlar · Günlük (devamı)" width="780" height="1688" loading="lazy"><figcaption><strong>Raporlar · Günlük (devamı)</strong></figcaption></figure>
+  </section>
   <section>
     <h2>Güncellemeler</h2>
     <ol>
       <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Faz 3</strong><span>Sağlık sekmesi (kilo grafiği, öğünler, antrenman günlüğü), Raporlar sekmesi (haftalık ve günlük), sunucuda otomatik üretilen günlük ve haftalık raporlar. Alt bar yüzen cam kapsüle çevrildi.</span></div></li>
       <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Faz 2</strong><span>Aylık sabitler ve dönem bazlı işaretleme, Kokpit Gün / Ay, iki ayrı AI girişi, Ayarlar ve bildirim kuralları, Operasyon sekmesi. Saf siyah zemin ve Bento kartlar.</span></div></li>
       <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Faz 1 ve düzeltme turu</strong><span>Temel mimari, Kokpit, AI Hızlı Giriş, Supabase şeması, Codemagic derlemesi; ilk incelemede bulunan 20 hata giderildi.</span></div></li>
-      <li><time>Sürüyor</time><div><strong>Son inceleme ve beyaz tema</strong><span>Tüm yapının bağımsız incelemesinde çıkan bulgular düzeltiliyor; açık tema ekleniyor.</span></div></li>
+      <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Son inceleme ve açık tema</strong><span>Tüm projenin bağımsız incelemesinde doğrulanan 10 hata giderildi. Açık tema eklendi: Ayarlar &gt; Görünüm (Sistem / Açık / Koyu).</span></div></li>
     </ol>
   </section>
 </div>
