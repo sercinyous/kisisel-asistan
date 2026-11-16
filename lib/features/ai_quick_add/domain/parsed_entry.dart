@@ -145,7 +145,15 @@ class ParsedTask {
     final title = _parseText(json['title']);
     if (title == null) return null;
     var dueAt = _parseDate(json['due_at']);
-    final explicitRemind = _parseDate(json['remind_at']);
+    var explicitRemind = _parseDate(json['remind_at']);
+    // Terminle aynı an, modelin termini yinelemesidir; kullanıcı ayrı bir
+    // hatırlatma zamanı söylememiştir. Boş bırakılır ki ayarlardaki
+    // "randevu kaç dk önce" süresi uygulansın.
+    if (dueAt != null &&
+        explicitRemind != null &&
+        explicitRemind.isAtSameMomentAs(dueAt)) {
+      explicitRemind = null;
+    }
     if (dueAt != null && explicitRemind == null) {
       dueAt = _defaultTimeForDateOnly(dueAt);
     }
@@ -156,7 +164,7 @@ class ParsedTask {
       priority: _oneOf(json['priority'], priorities, 'medium'),
       assignee: _parseText(json['assignee']),
       dueAt: dueAt,
-      remindAt: explicitRemind ?? dueAt,
+      remindAt: explicitRemind,
     );
   }
 

@@ -61,7 +61,8 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       _date = AppDates.startOfDay(when);
       _time = TimeOfDay(hour: when.hour, minute: when.minute);
       final due = task.dueAt, remind = task.remindAt;
-      _remind = remind != null;
+      // Kapalı kayıt kapalı açılır; AI görevinde hatırlatma saati olmasa da açıktır.
+      _remind = task.notify;
       // Kayıtlı aralık korunur; yalnızca hatırlatma varsa tam saatindedir.
       if (remind != null) {
         final diff = due == null ? 0 : due.difference(remind).inMinutes;
@@ -99,6 +100,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
     setState(() {
       _saving = true;
@@ -112,8 +114,12 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     final remind = due != null && _remind
         ? due.subtract(Duration(minutes: _offsetMinutes))
         : null;
+    // Tarihsiz görevde bildirim zaten olmaz; sonradan tarih eklenirse
+    // varsayılan (açık) geçerli olsun diye true kalır.
+    final notify = due == null || _remind;
     final description = _description.text.trim();
 
+    TaskItem? updated;
     try {
       final repository = container.read(tasksRepositoryProvider);
       final existing = widget.task;
@@ -126,9 +132,10 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
           assignee: _assignee,
           dueAt: due,
           remindAt: remind,
+          notify: notify,
         );
       } else {
-        await repository.update(
+        updated = await repository.update(
           TaskItem(
             id: existing.id,
             title: _title.text.trim(),
@@ -140,6 +147,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             dueAt: due,
             remindAt: remind,
             completedAt: existing.completedAt,
+            notify: notify,
           ),
         );
       }
@@ -151,9 +159,12 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       });
       return;
     }
+    if (updated != null) {
+      container.read(opsTasksProvider.notifier).applySaved(updated);
+    }
     container.invalidate(opsTasksProvider);
     notifyTaskChange(container.invalidate);
-    navigator.pop(true);
+    closeOpsSheet(navigator, route);
   }
 
   @override
@@ -235,6 +246,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         ],
         const SizedBox(height: 8),
         SwitchListTile(
+          key: const Key('task-remind'),
           contentPadding: EdgeInsets.zero,
           title: const Text('Hatırlat'),
           subtitle: Text(

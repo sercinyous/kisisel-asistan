@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/health_service.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../routines/data/routines_repository.dart';
@@ -169,6 +170,8 @@ int? averageSteps(Iterable<DailyHealthMetric> days) {
 /// gösteren tüm sağlayıcıları tazeler: Sağlık sekmesi, Kokpit'in beslenme
 /// özeti ve Ay özeti. await sonrası `WidgetRef` kullanılamayacağı için
 /// kapsayıcı alır (`ProviderScope.containerOf(context, listen: false)`).
+/// Bu sağlayıcılar pencerelerini "bugün"e göre açtığı için uygulama öne
+/// geldiğinde de çağrılır (gün değişmiş olabilir).
 void invalidateHealthData(ProviderContainer container) {
   container
     ..invalidate(weightSeriesProvider)
@@ -177,4 +180,39 @@ void invalidateHealthData(ProviderContainer container) {
     ..invalidate(weekWorkoutPlanProvider)
     ..invalidate(todayNutritionProvider)
     ..invalidate(monthOverviewProvider);
+}
+
+/// HealthKit'in son [HealthService.backfillDays] tamamlanmış gününü gün sonu
+/// değerleriyle yeniden yedekler. Bugünün okuması günü ancak o ana kadar
+/// görür; gün bittikten sonra kimse yeniden okumazsa raporlar, 7 günlük adım
+/// grafiği ve Ay ortalamaları eksik kalır. Bitince bu satırları okuyan
+/// sağlayıcılar tazelenir (bugünün yedeği de o zamana dek yazılmıştır).
+/// Uygulama açılışında çağrılır; öne gelişte ve elle yenilemede
+/// [resyncHealthKit] kullanılır.
+Future<void> backfillHealthKit(ProviderContainer container) async {
+  try {
+    // Bugünün okuması ve yedeği bitsin; izin penceresi de orada açılır.
+    final today = await container.read(healthTodayProvider.future);
+    if (today.status == HealthStatus.ok) {
+      final days = await container.read(healthServiceProvider).readPastDays();
+      await container.read(healthRepositoryProvider).upsertHealthDays(days);
+    }
+  } catch (_) {
+    // Okuma hatası kartta gösterilir; yedekleme hatası ekranı bozmaz.
+  }
+  try {
+    container
+      ..invalidate(weekStepsProvider)
+      ..invalidate(monthOverviewProvider);
+  } on StateError {
+    // Okuma sürerken kapsayıcı kapanmış (çıkış, test sonu).
+  }
+}
+
+/// HealthKit'i yeniden okur (bugün + son günler) ve yedekler; bitince 7 günlük
+/// adım grafiği ile Ay ortalamaları tazelenir. `healthTodayProvider` doğrudan
+/// tazelenirse bu ikisi yedeklenen yeni satırı görmez; onun yerine bu çağrılır.
+Future<void> resyncHealthKit(ProviderContainer container) {
+  container.invalidate(healthTodayProvider);
+  return backfillHealthKit(container);
 }

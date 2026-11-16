@@ -1,4 +1,5 @@
 // Önizleme için gerçek ekran görüntüleri üretir (örnek veriyle).
+// Koyu tema: 01–15; açık tema aynı akışla 16–30 (`NN_acik_<ad>.png`).
 // Çalıştırma: flutter test --update-goldens test/screenshots/app_screens_test.dart
 @Tags(['screenshots'])
 library;
@@ -12,20 +13,21 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
+import 'package:kisisel_asistan/core/theme/theme_mode.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
+import 'package:kisisel_asistan/demo/demo_data.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/gemini_parser_service.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/quick_add_repository.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/presentation/ai_quick_add_modal.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
+import 'package:kisisel_asistan/features/health/presentation/health_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
-import 'package:kisisel_asistan/features/kokpit/domain/kokpit_models.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
-import 'package:kisisel_asistan/features/operations/domain/note_item.dart';
-import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
+import 'package:kisisel_asistan/features/reports/data/reports_repository.dart';
+import 'package:kisisel_asistan/features/reports/presentation/reports_screen.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
-import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/shell/presentation/home_shell.dart';
 
@@ -39,109 +41,32 @@ void main() {
     await loadRealFonts();
   });
 
-  testWidgets('ekran görüntüleri', (tester) async {
+  // Açık temada dosya adı: numara 15 kaydırılır, araya "acik" eklenir.
+  String lightName(String name) =>
+      '${int.parse(name.substring(0, 2)) + 15}_acik_${name.substring(3)}';
+
+  Future<void> capture(WidgetTester tester, {required bool light}) async {
+    AppColors.palette = light ? AppPalette.light : AppPalette.dark;
+    addTearDown(() => AppColors.palette = AppPalette.dark);
+
+    // Tarayıcı demosuyla aynı örnek veri: önizleme ile demo aynı görünür.
     final now = DateTime.now();
     final today = AppDates.startOfDay(now);
-    final lastDay = DateTime(now.year, now.month + 1, 0).day;
-    int dayIn(int offset) => (now.day + offset).clamp(1, lastDay);
-    final created = DateTime(now.year, now.month - 2, 1);
+    final demo = DemoData.seed(now);
 
-    Routine r(String id, String title, String scope, String cat, int h, int m,
-            {List<int> days = Routine.everyDay}) =>
-        Routine(
-          id: id,
-          title: title,
-          scope: scope,
-          category: cat,
-          daysOfWeek: days,
-          hour: h,
-          minute: m,
-          createdAt: created,
-        );
-    Routine monthly(String id, String title, String scope, String cat, int day) =>
-        Routine(
-          id: id,
-          title: title,
-          scope: scope,
-          category: cat,
-          frequency: RoutineFrequency.monthly,
-          dayOfMonth: day,
-          hour: 10,
-          minute: 0,
-          createdAt: created,
-        );
-
-    final routines = FakeRoutinesRepository(
-      routines: [
-        r('r1', 'Sabah tartı ve kilo kaydı', 'Kişisel', 'beslenme', 8, 0),
-        r('r2', 'Sabah push performans kontrolü', 'Pusholder', 'operasyon', 9, 0),
-        r('r3', 'Editör vardiya kontrolü', 'Pusholder', 'operasyon', 9, 30),
-        r('r4', 'Öğlen gündem ve push takvimi', 'Pusholder', 'operasyon', 13, 0),
-        r('r5', 'Ağırlık antrenmanı', 'Kişisel', 'spor', 19, 0,
-            days: [now.weekday]),
-        r('r6', 'Akşam operasyon kapanışı', 'Pusholder', 'operasyon', 22, 0),
-        monthly('m1', 'Maaş ödemeleri', 'Pusholder', 'finans', dayIn(2)),
-        monthly('m2', 'Aylık push performans raporu', 'Pusholder', 'operasyon', 1),
-        monthly('m3', 'Kira ve faturalar', 'Kişisel', 'finans', dayIn(-3)),
-      ],
-      completions: [
-        RoutineCompletionKey('r1', today, completedAt: now),
-        RoutineCompletionKey('r2', today, completedAt: now),
-        RoutineCompletionKey('r3', today, completedAt: now),
-        RoutineCompletionKey('m2', DateTime(now.year, now.month, 1),
-            completedAt: DateTime(now.year, now.month, 1, 11)),
-      ],
-    );
-
-    TaskItem t(String id, String title, String cat, String prio, DateTime due,
-            {String? who}) =>
-        TaskItem(
-          id: id,
-          title: title,
-          category: cat,
-          priority: prio,
-          status: 'todo',
-          assignee: who,
-          dueAt: due,
-          remindAt: due.subtract(const Duration(minutes: 30)),
-        );
-    final tasks = FakeTasksRepository(tasks: [
-      t('t1', 'Duhan ile vardiya planı', 'Ekip', 'high',
-          today.add(const Duration(days: 1, hours: 15)),
-          who: 'Duhan'),
-      t('t2', 'Dişçi randevusu', 'Kişisel', 'medium',
-          today.add(const Duration(days: 3, hours: 14))),
-      t('t3', 'Push performans raporunu hazırla', 'Pusholder', 'high',
-          today.add(const Duration(days: 2, hours: 12))),
-      t('t4', 'Aylık gelir-gider tablosu', 'Finans', 'medium',
-          today.add(const Duration(days: 6, hours: 18))),
-    ]);
-
-    final health = FakeHealthRepository(
-      metrics: [
-        for (var d = 1; d <= now.day; d++)
-          DailyHealthMetric(
-            day: DateTime(now.year, now.month, d),
-            steps: 6200 + (d * 517) % 4800,
-            activeKcal: 320 + (d * 37) % 260,
-            sleepMinutes: 390 + (d * 23) % 90,
+    // Aile adı olmayan stil testte kare çizen "FlutterTest" yazı tipine düşer
+    // (cihazda sistem yazı tipidir); buton etiketleri okunsun diye Roboto verilir.
+    final base = light ? AppTheme.light : AppTheme.dark;
+    final theme = base.copyWith(
+      filledButtonTheme: FilledButtonThemeData(
+        style: base.filledButtonTheme.style?.copyWith(
+          textStyle: WidgetStatePropertyAll(
+            base.filledButtonTheme.style?.textStyle
+                ?.resolve(const {})
+                ?.copyWith(fontFamily: 'Roboto'),
           ),
-      ],
-      weights: [
-        WeightEntry(id: 'w1', weightKg: 84.5, loggedAt: DateTime(now.year, now.month, 1, 8)),
-        WeightEntry(id: 'w2', weightKg: 83.6, loggedAt: today.add(const Duration(hours: 8))),
-      ],
-      nutrition: [
-        for (var d = 1; d <= now.day; d++)
-          DailyNutritionTotal(
-            day: DateTime(now.year, now.month, d),
-            calories: 1850 + (d * 61) % 320,
-            proteinG: 150 + (d * 7) % 30,
-            carbsG: 170,
-            fatG: 60,
-            entryCount: 4,
-          ),
-      ],
+        ),
+      ),
     );
 
     final parser = FakeGeminiParserService(
@@ -180,44 +105,21 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          initialThemeModeProvider.overrideWithValue(
+            light ? AppThemeMode.light : AppThemeMode.dark,
+          ),
           geminiParserServiceProvider.overrideWith((ref, mode) => parser),
           quickAddRepositoryProvider
               .overrideWithValue(RecordingQuickAddRepository()),
           notificationServiceProvider
               .overrideWithValue(FakeNotificationService()),
-          settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
-          routinesRepositoryProvider.overrideWithValue(routines),
-          tasksRepositoryProvider.overrideWithValue(tasks),
-          notesRepositoryProvider.overrideWithValue(
-            FakeNotesRepository(notes: [
-              NoteItem(
-                id: 'n1',
-                title: 'Form hedefi',
-                content: '84.5 kg → 78 kg. Kas kütlesini koru.',
-                isPinned: true,
-                createdAt: now,
-              ),
-              NoteItem(
-                id: 'n2',
-                title: 'Fikir: son dakika push şablonları',
-                content: 'Sık kullanılan başlık kalıpları için hazır set.',
-                category: 'Fikir',
-                createdAt: now,
-              ),
-            ]),
-          ),
-          healthRepositoryProvider.overrideWithValue(health),
-          kokpitRepositoryProvider.overrideWithValue(
-            FakeKokpitRepository(
-              nutrition: const NutritionSummary(
-                calories: 1240,
-                proteinG: 96,
-                carbsG: 118,
-                fatG: 38,
-                entryCount: 3,
-              ),
-            ),
-          ),
+          settingsRepositoryProvider.overrideWithValue(demo.settings),
+          routinesRepositoryProvider.overrideWithValue(demo.routines),
+          tasksRepositoryProvider.overrideWithValue(demo.tasks),
+          notesRepositoryProvider.overrideWithValue(demo.notes),
+          healthRepositoryProvider.overrideWithValue(demo.health),
+          kokpitRepositoryProvider.overrideWithValue(demo.kokpit),
+          reportsRepositoryProvider.overrideWithValue(demo.reports),
           healthServiceProvider.overrideWithValue(
             FakeHealthService(
               HealthSnapshot(
@@ -232,7 +134,7 @@ void main() {
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.dark,
+          theme: theme,
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
           supportedLocales: const [Locale('tr', 'TR')],
           locale: const Locale('tr', 'TR'),
@@ -249,7 +151,7 @@ void main() {
       await tester.pumpAndSettle();
       await expectLater(
         find.byType(MaterialApp),
-        matchesGoldenFile('out/$name.png'),
+        matchesGoldenFile('out/${light ? lightName(name) : name}.png'),
       );
     }
 
@@ -290,5 +192,60 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Ayarlar'));
     await shot('08_ayarlar');
-  });
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pumpAndSettle();
+
+    Finder scrollOf(Type screen) => find
+        .descendant(of: find.byType(screen), matching: find.byType(Scrollable))
+        .first;
+
+    await tester.tap(find.byTooltip('Sağlık'));
+    await shot('09_saglik');
+    await tester.drag(scrollOf(HealthScreen), const Offset(0, -560));
+    await shot('10_saglik_ogunler');
+    await tester.drag(scrollOf(HealthScreen), const Offset(0, -700));
+    await shot('11_saglik_antrenman');
+
+    await tester.tap(find.byTooltip('Raporlar'));
+    // Biten son hafta: içinde bulunulan hafta Pazartesi günü neredeyse boştur.
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Önceki hafta'));
+    await shot('12_raporlar_haftalik');
+    await tester.drag(scrollOf(ReportsScreen), const Offset(0, -600));
+    await shot('13_raporlar_haftalik_alt');
+    await tester.drag(scrollOf(ReportsScreen), const Offset(0, 5000));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Günlük'));
+    await tester.pumpAndSettle();
+    // Bugünün raporu gece üretilir; dolu görünüm için düne gidilir.
+    await tester.tap(find.byTooltip('Önceki gün'));
+    await shot('14_raporlar_gunluk');
+    await tester.drag(scrollOf(ReportsScreen), const Offset(0, -600));
+    await shot('15_raporlar_gunluk_alt');
+  }
+
+  // Görüntüler bugünün tarihine ve saatine bağlıdır; kayıtlı PNG'lerle
+  // karşılaştırmak ertesi gün yanlış alarm verir. Bu dosya yalnızca
+  // --update-goldens ile görüntü üretmek için çalışır.
+  testWidgets(
+    'ekran görüntüleri',
+    (tester) => capture(tester, light: false),
+    skip: !autoUpdateGoldenFiles,
+  );
+
+  testWidgets(
+    'ekran görüntüleri (açık tema)',
+    (tester) async {
+      // Testlerde gölgeler düz çizilir; beyaz zeminde alt barın gölgesi
+      // cihazdaki gibi (bulanık) görünsün diye burada açılır.
+      debugDisableShadows = false;
+      try {
+        await capture(tester, light: true);
+      } finally {
+        debugDisableShadows = true;
+      }
+    },
+    skip: !autoUpdateGoldenFiles,
+  );
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,10 +8,12 @@ import '../../../core/widgets/app_bottom_bar.dart';
 import '../../ai_quick_add/domain/quick_add_mode.dart';
 import '../../ai_quick_add/presentation/ai_quick_add_modal.dart';
 import '../../ai_quick_add/presentation/quick_add_mode_sheet.dart';
+import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/health_screen.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_screen.dart';
 import '../../operations/presentation/operations_screen.dart';
+import '../../reports/presentation/reports_providers.dart';
 import '../../reports/presentation/reports_screen.dart';
 import '../../routines/presentation/routines_providers.dart';
 
@@ -44,6 +48,14 @@ class _HomeShellState extends ConsumerState<HomeShell>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Açılışta HealthKit'in son günleri gün sonu değerleriyle tamamlanır
+    // (uygulama kapalıyken biten günleri başka okuyan yoktur).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        backfillHealthKit(ProviderScope.containerOf(context, listen: false)),
+      );
+    });
   }
 
   @override
@@ -52,15 +64,28 @@ class _HomeShellState extends ConsumerState<HomeShell>
     super.dispose();
   }
 
-  /// Uygulama öne geldiğinde gün değişmiş olabilir: Kokpit'i tazele.
+  /// Uygulama öne geldiğinde gün değişmiş, sunucu yeni rapor yazmış olabilir:
+  /// "bugün"e göre hesaplanan ve sunucuda değişmiş olabilecek her şeyi tazele.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
+    final container = ProviderScope.containerOf(context, listen: false);
     ref.read(kokpitClockProvider.notifier).state = DateTime.now();
     ref.invalidate(todayOccurrencesProvider);
     ref.invalidate(upcomingRemindersProvider);
-    ref.invalidate(todayNutritionProvider);
-    ref.invalidate(healthTodayProvider);
+    // Sağlık sekmesi, Kokpit beslenme özeti ve Ay özeti: pencereleri (son N
+    // gün, bu hafta, bugünün öğünleri) ve durum rozetleri bugüne göredir.
+    invalidateHealthData(container);
+    // HealthKit yeniden okunur, son günler tamamlanır; 7 günlük adım grafiği
+    // ve Ay ortalamaları yedekleme bitince tazelenir (önce tazelenirse yeni
+    // satırı görmezler).
+    unawaited(resyncHealthKit(container));
+    // Raporlar sunucuda, uygulama arka plandayken üretilir.
+    ref
+      ..invalidate(weeklyReportProvider)
+      ..invalidate(weeklyReportListProvider)
+      ..invalidate(dailyReportProvider)
+      ..invalidate(dailyReportListProvider);
   }
 
   Future<void> _openQuickAdd() async {

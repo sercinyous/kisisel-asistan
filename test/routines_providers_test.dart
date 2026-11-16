@@ -785,6 +785,7 @@ void main() {
       const HealthSnapshot(status: HealthStatus.ok, steps: 1),
     );
     expect((await service.readToday()).steps, 1);
+    expect(await service.readPastDays(), isEmpty);
   });
 }
 

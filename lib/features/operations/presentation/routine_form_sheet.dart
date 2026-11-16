@@ -107,6 +107,7 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
     if (!fieldsOk || !daysOk) return;
 
     final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
     setState(() {
       _saving = true;
@@ -147,7 +148,7 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
       return;
     }
     notifyRoutineChange(container.invalidate);
-    navigator.pop(true);
+    closeOpsSheet(navigator, route);
   }
 
   @override

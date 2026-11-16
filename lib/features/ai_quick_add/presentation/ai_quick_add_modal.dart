@@ -33,7 +33,7 @@ class AiQuickAddModal extends ConsumerStatefulWidget {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.6),
+      barrierColor: AppColors.scrim,
       builder: (_) => AiQuickAddModal(mode: mode, initialText: initialText),
     );
   }
@@ -114,6 +114,9 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
       });
       return;
     }
+    // Kayıt sürerken sayfa kapatıldıysa (çıkış animasyonu sürüyor olabilir)
+    // gecikmiş pop alttaki rotayı kapatmasın.
+    if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
     Navigator.of(context).pop(_savedBeforeSwitch + saved);
   }
 
@@ -157,9 +160,9 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(top: BorderSide(color: AppColors.border)),
           ),
           child: SafeArea(
@@ -323,7 +326,7 @@ class _Header extends StatelessWidget {
         IconButton(
           onPressed: onClose,
           tooltip: 'Kapat',
-          icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+          icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
         ),
       ],
     );
@@ -364,7 +367,7 @@ class _OtherDomainBanner extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.swap_horiz_rounded,
+              Icon(Icons.swap_horiz_rounded,
                   size: 18, color: AppColors.warning),
               const SizedBox(width: 10),
               Expanded(
@@ -429,7 +432,7 @@ class _SavedNotice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle_outline_rounded,
+          Icon(Icons.check_circle_outline_rounded,
               size: 18, color: AppColors.accent),
           const SizedBox(width: 10),
           Expanded(
@@ -510,7 +513,7 @@ class _InputSection extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.north_west_rounded,
                         size: 16,
                         color: AppColors.textMuted,
@@ -580,7 +583,7 @@ class _PreviewList extends StatelessWidget {
           subtitle: [
             if (t.assignee != null) 'İlgili: ${t.assignee}',
             if (t.dueAt != null) AppDates.relativeDayTime(t.dueAt!),
-            if (t.remindAt != null) 'Hatırlatma açık',
+            if (t.dueAt != null || t.remindAt != null) 'Hatırlatma açık',
             if (t.dueAt == null && t.assignee == null) 'Tarihsiz görev',
           ].join(' · '),
           onRemove: enabled ? () => onRemove(ParsedKind.task, i) : null,
@@ -712,7 +715,7 @@ class _PreviewTile extends StatelessWidget {
             onPressed: onRemove,
             tooltip: 'Bu kaydı çıkar',
             visualDensity: VisualDensity.compact,
-            icon: const Icon(
+            icon: Icon(
               Icons.close_rounded,
               size: 18,
               color: AppColors.textMuted,
@@ -741,7 +744,7 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline_rounded,
+          Icon(Icons.error_outline_rounded,
               size: 18, color: AppColors.danger),
           const SizedBox(width: 10),
           Expanded(

@@ -13,8 +13,12 @@ MIN_IOS="15.0"
 BUDDY="/usr/libexec/PlistBuddy"
 
 if [[ ! -f "$PLIST" || ! -f "$PBXPROJ" ]]; then
-  echo "HATA: ios/ klasörü yok. Önce şunu çalıştır:" >&2
-  echo "  flutter create --platforms=ios --org com.ornek --project-name kisisel_asistan ." >&2
+  echo "HATA: ios/ klasörü yok." >&2
+  echo "Codemagic derlemesi onu kendisi oluşturur (codemagic.yaml, \"iOS projesini oluştur\" adımı)." >&2
+  echo "Yerelde (Mac) önce şunu çalıştır; com.ornek yerine Bundle ID'nin son parçası hariç kısmını yaz:" >&2
+  echo "  flutter create --no-pub --platforms=ios --org com.ornek --project-name kisisel_asistan ." >&2
+  echo "  git checkout -- pubspec.lock   # flutter create kilit dosyasını yeniden yazar" >&2
+  echo "  flutter pub get" >&2
   exit 1
 fi
 if [[ ! -x "$BUDDY" ]]; then

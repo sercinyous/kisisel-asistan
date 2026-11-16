@@ -10,3 +10,6 @@ ios/Flutter/Generated.xcconfig
 .idea/
 .env
 dart_defines.json
+
+# Ajanların geçici çalışma kopyaları
+.claude/worktrees/

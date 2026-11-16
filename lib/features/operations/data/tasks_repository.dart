@@ -88,6 +88,7 @@ class TasksRepository {
     String? assignee,
     DateTime? dueAt,
     DateTime? remindAt,
+    bool notify = true,
   }) async {
     final draft = TaskItem(
       id: '',
@@ -99,6 +100,7 @@ class TasksRepository {
       assignee: assignee,
       dueAt: dueAt,
       remindAt: remindAt,
+      notify: notify,
     );
     final row =
         await _client.from('tasks').insert(draft.toWriteMap()).select().single();

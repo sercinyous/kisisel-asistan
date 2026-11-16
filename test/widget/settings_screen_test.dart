@@ -104,4 +104,38 @@ void main() {
     expect(settings.saved, isEmpty);
     expect(find.text('800–6000 arası olmalı'), findsOneWidget);
   });
+
+  Future<void> scrollToPermission(WidgetTester tester) async {
+    await tester.scrollUntilVisible(
+      find.text('Bildirim izni'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('ekranı açmak bildirim izni istemez, yalnızca durumu gösterir',
+      (tester) async {
+    notifications.permissionGranted = false;
+    await pumpSettings(tester);
+    await scrollToPermission(tester);
+
+    expect(find.textContaining('Kapalı'), findsOneWidget);
+    expect(notifications.permissionRequests, 0);
+  });
+
+  testWidgets('"İzin iste" butonu izni ister ve durumu yeniler', (tester) async {
+    notifications.permissionGranted = false;
+    await pumpSettings(tester);
+    await scrollToPermission(tester);
+
+    // Kullanıcı sistem penceresinde izin verir.
+    notifications.permissionGranted = true;
+    await tester.ensureVisible(find.text('İzin iste'));
+    await tester.tap(find.text('İzin iste'));
+    await tester.pumpAndSettle();
+
+    expect(notifications.permissionRequests, greaterThanOrEqualTo(1));
+    expect(find.text('Açık'), findsOneWidget);
+  });
 }

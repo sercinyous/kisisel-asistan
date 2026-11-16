@@ -1,17 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/health_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../../core/services/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/theme_mode.dart';
 import '../../../core/widgets/bento.dart';
+import '../../health/presentation/health_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../domain/user_settings.dart';
 import 'settings_providers.dart';
 
-/// Ayarlar: hedefler, bildirimler, ekip, bağlantılar ve hesap.
+/// Ayarlar: görünüm, hedefler, bildirimler, ekip, bağlantılar ve hesap.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -48,7 +53,7 @@ class _LoadError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_rounded, color: AppColors.textMuted),
+            Icon(Icons.cloud_off_rounded, color: AppColors.textMuted),
             const SizedBox(height: 12),
             Text(
               'Ayarlar yüklenemedi.',
@@ -345,13 +350,15 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
 
   Future<void> _reconnectHealth() async {
     final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context, listen: false);
     var granted = false;
     try {
       granted = await ref.read(healthServiceProvider).requestAccess();
     } catch (_) {
       granted = false;
     }
-    ref.invalidate(healthTodayProvider);
+    // İlk izinle birlikte son günler de okunur ve yedeklenir.
+    unawaited(resyncHealthKit(container));
     if (granted) return;
     messenger
       ..hideCurrentSnackBar()
@@ -365,8 +372,11 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       );
   }
 
-  void _recheckNotifications() {
-    ref
+  /// İzin yalnızca kullanıcı butona basınca istenir; ekranı açmak sormaz.
+  Future<void> _requestNotifications() async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    await container.read(notificationServiceProvider).requestPermission();
+    container
       ..invalidate(notificationPermissionProvider)
       ..invalidate(notificationSyncProvider);
   }
@@ -391,7 +401,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text(
+            child: Text(
               'Çıkış yap',
               style: TextStyle(color: AppColors.danger),
             ),
@@ -439,6 +449,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                   AppSpacing.page,
                 ),
                 children: [
+                  const _AppearanceCard(),
+                  const SizedBox(height: AppSpacing.grid),
                   _goalsCard(),
                   const SizedBox(height: AppSpacing.grid),
                   _notificationsCard(),
@@ -666,7 +678,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                 InputChip(
                   label: Text(name),
                   backgroundColor: AppColors.surfaceHigh,
-                  side: const BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.border),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadii.chip),
                   ),
@@ -771,10 +783,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           title: 'Bildirim izni',
           status: permissionText,
           statusColor: permissionColor,
-          actionLabel: 'Yeniden dene',
+          actionLabel: 'İzin iste',
           onAction: permission.isLoading || permission.valueOrNull == true
               ? null
-              : _recheckNotifications,
+              : _requestNotifications,
         ),
       ],
     );
@@ -1071,6 +1083,57 @@ class _Hint extends StatelessWidget {
             .bodySmall
             ?.copyWith(color: AppColors.textMuted),
       ),
+    );
+  }
+}
+
+/// Görünüm tercihi (Sistem / Açık / Koyu). Cihaza özgüdür: seçilir seçilmez
+/// uygulanır, kaydedilmemiş değişikliklere ve Supabase'e dahil değildir.
+class _AppearanceCard extends ConsumerWidget {
+  const _AppearanceCard();
+
+  static IconData _icon(AppThemeMode mode) => switch (mode) {
+        AppThemeMode.system => Icons.brightness_auto_rounded,
+        AppThemeMode.light => Icons.light_mode_rounded,
+        AppThemeMode.dark => Icons.dark_mode_rounded,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    return _Section(
+      icon: Icons.palette_rounded,
+      title: 'Görünüm',
+      color: AppColors.warning,
+      children: [
+        SegmentedButton<AppThemeMode>(
+          key: const Key('settings-theme-mode'),
+          showSelectedIcon: false,
+          segments: [
+            for (final option in AppThemeMode.values)
+              ButtonSegment(
+                value: option,
+                label: Text(option.label),
+                icon: Icon(_icon(option)),
+              ),
+          ],
+          selected: {mode},
+          onSelectionChanged: (selection) =>
+              ref.read(themeModeProvider.notifier).select(selection.first),
+          style: SegmentedButton.styleFrom(
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.textSecondary,
+            selectedBackgroundColor: AppColors.surfaceHigh,
+            selectedForegroundColor: AppColors.accent,
+            side: BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadii.inner),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const _Hint('Sistem, iPhone\'un açık/koyu ayarını izler.'),
+      ],
     );
   }
 }

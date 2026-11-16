@@ -15,6 +15,8 @@ import 'core/services/health_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/supabase_providers.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_theme_scope.dart';
+import 'core/theme/theme_mode.dart';
 import 'core/utils/date_utils.dart';
 import 'demo/demo_backend.dart';
 import 'demo/demo_data.dart';
@@ -52,12 +54,17 @@ Future<void> main() async {
   await initializeDateFormatting(AppDates.locale);
   await _loadFonts();
 
-  final data = DemoData.seed(DateTime.now());
-  final base = AppTheme.dark;
+  final data = DemoData.seed(
+    DateTime.now(),
+    regenerateDelay: const Duration(milliseconds: 900),
+  );
+  // Depo (localStorage) korumalı alanda hata verirse koyu temayla açılır.
+  final themeMode = await loadInitialThemeMode();
 
   runApp(
     ProviderScope(
       overrides: [
+        initialThemeModeProvider.overrideWithValue(themeMode),
         supabaseClientProvider.overrideWithValue(
           SupabaseClient('https://demo.invalid', 'demo'),
         ),
@@ -93,48 +100,65 @@ Future<void> main() async {
           ),
         ),
       ],
-      child: MaterialApp(
-        title: 'Operasyon Merkezi Demo',
-        debugShowCheckedModeBanner: false,
-        theme: base.copyWith(
-          textTheme: base.textTheme.apply(fontFamily: 'Roboto'),
-        ),
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        supportedLocales: const [Locale('tr', 'TR')],
-        locale: const Locale('tr', 'TR'),
-        // Geniş ekranda uygulama telefon genişliğinde ortalanır.
-        builder: (context, child) {
-          final media = MediaQuery.of(context);
-          final width = math.min(media.size.width, 430.0);
-          return ColoredBox(
-            color: AppColors.background,
-            child: Center(
-              child: SizedBox(
-                width: width,
-                child: Column(
-                  children: [
-                    const _DemoBanner(),
-                    Expanded(
-                      child: MediaQuery(
-                        data: media.copyWith(
-                          size: Size(
-                            width,
-                            media.size.height - _DemoBanner.height,
-                          ),
-                        ),
-                        child: child!,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-        home: const HomeShell(),
-      ),
+      child: const _DemoApp(),
     ),
   );
+}
+
+class _DemoApp extends ConsumerWidget {
+  const _DemoApp();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppThemeScope(
+      mode: ref.watch(themeModeProvider),
+      builder: _app,
+    );
+  }
+
+  Widget _app(BuildContext context, ThemeData base) {
+    return MaterialApp(
+      title: 'Operasyon Merkezi Demo',
+      debugShowCheckedModeBanner: false,
+      theme: base.copyWith(
+        textTheme: base.textTheme.apply(fontFamily: 'Roboto'),
+      ),
+      themeAnimationDuration: Duration.zero,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('tr', 'TR')],
+      locale: const Locale('tr', 'TR'),
+      // Geniş ekranda uygulama telefon genişliğinde ortalanır.
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        final width = math.min(media.size.width, 430.0);
+        return ColoredBox(
+          color: AppColors.background,
+          child: Center(
+            child: SizedBox(
+              width: width,
+              child: Column(
+                children: [
+                  const _DemoBanner(),
+                  Expanded(
+                    child: MediaQuery(
+                      data: media.copyWith(
+                        size: Size(
+                          width,
+                          media.size.height - _DemoBanner.height,
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      home: const HomeShell(),
+    );
+  }
 }
 
 /// Sayfanın örnek veriyle çalışan bir demo olduğunu her ekranda belirtir.
@@ -148,11 +172,11 @@ class _DemoBanner extends StatelessWidget {
     return Container(
       height: height,
       alignment: Alignment.center,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(bottom: BorderSide(color: AppColors.border, width: 0.5)),
       ),
-      child: const Text.rich(
+      child: Text.rich(
         TextSpan(
           children: [
             TextSpan(
@@ -162,7 +186,7 @@ class _DemoBanner extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            TextSpan(text: ' · örnek veri, sayfa yenilenince sıfırlanır'),
+            const TextSpan(text: ' · örnek veri, sayfa yenilenince sıfırlanır'),
           ],
         ),
         style: TextStyle(

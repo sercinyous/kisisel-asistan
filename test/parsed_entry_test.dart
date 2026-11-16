@@ -133,23 +133,63 @@ void main() {
       expect(task.remindAt, isNull);
     });
 
-    test('remind_at yoksa due_at kullanılır', () {
+    // remind_at boşsa bildirim anını ayarlardaki "randevu kaç dk önce" süresi
+    // belirler (buildNotificationPlan); burada termin kopyalanmaz.
+    test('remind_at yoksa boş kalır', () {
       final task = ParsedTask.fromJson(const {
         'title': 'Toplantı',
         'due_at': '2026-11-17T15:00:00+03:00',
         'remind_at': null,
       })!;
       expect(task.dueAt, DateTime.utc(2026, 11, 17, 12));
-      expect(task.remindAt, task.dueAt);
+      expect(task.remindAt, isNull);
+      expect(task.toJson()['remind_at'], isNull);
     });
 
-    test('remind_at geçersizse due_at kullanılır', () {
+    test('remind_at geçersizse boş kalır', () {
       final task = ParsedTask.fromJson(const {
         'title': 'Toplantı',
         'due_at': '2026-11-17T15:00:00+03:00',
         'remind_at': '',
       })!;
-      expect(task.remindAt, DateTime.utc(2026, 11, 17, 12));
+      expect(task.dueAt, DateTime.utc(2026, 11, 17, 12));
+      expect(task.remindAt, isNull);
+    });
+
+    test('remind_at terminle aynı ansa (model yinelemesi) boş kalır', () {
+      for (final remind in const [
+        '2026-11-17T15:00:00+03:00',
+        // Aynı an, farklı yazım.
+        '2026-11-17T12:00:00Z',
+      ]) {
+        final task = ParsedTask.fromJson({
+          'title': 'Toplantı',
+          'due_at': '2026-11-17T15:00:00+03:00',
+          'remind_at': remind,
+        })!;
+        expect(task.dueAt, DateTime.utc(2026, 11, 17, 12), reason: remind);
+        expect(task.remindAt, isNull, reason: remind);
+      }
+    });
+
+    test('yalnızca tarih yinelenmişse saat 09:00 olur, hatırlatma boş kalır',
+        () {
+      final task = ParsedTask.fromJson(const {
+        'title': 'Rapor',
+        'due_at': '2099-01-05T00:00:00',
+        'remind_at': '2099-01-05T00:00:00',
+      })!;
+      expect(task.dueAt, DateTime(2099, 1, 5, 9));
+      expect(task.remindAt, isNull);
+    });
+
+    test('yalnızca remind_at verilmişse korunur', () {
+      final task = ParsedTask.fromJson(const {
+        'title': 'İlacı al',
+        'remind_at': '2026-11-17T09:00:00+03:00',
+      })!;
+      expect(task.dueAt, isNull);
+      expect(task.remindAt, DateTime.utc(2026, 11, 17, 6));
     });
 
     test('remind_at verilmişse korunur', () {

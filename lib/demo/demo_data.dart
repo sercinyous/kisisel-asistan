@@ -32,7 +32,12 @@ class DemoData {
   int _seq = 0;
   String nextId(String prefix) => '$prefix-demo-${_seq++}';
 
-  factory DemoData.seed(DateTime now) {
+  /// [regenerateDelay]: "Raporu oluştur" bu kadar sürer (tarayıcı demosunda
+  /// meşgul durumu görünsün diye verilir; testlerde sıfırdır).
+  factory DemoData.seed(
+    DateTime now, {
+    Duration regenerateDelay = Duration.zero,
+  }) {
     final today = AppDates.startOfDay(now);
     final lastDay = DateTime(now.year, now.month + 1, 0).day;
     int dayIn(int offset) => (now.day + offset).clamp(1, lastDay);
@@ -242,6 +247,7 @@ class DemoData {
         ],
         weeklyBuilder: (weekStart) => demoWeeklyReport(weekStart, DateTime.now()),
         dailyBuilder: (day) => demoDailyReport(day, DateTime.now()),
+        regenerateDelay: regenerateDelay,
       ),
     );
   }
@@ -500,7 +506,14 @@ class DemoQuickAddRepository implements QuickAddRepository {
           remindAt: t.remindAt?.toLocal(),
         ),
       );
-      saved.add(SavedTask(id: id, title: t.title, remindAt: t.remindAt));
+      saved.add(
+        SavedTask(
+          id: id,
+          title: t.title,
+          dueAt: t.dueAt,
+          remindAt: t.remindAt,
+        ),
+      );
     }
     for (final r in entry.routines) {
       _data.routines.routines.add(
@@ -834,7 +847,8 @@ ParsedEntry demoParse(String input, QuickAddMode mode, {DateTime? now}) {
       'priority': RegExp(r'acil|önemli|hemen').hasMatch(s) ? 'high' : 'medium',
       'assignee': assignee,
       'due_at': due?.toIso8601String(),
-      'remind_at': due?.toIso8601String(),
+      // Gerçek talimattaki gibi: ayrı bir hatırlatma zamanı söylenmedi.
+      'remind_at': null,
     });
   }
 

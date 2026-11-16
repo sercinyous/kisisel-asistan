@@ -39,6 +39,32 @@ begin
     raise exception 'BAŞARISIZ: weekly_reports yetkileri yanlış';
   end if;
 
+  -- tasks.notify: yalnızca eski formda hatırlatması kapatılmış görev kapalıya döner.
+  select count(*) into v_count from public.tasks
+  where user_id = v_user and title like 'eski-%'
+    and notify = (title <> 'eski-kapali');
+  if v_count <> 4 then
+    raise exception 'BAŞARISIZ: tasks.notify yükseltmesi yanlış (% doğru satır)', v_count;
+  end if;
+
+  -- AI girişi notify = true yazar; elle eklenen satırda varsayılan true'dur.
+  perform set_config('request.jwt.claim.sub', v_user::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  set local role authenticated;
+  perform public.quick_add_entries(
+    '{"tasks":[{"title":"ai-yeni","due_at":"2026-10-02T09:00:00Z"}]}'::jsonb);
+  insert into public.tasks (title, notify) values ('elle-kapali', false);
+  insert into public.tasks (title) values ('elle-varsayilan');
+  reset role;
+  select count(*) into v_count from public.tasks
+  where user_id = v_user
+    and ((title = 'ai-yeni' and notify and source = 'ai')
+      or (title = 'elle-kapali' and not notify)
+      or (title = 'elle-varsayilan' and notify));
+  if v_count <> 3 then
+    raise exception 'BAŞARISIZ: yeni görevlerde notify yanlış (% doğru satır)', v_count;
+  end if;
+
   -- Eski kullanıcı kendi eski raporunu okumaya devam eder.
   perform set_config('request.jwt.claim.sub', v_user::text, true);
   set local role authenticated;

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/notification_plan.dart';
+import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
@@ -9,7 +10,8 @@ void main() {
   final now = DateTime(2026, 11, 16, 10);
   const defaults = UserSettings.defaults();
 
-  TaskItem task(String id, {DateTime? due, DateTime? remind, String status = 'todo'}) =>
+  TaskItem task(String id,
+          {DateTime? due, DateTime? remind, String status = 'todo', bool notify = true}) =>
       TaskItem(
         id: id,
         title: 'Görev $id',
@@ -18,6 +20,7 @@ void main() {
         status: status,
         dueAt: due,
         remindAt: remind,
+        notify: notify,
       );
 
   Routine monthly(String id, int day, {int? hour, int? minute}) => Routine(
@@ -127,7 +130,7 @@ void main() {
       tasks: [
         task('a', due: DateTime(2026, 11, 17, 15), remind: DateTime(2026, 11, 17, 12)),
         task('b', due: DateTime(2026, 11, 17, 15)),
-        task('c', due: DateTime(2026, 11, 16, 10, 30)),
+        task('c', due: DateTime(2026, 11, 16, 9)),
         task('d', due: DateTime(2026, 11, 18, 15), status: 'done'),
         task('e'),
       ],
@@ -136,6 +139,22 @@ void main() {
     expect(result[0].fireAt, DateTime(2026, 11, 17, 12));
     expect(result[1].fireAt, DateTime(2026, 11, 17, 14, 15));
     expect(result[1].kind, PlannedKind.task);
+  });
+
+  test('görev: hatırlatma anı geçmiş ama termin ileride ise termin anında', () {
+    // Şimdi 10:00, ayar 45 dk: 10:30 randevusunun hatırlatması 09:45'te kalır.
+    final result = plan(
+      settings: defaults.copyWith(eventRemindMinutes: 45),
+      tasks: [
+        task('yakin', due: DateTime(2026, 11, 16, 10, 30)),
+        task('acik', due: DateTime(2026, 11, 16, 11), remind: DateTime(2026, 11, 16, 9)),
+        task('gecti', due: DateTime(2026, 11, 16, 9, 59)),
+      ],
+    );
+    expect({for (final p in result) p.sourceId: p.fireAt}, {
+      'yakin': DateTime(2026, 11, 16, 10, 30),
+      'acik': DateTime(2026, 11, 16, 11),
+    });
   });
 
   test('sessiz saatler gece yarısını aşar: aralıktaki bildirim bitişe ertelenir', () {
@@ -182,5 +201,73 @@ void main() {
     expect(result.length, maxPendingNotifications);
     expect(result.first.sourceId, 't0');
     expect(result.last.sourceId, 't63');
+  });
+
+  group('görev hatırlatması kapalı (notify = false)', () {
+    final due = DateTime(2026, 11, 17, 15);
+
+    test('termini olsa da bildirim planlanmaz', () {
+      expect(plan(tasks: [task('t1', due: due, notify: false)]), isEmpty);
+    });
+
+    test('kayıtlı hatırlatma saati olsa da planlanmaz', () {
+      final remind = due.subtract(const Duration(minutes: 30));
+      expect(
+        plan(tasks: [task('t1', due: due, remind: remind, notify: false)]),
+        isEmpty,
+      );
+    });
+
+    test('açık görev etkilenmez: termin − varsayılan süre', () {
+      final result = plan(tasks: [
+        task('kapali', due: due, notify: false),
+        task('acik', due: due),
+      ]);
+      expect(result.map((p) => p.key), ['task:acik']);
+      expect(
+        result.single.fireAt,
+        due.subtract(Duration(minutes: defaults.eventRemindMinutes)),
+      );
+    });
+  });
+
+  group('AI girişiyle eklenen randevu', () {
+    final due = DateTime(2026, 11, 17, 15);
+    final settings = defaults.copyWith(eventRemindMinutes: 45);
+
+    /// Model çıktısı → ParsedTask → `quick_add_entries` satırı (notify = true).
+    TaskItem aiRow(Object? remindAt) {
+      final json = ParsedTask.fromJson({
+        'title': 'Duhan ile vardiya planı',
+        'category': 'Ekip',
+        'priority': 'medium',
+        'due_at': due.toUtc().toIso8601String(),
+        'remind_at': remindAt,
+      })!
+          .toJson();
+      return TaskItem.fromMap({...json, 'id': 'ai-1', 'notify': true});
+    }
+
+    test('hatırlatma zamanı söylenmemişse termin − ayardaki süre', () {
+      final result = plan(settings: settings, tasks: [aiRow(null)]);
+      expect(result.single.fireAt, DateTime(2026, 11, 17, 14, 15));
+    });
+
+    test('model termini remind_at olarak yinelese de süre uygulanır', () {
+      final result = plan(
+        settings: settings,
+        tasks: [aiRow(due.toUtc().toIso8601String())],
+      );
+      expect(result.single.fireAt, DateTime(2026, 11, 17, 14, 15));
+    });
+
+    test('kullanıcının söylediği hatırlatma zamanı korunur', () {
+      final remind = DateTime(2026, 11, 17, 9);
+      final result = plan(
+        settings: settings,
+        tasks: [aiRow(remind.toUtc().toIso8601String())],
+      );
+      expect(result.single.fireAt, remind);
+    });
   });
 }

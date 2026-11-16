@@ -150,10 +150,16 @@ class QuickAddController
       // Tam eşitleme aşağıda tetiklenir ama yalnızca dinleyeni varsa çalışır;
       // saatli görev o beklenmeden hemen planlanır. Bildirimler kapalıysa
       // hiçbir şey planlanmaz.
-      if (ref.read(settingsOrDefaultProvider).notificationsEnabled) {
+      final settings = ref.read(settingsOrDefaultProvider);
+      if (settings.notificationsEnabled) {
         final notifications = ref.read(notificationServiceProvider);
         for (final task in result.tasks) {
-          final when = task.remindAt;
+          // buildNotificationPlan ile aynı kural: açık hatırlatma anı yoksa
+          // terminden "randevu kaç dk önce" süresi kadar önce.
+          final when = task.remindAt ??
+              task.dueAt?.subtract(
+                Duration(minutes: settings.eventRemindMinutes),
+              );
           if (when == null) continue;
           try {
             await notifications.scheduleReminder(
