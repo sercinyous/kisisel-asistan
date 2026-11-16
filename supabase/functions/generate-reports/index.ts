@@ -82,7 +82,7 @@ const handler = createHandler({
   store,
   cronSecret: Deno.env.get("CRON_SECRET") ?? "",
   geminiApiKey: Deno.env.get("GEMINI_API_KEY") ?? "",
-  geminiModel: Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash",
+  geminiModel: Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash",
   fetch,
   now: () => new Date(),
   log: (message) => console.error(message),

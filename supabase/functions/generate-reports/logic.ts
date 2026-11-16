@@ -187,10 +187,12 @@ export function buildGeminiRequest(prompt: Prompt) {
     systemInstruction: { parts: [{ text: prompt.system }] },
     contents: [{ role: "user", parts: [{ text: prompt.user }] }],
     generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 1024,
+      // Sıcaklık verilmez: Gemini 3 serisinde 1.0'ın altı döngüye sokabiliyor.
+      // Gemini 3 serisinde düşünme belirteçleri de bu sınıra sayılır.
+      maxOutputTokens: 2048,
       // Kısa yorum için düşünme adımı gereksiz gecikme ve maliyettir.
-      thinkingConfig: { thinkingBudget: 0 },
+      // Gemini 3 serisi bütçe yerine düzey alır; en düşük desteklenen "low".
+      thinkingConfig: { thinkingLevel: "low" },
     },
   };
 }

@@ -78,7 +78,7 @@ Kalori aralığı: hedefin %85–%110'u. `form.rate` = (min(workouts_done, plann
 - Yetki: (a) `x-cron-secret` başlığı `CRON_SECRET` ile eşleşirse **tüm kullanıcılar** için üretir;
   (b) aksi halde `Authorization: Bearer <kullanıcı JWT>` doğrulanır ve **yalnızca o kullanıcı** için üretir;
   ikisi de yoksa 401. Sabit zamanlı karşılaştırma. service_role istemcisi yalnızca sunucuda.
-- Akış: metrics RPC → Gemini (`gemini-2.5-flash`, Türkçe, düz metin, günlük ≤ 70 kelime / haftalık ≤ 120
+- Akış: metrics RPC → Gemini (`gemini-3.8-flash`, Türkçe, düz metin, günlük ≤ 70 kelime / haftalık ≤ 120
   kelime + en fazla 3 öneri, yalnızca verilen sayılara dayan, tıbbi tavsiye yok) → save RPC.
   Gemini hata verirse `ai_status='failed'`, özet null. Yanıt: `{ok, kind, date, users, failed}`.
 - Girdi doğrulama (kind, tarih biçimi, gelecekteki tarih reddi), 30 sn zaman aşımı, kullanıcı başına hata
