@@ -1,0 +1,208 @@
+<title>Faz 3 Ekran Taslağı</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Yerleşim: üstte kısa açıklama, altında yan yana iki telefon ekranı (dar ekranda alt alta), en altta karar notları. */
+  :root {
+    color-scheme: dark;
+    --bg: #000000; --surface: #0E0E10; --surface-high: #18181B; --border: #222226;
+    --text: #F2F4F8; --text-2: #A1A1AA; --text-3: #71717A;
+    --accent: #5EEAD4; --ops: #7AA7FF; --fit: #FF8A65; --food: #B9F27C; --warn: #FBBF24; --danger: #FF6B6B;
+    --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--ui); line-height: 1.4;
+    padding-block: 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+  h1 { font-size: 26px; letter-spacing: -0.5px; margin: 0 0 6px; }
+  .lead { margin: 0; color: var(--text-2); font-size: 14.5px; max-width: 65ch; }
+  .note { border: 1px solid var(--border); background: var(--surface); border-radius: 16px; padding: 12px 16px; font-size: 13.5px; color: var(--text-2); max-width: 70ch; }
+  .note b { color: var(--warn); font-weight: 600; }
+  .phones { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 10px; width: min(390px, 100%); }
+  .col > strong { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+  .phone { border: 1px solid var(--border); border-radius: 36px; overflow: hidden; background: var(--bg); }
+  .screen { padding: 22px 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .sub { font-size: 13.5px; color: var(--text-2); margin-top: -6px; margin-bottom: 6px; }
+  .h2 { font-size: 18px; font-weight: 700; margin: 14px 0 2px; display: flex; justify-content: space-between; align-items: baseline; }
+  .h2 a { font-size: 13px; color: var(--accent); font-weight: 600; text-decoration: none; }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 24px; padding: 16px; min-width: 0; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .lbl { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 500; color: var(--text-2); }
+  .lbl i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); display: inline-block; }
+  .lbl span { margin-left: auto; font-size: 11.5px; color: var(--text-3); font-weight: 400; }
+  .big { font-size: 34px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 6px; }
+  .big small { font-size: 14px; font-weight: 400; color: var(--text-2); letter-spacing: 0; }
+  .mid { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  .mid small { font-size: 13px; font-weight: 400; color: var(--text-2); }
+  .cap { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .chip { font-size: 12px; padding: 4px 10px; border-radius: 12px; background: var(--surface-high); color: var(--text-2); }
+  .chip.good { color: var(--accent); }
+  svg { display: block; width: 100%; height: auto; margin-top: 10px; }
+  svg text { font-family: var(--ui); font-size: 10px; fill: var(--text-3); }
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; text-align: center; font-size: 10px; color: var(--text-3); }
+  .days b { display: block; height: 22px; border-radius: 7px; background: var(--surface-high); margin-bottom: 4px; }
+  .days b.on { background: var(--fit); }
+  .days b.plan { border: 1px dashed var(--text-3); background: none; }
+  .list { padding: 4px 16px; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  .item + .item { border-top: 0.5px solid var(--border); }
+  .ic { width: 36px; height: 36px; border-radius: 10px; background: color-mix(in srgb, var(--c) 16%, transparent); color: var(--c); display: grid; place-items: center; font-size: 15px; flex: none; }
+  .item .b { flex: 1; min-width: 0; }
+  .item .b strong { display: block; font-size: 14.5px; font-weight: 600; }
+  .item .b span { font-size: 12px; color: var(--text-2); }
+  .item .v { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar { height: 8px; border-radius: 99px; background: var(--surface-high); overflow: hidden; margin-top: 10px; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--c); }
+  .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .kv div span { display: block; font-size: 11px; color: var(--text-2); }
+  .kv div b { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ai p { margin: 8px 0 0; font-size: 13.5px; color: var(--text); line-height: 1.5; }
+  .ai ul { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
+  .btn { margin-top: 12px; height: 46px; border-radius: 16px; background: var(--accent); color: #04201B; font-weight: 700; font-size: 15px; display: grid; place-items: center; }
+  .seg { display: grid; grid-template-columns: auto 1fr auto; align-items: center; font-size: 15px; font-weight: 600; text-align: center; margin-bottom: 4px; }
+  .seg span { color: var(--text-2); font-size: 20px; padding: 0 6px; }
+  .nav { display: grid; grid-template-columns: repeat(5, 1fr); height: 56px; border-top: 0.5px solid var(--border); align-items: center; justify-items: center; color: var(--text-3); }
+  .nav .plus { width: 44px; height: 34px; border-radius: 12px; background: var(--accent); color: #000; display: grid; place-items: center; font-size: 22px; font-weight: 600; }
+  .nav .on { color: var(--text); }
+  .decide { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .decide .card strong { display: block; font-size: 14.5px; margin-bottom: 4px; }
+  .decide .card span { font-size: 13.5px; color: var(--text-2); }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Faz 3 ekran taslağı</h1>
+    <p class="lead">Sağlık ve Raporlar sekmelerinin kurulmadan önceki tasarım önerisi. Mevcut tasarım diliyle çizildi: siyah zemin, Bento kartlar, etiketsiz alt bar.</p>
+  </header>
+  <div class="note"><b>Taslak, henüz kodlanmadı.</b> Sayılar örnektir. Onayından sonra bu düzen Flutter'da kurulacak; değiştirmek istediğin kartı ya da sırayı şimdi söylemek en ucuz an.</div>
+
+  <div class="phones">
+    <div class="col">
+      <strong>Sağlık</strong>
+      <div class="phone">
+        <div class="screen">
+          <div class="h1">Sağlık</div>
+          <div class="sub">84.5 kg → 78 kg, kas kütlesini koruyarak</div>
+
+          <div class="card">
+            <div class="lbl" style="--c:var(--accent)"><i></i>Kilo<span>son 30 gün</span></div>
+            <div class="big">83.6 <small>kg</small></div>
+            <div class="chips"><span class="chip good">−0.9 kg bu ay</span><span class="chip">Hedefe 5.6 kg</span></div>
+            <svg viewBox="0 0 300 118" role="img" aria-label="Kilo grafiği: 84.5 kilodan 83.6 kiloya iniş, hedef çizgisi 78 kilo">
+              <line x1="10" y1="97.5" x2="290" y2="97.5" stroke="#FBBF24" stroke-width="1" stroke-dasharray="4 4"/>
+              <text x="290" y="110" text-anchor="end" fill="#FBBF24" style="fill:#FBBF24">Hedef 78 kg</text>
+              <path d="M10 16.3 L57 20 L103 18.8 L150 23.8 L197 22.5 L243 26.3 L290 27.5 L290 97.5 L10 97.5 Z" fill="#5EEAD4" fill-opacity="0.10"/>
+              <path d="M10 16.3 L57 20 L103 18.8 L150 23.8 L197 22.5 L243 26.3 L290 27.5" fill="none" stroke="#5EEAD4" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="290" cy="27.5" r="4" fill="#5EEAD4"/>
+              <text x="10" y="10">84.5</text>
+              <text x="284" y="18" text-anchor="end" style="fill:#F2F4F8">83.6</text>
+            </svg>
+          </div>
+
+          <div class="row2">
+            <div class="card">
+              <div class="lbl" style="--c:var(--fit)"><i></i>Antrenman</div>
+              <div class="mid">3 <small>/ 7 bu hafta</small></div>
+              <div class="days">
+                <div><b class="on"></b>Pzt</div><div><b class="on"></b>Sal</div><div><b class="on"></b>Çar</div><div><b class="plan"></b>Per</div><div><b class="plan"></b>Cum</div><div><b class="plan"></b>Cmt</div><div><b class="plan"></b>Paz</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="lbl" style="--c:var(--ops)"><i></i>Adım<span>7 gün</span></div>
+              <div class="mid">8.240 <small>ort.</small></div>
+              <svg viewBox="0 0 140 40" role="img" aria-label="Son 7 günün adım çubukları">
+                <g fill="#7AA7FF"><rect x="2" y="14" width="14" height="26" rx="4"/><rect x="22" y="8" width="14" height="32" rx="4"/><rect x="42" y="18" width="14" height="22" rx="4"/><rect x="62" y="4" width="14" height="36" rx="4"/><rect x="82" y="12" width="14" height="28" rx="4"/><rect x="102" y="20" width="14" height="20" rx="4"/><rect x="122" y="16" width="14" height="24" rx="4" fill-opacity="0.45"/></g>
+              </svg>
+            </div>
+          </div>
+
+          <div class="h2">Bugünün öğünleri <a>Öğün ekle</a></div>
+          <div class="card list">
+            <div class="item" style="--c:var(--food)"><span class="ic">☀</span><div class="b"><strong>Kahvaltı</strong><span>Yulaf, 2 yumurta · P 28 g</span></div><span class="v">420 kcal</span></div>
+            <div class="item" style="--c:var(--food)"><span class="ic">◐</span><div class="b"><strong>Öğle</strong><span>Tavuk göğsü, çavdar ekmeği · P 67 g</span></div><span class="v">460 kcal</span></div>
+            <div class="item" style="--c:var(--food)"><span class="ic">☾</span><div class="b"><strong>Akşam</strong><span>Henüz kayıt yok</span></div><span class="v" style="color:var(--text-3)">—</span></div>
+          </div>
+
+          <div class="h2">Antrenman günlüğü <a>Ekle</a></div>
+          <div class="card list">
+            <div class="item" style="--c:var(--fit)"><span class="ic">▲</span><div class="b"><strong>Kickboks</strong><span>Bugün 19:30 · 60 dk</span></div><span class="v">540 kcal</span></div>
+            <div class="item" style="--c:var(--fit)"><span class="ic">▲</span><div class="b"><strong>Ağırlık antrenmanı</strong><span>Dün 19:00 · 45 dk</span></div><span class="v">310 kcal</span></div>
+          </div>
+
+          <div class="card">
+            <div class="lbl" style="--c:var(--danger)"><i></i>HealthKit<span>son eşitleme 15:34</span></div>
+            <div class="cap" style="margin-top:8px">Adım, uyku ve aktif kalori Sağlık uygulamasından okunuyor. Dün gece uyku: 7 sa 12 dk.</div>
+          </div>
+        </div>
+        <div class="nav"><span>▦</span><span>✓</span><span class="plus">+</span><span class="on">♥</span><span>▮</span></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <strong>Raporlar</strong>
+      <div class="phone">
+        <div class="screen">
+          <div class="h1">Raporlar</div>
+          <div class="seg"><span>‹</span>10 – 16 Kasım<span>›</span></div>
+
+          <div class="row2">
+            <div class="card">
+              <div class="lbl" style="--c:var(--ops)"><i></i>İş</div>
+              <div class="mid">%78</div>
+              <div class="cap">Görev 9 / 12 · Rutin %82</div>
+              <div class="bar" style="--c:var(--ops)"><i style="width:78%"></i></div>
+            </div>
+            <div class="card">
+              <div class="lbl" style="--c:var(--fit)"><i></i>Form</div>
+              <div class="mid">%71</div>
+              <div class="cap">Antrenman 5 / 7 · Protein 5 gün</div>
+              <div class="bar" style="--c:var(--fit)"><i style="width:71%"></i></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="lbl" style="--c:var(--ops)"><i></i>Günlük tamamlama<span>iş · form</span></div>
+            <svg viewBox="0 0 300 96" role="img" aria-label="Günlük iş ve form tamamlama yüzdeleri, pazartesiden pazara">
+              <line x1="0" y1="70" x2="300" y2="70" stroke="#222226"/>
+              <g fill="#7AA7FF"><rect x="10" y="14" width="12" height="56" rx="3"/><rect x="52" y="22" width="12" height="48" rx="3"/><rect x="94" y="8" width="12" height="62" rx="3"/><rect x="136" y="30" width="12" height="40" rx="3"/><rect x="178" y="18" width="12" height="52" rx="3"/><rect x="220" y="42" width="12" height="28" rx="3"/><rect x="262" y="36" width="12" height="34" rx="3"/></g>
+              <g fill="#FF8A65"><rect x="25" y="20" width="12" height="50" rx="3"/><rect x="67" y="34" width="12" height="36" rx="3"/><rect x="109" y="16" width="12" height="54" rx="3"/><rect x="151" y="48" width="12" height="22" rx="3"/><rect x="193" y="24" width="12" height="46" rx="3"/><rect x="235" y="12" width="12" height="58" rx="3"/><rect x="277" y="28" width="12" height="42" rx="3"/></g>
+              <g text-anchor="middle"><text x="24" y="86">Pzt</text><text x="66" y="86">Sal</text><text x="108" y="86">Çar</text><text x="150" y="86">Per</text><text x="192" y="86">Cum</text><text x="234" y="86">Cmt</text><text x="276" y="86">Paz</text></g>
+            </svg>
+          </div>
+
+          <div class="card">
+            <div class="kv">
+              <div><span>Ort. kalori</span><b>1.960</b></div>
+              <div><span>Ort. protein</span><b>158 g</b></div>
+              <div><span>Kilo</span><b style="color:var(--accent)">−0.4 kg</b></div>
+              <div><span>Ort. adım</span><b>8.240</b></div>
+              <div><span>Ort. uyku</span><b>7 sa 05</b></div>
+              <div><span>Aktif kalori</span><b>430</b></div>
+            </div>
+          </div>
+
+          <div class="card ai">
+            <div class="lbl" style="--c:var(--accent)"><i></i>Haftalık değerlendirme<span>AI</span></div>
+            <p>İş tarafında güçlü bir hafta: görevlerin dörtte üçü kapandı, rutinler düzenli. Form tarafında perşembe ve cuma antrenmanları kaçtı, protein iki gün hedefin altında kaldı.</p>
+            <ul><li>Perşembe antrenmanını sabaha al.</li><li>Öğle öğününe 30 g protein ekle.</li><li>Maaş ödemeleri bu hafta: salı günü tamamla.</li></ul>
+            <div class="btn">Raporu yeniden oluştur</div>
+          </div>
+
+          <div class="h2">Geçmiş haftalar</div>
+          <div class="card list">
+            <div class="item" style="--c:var(--ops)"><span class="ic">▮</span><div class="b"><strong>3 – 9 Kasım</strong><span>İş %74 · Form %80 · −0.5 kg</span></div><span class="v" style="color:var(--text-3)">›</span></div>
+            <div class="item" style="--c:var(--ops)"><span class="ic">▮</span><div class="b"><strong>27 Eki – 2 Kas</strong><span>İş %81 · Form %66 · −0.2 kg</span></div><span class="v" style="color:var(--text-3)">›</span></div>
+          </div>
+        </div>
+        <div class="nav"><span>▦</span><span>✓</span><span class="plus">+</span><span>♥</span><span class="on">▮</span></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="decide">
+    <div class="card"><strong>Grafikler</strong><span>Öneri: hazır grafik paketi (fl_chart). Dokunulabilir olur ve daha hızlı kurulur.</span></div>
+    <div class="card"><strong>Haftalık rapor</strong><span>Öneri: sen butona basınca üretilir ve kaydedilir. Otomatik üretim sonraya kalır.</span></div>
+  </section>
+</div>
