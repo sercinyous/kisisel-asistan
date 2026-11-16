@@ -1,298 +1,57 @@
 <title>Operasyon Merkezi Önizleme</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-  /* Yerleşim: solda telefon çerçevesinde çalışan uygulama, sağda sürüm notları; dar ekranda alt alta. */
+  /* Yerleşim: üstte kısa başlık ve not, altında gerçek ekran görüntülerinden oluşan ızgara, en altta sürüm notları. */
   :root {
     color-scheme: dark;
-    --bg: #0B0D12;
-    --page: #07080C;
-    --surface: #14171F;
-    --surface-high: #1C202B;
-    --border: #262B38;
-    --text: #F2F4F8;
-    --text-2: #9AA3B5;
-    --text-3: #6B7385;
-    --accent: #5EEAD4;
-    --ops: #7AA7FF;
-    --fit: #FF8A65;
-    --food: #B9F27C;
-    --warn: #FBBF24;
-    --danger: #FF6B6B;
-    --on-accent: #04201B;
+    --bg: #000000; --surface: #0E0E10; --border: #222226;
+    --text: #F2F4F8; --text-2: #A1A1AA; --text-3: #71717A;
+    --accent: #5EEAD4; --warn: #FBBF24;
     --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
   * { box-sizing: border-box; }
-  body {
-    background: var(--page); color: var(--text); font-family: var(--ui);
-    padding-block: 24px;
-    padding-left: max(16px, env(safe-area-inset-left, 0px));
-    padding-right: max(16px, env(safe-area-inset-right, 0px));
-    line-height: 1.4;
-  }
-  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-  button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .wrap { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; justify-content: center; }
-  .side { flex: 1 1 300px; min-width: 0; max-width: 460px; display: flex; flex-direction: column; gap: 20px; }
-  .side h1 { font-size: 26px; letter-spacing: -0.5px; margin: 0; text-wrap: balance; }
-  .side p { margin: 0; color: var(--text-2); font-size: 14px; }
-  .note { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; background: var(--surface); font-size: 13px; color: var(--text-2); }
+  body { background: var(--bg); color: var(--text); font-family: var(--ui); line-height: 1.45;
+    padding-block: 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+  h1 { font-size: 28px; letter-spacing: -0.5px; margin: 0 0 6px; text-wrap: balance; }
+  p { margin: 0; color: var(--text-2); font-size: 14.5px; max-width: 65ch; }
+  .note { border: 1px solid var(--border); background: var(--surface); border-radius: 16px; padding: 14px 16px; font-size: 13.5px; color: var(--text-2); max-width: 70ch; }
   .note b { color: var(--warn); font-weight: 600; }
-  .log h2 { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); margin: 0 0 10px; font-weight: 600; }
-  .log ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
-  .log li { display: grid; grid-template-columns: 84px 1fr; gap: 12px; font-size: 13.5px; }
-  .log time { color: var(--text-3); font-variant-numeric: tabular-nums; }
-  .log strong { display: block; font-weight: 600; color: var(--text); }
-  .log span { color: var(--text-2); }
-
-  /* Telefon */
-  .phone { flex: 0 0 auto; width: min(390px, 100%); height: min(800px, 86vh); min-height: 560px; background: var(--bg); border: 1px solid var(--border); border-radius: 36px; position: relative; overflow: hidden; display: flex; flex-direction: column; }
-  .screen { flex: 1; overflow-y: auto; padding: 22px 20px 110px; scrollbar-width: none; }
-  .screen::-webkit-scrollbar { display: none; }
-  .eyebrow { font-size: 12px; letter-spacing: 1.1px; color: var(--text-2); font-weight: 600; text-transform: uppercase; }
-  .h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin: 4px 0 20px; }
-  .h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.2px; margin: 28px 0 12px; display: flex; justify-content: space-between; align-items: baseline; }
-  .h2 small { font-size: 14px; color: var(--text-2); font-weight: 500; font-variant-numeric: tabular-nums; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 18px; }
-  .card + .card { margin-top: 12px; }
-  .row { display: flex; align-items: center; gap: 6px; }
-  .row .sp { flex: 1; }
-  .lbl { font-size: 14px; font-weight: 500; }
-  .muted { color: var(--text-2); font-size: 12px; }
-  .big { font-size: 36px; font-weight: 700; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
-  .mid { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
-  .base { display: flex; align-items: baseline; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .base .of { color: var(--text-2); font-size: 14px; }
-  .bar { height: 8px; border-radius: 99px; background: var(--surface-high); overflow: hidden; margin-top: 10px; }
-  .bar i { display: block; height: 100%; border-radius: 99px; width: 0; transition: width .5s cubic-bezier(.2,.7,.2,1); }
-  .macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
-  .macros div { min-width: 0; }
-  .macros .k { font-size: 11px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .macros .v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 4px; white-space: nowrap; }
-  .macros .v small { font-size: 11px; color: var(--text-3); font-weight: 400; }
-  .macros .bar { height: 6px; margin-top: 6px; }
-  .mini { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
-  .list { padding: 6px 0; }
-  .rt { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; text-align: left; }
-  .rt + .rt { border-top: 1px solid var(--border); }
-  .cb { width: 26px; height: 26px; border-radius: 9px; border: 1.6px solid var(--text-3); flex: none; display: grid; place-items: center; transition: background .18s, border-color .18s; }
-  .cb svg { opacity: 0; }
-  .rt[aria-checked="true"] .cb { background: var(--c); border-color: var(--c); }
-  .rt[aria-checked="true"] .cb svg { opacity: 1; }
-  .rt .t { flex: 1; min-width: 0; font-size: 15.5px; }
-  .rt[aria-checked="true"] .t { color: var(--text-3); text-decoration: line-through; }
-  .rt .tm { font-size: 12px; font-weight: 600; color: var(--c); font-variant-numeric: tabular-nums; }
-  .rt[aria-checked="true"] .tm { color: var(--text-3); }
-  .rem { display: flex; align-items: center; gap: 12px; padding: 12px 10px 12px 14px; margin-top: 10px; }
-  .rem .stripe { width: 4px; height: 44px; border-radius: 2px; background: var(--c); flex: none; }
-  .rem .b { flex: 1; min-width: 0; }
-  .rem .b strong { display: block; font-size: 14px; font-weight: 600; }
-  .rem .b span { font-size: 12px; color: var(--text-2); }
-  .rem button { width: 40px; height: 40px; display: grid; place-items: center; color: var(--text-2); border-radius: 50%; }
-  .bullets { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; color: var(--text-2); font-size: 14px; }
-  .bullets li { display: flex; gap: 12px; }
-  .bullets li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c); margin-top: 7px; flex: none; }
-
-  /* Alt menü */
-  .nav { position: absolute; left: 0; right: 0; bottom: 0; height: 72px; background: var(--surface); border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr 72px 1fr 1fr; align-items: center; }
-  .nav button { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--text-3); height: 100%; justify-content: center; }
-  .nav button[aria-selected="true"] { color: var(--accent); font-weight: 700; }
-  .fab { position: absolute; left: 50%; bottom: 38px; transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; box-shadow: 0 0 0 6px var(--bg), 0 10px 24px rgba(0,0,0,.5); z-index: 2; }
-
-  /* AI sayfası */
-  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.6); z-index: 3; }
-  .sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 90%; background: var(--surface); border-top: 1px solid var(--border); border-radius: 28px 28px 0 0; padding: 12px 20px 20px; z-index: 4; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; animation: up .28s cubic-bezier(.2,.7,.2,1); }
-  @keyframes up { from { transform: translateY(40px); opacity: .6; } }
-  @media (prefers-reduced-motion: reduce) { .sheet { animation: none; } .bar i { transition: none; } }
-  .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--border); align-self: center; }
-  .sh-head { display: flex; gap: 12px; align-items: center; }
-  .sh-ico { width: 40px; height: 40px; border-radius: 12px; background: rgba(94,234,212,.14); color: var(--accent); display: grid; place-items: center; flex: none; }
-  .sh-head div { flex: 1; min-width: 0; }
-  .sh-head strong { font-size: 20px; display: block; letter-spacing: -0.2px; }
-  .sh-head span { font-size: 12px; color: var(--text-2); }
-  textarea { width: 100%; min-height: 92px; resize: none; background: var(--surface-high); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; color: var(--text); font: inherit; font-size: 16px; }
-  textarea::placeholder { color: var(--text-3); }
-  .ex { display: flex; flex-direction: column; gap: 8px; }
-  .ex button { text-align: left; background: var(--surface-high); border-radius: 12px; padding: 10px 12px; font-size: 12.5px; color: var(--text-2); }
-  .btn { height: 52px; border-radius: 16px; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; }
-  .btn.pri { background: var(--accent); color: var(--on-accent); flex: 2; }
-  .btn.sec { border: 1px solid var(--border); }
-  .btn:disabled { opacity: .45; cursor: default; }
-  .btns { display: flex; gap: 12px; }
-  .pv { display: flex; gap: 12px; background: var(--surface-high); border: 1px solid var(--border); border-radius: 16px; padding: 12px 6px 12px 14px; align-items: flex-start; }
-  .pv .ic { width: 36px; height: 36px; border-radius: 10px; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); display: grid; place-items: center; flex: none; font-size: 16px; }
-  .pv .b { flex: 1; min-width: 0; }
-  .pv .tag { font-size: 11px; font-weight: 700; letter-spacing: .3px; color: var(--c); }
-  .pv strong { display: block; font-size: 14px; font-weight: 600; }
-  .pv span { font-size: 12px; color: var(--text-2); }
-  .pv button { width: 32px; height: 32px; color: var(--text-3); font-size: 16px; }
-  .pvs { display: flex; flex-direction: column; gap: 10px; }
-  .err { background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.4); border-radius: 12px; padding: 12px; font-size: 12.5px; }
-  .toast { position: absolute; left: 16px; right: 16px; bottom: 122px; background: var(--surface-high); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; font-size: 13.5px; z-index: 5; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px 20px; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  figure img { width: 100%; height: auto; display: block; border-radius: 28px; border: 1px solid var(--border); background: var(--surface); }
+  figcaption strong { display: block; font-size: 14.5px; font-weight: 600; }
+  figcaption span { font-size: 13px; color: var(--text-2); }
+  h2 { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); margin: 0 0 12px; font-weight: 600; }
+  ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; max-width: 75ch; }
+  li { display: grid; grid-template-columns: 92px 1fr; gap: 12px; font-size: 13.5px; }
+  li time { color: var(--text-3); font-variant-numeric: tabular-nums; }
+  li strong { display: block; font-weight: 600; }
+  li span { color: var(--text-2); }
 </style>
-
 <div class="wrap">
-  <div class="phone" id="phone">
-    <div class="screen" id="screen"></div>
-    <div class="toast" id="toast" hidden></div>
-    <nav class="nav" role="tablist" aria-label="Sekmeler" id="nav"></nav>
-    <button class="fab" id="fab" aria-label="AI Hızlı Giriş">
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-    </button>
-    <div class="scrim" id="scrim" hidden></div>
-    <div class="sheet" id="sheet" hidden role="dialog" aria-label="AI Hızlı Giriş"></div>
-  </div>
-
-  <aside class="side">
+  <header>
     <h1>Operasyon Merkezi</h1>
-    <p>Flutter uygulamasının tıklanabilir önizlemesi. Rutinleri işaretleyebilir, sekmeleri gezebilir, ortadaki + ile AI Hızlı Giriş akışını deneyebilirsin.</p>
-    <div class="note"><b>Önizleme, gerçek uygulama değil.</b> Buradaki sayılar örnek veridir. Ayrıştırma adımı Gemini'ye bağlanmaz; yalnızca örnek cümlelerdeki kalıpları tanıyan bir taklittir. Gerçek davranış iPhone'daki derlemede görülür.</div>
-    <div class="log">
-      <h2>Güncellemeler</h2>
-      <ol>
-        <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Faz 1: temel mimari</strong><span>Kokpit ekranı, AI Hızlı Giriş (ayrıştır, önizle, kaydet), Supabase şeması, HealthKit ve bildirim servisleri, Codemagic Ad-Hoc derlemesi.</span></div></li>
-        <li><time>Sırada</time><div><strong>Faz 2: diğer üç sekme</strong><span>Görev ve not listeleri, kilo grafiği ve antrenman günlüğü, haftalık rapor ve AI değerlendirme kartı.</span></div></li>
-      </ol>
-    </div>
-  </aside>
+    <p>Aşağıdakiler uygulamanın kendi koduyla, Flutter'ın çizdiği gerçek ekranlardır (390×844, iPhone boyutu).</p>
+  </header>
+  <div class="note"><b>Örnek veri.</b> Sayılar, görevler ve rutinler gösterim için konmuş örneklerdir; Supabase, HealthKit ve Gemini bağlı değildir. Yazı tipi iPhone'da San Francisco olur, burada Roboto görünür.</div>
+  <section class="grid">
+    <figure><img src="shots/01.png" alt="Kokpit Gün görünümü" width="780" height="1688"><figcaption><strong>Kokpit · Gün</strong><span>Kalori ve makrolar, adım ve uyku, bugünün rutinleri.</span></figcaption></figure>
+    <figure><img src="shots/02.png" alt="Kokpit Ay görünümü" width="780" height="1688"><figcaption><strong>Kokpit · Ay</strong><span>Takvim, aylık sabitler: Yapıldı / Bekliyor / Gecikti.</span></figcaption></figure>
+    <figure><img src="shots/03.png" alt="Kokpit Ay görünümünün devamı" width="780" height="1688"><figcaption><strong>Kokpit · Ay (devamı)</strong><span>Ayın randevuları ve ay özeti.</span></figcaption></figure>
+    <figure><img src="shots/04.png" alt="Giriş seçimi" width="780" height="1688"><figcaption><strong>+ · Giriş seçimi</strong><span>İş girişi ve Sağlık &amp; beslenme girişi ayrı.</span></figcaption></figure>
+    <figure><img src="shots/05.png" alt="Sağlık ve beslenme girişi önizlemesi" width="780" height="1688"><figcaption><strong>Sağlık &amp; beslenme girişi</strong><span>Yazılan cümle ayrıştırılır, kaydetmeden önce önizlenir.</span></figcaption></figure>
+    <figure><img src="shots/06.png" alt="Operasyon sekmesi, görevler" width="780" height="1688"><figcaption><strong>Operasyon · Görevler</strong><span>Etiket filtresi, tek seferlik işler ve randevular.</span></figcaption></figure>
+    <figure><img src="shots/07.png" alt="Operasyon sekmesi, sabitler" width="780" height="1688"><figcaption><strong>Operasyon · Sabitler</strong><span>Günlük, haftalık ve aylık tekrarlayan işler.</span></figcaption></figure>
+    <figure><img src="shots/08.png" alt="Ayarlar ekranı" width="780" height="1688"><figcaption><strong>Ayarlar</strong><span>Hedefler, bildirimler, ekip, hesap.</span></figcaption></figure>
+  </section>
+  <section>
+    <h2>Güncellemeler</h2>
+    <ol>
+      <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Faz 2</strong><span>Aylık sabitler ve dönem bazlı işaretleme, Kokpit Gün / Ay, iki ayrı AI girişi, Ayarlar ve bildirim kuralları, Operasyon sekmesi (Görevler, Sabitler, Notlar). Yeni tasarım: saf siyah zemin, Bento kartlar, etiketsiz 5 slotlu alt bar.</span></div></li>
+      <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Düzeltme turu</strong><span>İlk incelemede bulunan 20 hata giderildi (veritabanı yetkileri, Codemagic adımları, oturum, HealthKit çift sayım, bildirim eşitleme).</span></div></li>
+      <li><time datetime="2026-11-16">16 Kas 2026</time><div><strong>Faz 1</strong><span>Temel mimari, Kokpit, AI Hızlı Giriş, Supabase şeması, Codemagic Ad-Hoc derlemesi.</span></div></li>
+      <li><time>Sırada</time><div><strong>Faz 3 ve son inceleme</strong><span>Sağlık ve Raporlar sekmeleri; ardından tüm yapının bağımsız incelemesi.</span></div></li>
+    </ol>
+  </section>
 </div>
-
-<script>
-(function () {
-  var T = { kcal: 2000, p: 170, c: 180, f: 65, steps: 10000 };
-  var S = {
-    tab: 0,
-    food: { kcal: 640, p: 52, c: 61, f: 19 },
-    health: { steps: 6480, active: 412, sleep: 432 },
-    routines: [
-      { t: 'Sabah tartı ve kilo kaydı', c: 'food', tm: '08:00', d: true },
-      { t: 'Sabah push performans kontrolü (CTR, teslim oranı)', c: 'ops', tm: '09:00', d: true },
-      { t: 'Editör vardiya kontrolü (Duhan, İlhan, Mehmet, Sedat)', c: 'ops', tm: '09:30', d: true },
-      { t: 'Haftalık ekip toplantısı ve vardiya planı', c: 'ops', tm: '11:00', d: false },
-      { t: 'Öğlen gündem ve push takvimi kontrolü', c: 'ops', tm: '13:00', d: false },
-      { t: 'Ağırlık antrenmanı', c: 'fit', tm: '19:00', d: false },
-      { t: 'Günlük makro kontrolü (protein hedefi)', c: 'food', tm: '21:30', d: false },
-      { t: 'Akşam operasyon kapanış kontrolü', c: 'ops', tm: '22:00', d: false }
-    ],
-    reminders: [
-      { t: 'Haftalık vardiya çizelgesini yayınla', m: 'Yarın 14:30 · Ekip', c: 'accent', hi: true },
-      { t: 'Push bildirim performans raporunu hazırla', m: '18 Kas Çar 10:00 · Pusholder', c: 'ops', hi: true }
-    ],
-    sheet: null // {step:'input'|'preview', items:[], err:''}
-  };
-  var $ = function (id) { return document.getElementById(id); };
-  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]; }); };
-  var fmt = function (n) { return Math.round(n).toLocaleString('tr-TR'); };
-  var pct = function (v, t) { return Math.max(0, Math.min(100, v / t * 100)); };
-  var CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B0D12" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-
-  function kokpit() {
-    var f = S.food, h = S.health, left = T.kcal - f.kcal;
-    var done = S.routines.filter(function (r) { return r.d; }).length;
-    var macro = function (k, v, t, col) {
-      return '<div><div class="k">' + k + '</div><div class="v">' + Math.round(v) + '<small> / ' + t + ' g</small></div><div class="bar"><i style="background:var(--' + col + ');width:' + pct(v, t) + '%"></i></div></div>';
-    };
-    return '<div class="eyebrow">16 Kasım Pazartesi</div><div class="h1">İyi günler</div>' +
-      '<div class="card"><div class="row"><span style="color:var(--food)">●</span><span class="lbl">Kalori</span><span class="sp"></span><span class="muted">' + (left < 0 ? fmt(-left) + ' kcal fazla' : fmt(left) + ' kcal kaldı') + '</span></div>' +
-      '<div class="base"><span class="big">' + fmt(f.kcal) + '</span><span class="of">/ ' + fmt(T.kcal) + ' kcal</span></div>' +
-      '<div class="bar" style="height:10px"><i style="background:var(--' + (left < 0 ? 'danger' : 'food') + ');width:' + pct(f.kcal, T.kcal) + '%"></i></div>' +
-      '<div class="macros">' + macro('Protein', f.p, T.p, 'accent') + macro('Karbonhidrat', f.c, T.c, 'ops') + macro('Yağ', f.f, T.f, 'warn') + '</div></div>' +
-      '<div class="card"><div class="row"><span style="color:var(--fit)">●</span><span class="lbl">Adım</span><span class="sp"></span><span class="muted" style="color:var(--text-3)">HealthKit · 15:34</span></div>' +
-      '<div class="base"><span class="mid">' + fmt(h.steps) + '</span><span class="of">/ ' + fmt(T.steps) + '</span><span style="flex:1"></span><span class="mini">⚡ ' + h.active + ' kcal</span><span class="mini">☾ ' + Math.floor(h.sleep / 60) + ' sa ' + (h.sleep % 60) + ' dk</span></div>' +
-      '<div class="bar"><i style="background:var(--fit);width:' + pct(h.steps, T.steps) + '%"></i></div></div>' +
-      '<div class="h2">Bugünün rutinleri <small>' + done + ' / ' + S.routines.length + '</small></div>' +
-      '<div class="bar" style="height:6px;margin:0 0 12px"><i style="background:var(--accent);width:' + pct(done, S.routines.length) + '%"></i></div>' +
-      '<div class="card list" style="padding:6px 0">' + S.routines.map(function (r, i) {
-        return '<button class="rt" role="checkbox" aria-checked="' + r.d + '" data-rt="' + i + '" style="--c:var(--' + r.c + ')"><span class="cb">' + CHECK + '</span><span class="t">' + esc(r.t) + '</span><span class="tm">' + r.tm + '</span></button>';
-      }).join('') + '</div>' +
-      '<div class="h2">Yaklaşan hatırlatmalar</div>' +
-      (S.reminders.length ? S.reminders.map(function (r, i) {
-        return '<div class="card rem" style="--c:var(--' + r.c + ')"><span class="stripe"></span><div class="b"><strong>' + esc(r.t) + '</strong><span>' + esc(r.m) + '</span></div>' + (r.hi ? '<span style="color:var(--danger);font-weight:700">!</span>' : '') +
-          '<button data-done="' + i + '" aria-label="Tamamlandı olarak işaretle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg></button></div>';
-      }).join('') : '<div class="card muted" style="font-size:14px">Yaklaşan hatırlatma yok. Ortadaki + ile tek cümleyle ekleyebilirsin.</div>');
-  }
-
-  function roadmap(title, sub, col, items) {
-    return '<div class="h1" style="margin-bottom:4px">' + title + '</div><div class="muted" style="font-size:14px;margin-bottom:20px">' + sub + '</div>' +
-      '<div class="card" style="--c:var(--' + col + ')"><div class="lbl" style="font-weight:600;font-size:16px">Sıradaki fazda</div><ul class="bullets">' + items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div>';
-  }
-  var TABS = [
-    { n: 'Kokpit', i: '<path d="M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z"/>', r: kokpit },
-    { n: 'Operasyon', i: '<path d="M4 6l2 2 3-3M4 13l2 2 3-3M4 20l2 0M12 7h8M12 14h8M12 20h8"/>', r: function () { return roadmap('Operasyon & Görevler', 'Pusholder, ekip, finans ve kişisel işler.', 'ops', ['Öncelik ve etiket bazlı görev listesi (Pusholder, Ekip, Finans, Kişisel)', 'Editör vardiya ve görev takibi (Duhan, İlhan, Mehmet, Sedat)', 'Kategori bazlı hızlı notlar: toplantı ve fikir notları', 'Görev ekleme, düzenleme ve hatırlatma saati seçimi']); } },
-    { n: 'Sağlık', i: '<path d="M3 12h4l2-5 4 10 2-5h6"/>', r: function () { return roadmap('Sağlık & Form', '84.5 kg → 78 kg, kas kütlesini koruyarak.', 'fit', ['Hedef çizgili kilo takip grafiği (84.5 → 78 kg)', 'Antrenman günlüğü: ağırlık, kickboks, koşu, halı saha', 'Öğün ve makro ekleme ekranı', 'HealthKit senkronizasyon durumu ve geçmişi']); } },
-    { n: 'Raporlar', i: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', r: function () { return roadmap('Raporlar & Analiz', 'Son 7 günün iş ve form özeti.', 'accent', ['Görev tamamlama oranı ile spor/beslenme istikrarı yan yana grafikler', 'Haftalık rapor kaydı', 'Gemini ile üretilen haftalık değerlendirme kartı']); } }
-  ];
-
-  function renderNav() {
-    var b = function (t, i) { return '<button role="tab" aria-selected="' + (S.tab === i) + '" data-tab="' + i + '"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + t.i + '</svg>' + t.n + '</button>'; };
-    $('nav').innerHTML = b(TABS[0], 0) + b(TABS[1], 1) + '<span></span>' + b(TABS[2], 2) + b(TABS[3], 3);
-  }
-  function render() { $('screen').innerHTML = TABS[S.tab].r(); renderNav(); }
-
-  var toastTimer;
-  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2600); }
-
-  // --- AI Hızlı Giriş (taklit ayrıştırıcı) ---
-  var EXAMPLES = ['Öğlen 200 gr tavuk göğsü ve 2 dilim tam çavdar ekmeği yedim, yarın saat 15:00\'te Duhan ile vardiya planını konuşacağım', 'Bugün 45 dk ağırlık çalıştım, sabah 83.9 kiloydum', 'Fikir: son dakika haberleri için hazır push şablonları'];
-  function mockParse(text) {
-    var s = text.toLocaleLowerCase('tr-TR'), out = [], m;
-    if (/tavuk/.test(s)) { var g = (m = s.match(/(\d+)\s*gr?\s*tavuk/)) ? +m[1] : 150; out.push({ k: 'food', c: 'food', ic: '🍽', tag: 'Beslenme · Öğle', t: 'Tavuk göğsü · ' + g + ' gr', kcal: g * 1.65, p: g * 0.31, cb: 0, f: g * 0.036 }); }
-    if (/ekme/.test(s)) { var n = (m = s.match(/(\d+)\s*dilim/)) ? +m[1] : 1; out.push({ k: 'food', c: 'food', ic: '🍽', tag: 'Beslenme · Öğle', t: 'Tam çavdar ekmeği · ' + n + ' dilim', kcal: n * 65, p: n * 2.5, cb: n * 12, f: n * 0.8 }); }
-    if ((m = s.match(/(\d{1,2})[:.](\d{2})/)) && /(konuş|görüş|toplantı|ara|hatırlat)/.test(s)) {
-      var who = ['Duhan', 'İlhan', 'Mehmet', 'Sedat'].filter(function (x) { return s.indexOf(x.toLocaleLowerCase('tr-TR')) > -1; })[0];
-      var day = /yarın/.test(s) ? 'Yarın' : 'Bugün', hm = ('0' + m[1]).slice(-2) + ':' + m[2];
-      out.push({ k: 'task', c: 'accent', ic: '✓', tag: 'Görev · Ekip', t: (who ? who + ' ile ' : '') + (/vardiya/.test(s) ? 'vardiya planı görüşmesi' : 'görüşme'), sub: (who ? 'İlgili: ' + who + ' · ' : '') + day + ' ' + hm + ' · Hatırlatma açık', when: day + ' ' + hm });
-    }
-    if ((m = s.match(/(\d+)\s*dk/)) && /(ağırlık|koş|kickboks|halı saha|antrenman)/.test(s)) { var ty = /koş/.test(s) ? 'Koşu' : /kickboks/.test(s) ? 'Kickboks' : /halı saha/.test(s) ? 'Halı saha' : 'Ağırlık'; out.push({ k: 'workout', c: 'fit', ic: '🏋', tag: 'Antrenman · ' + ty, t: ty + ' antrenmanı', sub: m[1] + ' dk · Bugün' }); }
-    if ((m = s.match(/(\d{2,3}[.,]\d)\s*kilo/))) out.push({ k: 'weight', c: 'accent', ic: '⚖', tag: 'Kilo', t: m[1].replace(',', '.') + ' kg', sub: 'Bugün sabah' });
-    if ((m = text.match(/^\s*(fikir|not)\s*:\s*(.+)/i))) out.push({ k: 'note', c: 'warn', ic: '✎', tag: 'Not · Fikir', t: m[2].trim().slice(0, 60), sub: 'Notlara eklenecek' });
-    out.forEach(function (o) { if (o.k === 'food') o.sub = fmt(o.kcal) + ' kcal · P ' + Math.round(o.p) + ' g · K ' + Math.round(o.cb) + ' g · Y ' + Math.round(o.f) + ' g'; });
-    return out;
-  }
-  function renderSheet() {
-    var sh = S.sheet, el = $('sheet');
-    $('scrim').hidden = el.hidden = !sh;
-    if (!sh) return;
-    var head = '<span class="grab"></span><div class="sh-head"><span class="sh-ico">✦</span><div><strong>' + (sh.step === 'preview' ? 'Bunları anladım' : 'AI Hızlı Giriş') + '</strong><span>' + (sh.step === 'preview' ? 'Kontrol et, yanlış olanı çıkar, sonra kaydet.' : 'Öğün, görev, antrenman ya da not. Tek cümleyle yaz.') + '</span></div><button data-close aria-label="Kapat" style="font-size:20px;color:var(--text-2);width:36px;height:36px">×</button></div>';
-    if (sh.step === 'preview') {
-      el.innerHTML = head + '<div class="pvs">' + sh.items.map(function (o, i) { return '<div class="pv" style="--c:var(--' + o.c + ')"><span class="ic">' + o.ic + '</span><div class="b"><div class="tag">' + esc(o.tag) + '</div><strong>' + esc(o.t) + '</strong><span>' + esc(o.sub) + '</span></div><button data-rm="' + i + '" aria-label="Bu kaydı çıkar">×</button></div>'; }).join('') + '</div>' +
-        '<div class="btns"><button class="btn sec" data-edit>Düzenle</button><button class="btn pri" data-save>✓ ' + sh.items.length + ' kaydı kaydet</button></div>';
-    } else {
-      el.innerHTML = head + '<textarea id="quick-text" placeholder="Örn. Öğlen 200 gr tavuk yedim, yarın 15:00\'te Duhan ile vardiya planını konuşacağım">' + esc(sh.text || '') + '</textarea>' +
-        '<div class="ex"><span class="muted">Örnekler</span>' + EXAMPLES.map(function (e, i) { return '<button data-ex="' + i + '">↖ ' + esc(e) + '</button>'; }).join('') + '</div>' +
-        (sh.err ? '<div class="err">' + esc(sh.err) + '</div>' : '') +
-        '<div class="btns"><button class="btn pri" data-parse>✦ Ayrıştır</button></div>';
-    }
-  }
-
-  $('phone').addEventListener('click', function (e) {
-    var t = e.target.closest('button'); if (!t) { if (e.target.id === 'scrim') { S.sheet = null; renderSheet(); } return; }
-    var d = t.dataset;
-    if (d.tab !== undefined) { S.tab = +d.tab; $('screen').scrollTop = 0; render(); }
-    else if (d.rt !== undefined) { var top = $('screen').scrollTop; S.routines[+d.rt].d = !S.routines[+d.rt].d; render(); $('screen').scrollTop = top; }
-    else if (d.done !== undefined) { var r = S.reminders.splice(+d.done, 1)[0]; var st = $('screen').scrollTop; render(); $('screen').scrollTop = st; toast('Tamamlandı: ' + r.t); }
-    else if (t.id === 'fab') { S.sheet = { step: 'input', text: '', items: [] }; renderSheet(); }
-    else if (d.close !== undefined) { S.sheet = null; renderSheet(); }
-    else if (d.ex !== undefined) { S.sheet.text = EXAMPLES[+d.ex]; S.sheet.err = ''; renderSheet(); }
-    else if (d.parse !== undefined) {
-      var txt = $('quick-text').value.trim(); S.sheet.text = txt;
-      if (!txt) { S.sheet.err = 'Lütfen bir şeyler yaz.'; renderSheet(); return; }
-      var items = mockParse(txt);
-      if (!items.length) { S.sheet.err = 'Bu önizleme yalnızca örnek cümlelerdeki kalıpları tanır. Gerçek uygulamada metni Gemini ayrıştırır.'; renderSheet(); return; }
-      S.sheet = { step: 'preview', text: txt, items: items }; renderSheet();
-    }
-    else if (d.rm !== undefined) { S.sheet.items.splice(+d.rm, 1); if (!S.sheet.items.length) S.sheet.step = 'input'; renderSheet(); }
-    else if (d.edit !== undefined) { S.sheet.step = 'input'; S.sheet.err = ''; renderSheet(); }
-    else if (d.save !== undefined) {
-      var n = S.sheet.items.length;
-      S.sheet.items.forEach(function (o) {
-        if (o.k === 'food') { S.food.kcal += o.kcal; S.food.p += o.p; S.food.c += o.cb; S.food.f += o.f; }
-        if (o.k === 'task') S.reminders.unshift({ t: o.t.charAt(0).toLocaleUpperCase('tr-TR') + o.t.slice(1), m: o.when + ' · Ekip', c: 'accent' });
-      });
-      S.sheet = null; S.tab = 0; renderSheet(); render(); toast(n + ' kayıt eklendi.');
-    }
-  });
-  $('sheet').addEventListener('input', function (e) { if (e.target.id === 'quick-text' && S.sheet) S.sheet.text = e.target.value; });
-
-  render();
-})();
-</script>
