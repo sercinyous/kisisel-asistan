@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../health/presentation/health_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_screen.dart';
 import 'kokpit_day_view.dart';
@@ -20,8 +23,12 @@ class KokpitScreen extends ConsumerWidget {
     ref.invalidate(todayOccurrencesProvider);
     ref.invalidate(upcomingRemindersProvider);
     ref.invalidate(todayNutritionProvider);
-    ref.invalidate(healthTodayProvider);
     ref.invalidate(monthOverviewProvider);
+    // HealthKit yeniden okunup yedeklenir; bitince 7 günlük adım grafiği ve
+    // Ay ortalamaları da tazelenir.
+    unawaited(
+      resyncHealthKit(ProviderScope.containerOf(ref.context, listen: false)),
+    );
     // Hatalar kartların kendi hata durumunda gösterilir; burada yutulur.
     Future<void> settle(Future<Object?> future) async {
       try {

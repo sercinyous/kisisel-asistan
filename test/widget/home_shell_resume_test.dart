@@ -7,13 +7,13 @@ import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
-import 'package:kisisel_asistan/features/health/data/health_repository.dart';
+import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
-import 'package:kisisel_asistan/features/reports/data/reports_repository.dart';
+import 'package:kisisel_asistan/features/reports/presentation/reports_providers.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
@@ -21,6 +21,7 @@ import 'package:kisisel_asistan/features/shell/presentation/home_shell.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/quick_add_fakes.dart';
+import '../helpers/reports_fakes.dart';
 import '../helpers/test_fonts.dart';
 
 /// Okuma ve yazmaların sırasını tutan sağlık deposu.
@@ -59,16 +60,25 @@ class _LoggingHealthRepository extends FakeHealthRepository {
     log.add('upsert');
     return super.upsertHealthMetrics(day, snapshot);
   }
+
+  @override
+  Future<void> upsertHealthDays(List<HealthDayReading> days) {
+    log.add('upsert-days');
+    return super.upsertHealthDays(days);
+  }
 }
 
-/// Uygulama arka plandan öne geldiğinde (gün değişmiş olabilir) "bugün"e göre
-/// hesaplanan verinin yeniden okunduğunu sınar. Test saati değiştiremediği
-/// için gün değişimi yerine, arka plandayken deponun değişmesi kullanılır:
-/// önbellek yeniden okunmuyorsa ekran eski hâlinde kalır.
+/// Uygulama arka plandan öne geldiğinde (gün değişmiş, sunucu yeni veri
+/// yazmış olabilir) ekranların yeniden okunduğunu sınar. Test saati
+/// değiştiremediği için gün değişimi yerine, arka plandayken deponun
+/// değişmesi kullanılır: önbellek yeniden okunmuyorsa ekran eski hâlinde kalır.
 void main() {
   late FakeRoutinesRepository routines;
   late CountingTasksRepository tasks;
   late _LoggingHealthRepository health;
+  late FakeReportsRepository reports;
+  late FakeHealthService healthKit;
+  late DateTime today;
 
   setUpAll(() async {
     await initializeDateFormatting(AppDates.locale);
@@ -76,9 +86,20 @@ void main() {
   });
 
   setUp(() {
+    today = AppDates.startOfDay(DateTime.now());
     routines = FakeRoutinesRepository();
     tasks = CountingTasksRepository();
     health = _LoggingHealthRepository();
+    reports = FakeReportsRepository();
+    healthKit = FakeHealthService(
+      HealthSnapshot(
+        status: HealthStatus.ok,
+        steps: 8432,
+        activeKcal: 512,
+        sleepMinutes: 452,
+        readAt: DateTime.now(),
+      ),
+    );
 
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -91,36 +112,38 @@ void main() {
     );
   });
 
-  Future<void> pumpShell(WidgetTester tester) async {
+  /// [clock] verilirse süreç o anda başlamış gibi olur (öne gelince saat
+  /// bugüne ilerler).
+  Future<ProviderContainer> pumpShell(
+    WidgetTester tester, {
+    DateTime? clock,
+  }) async {
     tester.view.devicePixelRatio = 2;
     tester.view.physicalSize = const Size(390, 844) * 2;
     addTearDown(tester.view.reset);
 
+    final container = ProviderContainer(
+      overrides: [
+        routinesRepositoryProvider.overrideWithValue(routines),
+        tasksRepositoryProvider.overrideWithValue(tasks),
+        notesRepositoryProvider.overrideWithValue(FakeNotesRepository()),
+        healthRepositoryProvider.overrideWithValue(health),
+        kokpitRepositoryProvider.overrideWithValue(FakeKokpitRepository()),
+        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+        reportsRepositoryProvider.overrideWithValue(reports),
+        notificationServiceProvider
+            .overrideWithValue(FakeNotificationService()),
+        healthServiceProvider.overrideWithValue(healthKit),
+      ],
+    );
+    addTearDown(container.dispose);
+    if (clock != null) {
+      container.read(kokpitClockProvider.notifier).state = clock;
+    }
+
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          routinesRepositoryProvider.overrideWithValue(routines),
-          tasksRepositoryProvider.overrideWithValue(tasks),
-          notesRepositoryProvider.overrideWithValue(FakeNotesRepository()),
-          healthRepositoryProvider.overrideWithValue(health),
-          kokpitRepositoryProvider.overrideWithValue(FakeKokpitRepository()),
-          settingsRepositoryProvider
-              .overrideWithValue(FakeSettingsRepository()),
-          reportsRepositoryProvider.overrideWithValue(FakeReportsRepository()),
-          notificationServiceProvider
-              .overrideWithValue(FakeNotificationService()),
-          healthServiceProvider.overrideWithValue(
-            FakeHealthService(
-              HealthSnapshot(
-                status: HealthStatus.ok,
-                steps: 8432,
-                activeKcal: 512,
-                sleepMinutes: 452,
-                readAt: DateTime.now(),
-              ),
-            ),
-          ),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: MaterialApp(
           theme: AppTheme.dark,
           locale: const Locale('tr', 'TR'),
@@ -128,6 +151,12 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+    return container;
+  }
+
+  Future<void> selectTab(WidgetTester tester, String label) async {
+    await tester.tap(find.byTooltip(label));
     await tester.pumpAndSettle();
   }
 
@@ -162,6 +191,18 @@ void main() {
         .status;
   }
 
+  HealthDayReading reading(DateTime day, {int steps = 0}) => (
+        day: day,
+        snapshot: HealthSnapshot(
+          status: HealthStatus.ok,
+          steps: steps,
+          readAt: DateTime.now(),
+        ),
+      );
+
+  int stepsOn(Iterable<DailyHealthMetric> days, DateTime day) =>
+      days.firstWhere((m) => m.day == day).steps;
+
   testWidgets('öne gelince Ay özeti yeniden okunur, rozetler güncellenir',
       (tester) async {
     final now = DateTime.now();
@@ -185,7 +226,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // fetchInRange'i yalnızca Ay özeti çağırır.
-    expect(tasks.fetchInRangeCount, 1, reason: 'Ay özeti bir kez okundu');
+    final before = tasks.fetchInRangeCount;
+    expect(before, greaterThan(0), reason: 'Ay özeti okundu');
     expect(chipOf(tester, 'Maaş ödemeleri'), isNot(OccurrenceStatus.done));
 
     routines.completions.add(
@@ -197,7 +239,11 @@ void main() {
     );
     await backgroundAndResume(tester);
 
-    expect(tasks.fetchInRangeCount, 2, reason: 'öne gelince yeniden okundu');
+    expect(
+      tasks.fetchInRangeCount,
+      greaterThan(before),
+      reason: 'öne gelince yeniden okundu',
+    );
     expect(chipOf(tester, 'Maaş ödemeleri'), OccurrenceStatus.done);
   });
 
@@ -222,15 +268,98 @@ void main() {
     expect(reads('meals'), 1, reason: 'bugünün öğünleri');
     expect(reads('metrics'), 1, reason: '7 günlük adım');
     expect(reads('upsert'), 1, reason: 'HealthKit yeniden okundu');
+    expect(reads('upsert-days'), 1, reason: 'geçmiş günler yeniden yazıldı');
     expect(
-      health.log.indexOf('upsert'),
+      health.log.indexOf('upsert-days'),
       lessThan(health.log.indexOf('metrics')),
-      reason: 'adım grafiği, bugünün satırı yazıldıktan sonra okunmalı',
+      reason: 'adım grafiği, HealthKit yedeği yazıldıktan sonra okunmalı',
     );
     // Sağlık sekmesi (arka planda kurulu) yeni kaydı gösteriyor.
     expect(
       find.byKey(const ValueKey('meal-gece'), skipOffstage: false),
       findsOneWidget,
     );
+  });
+
+  testWidgets(
+      'açılışta ve öne gelişte HealthKit\'in biten günleri gün sonu değeriyle '
+      'tamamlanır; adım grafiği yeni değeri gösterir', (tester) async {
+    final yesterday = AppDates.addDays(today, -1);
+    // Dün uygulama son kez sabah açılmış: tabloda 700 adım kalmış.
+    health.metrics = [DailyHealthMetric(day: yesterday, steps: 700)];
+    healthKit.pastDays = [reading(yesterday, steps: 11000)];
+
+    final container = await pumpShell(tester);
+
+    expect(stepsOn(health.metrics, yesterday), 11000);
+    expect(health.upsertedDays, [yesterday]);
+    expect(
+      stepsOn(container.read(weekStepsProvider).requireValue, yesterday),
+      11000,
+      reason: 'grafik, yedekleme bittikten sonra tazelenir',
+    );
+    // Bugünün satırı da yazıldı ve grafikte.
+    expect(
+      stepsOn(container.read(weekStepsProvider).requireValue, today),
+      8432,
+    );
+
+    // Arka plandayken saat/Fitbit geç eşitlendi: gün sonu değeri büyüdü.
+    healthKit.pastDays = [reading(yesterday, steps: 11450)];
+    await backgroundAndResume(tester);
+
+    expect(stepsOn(health.metrics, yesterday), 11450);
+    expect(
+      stepsOn(container.read(weekStepsProvider).requireValue, yesterday),
+      11450,
+    );
+  });
+
+  testWidgets('öne gelince sunucuda oluşan günlük rapor görünür',
+      (tester) async {
+    await pumpShell(tester);
+    await selectTab(tester, 'Raporlar');
+    await tester.tap(find.text('Günlük'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
+
+    // 23:45 zamanlayıcısı raporu yazdı.
+    reports.daily = [dailyReport(today)];
+    await backgroundAndResume(tester);
+
+    expect(find.text('Bu gün için rapor henüz oluşmadı'), findsNothing);
+    expect(find.text('Gün özeti.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'öne gelince geçen haftanın raporu ve "Geçmiş haftalar" tazelenir',
+      (tester) async {
+    final thisWeek = AppDates.weekStart(today);
+    final lastWeek = AppDates.addDays(thisWeek, -7);
+    // Süreç geçen hafta başlamış; Raporlar sekmesi hiç açılmamış (sekme yine
+    // de kurulur ve boş sonucu önbelleğe alır).
+    final container = await pumpShell(
+      tester,
+      clock: lastWeek.add(const Duration(days: 5, hours: 20)),
+    );
+    expect(container.read(weeklyReportListProvider).requireValue, isEmpty);
+
+    // Pazartesi 07:00 zamanlayıcısı biten haftanın raporunu yazdı.
+    reports.weekly = [weeklyReport(lastWeek)];
+    await backgroundAndResume(tester);
+    await selectTab(tester, 'Raporlar');
+
+    expect(
+      [
+        for (final r in container.read(weeklyReportListProvider).requireValue)
+          r.weekStart,
+      ],
+      [lastWeek],
+      reason: 'Geçmiş haftalar listesi yeniden okundu',
+    );
+    await tester.tap(find.byTooltip('Önceki hafta'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bu hafta için rapor henüz oluşmadı'), findsNothing);
+    expect(find.text('Hafta özeti.'), findsOneWidget);
   });
 }

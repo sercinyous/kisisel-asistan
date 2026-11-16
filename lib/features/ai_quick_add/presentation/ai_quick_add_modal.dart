@@ -114,6 +114,9 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
       });
       return;
     }
+    // Kayıt sürerken sayfa kapatıldıysa (çıkış animasyonu sürüyor olabilir)
+    // gecikmiş pop alttaki rotayı kapatmasın.
+    if (!(ModalRoute.of(context)?.isCurrent ?? false)) return;
     Navigator.of(context).pop(_savedBeforeSwitch + saved);
   }
 

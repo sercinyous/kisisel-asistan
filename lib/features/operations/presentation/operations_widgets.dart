@@ -248,6 +248,16 @@ Future<bool> showOpsSheet(BuildContext context, Widget sheet) async {
   return saved ?? false;
 }
 
+/// Kayıt bitince form sayfasını `true` ile kapatır.
+///
+/// [route], kayıt başlamadan önce alınan sayfa rotasıdır. Kayıt sürerken
+/// kullanıcı sayfayı sürükleyerek ya da dışına dokunarak kapatmış olabilir;
+/// o durumda körlemesine `pop` sıradaki rotayı (ana kabuğu) kapatırdı. Bu
+/// yüzden yalnızca sayfanın kendi rotası hâlâ en üstteyse kapatılır.
+void closeOpsSheet(NavigatorState navigator, Route<Object?>? route) {
+  if (route != null && route.isCurrent) navigator.pop(true);
+}
+
 /// Form iskeleti: başlık, kaydırılan alanlar ve altta sabit "Kaydet".
 class OpsSheetFrame extends StatelessWidget {
   const OpsSheetFrame({

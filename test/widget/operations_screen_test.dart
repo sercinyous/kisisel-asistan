@@ -4,13 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
-import 'package:kisisel_asistan/features/health/data/health_repository.dart';
+import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/operations/domain/note_item.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
 import 'package:kisisel_asistan/features/operations/presentation/operations_screen.dart';
 import 'package:kisisel_asistan/features/operations/presentation/routine_form_sheet.dart';
+import 'package:kisisel_asistan/features/operations/presentation/task_form_sheet.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
@@ -235,5 +236,114 @@ void main() {
     await tester.ensureVisible(toggle);
     expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
     await drainSnackBar(tester);
+  });
+
+  testWidgets(
+      'spor sabiti eklenip silinince haftalık antrenman planı tazelenir',
+      (tester) async {
+    await pumpScreen(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(OperationsScreen)),
+    );
+    // Sağlık sekmesi açıkmış gibi: haftalık plan dinleniyor.
+    container.listen(weekWorkoutPlanProvider, (_, __) {});
+    await tester.pumpAndSettle();
+    // r2: Pzt, Çar, Cum.
+    expect(
+      container.read(weekWorkoutPlanProvider).requireValue.plannedCount,
+      3,
+    );
+
+    await tester.tap(find.text('Sabitler').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ekle'));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(RoutineFormSheet);
+    await tester.enterText(
+      find.descendant(of: sheet, matching: find.byType(TextFormField)),
+      'Akşam koşusu',
+    );
+    final spor = find.descendant(of: sheet, matching: find.text('Spor'));
+    await tester.ensureVisible(spor);
+    await tester.pumpAndSettle();
+    await tester.tap(spor);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kaydet'));
+    await tester.pumpAndSettle();
+    expect(routines.routines.last.category, 'spor');
+    // Her gün planlı yeni spor sabiti: 3 + 7.
+    expect(
+      container.read(weekWorkoutPlanProvider).requireValue.plannedCount,
+      10,
+    );
+    await drainSnackBar(tester);
+
+    // Silme de aynı sağlayıcıyı tazeler.
+    final row = find.ancestor(
+      of: find.text('Ağırlık antrenmanı'),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(
+      find.descendant(of: row.first, matching: find.byTooltip('Seçenekler')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sil').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Sil'));
+    await tester.pumpAndSettle();
+    expect(
+      container.read(weekWorkoutPlanProvider).requireValue.plannedCount,
+      7,
+    );
+    await drainSnackBar(tester);
+  });
+
+  testWidgets(
+      'bu oturumda tamamlanan görev düzenlenince satır yeni başlığı gösterir',
+      (tester) async {
+    await pumpScreen(tester);
+    await tester.tap(find.byKey(const ValueKey('task-check-t2')));
+    await tester.pumpAndSettle();
+    await drainSnackBar(tester);
+
+    await tester.tap(find.text('Fatura ödemesi'));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(TaskFormSheet);
+    await tester.enterText(
+      find.descendant(of: sheet, matching: find.byType(TextFormField)).first,
+      'Fatura ödemesi (Kasım)',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Kaydet'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tasks.tasks.firstWhere((t) => t.id == 't2').title,
+      'Fatura ödemesi (Kasım)',
+    );
+    expect(find.text('Fatura ödemesi (Kasım)'), findsOneWidget);
+    expect(find.text('Fatura ödemesi'), findsNothing);
+    // Görev hâlâ tamamlanmış görünür ve geri alınabilir.
+    expect(
+      tester
+          .widget<Checkbox>(find.byKey(const ValueKey('task-check-t2')))
+          .value,
+      isTrue,
+    );
+    await drainSnackBar(tester);
+
+    // Form yeniden açıldığında kayıtlı (yeni) değerlerle başlar.
+    await tester.tap(find.text('Fatura ödemesi (Kasım)'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextFormField>(
+            find
+                .descendant(of: sheet, matching: find.byType(TextFormField))
+                .first,
+          )
+          .controller!
+          .text,
+      'Fatura ödemesi (Kasım)',
+    );
   });
 }

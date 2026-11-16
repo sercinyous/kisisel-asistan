@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/notification_sync.dart';
+import '../../health/presentation/health_providers.dart'
+    show weekWorkoutPlanProvider;
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../routines/data/routines_repository.dart';
 import '../../routines/domain/routine.dart';
@@ -30,11 +32,13 @@ void notifyTaskChange(OpsInvalidate invalidate) {
   invalidate(notificationSyncProvider);
 }
 
-/// Rutin değişince Gün/Ay ekranları ve bildirim planı bayatlar.
+/// Rutin değişince Gün/Ay ekranları, Sağlık sekmesinin haftalık antrenman
+/// planı (spor rutinleri) ve bildirim planı bayatlar.
 void notifyRoutineChange(OpsInvalidate invalidate) {
   invalidate(opsRoutinesProvider);
   invalidate(activeRoutinesProvider);
   invalidate(todayOccurrencesProvider);
+  invalidate(weekWorkoutPlanProvider);
   invalidate(monthOverviewProvider);
   invalidate(notificationSyncProvider);
 }
@@ -95,6 +99,15 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
       await future;
     } catch (_) {
       // Hata durumu ekranda zaten gösterilir.
+    }
+  }
+
+  /// Formdan kaydedilen görev bu oturumda tamamlanmışsa listede tutulan kopya
+  /// da güncellenir; `build` yalnızca açık görevleri okuduğu için tazeleme
+  /// onu yenilemez. Ardından sağlayıcı tazelenmelidir.
+  void applySaved(TaskItem saved) {
+    if (saved.isDone && _doneInSession.containsKey(saved.id)) {
+      _doneInSession[saved.id] = saved;
     }
   }
 

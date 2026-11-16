@@ -16,6 +16,24 @@ final notificationPermissionProvider = FutureProvider<bool>(
   (ref) => ref.watch(notificationServiceProvider).hasPermission(),
 );
 
+/// Eşitleme turlarının eklenti çağrılarını tek sıraya dizer.
+final _syncQueueProvider = Provider<_SyncQueue>((ref) => _SyncQueue());
+
+class _SyncQueue {
+  Future<void> _tail = Future<void>.value();
+
+  /// [apply]'ı önceki turun eklenti çağrıları bittikten sonra çalıştırır;
+  /// tur o ana dek bayatladıysa ([isCurrent] `false`) hiç çalıştırmaz.
+  Future<void> run(bool Function() isCurrent, Future<void> Function() apply) {
+    final result = _tail.then((_) async {
+      if (isCurrent()) await apply();
+    });
+    // Bir turun hatası sıradakileri kilitlemez; hatayı çağıran görür.
+    _tail = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+}
+
 /// Bekleyen bildirimleri ayarlar ve veritabanıyla eşitler.
 /// Oturum (kullanıcı) başına bir kez çalışır; ayar, görev ya da aylık iş
 /// değişince yenilenir.
@@ -23,6 +41,12 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
   final notifications = ref.watch(notificationServiceProvider);
   final routinesRepository = ref.watch(routinesRepositoryProvider);
   final tasksRepository = ref.watch(tasksRepositoryProvider);
+  final queue = ref.watch(_syncQueueProvider);
+
+  // Riverpod, sağlayıcı tazelenince süren turu durdurmaz. Bayatlayan tur
+  // eklentiye dokunmaz; yoksa yenisinden sonra bitip eski veriyi geri planlar.
+  var current = true;
+  ref.onDispose(() => current = false);
 
   UserSettings settings;
   try {
@@ -34,7 +58,10 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
 
   if (!settings.notificationsEnabled) {
     // Kapalıyken bekleyenlerin tamamı silinir; izin de sorulmaz.
-    await notifications.resync(routines: const [], reminders: const []);
+    await queue.run(
+      () => current,
+      () => notifications.resync(routines: const [], reminders: const []),
+    );
     return;
   }
 
@@ -61,19 +88,22 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
     tasks: tasks,
   );
 
-  await notifications.resync(
-    routines: routineSchedulesOf(plan, routines),
-    reminders: [
-      for (final p in plan)
-        if (p.kind == PlannedKind.task) _reminderOf(p),
-    ],
-  );
-  // resync bekleyenleri sildiği için aylık tek seferlikler ondan sonra eklenir.
-  for (final p in plan) {
-    if (p.kind == PlannedKind.monthlyLead || p.kind == PlannedKind.monthlyDue) {
-      await notifications.scheduleReminder(_reminderOf(p));
+  await queue.run(() => current, () async {
+    await notifications.resync(
+      routines: routineSchedulesOf(plan, routines),
+      reminders: [
+        for (final p in plan)
+          if (p.kind == PlannedKind.task) _reminderOf(p),
+      ],
+    );
+    // resync bekleyenleri sildiği için aylık tek seferlikler ondan sonra eklenir.
+    for (final p in plan) {
+      if (p.kind == PlannedKind.monthlyLead ||
+          p.kind == PlannedKind.monthlyDue) {
+        await notifications.scheduleReminder(_reminderOf(p));
+      }
     }
-  }
+  });
 });
 
 ReminderSchedule _reminderOf(PlannedNotification p) => ReminderSchedule(

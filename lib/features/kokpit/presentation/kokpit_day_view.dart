@@ -8,6 +8,7 @@ import '../../../core/services/health_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
+import '../../health/presentation/health_providers.dart';
 import '../../operations/domain/task_item.dart';
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
@@ -92,7 +93,9 @@ class _TodayBento extends ConsumerWidget {
                 icon: Icons.heart_broken_rounded,
                 message: 'HealthKit verisi okunamadı.',
                 actionLabel: 'Tekrar dene',
-                onAction: () => ref.invalidate(healthTodayProvider),
+                onAction: () => resyncHealthKit(
+                  ProviderScope.containerOf(context, listen: false),
+                ),
               ),
             ),
           ],
@@ -113,7 +116,9 @@ class _TodayBento extends ConsumerWidget {
                     message: 'HealthKit erişimi verilmedi. Sağlık uygulaması > '
                         'Paylaşım > Uygulamalar bölümünden izin verebilirsin.',
                     actionLabel: 'Bağlan',
-                    onAction: () => ref.invalidate(healthTodayProvider),
+                    onAction: () => resyncHealthKit(
+                      ProviderScope.containerOf(context, listen: false),
+                    ),
                   ),
                 ),
               ],

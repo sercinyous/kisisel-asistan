@@ -346,3 +346,31 @@ Widget testinde tipik override listesine `reportsRepositoryProvider` (R) eklenir
   yalnızca `--update-goldens` ile çalışır; olağan `flutter test` çalışmasında atlanır.
 - **Demo**: `FakeReportsRepository.regenerateDelay` ve `DemoData.seed(now, regenerateDelay:)`; tarayıcı demosunda
   "Raporu oluştur" 900 ms sürer.
+
+## 9. Son inceleme düzeltmeleri (davranış ve API ekleri)
+
+- **HealthKit geçmiş günleri**: `HealthService.readPastDays({int days = HealthService.backfillDays /* 7 */, DateTime? now})
+  → List<HealthDayReading>` (`typedef HealthDayReading = ({DateTime day, HealthSnapshot snapshot})`); pencereler saf
+  `healthDayWindows(now, {pastDays})` ile hesaplanır: adım/enerji `[gün 00:00, ertesi 00:00)` (bugünde şu ana kadar),
+  uyku `[önceki gün 18:00, o gün 18:00)` (bugünde en geç şu an). `HealthRepository.upsertHealthDays(days)` verisi olan
+  günleri tek istekte yazar. `backfillHealthKit(container)` (health_providers.dart): bugünün okumasını bekler, geçmiş
+  günleri okuyup yazar, `weekStepsProvider` ve `monthOverviewProvider`'ı tazeler; `resyncHealthKit(container)` önce
+  `healthTodayProvider`'ı tazeler, sonra aynısını yapar. `healthTodayProvider` doğrudan `invalidate` edilmez; yenileme
+  hep `resyncHealthKit` ile yapılır (Kokpit ve Sağlık yenilemesi, "Tekrar dene"/"Bağlan", Ayarlar'daki yeniden bağlanma).
+- **Açılış ve öne geliş** (`home_shell.dart`): açılışta `backfillHealthKit`; `resumed` olduğunda saat, bugünün rutinleri,
+  yaklaşanlar, `invalidateHealthData` (Sağlık sekmesi, Kokpit beslenme özeti, Ay özeti), `resyncHealthKit` ve dört rapor
+  sağlayıcısı tazelenir.
+- **AI görevinde hatırlatma**: `ParsedTask.remindAt` yalnızca kullanıcı ayrı bir hatırlatma zamanı söylediyse doludur
+  (terminle aynı an boş sayılır). Boşsa bildirim `due_at − event_remind_minutes` anındadır; kayıt anındaki anlık planlama
+  (`QuickAddController.save`) ve `buildNotificationPlan` aynı kuralı uygular. `SavedTask.dueAt` eklendi.
+- **Rutin sıklığı değişimi**: `routines_frequency_changed` tetikleyicisi (schema.sql) sıklığı değişen rutinin
+  `routine_completions` satırlarını siler; `FakeRoutinesRepository.update` aynısını yapar.
+- **Form sayfaları**: kayıt bitince `closeOpsSheet(navigator, route)` (operations_widgets.dart) çağrılır; `route`, kayıttan
+  önce `ModalRoute.of(context)` ile alınır ve yalnızca hâlâ en üstteyse kapatılır (kayıt sürerken kapatılan sayfa alttaki
+  rotayı kapatmasın).
+- **Operasyon**: `notifyRoutineChange` `weekWorkoutPlanProvider`'ı da tazeler; `OpsTasksNotifier.applySaved(TaskItem)` bu
+  oturumda tamamlanmış görevin listede tutulan kopyasını formdan kaydedilen hâliyle değiştirir.
+- **Bildirim eşitleme**: `notificationSyncProvider` turlarının eklenti çağrıları tek sıraya dizilir; bayatlayan tur
+  (sağlayıcı tazelenmiş) eklentiye dokunmaz.
+- **Sahteler**: `FakeHealthService(snapshot, {pastDays})` + `pastDayReads`; `FakeHealthRepository.upsertHealthMetrics` /
+  `upsertHealthDays` verisi olan okumayı `metrics`'e yazar, `upsertedDays` yazılan günleri tutar.

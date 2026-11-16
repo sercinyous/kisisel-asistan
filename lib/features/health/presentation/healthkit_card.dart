@@ -10,18 +10,6 @@ import '../../kokpit/presentation/kokpit_providers.dart';
 import 'health_providers.dart';
 import 'health_widgets.dart';
 
-/// HealthKit'i yeniden okur; okuma bitince (veri Supabase'e yedeklendikten
-/// sonra) 7 günlük adım grafiği de tazelenir.
-Future<void> resyncHealthKit(ProviderContainer container) async {
-  container.invalidate(healthTodayProvider);
-  try {
-    await container.read(healthTodayProvider.future);
-  } catch (_) {
-    // Hata kartta gösterilir; adım grafiği yine de tazelenir.
-  }
-  container.invalidate(weekStepsProvider);
-}
-
 /// HealthKit durumu: bağlantı, son eşitleme ve yeniden bağlanma.
 class HealthKitCard extends ConsumerWidget {
   const HealthKitCard({super.key});

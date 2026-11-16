@@ -200,4 +200,28 @@ class HealthRepository {
       onConflict: 'user_id,metric_date',
     );
   }
+
+  /// Tamamlanmış günlerin gün sonu değerlerini tek istekte yazar
+  /// ([HealthService.readPastDays]). Verisi olmayan gün atlanır: izin geri
+  /// alınmışsa kayıtlı geçmişin üstüne sıfır yazılmaz.
+  Future<void> upsertHealthDays(List<HealthDayReading> days) async {
+    final userId = _client.auth.currentUser?.id;
+    final syncedAt = DateTime.now().toUtc().toIso8601String();
+    final rows = [
+      for (final (:day, :snapshot) in days)
+        if (snapshot.status == HealthStatus.ok && snapshot.hasData)
+          {
+            'user_id': userId,
+            'metric_date': AppDates.ymd(day),
+            'steps': snapshot.steps,
+            'active_kcal': snapshot.activeKcal,
+            'sleep_minutes': snapshot.sleepMinutes,
+            'synced_at': syncedAt,
+          },
+    ];
+    if (userId == null || rows.isEmpty) return;
+    await _client
+        .from('daily_health_metrics')
+        .upsert(rows, onConflict: 'user_id,metric_date');
+  }
 }

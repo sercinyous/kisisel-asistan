@@ -125,9 +125,16 @@ class FakeNotificationService implements NotificationService {
 }
 
 class FakeHealthService implements HealthService {
-  FakeHealthService(this.snapshot);
+  FakeHealthService(this.snapshot, {List<HealthDayReading>? pastDays})
+      : pastDays = pastDays ?? [];
 
   HealthSnapshot snapshot;
+
+  /// [readPastDays] ne dönerse o (tamamlanmış günlerin gün sonu değerleri).
+  List<HealthDayReading> pastDays;
+
+  /// [readPastDays] çağrı sayısı.
+  int pastDayReads = 0;
 
   @override
   bool get isSupported => snapshot.status != HealthStatus.unavailable;
@@ -137,6 +144,15 @@ class FakeHealthService implements HealthService {
 
   @override
   Future<HealthSnapshot> readToday({DateTime? now}) async => snapshot;
+
+  @override
+  Future<List<HealthDayReading>> readPastDays({
+    int days = HealthService.backfillDays,
+    DateTime? now,
+  }) async {
+    pastDayReads++;
+    return snapshot.status == HealthStatus.ok ? List.of(pastDays) : const [];
+  }
 }
 
 /// Supabase'e gitmeyen Kokpit deposu (yalnızca günün beslenme özeti).
@@ -497,6 +513,9 @@ class FakeHealthRepository implements HealthRepository {
   Object? upsertError;
 
   final List<HealthSnapshot> upsertedHealth = [];
+
+  /// [upsertHealthDays] ile yazılan günler (verisi olmayanlar hariç).
+  final List<DateTime> upsertedDays = [];
   final List<String> deletedIds = [];
   int _nextId = 1;
 
@@ -641,6 +660,34 @@ class FakeHealthRepository implements HealthRepository {
       DateTime day, HealthSnapshot snapshot) async {
     if (upsertError != null) throw upsertError!;
     upsertedHealth.add(snapshot);
+    _storeMetric(day, snapshot);
+  }
+
+  @override
+  Future<void> upsertHealthDays(List<HealthDayReading> days) async {
+    if (upsertError != null) throw upsertError!;
+    for (final (:day, :snapshot) in days) {
+      if (_storeMetric(day, snapshot)) {
+        upsertedDays.add(AppDates.startOfDay(day));
+      }
+    }
+  }
+
+  /// Gerçek depo gibi: verisi olan okuma o günün satırının yerine geçer.
+  bool _storeMetric(DateTime day, HealthSnapshot snapshot) {
+    if (snapshot.status != HealthStatus.ok || !snapshot.hasData) return false;
+    final key = AppDates.startOfDay(day);
+    metrics = [
+      for (final m in metrics)
+        if (AppDates.startOfDay(m.day) != key) m,
+      DailyHealthMetric(
+        day: key,
+        steps: snapshot.steps,
+        activeKcal: snapshot.activeKcal,
+        sleepMinutes: snapshot.sleepMinutes,
+      ),
+    ];
+    return true;
   }
 }
 

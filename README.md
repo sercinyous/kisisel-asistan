@@ -97,9 +97,18 @@ Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (re
 
 ## Kurulum
 
-1. **iOS projesini oluştur** (Mac'te, bu klasörde). `com.ornek` yerine kendi kimliğini yaz:
+`ios/` klasörü depoda tutulmaz ve **yalnızca Codemagic ile derleyeceksen Mac gerekmez**: derleme
+`ios/` yoksa onu kendisi oluşturur ve yapılandırır (bkz. "Ad-Hoc dağıtım"); 1. ve 2. adımı atla.
+Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
+
+1. **iOS projesini oluştur** (Mac'te, bu klasörde). `com.ornek` yerine Bundle ID'nin son parçası
+   hariç kısmını yaz (`com.ornek.kisiselAsistan` → `com.ornek`):
    ```bash
-   flutter create --platforms=ios --org com.ornek --project-name kisisel_asistan .
+   flutter create --no-pub --platforms=ios --org com.ornek --project-name kisisel_asistan .
+   ```
+   `flutter create` kilit dosyasını yeniden yazar; depodaki sürümlere dön:
+   ```bash
+   git checkout -- pubspec.lock
    ```
 2. **iOS'u yapılandır** (HealthKit, Info.plist, iOS 15, bildirim delegesi):
    ```bash
@@ -108,6 +117,8 @@ Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (re
    ```bash
    bash tool/configure_ios.sh
    ```
+   `ios/` klasörünü depoya koymak isteğe bağlıdır. Xcode'da elle değişiklik (ek yetki, uzantı,
+   uygulama simgesi) yaptıysan koy: Codemagic depodaki klasörü kullanır, yeniden oluşturmaz.
 3. **Supabase**: yeni proje aç → SQL Editor'da `supabase/schema.sql` dosyasını çalıştır →
    Authentication > Users bölümünden kendi kullanıcını (e-posta + şifre) oluştur.
    Başlangıç verisi kullanıcı oluştuğu anda yüklenir. Authentication > Sign In / Providers altında
@@ -180,8 +191,11 @@ Notlar:
   zamanlamayı değiştir.
 - Uygulama rapor tablolarını yalnızca okur; satırları fonksiyon `service_role` ile yazar. Bu anahtar
   yalnızca sunucudadır, uygulamaya konmaz.
-- Adım ve uyku, uygulama açıldığında HealthKit'ten eşitlenir; gün içinde uygulama hiç açılmadıysa o günün
-  raporunda bu alanlar boş kalır. "Raporu yeniden oluştur" eşitlemeden sonra sayıları günceller.
+- Adım, uyku ve aktif kalori uygulama açıkken HealthKit'ten eşitlenir (uygulama kapalıyken veri
+  gönderilemez). Bu yüzden zamanlayıcının yazdığı rapor, o gün uygulamanın son açıldığı ana kadarki
+  değeri (uygulama hiç açılmadıysa boş alanı) taşır. Uygulama her açıldığında ve öne geldiğinde son
+  7 günün gün sonu değerleri yeniden okunup tabloya yazılır; ardından "Raporu yeniden oluştur" o günün
+  ya da haftanın sayılarını doğru değerlerle günceller.
 - Zamanlayıcı çağrılarının sonucu: `select * from net._http_response order by created desc limit 5;`
   İş geçmişi: `select * from cron.job_run_details order by start_time desc limit 5;`
 - Doğrulama durumu: `schema.sql` ve rapor fonksiyonları yerel PostgreSQL 16'da sınandı
@@ -220,6 +234,11 @@ flutter test --update-goldens test/screenshots/app_screens_test.dart
 4. `codemagic.yaml` içindeki `com.ornek.kisiselAsistan` değerini iki yerde kendi Bundle ID'nle değiştir.
 5. `main` dalına push → `.ipa` Artifacts altında. Codemagic'in kurulum bağlantısından iPhone'a yükle.
 
+Depoda `ios/` klasörü yoksa derleme onu `flutter create` ile, Bundle ID'ne göre oluşturur
+(`--org` = Bundle ID'nin son parçası hariç kısmı), `tool/configure_ios.sh` ile yapılandırır ve
+uygulama ile `RunnerTests` kimliklerini Bundle ID'ne eşitler. Depoda `ios/` varsa o kullanılır;
+aynı yapılandırma ve kimlik adımları onun üzerinde çalışır.
+
 ## Bilinmesi gerekenler
 
 - **Rapor yorumları için Gemini anahtarı sunucudadır** (Edge Function secret); aşağıdaki not yalnızca
@@ -238,12 +257,15 @@ flutter test --update-goldens test/screenshots/app_screens_test.dart
   aylık (`frequency = 'monthly'`, `day_of_month`; 31 → kısa ayda ayın son günü). Aylık iş, gününden
   `monthly_lead_days` gün önce Gün ekranına düşer, günü geçince gecikmiş görünür, ay bitince kapanır.
   `routine_completions.completed_on` dönem anahtarıdır: günlük/haftalıkta o gün, aylıkta ayın 1'i.
+  Anahtarın anlamı sıklığa bağlı olduğu için, bir rutinin sıklığı (günlük/haftalık ↔ aylık)
+  değiştirilince o rutinin eski işaretleri silinir (`routines_frequency_changed` tetikleyicisi).
 - **Şema yükseltmesi**: `supabase/schema.sql` yeniden çalıştırılabilir; eski sürümle kurulmuş veritabanını
   veriyi silmeden yükseltir (yeni sütunlar, `user_settings`, iki örnek aylık iş, rapor tabloları,
   `tasks.notify`). **Bu sürümü kurmadan önce şemayı yeniden çalıştır**: uygulama görev kaydederken
   `notify` sütununu yazar.
 - **Görev hatırlatması**: formdaki "Hatırlat" kapalıysa (`tasks.notify = false`) görev termini olsa da
-  bildirim almaz. AI ile eklenen görevler bildirimlidir. Yükseltmede, eski formda hatırlatması kapalı
+  bildirim almaz. AI ile eklenen görevler bildirimlidir; ayrı bir hatırlatma zamanı söylenmediyse
+  bildirim, Ayarlar'daki "randevu kaç dk önce" süresi kadar önce gelir. Yükseltmede, eski formda hatırlatması kapalı
   kaydedilmiş görevler (elle eklenmiş, termini var, hatırlatma saati yok) bir kez kapalıya çevrilir.
 - **iOS, HealthKit okuma izninin reddini uygulamaya bildirmez**; reddedilirse değerler 0 görünür.
 - **Ek tablolar**: istenen 6 tabloya ek olarak `routine_completions` (dönem bazlı tamamlanma),

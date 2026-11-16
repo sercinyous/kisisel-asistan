@@ -55,6 +55,7 @@ class _NoteFormSheetState extends ConsumerState<NoteFormSheet> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
     setState(() {
       _saving = true;
@@ -90,7 +91,7 @@ class _NoteFormSheetState extends ConsumerState<NoteFormSheet> {
       return;
     }
     container.invalidate(opsNotesProvider);
-    navigator.pop(true);
+    closeOpsSheet(navigator, route);
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import '../../../core/services/notification_sync.dart';
 import '../../../core/services/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../health/presentation/health_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../domain/user_settings.dart';
 import 'settings_providers.dart';
@@ -346,13 +349,15 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
 
   Future<void> _reconnectHealth() async {
     final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context, listen: false);
     var granted = false;
     try {
       granted = await ref.read(healthServiceProvider).requestAccess();
     } catch (_) {
       granted = false;
     }
-    ref.invalidate(healthTodayProvider);
+    // İlk izinle birlikte son günler de okunur ve yedeklenir.
+    unawaited(resyncHealthKit(container));
     if (granted) return;
     messenger
       ..hideCurrentSnackBar()

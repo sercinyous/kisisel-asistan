@@ -51,11 +51,9 @@ workflows:
             fi
           done
 
-      - name: Bağımlılıkları yükle
-        script: flutter pub get
-
       # ios/ depoda tutulmuyorsa burada üretilir (Mac gerekmez). --org, BUNDLE_ID'nin
       # son parçası hariç kısmıdır; depoda ios/ varsa bu adım hiçbir şey yapmaz.
+      # Sıra önemli: Podfile ve eklenti kayıtları bir sonraki "flutter pub get" ile oluşur.
       - name: iOS projesini oluştur (ios/ depoda yoksa)
         script: |
           #!/usr/bin/env bash
@@ -70,7 +68,15 @@ workflows:
             echo "HATA: BUNDLE_ID 'com.sirket.uygulama' biçiminde olmalı (şu an: '$BUNDLE_ID')." >&2
             exit 1
           fi
-          flutter create --platforms=ios --org "$ORG" --project-name kisisel_asistan .
+          # flutter create, pubspec.lock'u yalnızca SDK'nın sabitlediği sürümlerle
+          # yeniden yazar (depodaki kilitli sürümler kaybolur); depodaki hâli korunur.
+          KEEP="$(mktemp -d)"
+          cp pubspec.lock "$KEEP/"
+          flutter create --no-pub --platforms=ios --org "$ORG" --project-name kisisel_asistan .
+          cp "$KEEP/pubspec.lock" pubspec.lock
+
+      - name: Bağımlılıkları yükle
+        script: flutter pub get
 
       - name: iOS projesini yapılandır (HealthKit, Info.plist)
         script: bash tool/configure_ios.sh

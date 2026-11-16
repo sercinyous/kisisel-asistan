@@ -50,6 +50,7 @@ class _WeightFormSheetState extends ConsumerState<WeightFormSheet> {
       return;
     }
     final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
     setState(() {
       _saving = true;
@@ -68,7 +69,7 @@ class _WeightFormSheetState extends ConsumerState<WeightFormSheet> {
       return;
     }
     invalidateHealthData(container);
-    navigator.pop(true);
+    closeOpsSheet(navigator, route);
   }
 
   @override

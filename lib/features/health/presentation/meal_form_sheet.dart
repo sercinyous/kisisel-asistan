@@ -91,6 +91,7 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final navigator = Navigator.of(context);
+    final route = ModalRoute.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
     setState(() {
       _saving = true;
@@ -130,7 +131,7 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
       return;
     }
     invalidateHealthData(container);
-    navigator.pop(true);
+    closeOpsSheet(navigator, route);
   }
 
   Widget _macroField({
