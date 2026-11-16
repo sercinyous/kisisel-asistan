@@ -1,0 +1,31 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/settings_repository.dart';
+import '../domain/user_settings.dart';
+
+final userSettingsProvider =
+    AsyncNotifierProvider<UserSettingsNotifier, UserSettings>(
+  UserSettingsNotifier.new,
+);
+
+class UserSettingsNotifier extends AsyncNotifier<UserSettings> {
+  @override
+  Future<UserSettings> build() =>
+      ref.watch(settingsRepositoryProvider).fetch();
+
+  /// Veritabanına yazar ve sunucunun döndürdüğü satırı yayınlar.
+  /// Hata çağırana iletilir; mevcut değer korunur.
+  Future<UserSettings> save(UserSettings settings) async {
+    final saved = await ref.read(settingsRepositoryProvider).save(settings);
+    state = AsyncData(saved);
+    return saved;
+  }
+}
+
+/// Hedef ve tercihleri eşzamanlı okumak için: ayarlar yüklenene kadar (ya da
+/// yüklenemezse) varsayılanları verir, böylece ekranlar beklemeden çizilir.
+final settingsOrDefaultProvider = Provider<UserSettings>(
+  (ref) =>
+      ref.watch(userSettingsProvider).valueOrNull ??
+      const UserSettings.defaults(),
+);
