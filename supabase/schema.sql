@@ -12,7 +12,11 @@
 --
 -- Sürüm 2 (Faz 2): routines.frequency / day_of_month / scope, 'finans'
 -- kategorisi, user_settings tablosu, quick_add_entries içinde routines[].
--- Sürüm 1 ile kurulmuş bir veritabanında çalıştırıldığında yerinde yükseltir.
+-- Sürüm 3 (Faz 3): user_settings.timezone, daily_reports tablosu,
+-- weekly_reports.ai_status / generated_at, rapor tablolarında salt okuma,
+-- rapor fonksiyonları (report_daily_metrics, report_weekly_metrics,
+-- save_daily_report, save_weekly_report — yalnızca service_role).
+-- Eski bir sürümle kurulmuş veritabanında çalıştırıldığında yerinde yükseltir.
 -- =====================================================================
 
 create extension if not exists pgcrypto;
@@ -221,7 +225,10 @@ create table if not exists public.daily_health_metrics (
 );
 
 -- ---------------------------------------------------------------------
--- 6) weekly_reports — haftalık verimlilik + form raporu (AI özetli)
+-- 6) weekly_reports / daily_reports — otomatik raporlar (AI özetli)
+--    Satırları yalnızca Edge Function (service_role) yazar; uygulama okur.
+--    Sayıların tamamı metrics içindedir; weekly_reports'taki sayısal
+--    sütunlar aynı değerlerin sorgulanabilir kopyasıdır.
 -- ---------------------------------------------------------------------
 create table if not exists public.weekly_reports (
   id                    uuid primary key default gen_random_uuid(),
@@ -241,8 +248,30 @@ create table if not exists public.weekly_reports (
   weight_end_kg         numeric(5,2),
   ai_summary            text,
   metrics               jsonb not null default '{}'::jsonb,
+  ai_status             text not null default 'pending'
+                        check (ai_status in ('pending', 'ok', 'failed')),
+  generated_at          timestamptz not null default now(),
   created_at            timestamptz not null default now(),
   unique (user_id, week_start)
+);
+
+-- Sürüm 2 → 3 yükseltmesi.
+alter table public.weekly_reports
+  add column if not exists ai_status text not null default 'pending'
+    check (ai_status in ('pending', 'ok', 'failed'));
+alter table public.weekly_reports
+  add column if not exists generated_at timestamptz not null default now();
+
+create table if not exists public.daily_reports (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users (id) on delete cascade,
+  report_date   date not null,
+  metrics       jsonb not null default '{}'::jsonb,
+  ai_summary    text,
+  ai_status     text not null default 'pending'
+                check (ai_status in ('pending', 'ok', 'failed')),
+  generated_at  timestamptz not null default now(),
+  unique (user_id, report_date)
 );
 
 -- ---------------------------------------------------------------------
@@ -279,8 +308,14 @@ create table if not exists public.user_settings (
   quiet_start            time not null default '23:00',
   quiet_end              time not null default '07:30',
   team_members           text[] not null default '{Duhan,İlhan,Mehmet,Sedat}',
+  -- Rapor günü ve haftası bu saat dilimine göre kesilir (IANA adı).
+  timezone               text not null default 'Europe/Istanbul',
   updated_at             timestamptz not null default now()
 );
+
+-- Sürüm 2 → 3 yükseltmesi.
+alter table public.user_settings
+  add column if not exists timezone text not null default 'Europe/Istanbul';
 
 -- ---------------------------------------------------------------------
 -- İndeksler
@@ -334,8 +369,7 @@ declare
 begin
   foreach t in array array[
     'routines', 'routine_completions', 'tasks', 'notes',
-    'fitness_logs', 'nutrition_logs', 'daily_health_metrics', 'weekly_reports',
-    'user_settings'
+    'fitness_logs', 'nutrition_logs', 'daily_health_metrics', 'user_settings'
   ]
   loop
     execute format('alter table public.%I enable row level security', t);
@@ -344,6 +378,21 @@ begin
       'create policy %I on public.%I for all to authenticated
          using (auth.uid() = user_id) with check (auth.uid() = user_id)',
       t || '_owner_all', t
+    );
+  end loop;
+
+  -- Rapor tabloları: kullanıcı yalnızca kendi satırını OKUR. Yazma politikası
+  -- yoktur; satırları service_role (RLS'i aşar) ile Edge Function yazar.
+  -- Sürüm 2'nin weekly_reports_owner_all politikası burada kaldırılır.
+  foreach t in array array['daily_reports', 'weekly_reports']
+  loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('drop policy if exists %I on public.%I', t || '_owner_all', t);
+    execute format('drop policy if exists %I on public.%I', t || '_owner_select', t);
+    execute format(
+      'create policy %I on public.%I for select to authenticated
+         using (auth.uid() = user_id)',
+      t || '_owner_select', t
     );
   end loop;
 end;
@@ -358,13 +407,26 @@ grant usage on schema public to authenticated;
 grant select, insert, update, delete on table
   public.routines, public.routine_completions, public.tasks, public.notes,
   public.fitness_logs, public.nutrition_logs, public.daily_health_metrics,
-  public.weekly_reports, public.user_settings
+  public.user_settings
   to authenticated;
 revoke all on table
   public.routines, public.routine_completions, public.tasks, public.notes,
   public.fitness_logs, public.nutrition_logs, public.daily_health_metrics,
-  public.weekly_reports, public.user_settings
+  public.weekly_reports, public.daily_reports, public.user_settings
   from anon;
+
+-- Rapor tabloları uygulama için salt okunurdur. Önce tümü geri alınır ki
+-- sürüm 2'de verilmiş yazma yetkisi de kalksın.
+revoke all on table public.weekly_reports, public.daily_reports from authenticated;
+grant select on table public.weekly_reports, public.daily_reports to authenticated;
+
+-- Edge Function (service_role): kullanıcı listesini ve saat dilimini
+-- user_settings'ten okur, raporları yazar. Diğer tablolara rapor
+-- fonksiyonları (security definer) üzerinden erişir.
+grant usage on schema public to service_role;
+grant select on table public.user_settings to service_role;
+grant select, insert, update, delete on table
+  public.weekly_reports, public.daily_reports to service_role;
 
 -- ---------------------------------------------------------------------
 -- Görünüm: günlük makro toplamları (İstanbul gününe göre)
@@ -491,6 +553,421 @@ $$;
 
 revoke all on function public.quick_add_entries(jsonb) from public, anon;
 grant execute on function public.quick_add_entries(jsonb) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- RAPORLAR — sayılar burada hesaplanır; Gemini yalnızca yorum yazar.
+-- Dört fonksiyonu yalnızca service_role (Edge Function generate-reports)
+-- çalıştırır. security definer: service_role'ün veri tablolarında yetkisi
+-- olması gerekmez; kullanıcı p_user ile açıkça verilir (auth.uid() yok).
+--
+-- Kurallar (docs/SPEC_FAZ3.md §2):
+--   * Gün sınırı user_settings.timezone'a göredir.
+--   * Görev o güne aittir: due_at o günde. done: status = 'done'.
+--   * Günlük/haftalık rutin: days_of_week o günü içeriyorsa planlıdır.
+--     Aylık rutin: günü = min(day_of_month, ayın son günü) ise planlıdır;
+--     tamamlanması ayın 1'i anahtarıyla okunur.
+--     Rutin, oluşturulduğu günden önce ve pasifken planlı sayılmaz.
+--   * Henüz gelmemiş günler planlı sayılmaz (hafta ortasında üretilen rapor
+--     kalan günler yüzünden düşük çıkmasın).
+--   * Protein tutturma: günlük protein >= hedefin %90'ı.
+--     Kalori aralığı: hedefin %85–%110'u (uçlar dahil). Kayıtsız gün tutmaz.
+--   * Ortalamalar yalnızca verisi olan günler üzerinden alınır.
+--   * Kilo: end = aralıktaki son ölçüm; start = aralıktan önceki son ölçüm,
+--     yoksa aralıktaki ilk ölçüm.
+-- ---------------------------------------------------------------------
+create or replace function public.report_period_metrics(
+  p_user uuid,
+  p_from date,
+  p_to date,
+  p_with_days boolean
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_tz        text;
+  v_cal       integer;
+  v_pro       integer;
+  v_steps     integer;
+  v_sleep     integer;
+  v_today     date;
+  v_t0        timestamptz;
+  v_t1        timestamptz;
+  v_t1_tasks  timestamptz;
+  v_w_start   numeric;
+  v_w_end     numeric;
+  v_result    jsonb;
+begin
+  if p_user is null or p_from is null or p_to is null or p_to < p_from then
+    raise exception 'Geçersiz rapor aralığı' using errcode = '22023';
+  end if;
+
+  select s.timezone, s.daily_calories, s.daily_protein_g, s.daily_steps, s.sleep_minutes
+    into v_tz, v_cal, v_pro, v_steps, v_sleep
+  from user_settings s
+  where s.user_id = p_user;
+
+  -- Ayar satırı yoksa tablo varsayılanları geçerlidir.
+  v_tz    := coalesce(nullif(btrim(v_tz), ''), 'Europe/Istanbul');
+  v_cal   := coalesce(v_cal, 2000);
+  v_pro   := coalesce(v_pro, 170);
+  v_steps := coalesce(v_steps, 10000);
+  v_sleep := coalesce(v_sleep, 450);
+
+  -- Bozuk bir saat dilimi adı raporu düşürmesin.
+  begin
+    perform now() at time zone v_tz;
+  exception when others then
+    v_tz := 'Europe/Istanbul';
+  end;
+
+  v_today    := (now() at time zone v_tz)::date;
+  v_t0       := p_from::timestamp at time zone v_tz;
+  v_t1       := (p_to + 1)::timestamp at time zone v_tz;
+  v_t1_tasks := least(v_t1, (v_today + 1)::timestamp at time zone v_tz);
+
+  select f.weight_kg into v_w_end
+  from fitness_logs f
+  where f.user_id = p_user and f.log_type = 'weight'
+    and f.logged_at >= v_t0 and f.logged_at < v_t1
+  order by f.logged_at desc
+  limit 1;
+
+  select f.weight_kg into v_w_start
+  from fitness_logs f
+  where f.user_id = p_user and f.log_type = 'weight' and f.logged_at < v_t0
+  order by f.logged_at desc
+  limit 1;
+
+  if v_w_start is null then
+    select f.weight_kg into v_w_start
+    from fitness_logs f
+    where f.user_id = p_user and f.log_type = 'weight'
+      and f.logged_at >= v_t0 and f.logged_at < v_t1
+    order by f.logged_at asc
+    limit 1;
+  end if;
+
+  with days as (
+    select g::date as day, g::date <= v_today as elapsed
+    from generate_series(p_from::timestamp, p_to::timestamp, interval '1 day') as g
+  ),
+  planned as (
+    select d.day,
+           r.id as routine_id,
+           r.category,
+           case when r.frequency = 'monthly'
+                then date_trunc('month', d.day)::date
+                else d.day end as period_key
+    from days d
+    join routines r
+      on r.user_id = p_user
+     and r.is_active
+     and (r.created_at at time zone v_tz)::date <= d.day
+     and (
+       (r.frequency = 'weekly'
+        and extract(isodow from d.day)::smallint = any (r.days_of_week))
+       or
+       (r.frequency = 'monthly'
+        and extract(day from d.day)::integer = least(
+              r.day_of_month::integer,
+              extract(day from date_trunc('month', d.day)
+                               + interval '1 month' - interval '1 day')::integer))
+     )
+    where d.elapsed
+  ),
+  routine_day as (
+    select p.day,
+           count(*)                                        as planned,
+           count(c.id)                                     as done,
+           count(*) filter (where p.category = 'spor')     as workouts_planned
+    from planned p
+    left join routine_completions c
+      on c.routine_id = p.routine_id and c.completed_on = p.period_key
+    group by p.day
+  ),
+  task_day as (
+    select (t.due_at at time zone v_tz)::date              as day,
+           count(*)                                        as total,
+           count(*) filter (where t.status = 'done')       as done
+    from tasks t
+    where t.user_id = p_user and t.due_at >= v_t0 and t.due_at < v_t1_tasks
+    group by 1
+  ),
+  nutrition_day as (
+    select (n.eaten_at at time zone v_tz)::date            as day,
+           sum(n.calories)  as calories,
+           sum(n.protein_g) as protein_g,
+           sum(n.carbs_g)   as carbs_g,
+           sum(n.fat_g)     as fat_g,
+           count(*)         as entries
+    from nutrition_logs n
+    where n.user_id = p_user and n.eaten_at >= v_t0 and n.eaten_at < v_t1
+    group by 1
+  ),
+  workout_day as (
+    select (f.logged_at at time zone v_tz)::date as day, count(*) as done
+    from fitness_logs f
+    where f.user_id = p_user and f.log_type = 'workout'
+      and f.logged_at >= v_t0 and f.logged_at < v_t1
+    group by 1
+  ),
+  per_day as (
+    select d.day,
+           d.elapsed,
+           coalesce(t.total, 0)             as tasks_total,
+           coalesce(t.done, 0)              as tasks_done,
+           coalesce(r.planned, 0)           as routines_planned,
+           coalesce(r.done, 0)              as routines_done,
+           coalesce(r.workouts_planned, 0)  as workouts_planned,
+           coalesce(w.done, 0)              as workouts_done,
+           coalesce(n.calories, 0)          as calories,
+           coalesce(n.protein_g, 0)         as protein_g,
+           coalesce(n.carbs_g, 0)           as carbs_g,
+           coalesce(n.fat_g, 0)             as fat_g,
+           coalesce(n.entries, 0)           as entries,
+           coalesce(h.steps, 0)             as steps,
+           coalesce(h.sleep_minutes, 0)     as sleep_minutes,
+           coalesce(h.active_kcal, 0)       as active_kcal,
+           (coalesce(n.entries, 0) > 0
+             and n.protein_g >= v_pro * 0.9)::integer as protein_hit,
+           (coalesce(n.entries, 0) > 0
+             and n.calories between v_cal * 0.85 and v_cal * 1.10)::integer as calorie_ok
+    from days d
+    left join task_day t      on t.day = d.day
+    left join routine_day r   on r.day = d.day
+    left join workout_day w   on w.day = d.day
+    left join nutrition_day n on n.day = d.day
+    left join daily_health_metrics h
+      on h.user_id = p_user and h.metric_date = d.day
+  ),
+  agg as (
+    select
+      sum(tasks_total)       as tasks_total,
+      sum(tasks_done)        as tasks_done,
+      sum(routines_planned)  as routines_planned,
+      sum(routines_done)     as routines_done,
+      sum(workouts_planned)  as workouts_planned,
+      sum(workouts_done)     as workouts_done,
+      sum(protein_hit)       as protein_days_hit,
+      sum(calorie_ok)        as calorie_days_in_range,
+      count(*) filter (where elapsed)       as elapsed_days,
+      count(*) filter (where entries > 0)   as days_logged,
+      avg(calories)  filter (where entries > 0) as calories,
+      avg(protein_g) filter (where entries > 0) as protein_g,
+      avg(carbs_g)   filter (where entries > 0) as carbs_g,
+      avg(fat_g)     filter (where entries > 0) as fat_g,
+      avg(steps)         filter (where steps > 0)         as steps,
+      avg(sleep_minutes) filter (where sleep_minutes > 0) as sleep_minutes,
+      avg(active_kcal)   filter (where active_kcal > 0)   as active_kcal,
+      count(*) filter (where steps > 0 or sleep_minutes > 0 or active_kcal > 0)
+        as days_with_data,
+      jsonb_agg(
+        jsonb_build_object(
+          'date', to_char(day, 'YYYY-MM-DD'),
+          'work_rate', round(100.0 * (tasks_done + routines_done)
+                             / nullif(tasks_total + routines_planned, 0))::integer,
+          'form_rate', case when elapsed then
+                         round(100.0 * (least(workouts_done, workouts_planned) + protein_hit)
+                               / (workouts_planned + 1))::integer
+                       end,
+          'calories', round(calories, 1),
+          'protein_g', round(protein_g, 1),
+          'steps', steps,
+          'sleep_minutes', sleep_minutes,
+          'workouts', workouts_done
+        ) order by day
+      ) as days
+    from per_day
+  )
+  select jsonb_build_object(
+    'period', jsonb_build_object(
+      'start', to_char(p_from, 'YYYY-MM-DD'),
+      'end', to_char(p_to, 'YYYY-MM-DD')),
+    'work', jsonb_build_object(
+      'tasks_total', a.tasks_total,
+      'tasks_done', a.tasks_done,
+      'routines_planned', a.routines_planned,
+      'routines_done', a.routines_done,
+      'rate', round(100.0 * (a.tasks_done + a.routines_done)
+                    / nullif(a.tasks_total + a.routines_planned, 0))::integer),
+    'form', jsonb_build_object(
+      'workouts_planned', a.workouts_planned,
+      'workouts_done', a.workouts_done,
+      'protein_days_hit', a.protein_days_hit,
+      'calorie_days_in_range', a.calorie_days_in_range,
+      'rate', round(100.0 * (least(a.workouts_done, a.workouts_planned) + a.protein_days_hit)
+                    / nullif(a.workouts_planned + a.elapsed_days, 0))::integer),
+    'nutrition', jsonb_build_object(
+      'calories', coalesce(round(a.calories, 1), 0),
+      'protein_g', coalesce(round(a.protein_g, 1), 0),
+      'carbs_g', coalesce(round(a.carbs_g, 1), 0),
+      'fat_g', coalesce(round(a.fat_g, 1), 0),
+      'days_logged', a.days_logged),
+    'health', jsonb_build_object(
+      'steps', coalesce(round(a.steps), 0)::integer,
+      'sleep_minutes', coalesce(round(a.sleep_minutes), 0)::integer,
+      'active_kcal', coalesce(round(a.active_kcal), 0)::integer,
+      'days_with_data', a.days_with_data),
+    'weight', jsonb_build_object(
+      'start_kg', v_w_start,
+      'end_kg', v_w_end,
+      'change_kg', v_w_end - v_w_start),
+    'targets', jsonb_build_object(
+      'calories', v_cal,
+      'protein_g', v_pro,
+      'steps', v_steps,
+      'sleep_minutes', v_sleep)
+  ) || case when p_with_days
+            then jsonb_build_object('days', a.days)
+            else '{}'::jsonb end
+  into v_result
+  from agg a;
+
+  return v_result;
+end;
+$$;
+
+-- Bir günün raporu (p_day: kullanıcının saat dilimindeki gün).
+create or replace function public.report_daily_metrics(p_user uuid, p_day date)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select public.report_period_metrics(p_user, p_day, p_day, false);
+$$;
+
+-- Bir haftanın raporu (p_week_start Pazartesi; Pzt–Paz). Toplam/ortalama
+-- değerlere ek olarak gün gün dökümü `days` dizisinde verir.
+create or replace function public.report_weekly_metrics(p_user uuid, p_week_start date)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if extract(isodow from p_week_start) <> 1 then
+    raise exception 'p_week_start Pazartesi olmalı: %', p_week_start
+      using errcode = '22023';
+  end if;
+  return public.report_period_metrics(p_user, p_week_start, p_week_start + 6, true);
+end;
+$$;
+
+-- Günlük raporu yazar ya da günceller (kullanıcı + gün başına tek satır).
+create or replace function public.save_daily_report(
+  p_user uuid,
+  p_day date,
+  p_metrics jsonb,
+  p_summary text,
+  p_status text
+)
+returns void
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  insert into daily_reports (user_id, report_date, metrics, ai_summary, ai_status, generated_at)
+  values (p_user, p_day, coalesce(p_metrics, '{}'::jsonb), p_summary, p_status, now())
+  on conflict (user_id, report_date) do update
+    set metrics      = excluded.metrics,
+        ai_summary   = excluded.ai_summary,
+        ai_status    = excluded.ai_status,
+        generated_at = excluded.generated_at;
+$$;
+
+-- Haftalık raporu yazar ya da günceller; sayısal sütunları metrics'ten doldurur.
+create or replace function public.save_weekly_report(
+  p_user uuid,
+  p_week_start date,
+  p_metrics jsonb,
+  p_summary text,
+  p_status text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  m            jsonb := coalesce(p_metrics, '{}'::jsonb);
+  v_total      integer := coalesce((m #>> '{work,tasks_total}')::numeric, 0)::integer;
+  v_done       integer := coalesce((m #>> '{work,tasks_done}')::numeric, 0)::integer;
+  v_logged     integer := coalesce((m #>> '{nutrition,days_logged}')::numeric, 0)::integer;
+  v_steps      integer := coalesce((m #>> '{health,steps}')::numeric, 0)::integer;
+  v_sleep      integer := coalesce((m #>> '{health,sleep_minutes}')::numeric, 0)::integer;
+begin
+  if extract(isodow from p_week_start) <> 1 then
+    raise exception 'p_week_start Pazartesi olmalı: %', p_week_start
+      using errcode = '22023';
+  end if;
+
+  insert into weekly_reports (
+    user_id, week_start, tasks_total, tasks_done, task_completion_rate,
+    routines_planned, routines_done, workouts_done,
+    avg_calories, avg_protein_g, avg_steps, avg_sleep_minutes,
+    weight_start_kg, weight_end_kg, ai_summary, metrics, ai_status, generated_at
+  )
+  values (
+    p_user, p_week_start, v_total, v_done,
+    case when v_total > 0 then round(100.0 * v_done / v_total, 2) else 0 end,
+    coalesce((m #>> '{work,routines_planned}')::numeric, 0)::integer,
+    coalesce((m #>> '{work,routines_done}')::numeric, 0)::integer,
+    coalesce((m #>> '{form,workouts_done}')::numeric, 0)::integer,
+    -- Verisi olmayan ortalama 0 değil "yok"tur.
+    case when v_logged > 0 then (m #>> '{nutrition,calories}')::numeric end,
+    case when v_logged > 0 then (m #>> '{nutrition,protein_g}')::numeric end,
+    nullif(v_steps, 0),
+    nullif(v_sleep, 0),
+    (m #>> '{weight,start_kg}')::numeric,
+    (m #>> '{weight,end_kg}')::numeric,
+    p_summary, m, p_status, now()
+  )
+  on conflict (user_id, week_start) do update
+    set tasks_total          = excluded.tasks_total,
+        tasks_done           = excluded.tasks_done,
+        task_completion_rate = excluded.task_completion_rate,
+        routines_planned     = excluded.routines_planned,
+        routines_done        = excluded.routines_done,
+        workouts_done        = excluded.workouts_done,
+        avg_calories         = excluded.avg_calories,
+        avg_protein_g        = excluded.avg_protein_g,
+        avg_steps            = excluded.avg_steps,
+        avg_sleep_minutes    = excluded.avg_sleep_minutes,
+        weight_start_kg      = excluded.weight_start_kg,
+        weight_end_kg        = excluded.weight_end_kg,
+        ai_summary           = excluded.ai_summary,
+        metrics              = excluded.metrics,
+        ai_status            = excluded.ai_status,
+        generated_at         = excluded.generated_at;
+end;
+$$;
+
+-- Fonksiyonlar herkese (PUBLIC) açık doğar; yalnızca service_role çalıştırır.
+revoke all on function public.report_period_metrics(uuid, date, date, boolean)
+  from public, anon, authenticated;
+revoke all on function public.report_daily_metrics(uuid, date)
+  from public, anon, authenticated;
+revoke all on function public.report_weekly_metrics(uuid, date)
+  from public, anon, authenticated;
+revoke all on function public.save_daily_report(uuid, date, jsonb, text, text)
+  from public, anon, authenticated;
+revoke all on function public.save_weekly_report(uuid, date, jsonb, text, text)
+  from public, anon, authenticated;
+grant execute on function public.report_period_metrics(uuid, date, date, boolean)
+  to service_role;
+grant execute on function public.report_daily_metrics(uuid, date) to service_role;
+grant execute on function public.report_weekly_metrics(uuid, date) to service_role;
+grant execute on function public.save_daily_report(uuid, date, jsonb, text, text)
+  to service_role;
+grant execute on function public.save_weekly_report(uuid, date, jsonb, text, text)
+  to service_role;
 
 -- ---------------------------------------------------------------------
 -- SEED — başlangıç verisi (kullanıcı başına bir kez)

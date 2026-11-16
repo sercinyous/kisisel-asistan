@@ -1,12 +1,16 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
 
-/// Instagram tarzı, etiketsiz 5 slotlu alt navigasyon.
+/// Yüzen cam kapsül biçiminde, etiketsiz 5 slotlu alt navigasyon.
 ///
 /// Slotlar: Kokpit · Operasyon · **+** (AI giriş) · Sağlık · Raporlar.
 /// [currentIndex] dört sekmeyi (0..3) gösterir; ortadaki + bir sekme değildir.
+/// İçerik barın arkasından akar (Scaffold.extendBody) ve bulanık görünür;
+/// seçili sekme, ikonun arkasındaki açık renkli kapsülle belirtilir.
 class AppBottomBar extends StatelessWidget {
   const AppBottomBar({
     super.key,
@@ -19,12 +23,20 @@ class AppBottomBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onCreate;
 
-  static const double height = 56;
+  /// Kapsülün yüksekliği.
+  static const double height = 64;
+
+  /// Kapsülün ekran kenarlarından ve alttan boşluğu.
+  static const double margin = 16;
+  static const double bottomGap = 8;
 
   static const List<_BarItem> _items = [
     _BarItem('Kokpit', Icons.grid_view_outlined, Icons.grid_view_rounded),
-    _BarItem('Operasyon', Icons.check_circle_outline_rounded,
-        Icons.check_circle_rounded),
+    _BarItem(
+      'Operasyon',
+      Icons.check_circle_outline_rounded,
+      Icons.check_circle_rounded,
+    ),
     _BarItem('Sağlık', Icons.favorite_border_rounded, Icons.favorite_rounded),
     _BarItem('Raporlar', Icons.bar_chart_outlined, Icons.bar_chart_rounded),
   ];
@@ -44,23 +56,50 @@ class AppBottomBar extends StatelessWidget {
           ),
         );
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: height,
-          child: Row(
-            children: [
-              tab(0),
-              tab(1),
-              Expanded(child: _CreateButton(onTap: onCreate)),
-              tab(2),
-              tab(3),
+    const radius = BorderRadius.all(Radius.circular(height / 2));
+
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.only(bottom: bottomGap),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(margin, 0, margin, bottomGap),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                height: height,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh.withValues(alpha: 0.72),
+                  borderRadius: radius,
+                  border: Border.all(
+                    color: AppColors.textPrimary.withValues(alpha: 0.14),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    tab(0),
+                    tab(1),
+                    Expanded(child: _CreateButton(onTap: onCreate)),
+                    tab(2),
+                    tab(3),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -97,18 +136,30 @@ class _TabButton extends StatelessWidget {
       excludeSemantics: true,
       child: Tooltip(
         message: item.label,
-        child: InkResponse(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          radius: 32,
-          highlightShape: BoxShape.circle,
           child: Center(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 160),
-              child: Icon(
-                selected ? item.selectedIcon : item.icon,
-                key: ValueKey<bool>(selected),
-                size: 28,
-                color: selected ? AppColors.textPrimary : AppColors.textMuted,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              height: 52,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? AppColors.textPrimary.withValues(alpha: 0.16)
+                    : AppColors.textPrimary.withValues(alpha: 0),
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 160),
+                child: Icon(
+                  selected ? item.selectedIcon : item.icon,
+                  key: ValueKey<bool>(selected),
+                  size: 28,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
           ),
@@ -131,24 +182,19 @@ class _CreateButton extends StatelessWidget {
       excludeSemantics: true,
       child: Tooltip(
         message: 'Yeni giriş',
-        child: InkResponse(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             HapticFeedback.lightImpact();
             onTap();
           },
-          radius: 32,
-          child: Center(
-            child: Container(
-              width: 44,
-              height: 34,
-              decoration: BoxDecoration(
+          child: const Center(
+            child: SizedBox(
+              height: 52,
+              child: Icon(
+                Icons.add_circle_outline_rounded,
+                size: 32,
                 color: AppColors.accent,
-                borderRadius: BorderRadius.circular(AppRadii.chip),
-              ),
-              child: const Icon(
-                Icons.add_rounded,
-                size: 26,
-                color: AppColors.background,
               ),
             ),
           ),

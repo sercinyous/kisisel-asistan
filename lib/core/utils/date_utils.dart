@@ -8,6 +8,14 @@ abstract final class AppDates {
 
   static DateTime endOfDay(DateTime d) => DateTime(d.year, d.month, d.day + 1);
 
+  /// [d]'nin haftasının Pazartesi'si (yerel gece yarısı).
+  static DateTime weekStart(DateTime d) =>
+      DateTime(d.year, d.month, d.day - (d.weekday - DateTime.monday));
+
+  /// [d]'den [days] takvim günü sonrası (yaz saati geçişinden etkilenmez).
+  static DateTime addDays(DateTime d, int days) =>
+      DateTime(d.year, d.month, d.day + days);
+
   /// Postgres `date` sütunları için `yyyy-MM-dd`.
   static String ymd(DateTime d) {
     final y = d.year.toString().padLeft(4, '0');

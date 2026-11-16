@@ -26,7 +26,11 @@ void main() {
     harness = QuickAddHarness(
       work: (_) async => ParsedEntry.fromJson(const {
         'routines': [
-          {'title': 'Ekip toplantısı', 'days_of_week': [1], 'time_of_day': '11:00'},
+          {
+            'title': 'Ekip toplantısı',
+            'days_of_week': [1],
+            'time_of_day': '11:00'
+          },
         ],
       }),
       health: (_) async => ParsedEntry.fromJson(const {
@@ -66,17 +70,13 @@ void main() {
   }
 
   Future<void> selectTab(WidgetTester tester, String label) async {
-    await tester.tap(
-      find.descendant(
-        of: find.byType(BottomAppBar),
-        matching: find.text(label),
-      ),
-    );
+    // Alt bar etiketsizdir; sekmeler ipucu (tooltip) metniyle bulunur.
+    await tester.tap(find.byTooltip(label));
     await tester.pumpAndSettle();
   }
 
   Future<void> tapPlus(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('AI Hızlı Giriş'));
+    await tester.tap(find.byTooltip('Yeni giriş'));
     await tester.pumpAndSettle();
   }
 
@@ -143,7 +143,8 @@ void main() {
     expect(openModalMode(tester), QuickAddMode.work);
   });
 
-  testWidgets('seçim sayfasında "Sağlık & beslenme girişi" sağlık girişini açar',
+  testWidgets(
+      'seçim sayfasında "Sağlık & beslenme girişi" sağlık girişini açar',
       (tester) async {
     await pumpShell(tester);
     await selectTab(tester, 'Raporlar');

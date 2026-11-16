@@ -97,7 +97,15 @@ void main() {
       await harness.pump(tester, month: DateTime(2026, 2));
 
       expect(find.text('Şubat 2026'), findsOneWidget);
-      for (final label in const ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']) {
+      for (final label in const [
+        'Pzt',
+        'Sal',
+        'Çar',
+        'Per',
+        'Cum',
+        'Cmt',
+        'Paz'
+      ]) {
         expect(find.text(label), findsOneWidget);
       }
       expect(dayCells(), findsNWidgets(28));
@@ -160,7 +168,8 @@ void main() {
 
       final decoration = cellDecoration(tester, now);
       expect((decoration.border! as Border).top.color, AppColors.accent);
-      final plain = cellDecoration(tester, DateTime(now.year, now.month, other));
+      final plain =
+          cellDecoration(tester, DateTime(now.year, now.month, other));
       expect((plain.border! as Border).top.color, Colors.transparent);
 
       final monthlyDot = find.byKey(ValueKey('kokpit-dot-monthly-${now.day}'));
@@ -168,11 +177,19 @@ void main() {
       expect(monthlyDot, findsOneWidget);
       expect(taskDot, findsOneWidget);
       expect(
-        (tester.widget<Container>(monthlyDot).decoration! as BoxDecoration).color,
+        (tester
+                .widget<Container>(find.descendant(
+                    of: monthlyDot, matching: find.byType(Container)))
+                .decoration! as BoxDecoration)
+            .color,
         AppColors.warning,
       );
       expect(
-        (tester.widget<Container>(taskDot).decoration! as BoxDecoration).color,
+        (tester
+                .widget<Container>(find.descendant(
+                    of: taskDot, matching: find.byType(Container)))
+                .decoration! as BoxDecoration)
+            .color,
         AppColors.ops,
       );
       expect(find.byKey(ValueKey('kokpit-dot-task-${now.day}')), findsNothing);
@@ -184,7 +201,9 @@ void main() {
   group('gün seçimi', () {
     testWidgets('güne dokununca altında o günün listesi açılır',
         (tester) async {
-      harness.routines.routines = [monthly('m1', 'Maaş ödemeleri', 15, hour: 10)];
+      harness.routines.routines = [
+        monthly('m1', 'Maaş ödemeleri', 15, hour: 10)
+      ];
       harness.tasks.tasks = [
         task('t1', 'Bayi toplantısı', DateTime(2026, 2, 15, 14, 30)),
         task('t2', 'Rapor teslimi', DateTime(2026, 2, 15, 9), done: true),
@@ -301,10 +320,12 @@ void main() {
       expect(find.text('1 / 2'), findsOneWidget);
     });
 
-    testWidgets('31\'i olan iş Şubat\'ta ayın son gününe düşer', (tester) async {
+    testWidgets('31\'i olan iş Şubat\'ta ayın son gününe düşer',
+        (tester) async {
       harness.routines.routines = [monthly('m1', 'Ay sonu kapanışı', 31)];
       await harness.pump(tester, month: DateTime(2026, 2));
-      expect(find.byKey(const ValueKey('kokpit-dot-monthly-28')), findsOneWidget);
+      expect(
+          find.byKey(const ValueKey('kokpit-dot-monthly-28')), findsOneWidget);
       expect(find.text('28 Şubat · Pusholder'), findsOneWidget);
     });
 
@@ -332,7 +353,8 @@ void main() {
       );
       if (now.day > 1) {
         expect(
-          find.descendant(of: chipIn('Geciken iş'), matching: find.text('Gecikti')),
+          find.descendant(
+              of: chipIn('Geciken iş'), matching: find.text('Gecikti')),
           findsOneWidget,
         );
       }
@@ -347,9 +369,12 @@ void main() {
       }
     });
 
-    testWidgets('Ay görünümünden işaretleme: iyimser, sonra Gün görünümünde de '
+    testWidgets(
+        'Ay görünümünden işaretleme: iyimser, sonra Gün görünümünde de '
         'işaretli', (tester) async {
-      harness.routines.routines = [monthly('m1', 'Maaş ödemeleri', today().day)];
+      harness.routines.routines = [
+        monthly('m1', 'Maaş ödemeleri', today().day)
+      ];
       harness.routines.toggleGate = Completer<void>();
       await harness.pump(tester, month: thisMonth());
       expect(find.text('0 / 1'), findsOneWidget);
@@ -392,7 +417,9 @@ void main() {
 
     testWidgets('sunucu hatasında geri alınır ve kullanıcı uyarılır',
         (tester) async {
-      harness.routines.routines = [monthly('m1', 'Maaş ödemeleri', today().day)];
+      harness.routines.routines = [
+        monthly('m1', 'Maaş ödemeleri', today().day)
+      ];
       harness.routines.toggleGate = Completer<void>();
       await harness.pump(tester, month: thisMonth());
 
@@ -408,14 +435,16 @@ void main() {
 
       expect(harness.isChecked(tester, 'Maaş ödemeleri'), isFalse);
       expect(find.text('0 / 1'), findsOneWidget);
-      expect(find.text('Aylık iş güncellenemedi. Tekrar dene.'), findsOneWidget);
+      expect(
+          find.text('Aylık iş güncellenemedi. Tekrar dene.'), findsOneWidget);
     });
 
     testWidgets('aylık sabit yoksa boş durum', (tester) async {
       await harness.pump(tester, month: DateTime(2026, 2));
       expect(find.text('Bu ay için aylık sabit yok.'), findsOneWidget);
-      expect(find.text('Bu ay için randevu ya da görev yok.',
-          skipOffstage: false), findsOneWidget);
+      expect(
+          find.text('Bu ay için randevu ya da görev yok.', skipOffstage: false),
+          findsOneWidget);
     });
   });
 
@@ -539,7 +568,8 @@ void main() {
       expect(find.text('Kilo değişimi'), findsOneWidget);
       expect(find.text('−1,2 kg'), findsOneWidget);
       expect(find.text('84,5 → 83,3 kg'), findsOneWidget);
-      expect(find.text('Bu ay için sağlık ve beslenme verisi yok.'), findsNothing);
+      expect(
+          find.text('Bu ay için sağlık ve beslenme verisi yok.'), findsNothing);
       expect(find.text('—'), findsNothing);
     });
 
@@ -607,7 +637,8 @@ void main() {
         ),
         task('t2', 'Rapor teslimi', DateTime(month.year, month.month, 15, 9),
             done: true),
-        task('t3', 'Bayi toplantısı', DateTime(month.year, month.month, 28, 23)),
+        task(
+            't3', 'Bayi toplantısı', DateTime(month.year, month.month, 28, 23)),
       ];
       harness.healthStore
         ..metrics = [

@@ -19,6 +19,13 @@ class HealthRepository {
 
   final SupabaseClient _client;
 
+  static const _nutritionColumns =
+      'id, meal_type, food_name, quantity_text, calories, protein_g, carbs_g, '
+      'fat_g, eaten_at, source';
+  static const _workoutColumns =
+      'id, workout_type, title, duration_min, distance_km, calories_burned, '
+      'notes, logged_at, source';
+
   /// [from]..[to] (iki uç dahil, yerel gün) aralığının HealthKit özetleri,
   /// eskiden yeniye.
   Future<List<DailyHealthMetric>> fetchDailyMetrics(
@@ -69,6 +76,108 @@ class HealthRepository {
       if (page.length < pageSize) break;
     }
     return DailyNutritionTotal.fromLogRows(rows);
+  }
+
+  /// [day] yerel gününün öğün kayıtları, saat sırasıyla.
+  Future<List<NutritionLog>> fetchNutritionLogs(DateTime day) async {
+    final rows = await _client
+        .from('nutrition_logs')
+        .select(_nutritionColumns)
+        .gte('eaten_at', AppDates.startOfDay(day).toUtc().toIso8601String())
+        .lt('eaten_at', AppDates.endOfDay(day).toUtc().toIso8601String())
+        .order('eaten_at', ascending: true)
+        .order('id', ascending: true);
+    return [for (final row in rows) NutritionLog.fromMap(row)];
+  }
+
+  /// Yeni öğün kaydı; [log]'un `id`'si yok sayılır.
+  Future<NutritionLog> createNutritionLog(NutritionLog log) async {
+    final row = await _client
+        .from('nutrition_logs')
+        .insert({...log.toWriteMap(), 'source': 'manual'})
+        .select(_nutritionColumns)
+        .single();
+    return NutritionLog.fromMap(row);
+  }
+
+  Future<NutritionLog> updateNutritionLog(NutritionLog log) async {
+    final row = await _client
+        .from('nutrition_logs')
+        .update(log.toWriteMap())
+        .eq('id', log.id)
+        .select(_nutritionColumns)
+        .single();
+    return NutritionLog.fromMap(row);
+  }
+
+  Future<void> deleteNutritionLog(String id) async {
+    await _client.from('nutrition_logs').delete().eq('id', id);
+  }
+
+  /// `[from, to)` aralığındaki antrenmanlar, yeniden eskiye.
+  Future<List<WorkoutLog>> fetchWorkouts(DateTime from, DateTime to) async {
+    final rows = await _client
+        .from('fitness_logs')
+        .select(_workoutColumns)
+        .eq('log_type', 'workout')
+        .gte('logged_at', from.toUtc().toIso8601String())
+        .lt('logged_at', to.toUtc().toIso8601String())
+        .order('logged_at', ascending: false)
+        .order('id', ascending: true);
+    return [for (final row in rows) WorkoutLog.fromMap(row)];
+  }
+
+  /// Yeni antrenman kaydı; [workout]'un `id`'si yok sayılır.
+  Future<WorkoutLog> createWorkout(WorkoutLog workout) async {
+    final row = await _client
+        .from('fitness_logs')
+        .insert({...workout.toWriteMap(), 'source': 'manual'})
+        .select(_workoutColumns)
+        .single();
+    return WorkoutLog.fromMap(row);
+  }
+
+  Future<WorkoutLog> updateWorkout(WorkoutLog workout) async {
+    final row = await _client
+        .from('fitness_logs')
+        .update(workout.toWriteMap())
+        .eq('id', workout.id)
+        // Aynı tabloda kilo satırları da var; yanlış id onları bozmasın.
+        .eq('log_type', 'workout')
+        .select(_workoutColumns)
+        .single();
+    return WorkoutLog.fromMap(row);
+  }
+
+  Future<void> deleteWorkout(String id) async {
+    await _client
+        .from('fitness_logs')
+        .delete()
+        .eq('id', id)
+        .eq('log_type', 'workout');
+  }
+
+  /// Yeni kilo ölçümü; [at] verilmezse şimdi.
+  Future<WeightEntry> addWeight(double weightKg, {DateTime? at}) async {
+    final row = await _client
+        .from('fitness_logs')
+        .insert({
+          'log_type': 'weight',
+          'weight_kg': weightKg,
+          'logged_at': (at ?? DateTime.now()).toUtc().toIso8601String(),
+          'source': 'manual',
+        })
+        .select('id, weight_kg, logged_at')
+        .single();
+    return WeightEntry.fromMap(row);
+  }
+
+  Future<void> deleteWeight(String id) async {
+    await _client
+        .from('fitness_logs')
+        .delete()
+        .eq('id', id)
+        .eq('log_type', 'weight');
   }
 
   /// HealthKit'ten okunan günlük özeti raporlar için saklar.
