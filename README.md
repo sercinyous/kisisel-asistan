@@ -1,4 +1,6 @@
-# Kişisel Asistan & Operasyon Merkezi
+# Ritim — Kişisel Asistan & Operasyon Merkezi
+
+App Store Connect adı: **Ritim: Rutin, İş ve Sağlık** · iPhone'da görünen ad: **Ritim**
 
 Tek kullanıcılı, iOS Ad-Hoc dağıtımlı Flutter uygulaması.
 Flutter · Riverpod · Supabase · Gemini (`gemini-2.5-flash`) · HealthKit · yerel bildirimler.
@@ -104,7 +106,7 @@ Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (re
 ## Kurulum
 
 `ios/` klasörü depoda tutulmaz ve **yalnızca Codemagic ile derleyeceksen Mac gerekmez**: derleme
-`ios/` yoksa onu kendisi oluşturur ve yapılandırır (bkz. "Ad-Hoc dağıtım"); 1. ve 2. adımı atla.
+`ios/` yoksa onu kendisi oluşturur ve yapılandırır (bkz. "TestFlight ile test"); 1. ve 2. adımı atla.
 Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
 
 1. **iOS projesini oluştur** (Mac'te, bu klasörde). `com.ornek` yerine Bundle ID'nin son parçası
@@ -230,17 +232,80 @@ bağlı olduğu için bu test olağan `flutter test` çalışmasında atlanır, 
 flutter test --update-goldens test/screenshots/app_screens_test.dart
 ```
 
-## Ad-Hoc dağıtım (Codemagic)
+## TestFlight ile test (önerilen)
+
+Uygulama App Store Connect'e yüklenir, iPhone'a **TestFlight** uygulamasından kurulur. Dahili test
+(kendi hesabın) Apple incelemesi beklemez, cihaz UDID'si gerekmez; her `main` push'unda yeni yapı gelir.
+
+**Ön koşul:** ücretli Apple Developer Program üyeliği.
+
+1. **App ID** — developer.apple.com > Certificates, Identifiers & Profiles > Identifiers > **+** >
+   App IDs > App. Bundle ID'yi açıkça yaz (ör. `com.adsoyad.kisiselasistan`) ve **HealthKit**
+   yetkisini işaretle. Bu kimlik sonradan değiştirilemez.
+2. **Uygulama kaydı** — appstoreconnect.apple.com > Uygulamalar > **+** > Yeni Uygulama:
+   platform iOS, ad (mağazada benzersiz olmalı; bu proje için "Ritim: Rutin, İş ve Sağlık", iPhone'da
+   görünen ad "Ritim"), dil Türkçe, Bundle ID'yi listeden seç, SKU serbest (ör. `kisiselasistan-ios`),
+   Kullanıcı Erişimi **Tam Erişim** (sınırlı erişimde Codemagic'in API anahtarı uygulamayı göremeyebilir).
+   Kaydedince Uygulama Bilgileri sayfasındaki **Apple ID** (sayısal) değerini not et.
+3. **Dahili test grubu** — uygulamanın TestFlight sekmesi > Dahili Test > **+**: bir grup aç,
+   kendini ekle ve "Yapıları otomatik dağıt" seçeneğini aç.
+4. **API anahtarı** — App Store Connect > Kullanıcılar ve Erişim > Entegrasyonlar > App Store Connect API
+   > Ekip Anahtarları > **+**: rol **App Manager**. `.p8` dosyasını indir (yalnızca bir kez
+   indirilebilir), Issuer ID ve Key ID'yi not et.
+5. **Codemagic** (codemagic.io):
+   - Depoyu ekle (`sercinyous/kisisel-asistan`), yapılandırma olarak `codemagic.yaml` seçili kalsın.
+   - Team settings > Team integrations > **Developer Portal** > Manage keys: 4. adımdaki anahtarı
+     ekle, adını `kisisel-asistan-asc` yap (ya da `codemagic.yaml` içindeki
+     `integrations.app_store_connect` değerini kendi verdiğin adla değiştir).
+   - Team settings > **Code signing identities**: iOS Distribution sertifikası ekle (yoksa
+     Codemagic orada oluşturur), sonra "iOS provisioning profiles" bölümünde Bundle ID'n için
+     **App Store** profilini çek (Fetch profiles).
+   - Environment variables: `app_secrets` grubuna `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+     `GEMINI_API_KEY` ekle (Secure işaretli).
+6. **`codemagic.yaml`** — en üstteki `definitions.vars` bloğunda iki değeri doldur:
+   `BUNDLE_ID` (1. adım) ve `APP_STORE_APPLE_ID` (2. adım). İmzalama ayarları bu değeri okur.
+   Örnek değerlerle derleme ilk adımda bilerek durur.
+7. **Derle** — `main`'e push et ya da Codemagic'te **iOS TestFlight** iş akışını başlat. Yapı
+   numarası App Store Connect'teki son numaranın bir fazlası olur.
+8. **Kur** — yükleme bitince Apple yapıyı işler (genellikle 5–30 dk) ve e-posta gönderir. iPhone'da
+   TestFlight uygulamasını aç, Ritim'i kur.
+
+**Kurulumdan önce Supabase hazır olmalı** (Kurulum > 3. adım ve "Otomatik raporlar"): uygulama
+açılınca giriş ekranı gelir ve Supabase'deki kullanıcınla giriş yapılır.
+
+**Bilmen gerekenler**
+- TestFlight yapıları 90 gün geçerlidir; yeni push yeni yapı getirir.
+- Şifreleme sorusu (Export Compliance) sorulmaz: Info.plist'te `ITSAppUsesNonExemptEncryption = false`.
+- Dış test (başkalarına göndermek) Apple'ın beta incelemesini ister; o zaman `submit_to_testflight: true`
+  ve `beta_groups` eklenir, App Store Connect'te gizlilik politikası adresi istenir.
+- Simge şu an Flutter'ın varsayılan simgesidir; değiştirmek için `ios/` klasörünü depoya koyup
+  `ios/Runner/Assets.xcassets/AppIcon.appiconset` içini güncelle.
+
+### Mac ve Xcode ile (alternatif)
+
+`ios/` oluşturulup yapılandırıldıktan sonra (Kurulum > 1–2) Xcode'da `ios/Runner.xcworkspace`
+dosyasını aç ve Signing & Capabilities'te ekibini seç. Arşivi Xcode'un Product > Archive menüsüyle
+**değil**, anahtarlar gömülsün diye Flutter ile üret (aksi hâlde uygulama "Yapılandırma eksik"
+ekranıyla açılır):
+```bash
+flutter build ipa --dart-define-from-file=dart_defines.json
+```
+Ardından `build/ios/archive/Runner.xcarchive` dosyasını açıp Xcode Organizer'da
+Distribute App > App Store Connect ile yükle. Yapı numarasını her yüklemede artır
+(`pubspec.yaml` içindeki `version: 1.0.0+N`).
+
+## Ad-Hoc dağıtım (Codemagic, alternatif)
+
+UDID'si eklenmiş cihazlara App Store Connect olmadan kurmak için. Codemagic'te **iOS Ad-Hoc**
+iş akışı yalnızca elle başlatılır.
 
 1. developer.apple.com: App ID oluştur (HealthKit yetkisi açık), iPhone'unun UDID'ini Devices'a ekle,
    bu App ID + cihaz için **Ad Hoc** provisioning profile üret.
-2. Codemagic > Teams > Code signing identities: dağıtım sertifikasını (.p12) ve profili yükle.
-3. Codemagic > Environment variables: `app_secrets` grubuna `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-   `GEMINI_API_KEY` ekle (Secure).
-4. `codemagic.yaml` içindeki `com.ornek.kisiselAsistan` değerini iki yerde kendi Bundle ID'nle değiştir.
-5. `main` dalına push → `.ipa` Artifacts altında. Codemagic'in kurulum bağlantısından iPhone'a yükle.
+2. Codemagic > Team settings > Code signing identities: dağıtım sertifikasını ve profili ekle.
+3. `app_secrets` grubu ve `codemagic.yaml` içindeki `BUNDLE_ID` TestFlight bölümündeki gibi.
+4. İş akışını başlat → `.ipa` Artifacts altında; Codemagic'in kurulum bağlantısından iPhone'a yükle.
 
-Depoda `ios/` klasörü yoksa derleme onu `flutter create` ile, Bundle ID'ne göre oluşturur
+Depoda `ios/` klasörü yoksa her iki iş akışı da onu `flutter create` ile, Bundle ID'ne göre oluşturur
 (`--org` = Bundle ID'nin son parçası hariç kısmı), `tool/configure_ios.sh` ile yapılandırır ve
 uygulama ile `RunnerTests` kimliklerini Bundle ID'ne eşitler. Depoda `ios/` varsa o kullanılır;
 aynı yapılandırma ve kimlik adımları onun üzerinde çalışır.
@@ -249,7 +314,7 @@ aynı yapılandırma ve kimlik adımları onun üzerinde çalışır.
 
 - **Rapor yorumları için Gemini anahtarı sunucudadır** (Edge Function secret); aşağıdaki not yalnızca
   AI hızlı giriş için geçerlidir.
-- **Gemini anahtarı uygulamanın içinde.** Tek kişilik Ad-Hoc dağıtım için kabul edilebilir; .ipa başka
+- **Gemini anahtarı uygulamanın içinde.** Tek kişilik dağıtım (dahili TestFlight / Ad-Hoc) için kabul edilebilir; .ipa başka
   birine verilirse anahtar çıkarılabilir. Google AI Studio'da anahtara kota sınırı koy. Daha sıkı güvenlik
   için çağrı bir Supabase Edge Function arkasına alınabilir.
 - **AI kaydı iki adımlıdır**: Ayrıştır → önizle → Kaydet. Kaydetme tek transaction'dır

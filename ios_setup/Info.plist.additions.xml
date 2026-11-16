@@ -17,7 +17,7 @@
 
 <!-- Ana ekranda görünen ad -->
 <key>CFBundleDisplayName</key>
-<string>Operasyon</string>
+<string>Ritim</string>
 
 <!-- Yalnızca HTTPS/standart şifreleme kullanılır: ihracat uyumluluğu sorusunu kapatır -->
 <key>ITSAppUsesNonExemptEncryption</key>
