@@ -79,6 +79,9 @@ void main() {
         // Profil düğmesi Ayarlar'ı açar.
         routinesRepositoryProvider.overrideWithValue(FakeRoutinesRepository()),
         tasksRepositoryProvider.overrideWithValue(FakeTasksRepository()),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(
           FakeHealthService(const HealthSnapshot(status: HealthStatus.denied)),
         ),

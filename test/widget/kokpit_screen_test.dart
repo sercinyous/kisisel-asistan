@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kisisel_asistan/core/services/health_source.dart'
+    show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
@@ -156,6 +158,9 @@ void main() {
         kokpitRepositoryProvider.overrideWithValue(kokpit),
         healthRepositoryProvider.overrideWithValue(healthStore),
         settingsRepositoryProvider.overrideWithValue(settings),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(health),
       ],
     );
@@ -452,6 +457,9 @@ void main() {
             kokpitRepositoryProvider.overrideWithValue(kokpit),
             healthRepositoryProvider.overrideWithValue(healthStore),
             settingsRepositoryProvider.overrideWithValue(settings),
+            appleHealthConsentStoreProvider.overrideWithValue(
+              MemoryAppleHealthConsentStore(grantAll: true),
+            ),
             healthServiceProvider.overrideWithValue(health),
           ],
           child: MaterialApp(

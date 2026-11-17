@@ -137,6 +137,9 @@ void main() {
                 .copyWith(startWeightKg: 84.5, targetWeightKg: 78),
           ),
         ),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(
           FakeHealthService(
             snapshot ??

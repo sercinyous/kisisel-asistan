@@ -112,11 +112,16 @@ class GoalSummary {
 }
 
 /// Kişinin kendi paylaşım anahtarları (`friend_sharing`); varsayılan kapalı.
+/// `share*` hedef paylaşımıdır: arkadaşlar yalnızca hedefi tutturulan gün
+/// sayısını görür. [shareDetails] ayrı, açık onaydır: hedef paylaşımı açık
+/// metriklerin ham değerlerini ([detailValueLabels]) açar. Sunucu onaysız
+/// ham değeri arkadaşa null döndürür (`friend_leaderboard`).
 class FriendSharing {
   const FriendSharing({
     this.shareSteps = false,
     this.shareSleep = false,
     this.shareCalories = false,
+    this.shareDetails = false,
   });
 
   factory FriendSharing.fromMap(Map<String, dynamic>? m) => m == null
@@ -125,17 +130,35 @@ class FriendSharing {
           shareSteps: (m['share_steps'] as bool?) ?? false,
           shareSleep: (m['share_sleep'] as bool?) ?? false,
           shareCalories: (m['share_calories'] as bool?) ?? false,
+          shareDetails: (m['share_details'] as bool?) ?? false,
         );
 
   final bool shareSteps;
   final bool shareSleep;
   final bool shareCalories;
+  final bool shareDetails;
 
-  FriendSharing copyWith({bool? steps, bool? sleep, bool? calories}) =>
+  bool get sharesAnyGoal => shareSteps || shareSleep || shareCalories;
+
+  /// Ayrıntı onayıyla arkadaşlara açılacak ham değerler (hedef paylaşımı
+  /// açık metrikler için).
+  List<String> get detailValueLabels => [
+        if (shareSteps) 'Bugünkü ve bu haftaki toplam adım sayın',
+        if (shareSleep) 'Bugünkü uyku süren ve bu haftaki ortalaman',
+        if (shareCalories) 'Bugün ve bu hafta yediğin toplam kalori (kcal)',
+      ];
+
+  FriendSharing copyWith({
+    bool? steps,
+    bool? sleep,
+    bool? calories,
+    bool? details,
+  }) =>
       FriendSharing(
         shareSteps: steps ?? shareSteps,
         shareSleep: sleep ?? shareSleep,
         shareCalories: calories ?? shareCalories,
+        shareDetails: details ?? shareDetails,
       );
 
   Map<String, dynamic> toMap(String userId) => {
@@ -143,6 +166,7 @@ class FriendSharing {
         'share_steps': shareSteps,
         'share_sleep': shareSleep,
         'share_calories': shareCalories,
+        'share_details': shareDetails,
       };
 }
 
@@ -164,6 +188,9 @@ enum RankPeriod {
 
 /// `friend_leaderboard` satırı: kabul edilmiş arkadaş ya da kişinin kendisi.
 /// Değerler yalnızca toplanmış sayılardır; paylaşılmayan metrik null gelir.
+/// Arkadaşın ham değeri yalnızca hedef paylaşımı VE ayrıntı onayı açıkken
+/// doludur; yalnızca hedef paylaşımı açıksa null gelir ve arayüz hedef gün
+/// sayısını ([GoalSummary]) gösterir.
 class LeaderboardEntry {
   const LeaderboardEntry({
     required this.userId,
@@ -261,6 +288,13 @@ List<LeaderboardEntry> rankEntries(
 }
 
 /// Metrik değerinin Türkçe gösterimi.
+/// Ham değeri paylaşılmayan arkadaş için hedef gün sayısı metni ("3/5 gün
+/// hedef"); hedef de paylaşılmıyorsa null.
+String? formatGoalDays(GoalSummary? s) {
+  if (s == null || !s.shared) return null;
+  return '${s.goalDays}/${s.dataDays} gün hedef';
+}
+
 String formatMetricValue(GoalMetric metric, RankPeriod period, num? v) {
   if (v == null) return 'paylaşmıyor';
   String grouped(int n) {

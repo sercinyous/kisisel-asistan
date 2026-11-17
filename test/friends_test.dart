@@ -47,7 +47,25 @@ void main() {
         'share_steps': false,
         'share_sleep': true,
         'share_calories': false,
+        'share_details': false,
       });
+    });
+
+    test('ayrıntı onayı ayrı alan, eski satırda kapalı', () {
+      final old = FriendSharing.fromMap({
+        'share_steps': true,
+        'share_sleep': false,
+        'share_calories': true,
+      });
+      expect(old.shareDetails, isFalse);
+      expect(old.detailValueLabels, hasLength(2));
+      expect(old.copyWith(details: true).toMap('u')['share_details'], isTrue);
+      expect(formatGoalDays(null), isNull);
+      expect(
+        formatGoalDays(const GoalSummary(
+            metric: GoalMetric.steps, shared: true, goalDays: 3, dataDays: 5)),
+        '3/5 gün hedef',
+      );
     });
   });
 

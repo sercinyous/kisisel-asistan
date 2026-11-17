@@ -233,6 +233,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     final async = ref.watch(friendsLeaderboardProvider);
     final metric = ref.watch(leaderboardMetricProvider);
     final period = ref.watch(leaderboardPeriodProvider);
+    // Ham değeri paylaşılmayan arkadaş için hedef gün sayıları.
+    final goals = <String, Map<GoalMetric, GoalSummary>>{
+      for (final f in ref.watch(friendsWithSummaryProvider).valueOrNull ??
+          const <FriendWithSummary>[])
+        f.friend.friendId: {
+          for (final s in f.summaries)
+            if (s.metric != null) s.metric!: s,
+        },
+    };
     return async.when(
       loading: _loading,
       error: (_, __) =>
@@ -274,7 +283,14 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               child: Column(
                 children: [
                   for (var i = 0; i < ranked.length; i++)
-                    _rankRow(theme, ranked[i], i, metric, period),
+                    _rankRow(
+                      theme,
+                      ranked[i],
+                      i,
+                      metric,
+                      period,
+                      goals[ranked[i].userId]?[metric],
+                    ),
                 ],
               ),
             ),
@@ -303,8 +319,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     int index,
     GoalMetric metric,
     RankPeriod period,
+    GoalSummary? goal,
   ) {
     final value = e.value(metric, period);
+    final label = value == null && !e.isSelf
+        ? formatGoalDays(goal) ?? formatMetricValue(metric, period, null)
+        : formatMetricValue(metric, period, value);
     final medal = value != null && value > 0 ? _medalColor(index) : null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
@@ -347,7 +367,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            formatMetricValue(metric, period, value),
+            label,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: value != null ? FontWeight.w600 : null,
               color:
@@ -375,6 +395,50 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
         ],
       ),
     );
+  }
+
+  /// Ayrıntılı değer paylaşımı için ayrı, açık onay: paylaşılacak değerler
+  /// tek tek listelenir.
+  Future<bool> _confirmDetails(FriendSharing s) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ayrıntılı değerleri paylaş'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Onaylarsan tüm arkadaşların hedef gün sayısına ek olarak '
+              'şunları görür:',
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            for (final label in s.detailValueLabels)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Text('• $label'),
+              ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Tarih ya da tekil kayıt paylaşılmaz. İstediğin zaman '
+              'kapatabilirsin.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Onaylıyorum'),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
   }
 
   Widget _outgoing(ThemeData theme) {
@@ -424,7 +488,18 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             vertical: AppSpacing.sm,
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  'Hedef paylaşımı: arkadaşların yalnızca bu hafta hedefi '
+                  'tutturduğun gün sayısını görür (ör. 3/5 gün). Adım, uyku '
+                  'ya da kalori değerin paylaşılmaz.',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
+                ),
+              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Adım hedefi'),
@@ -440,11 +515,27 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Kalori hedefi'),
-                subtitle: const Text(
-                  'Arkadaşlar yalnızca hedefi tutturduğun gün sayısını görür.',
-                ),
                 value: s.shareCalories,
                 onChanged: (v) => save(s.copyWith(calories: v)),
+              ),
+              const Divider(height: AppSpacing.md),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Ayrıntılı değerleri de paylaş'),
+                subtitle: Text(
+                  !s.sharesAnyGoal
+                      ? 'Önce en az bir hedef paylaşımını aç.'
+                      : s.shareDetails
+                          ? 'Arkadaşların görür: ${s.detailValueLabels.join('; ')}.'
+                          : 'Kapalı: arkadaşların ham değerlerini görmez.',
+                ),
+                value: s.shareDetails,
+                onChanged: !s.sharesAnyGoal && !s.shareDetails
+                    ? null
+                    : (v) async {
+                        if (v && !await _confirmDetails(s)) return;
+                        await save(s.copyWith(details: v));
+                      },
               ),
             ],
           ),
