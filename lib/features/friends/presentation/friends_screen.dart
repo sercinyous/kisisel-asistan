@@ -60,7 +60,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     }
   }
 
-  Future<void> _confirmLeave(Friend f) async {
+  Future<void> _confirmLeave(LeaderboardEntry f) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -79,7 +79,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       ),
     );
     if (ok == true) {
-      await _run(() => ref.read(friendsRepositoryProvider).leave(f.friendId));
+      await _run(() => ref.read(friendsRepositoryProvider).leave(f.userId));
     }
   }
 
@@ -230,74 +230,150 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   }
 
   Widget _friendList(ThemeData theme) {
-    final async = ref.watch(friendsWithSummaryProvider);
+    final async = ref.watch(friendsLeaderboardProvider);
+    final metric = ref.watch(leaderboardMetricProvider);
+    final period = ref.watch(leaderboardPeriodProvider);
     return async.when(
       loading: _loading,
       error: (_, __) =>
-          _error(theme, () => ref.invalidate(friendsWithSummaryProvider)),
+          _error(theme, () => ref.invalidate(friendsLeaderboardProvider)),
       data: (list) {
-        if (list.isEmpty) {
-          return _message(theme, 'Henüz arkadaşın yok. E-postayla davet et.');
-        }
+        final ranked = rankEntries(list, metric, period);
+        final hasFriends = list.any((e) => !e.isSelf);
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final item in list)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.grid),
-                child: BentoCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              item.friend.displayName,
-                              style: theme.textTheme.titleSmall,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => _confirmLeave(item.friend),
-                            child: Text(
-                              'Arkadaşlıktan çık',
-                              style: TextStyle(color: AppColors.danger),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'Bu hafta hedef günleri',
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: AppColors.textMuted),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      for (final s in item.summaries)
-                        if (s.metric != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                            child: Row(
-                              children: [
-                                Expanded(child: Text(s.metric!.label)),
-                                Text(
-                                  s.shared
-                                      ? '${s.goalDays}/${s.dataDays} gün'
-                                      : 'paylaşmıyor',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: s.shared
-                                        ? AppColors.textPrimary
-                                        : AppColors.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                    ],
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final m in GoalMetric.values)
+                  ChoiceChip(
+                    label: Text(m.label),
+                    selected: m == metric,
+                    onSelected: (_) => ref
+                        .read(leaderboardMetricProvider.notifier)
+                        .state = m,
                   ),
-                ),
+                for (final p in RankPeriod.values)
+                  ChoiceChip(
+                    label: Text(p.label),
+                    selected: p == period,
+                    onSelected: (_) => ref
+                        .read(leaderboardPeriodProvider.notifier)
+                        .state = p,
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            BentoCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.cardPadding,
+                vertical: AppSpacing.sm,
+              ),
+              child: Column(
+                children: [
+                  for (var i = 0; i < ranked.length; i++)
+                    _rankRow(theme, ranked[i], i, metric, period),
+                ],
+              ),
+            ),
+            if (!hasFriends)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.grid),
+                child: _message(
+                    theme, 'Henüz arkadaşın yok. E-postayla davet et.'),
               ),
           ],
         );
       },
+    );
+  }
+
+  Color? _medalColor(int index) => switch (index) {
+        0 => AppColors.warning,
+        1 => AppColors.textSecondary,
+        2 => AppColors.nutrition,
+        _ => null,
+      };
+
+  Widget _rankRow(
+    ThemeData theme,
+    LeaderboardEntry e,
+    int index,
+    GoalMetric metric,
+    RankPeriod period,
+  ) {
+    final value = e.value(metric, period);
+    final medal = value != null && value > 0 ? _medalColor(index) : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 26,
+            child: medal != null
+                ? Icon(Icons.emoji_events_rounded, size: 18, color: medal)
+                : Text(
+                    '${index + 1}',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: AppColors.textMuted),
+                  ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _Avatar(entry: e),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  e.isSelf ? '${e.displayName} (sen)' : e.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                if (e.email.isNotEmpty && e.email != e.displayName)
+                  Text(
+                    e.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: AppColors.textMuted),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            formatMetricValue(metric, period, value),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: value != null ? FontWeight.w600 : null,
+              color:
+                  value != null ? AppColors.textPrimary : AppColors.textMuted,
+            ),
+          ),
+          if (!e.isSelf)
+            PopupMenuButton<String>(
+              tooltip: 'Seçenekler',
+              icon: Icon(Icons.more_vert_rounded,
+                  size: 20, color: AppColors.textMuted),
+              onSelected: (_) => _confirmLeave(e),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'leave',
+                  child: Text(
+                    'Arkadaşlıktan çık',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+              ],
+            )
+          else
+            const SizedBox(width: 48),
+        ],
+      ),
     );
   }
 
@@ -374,6 +450,31 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.entry});
+
+  final LeaderboardEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = Text(
+      entry.initials,
+      style: Theme.of(context)
+          .textTheme
+          .labelMedium
+          ?.copyWith(color: AppColors.onAccent, fontWeight: FontWeight.w700),
+    );
+    final url = entry.avatarUrl;
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: AppColors.accent,
+      foregroundImage: url == null ? null : NetworkImage(url),
+      onForegroundImageError: url == null ? null : (_, __) {},
+      child: initials,
     );
   }
 }

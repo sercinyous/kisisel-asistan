@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import 'dashboard/task_dashboard_providers.dart';
+import 'dashboard/task_dashboard_view.dart';
 import 'notes_view.dart';
 import 'operations_providers.dart';
 import 'routines_view.dart';
@@ -14,6 +16,7 @@ class OperationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final segment = ref.watch(opsSegmentProvider);
+    final dashboard = ref.watch(opsDashboardVisibleProvider);
     return SafeArea(
       bottom: false,
       child: Column(
@@ -29,41 +32,60 @@ class OperationsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Operasyon',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<OpsSegment>(
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(
-                      value: OpsSegment.tasks,
-                      label: Text('Görevler'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Operasyon',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                     ),
-                    ButtonSegment(
-                      value: OpsSegment.routines,
-                      label: Text('Sabitler'),
-                    ),
-                    ButtonSegment(
-                      value: OpsSegment.notes,
-                      label: Text('Notlar'),
+                    IconButton(
+                      tooltip: dashboard ? 'Listeye dön' : 'Görev panosu',
+                      isSelected: dashboard,
+                      icon: const Icon(Icons.insights_rounded),
+                      color:
+                          dashboard ? AppColors.ops : AppColors.textSecondary,
+                      onPressed: () => ref
+                          .read(opsDashboardVisibleProvider.notifier)
+                          .state = !dashboard,
                     ),
                   ],
-                  selected: {segment},
-                  onSelectionChanged: (selection) => ref
-                      .read(opsSegmentProvider.notifier)
-                      .state = selection.first,
                 ),
+                if (!dashboard) const SizedBox(height: 12),
+                if (!dashboard)
+                  SegmentedButton<OpsSegment>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: OpsSegment.tasks,
+                        label: Text('Görevler'),
+                      ),
+                      ButtonSegment(
+                        value: OpsSegment.routines,
+                        label: Text('Sabitler'),
+                      ),
+                      ButtonSegment(
+                        value: OpsSegment.notes,
+                        label: Text('Notlar'),
+                      ),
+                    ],
+                    selected: {segment},
+                    onSelectionChanged: (selection) => ref
+                        .read(opsSegmentProvider.notifier)
+                        .state = selection.first,
+                  ),
               ],
             ),
           ),
           Expanded(
-            child: switch (segment) {
-              OpsSegment.tasks => const TasksView(),
-              OpsSegment.routines => const RoutinesView(),
-              OpsSegment.notes => const NotesView(),
-            },
+            child: dashboard
+                ? const TaskDashboardView()
+                : switch (segment) {
+                    OpsSegment.tasks => const TasksView(),
+                    OpsSegment.routines => const RoutinesView(),
+                    OpsSegment.notes => const NotesView(),
+                  },
           ),
         ],
       ),

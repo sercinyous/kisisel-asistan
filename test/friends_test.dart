@@ -84,4 +84,63 @@ void main() {
       expect(s.every((e) => !e.shared), isTrue);
     });
   });
+
+  group('sıralama', () {
+    LeaderboardEntry e(String id, {num? steps, bool self = false}) =>
+        LeaderboardEntry(
+          userId: id,
+          isSelf: self,
+          displayName: id,
+          email: '$id@x.com',
+          stepsToday: steps,
+        );
+
+    test('fromMap: Google adı, foto, ham sayılar, null paylaşılmıyor', () {
+      final x = LeaderboardEntry.fromMap({
+        'user_id': 'u',
+        'is_self': false,
+        'display_name': 'Sercan Kılıç',
+        'email': 'sercan@gmail.com',
+        'avatar_url': 'https://a/b.png',
+        'steps_today': 8421,
+        'steps_week': 40000,
+        'sleep_today': null,
+        'kcal_week': '1234.5',
+      });
+      expect(x.initials, 'SK');
+      expect(x.avatarUrl, 'https://a/b.png');
+      expect(x.value(GoalMetric.steps, RankPeriod.today), 8421);
+      expect(x.value(GoalMetric.sleep, RankPeriod.today), isNull);
+      expect(x.value(GoalMetric.calories, RankPeriod.week), 1234.5);
+      final y = LeaderboardEntry.fromMap(
+          {'user_id': 'v', 'display_name': '', 'email': 'ada.lov@x.com'});
+      expect(y.displayName, 'ada.lov@x.com');
+      expect(y.initials, 'AL');
+      expect(y.avatarUrl, isNull);
+    });
+
+    test('en iyi önce, paylaşmayan sona', () {
+      final r = rankEntries(
+        [e('a', steps: 100), e('b'), e('c', steps: 900, self: true), e('d', steps: 500)],
+        GoalMetric.steps,
+        RankPeriod.today,
+      );
+      expect(r.map((x) => x.userId), ['c', 'd', 'a', 'b']);
+    });
+
+    test('biçim', () {
+      expect(formatMetricValue(GoalMetric.steps, RankPeriod.today, 12345),
+          '12.345 adım');
+      expect(formatMetricValue(GoalMetric.sleep, RankPeriod.week, 425),
+          'ort. 7 sa 05 dk');
+      expect(formatMetricValue(GoalMetric.calories, RankPeriod.today, null),
+          'paylaşmıyor');
+    });
+
+    test('demo depo kendini ve arkadaşları döner', () async {
+      final l = await DemoFriendsRepository().leaderboard(DateTime(2026, 11, 16));
+      expect(l.where((x) => x.isSelf).length, 1);
+      expect(l.length, 3);
+    });
+  });
 }

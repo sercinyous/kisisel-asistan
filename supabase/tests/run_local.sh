@@ -50,6 +50,9 @@ echo "tamam"
 echo "== 1b) profil sütunları (user_settings: boy, doğum yılı, cinsiyet) =="
 run -d fresh -f "$HERE/profile_columns_test.sql"
 
+echo "== 1b2) görev kategorileri (user_settings.task_categories, tasks.category) =="
+run -d fresh -f "$HERE/task_categories_test.sql"
+
 echo "== 1c) Faz 4B: kayıt kapısı, arkadaşlar, kota, eşlik =="
 export GOAL_VECTORS="$HERE/goal_vectors.json"
 run -d postgres -c "create database faz4b"
@@ -67,6 +70,8 @@ run -d faz4b -f "$HERE/ai_quota_test.sql" >/dev/null
 echo "tamam: AI kotası"
 run -d faz4b -f "$HERE/goal_parity_test.sql" >/dev/null
 echo "tamam: SQL-Dart eşlik (SQL tarafı)"
+run -d faz4b -f "$HERE/friend_leaderboard_test.sql" >/dev/null
+echo "tamam: arkadaş sıralaması (friend_leaderboard)"
 
 # Atomiklik: 8 paralel oturum aynı kullanıcı için 5'er çağrı yapar, limit 10.
 # Tam 10 çağrı true almalı, sayaç tam 10 olmalı (aşım ve kayıp artış yok).

@@ -54,7 +54,9 @@ Color energyVerdictColor(EnergyVerdict verdict) => switch (verdict) {
       EnergyVerdict.slightOver ||
       EnergyVerdict.over =>
         AppColors.warning,
-      EnergyVerdict.noMeals || EnergyVerdict.underAge => AppColors.textSecondary,
+      EnergyVerdict.noMeals ||
+      EnergyVerdict.underAge =>
+        AppColors.textSecondary,
     };
 
 /// Rengin yanında şekil de taşısın diye her yorumun simgesi vardır.
@@ -121,8 +123,9 @@ class EnergyCard extends ConsumerWidget {
                   ..invalidate(energyDayProvider);
               },
             ),
-            data: (value) =>
-                value == null ? const _ProfileMissing() : _EnergyBody(day: value),
+            data: (value) => value == null
+                ? const _ProfileMissing()
+                : _EnergyBody(day: value),
           ),
         ],
       ),

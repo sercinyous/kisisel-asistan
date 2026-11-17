@@ -162,7 +162,7 @@ void main() {
 
   /// Sayfayı tutamağından aşağı fırlatır (kullanıcının kaydırarak kapatması).
   Future<void> flingSheetDown(WidgetTester tester) async {
-    final sheet = find.byType(BottomSheet);
+    final sheet = find.byType(BottomSheet).last;
     final top = tester.getTopLeft(sheet);
     await tester.flingFrom(
       Offset(top.dx + tester.getSize(sheet).width / 2, top.dy + 20),
@@ -219,6 +219,9 @@ void main() {
       'Sağlık',
       (tester) async {
         await tapVisible(tester, find.text('Öğün ekle'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Elle gir'));
+        await tester.pumpAndSettle();
         await tester.enterText(find.byKey(const Key('meal-name')), 'Tavuk');
       },
       () => health.nutritionLogs.length,
@@ -251,9 +254,11 @@ void main() {
       await open(tester);
       await startSave(tester);
 
+      // Öğün: elle giriş formu besin seçicinin üstünde açılır.
+      final base = tester.widgetList(find.byType(BottomSheet)).length - 1;
       await flingSheetDown(tester);
       await pumpFor(tester, 1000);
-      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(BottomSheet), findsNWidgets(base));
       expectShellAlive();
 
       gate.complete();
@@ -269,15 +274,17 @@ void main() {
       await open(tester);
       await startSave(tester);
 
+      // Öğün: elle giriş formu besin seçicinin üstünde açılır.
+      final base = tester.widgetList(find.byType(BottomSheet)).length - 1;
       await flingSheetDown(tester);
       await tester.pump(const Duration(milliseconds: 16));
       // Rota kapandı ama sayfa hâlâ ağaçta (State.mounted == true).
-      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNWidgets(base + 1));
 
       gate.complete();
       await pumpFor(tester, 1000);
       expect(savedCount(), 1);
-      expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(BottomSheet), findsNWidgets(base));
       expectShellAlive();
     });
   }

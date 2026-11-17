@@ -459,6 +459,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         return OnboardingHealthStep(
           access: _health,
           onRequest: _requestHealthAccess,
+          onSkip: _next,
         );
     }
   }

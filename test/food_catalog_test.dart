@@ -62,7 +62,8 @@ Map<String, dynamic> row(String id, String name) => {
 void main() {
   group('FoodItem', () {
     test('forGrams 143 kcal/100 g için 150 g = 214,5 kcal', () {
-      final food = item('x', 'Deneme', kcal: 143, protein: 12, carbs: 2, fat: 9);
+      final food =
+          item('x', 'Deneme', kcal: 143, protein: 12, carbs: 2, fat: 9);
       final macros = food.forGrams(150);
       expect(macros.kcal, 214.5);
       expect(macros.protein, 18);
@@ -90,7 +91,8 @@ void main() {
       expect(food.category, 'sebze');
       expect(food.kcal100, 20);
       expect(food.fat100, 0.2);
-      expect(food.portions.single, const FoodPortion(name: '1 adet', grams: 80));
+      expect(
+          food.portions.single, const FoodPortion(name: '1 adet', grams: 80));
       expect(food.source, 'USDA FDC 1 | TürKomp 2');
       expect(food.verification, 'iki kaynak');
     });
@@ -117,6 +119,52 @@ void main() {
         }),
         throwsFormatException,
       );
+    });
+  });
+
+  group('kullanıcı listesi alanları', () {
+    test('makrosuz satır okunur; forGrams makroları null döner', () {
+      final food = FoodItem.fromMap({
+        ...row('kizarmis', 'Kızarmış kabak'),
+        'kcal100': 150,
+        'protein100': null,
+        'carbs100': null,
+        'fat100': null,
+        'categories': ['Kızartılmış Yiyecekler'],
+        'note': 'Yağ miktarına göre değişir',
+      });
+      expect(food.hasMacros, isFalse);
+      expect(food.categories, ['Kızartılmış Yiyecekler']);
+      expect(food.note, 'Yağ miktarına göre değişir');
+      final macros = food.forGrams(200);
+      expect(macros.kcal, 300);
+      expect(macros.protein, isNull);
+      expect(macros.fat, isNull);
+    });
+
+    test('defaultPortion ilk porsiyon, yoksa 100 g', () {
+      final withPortion = FoodItem.fromMap(row('a', 'A'));
+      expect(withPortion.defaultPortion.grams, 80);
+      final bare = FoodItem.fromMap({...row('b', 'B'), 'portions': []});
+      expect(bare.defaultPortion, const FoodPortion(name: '100 g', grams: 100));
+    });
+
+    test('inCategory ve byId', () {
+      final catalog = FoodCatalog.fromItems([
+        FoodItem.fromMap({
+          ...row('a', 'A'),
+          'categories': ['Meyveler', 'Öğle Atıştırmalıkları'],
+        }),
+        FoodItem.fromMap({
+          ...row('b', 'B'),
+          'categories': ['Sebzeler']
+        }),
+      ]);
+      expect(catalog.inCategory('Meyveler').map((f) => f.id), ['a']);
+      expect(
+          catalog.inCategory('Öğle Atıştırmalıkları').map((f) => f.id), ['a']);
+      expect(catalog.byId('b')?.name, 'B');
+      expect(catalog.byId('x'), isNull);
     });
   });
 

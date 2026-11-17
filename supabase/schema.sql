@@ -479,8 +479,10 @@ begin
   alter table public.notes enable trigger user;
   alter table public.routines enable trigger user;
 
+  -- Görev kategorileri kullanıcı tarafından yönetilir (sürüm 7); ad sınırı
+  -- dosya sonundaki "Görev kategorileri" bölümüyle aynıdır.
   alter table public.tasks add constraint tasks_category_check
-    check (category in ('İş', 'Ekip', 'Finans', 'Kişisel'));
+    check (char_length(btrim(category)) between 1 and 40);
   alter table public.notes add constraint notes_category_check
     check (category in ('Toplantı', 'Fikir', 'İş', 'Ekip', 'Finans', 'Kişisel'));
   alter table public.routines add constraint routines_scope_check
@@ -1927,10 +1929,11 @@ grant execute on function public.leave_friendship(uuid) to authenticated;
 -- hook_before_user_created işlevi Dashboard > Authentication > Hooks >
 -- "Before User Created" olarak seçilebilir (isteğe bağlı; tetikleyici her
 -- durumda ikinci kapı olarak kalır).
--- Geçici olarak kapatmak (ör. Dashboard'dan elle hesap açmak) için:
---   alter table auth.users disable trigger signup_invite_gate;
--- ve işin sonunda:
---   alter table auth.users enable trigger signup_invite_gate;
+-- Supabase'de auth.users sahibi olunmadığı için tetikleyici kapatılamaz
+-- ("must be owner of table users"). Dashboard'dan elle hesap açmak için önce
+-- o e-postaya bekleyen bir davet ekle, sonra Add user (Auto Confirm) kullan:
+--   insert into public.friend_requests (from_user, target_email)
+--   select id, 'yeni@ornek.com' from auth.users where email = 'SAHIP_EPOSTASI';
 -- ---------------------------------------------------------------------
 create or replace function public.has_pending_invite(p_email text)
 returns boolean
@@ -2059,3 +2062,158 @@ $$;
 
 revoke all on function public.refund_ai_quota(uuid, text) from public, anon, authenticated;
 grant execute on function public.refund_ai_quota(uuid, text) to service_role;
+
+-- =====================================================================
+-- BEGIN friend_leaderboard (arkadaş sıralaması: ham sayılar + profil)
+-- Tekrar çalıştırılabilir. Kabul edilmiş arkadaşlar + çağıranın kendisi için
+-- bugün ve bu hafta (Pazartesi–Pazar, KİŞİNİN saat diliminde) yalnızca
+-- TOPLANMIŞ sayılar döner; tarih ya da tekil kayıt yoktur. Arkadaşın değeri
+-- yalnızca ilgili paylaşım anahtarı açıkken doludur, aksi halde null.
+-- Ad: user_settings.display_name, yoksa Google meta verisi (full_name/name),
+-- yoksa e-posta. Fotoğraf: avatar_url/picture. auth.users istemciye açılmaz.
+-- =====================================================================
+create or replace function public.friend_leaderboard(week_start date)
+returns table (
+  user_id         uuid,
+  is_self         boolean,
+  display_name    text,
+  email           text,
+  avatar_url      text,
+  share_steps     boolean,
+  share_sleep     boolean,
+  share_calories  boolean,
+  steps_today     bigint,
+  steps_week      bigint,
+  sleep_today     integer,
+  sleep_week_avg  integer,
+  kcal_today      numeric,
+  kcal_week       numeric
+)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid  uuid := auth.uid();
+  v_week date := friend_leaderboard.week_start;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_week is null or extract(isodow from v_week) <> 1 then
+    raise exception 'week_start Pazartesi olmalı: %', v_week using errcode = '22023';
+  end if;
+
+  return query
+  with people as (
+    select v_uid as pid, true as me
+    union
+    select case when f.user_a = v_uid then f.user_b else f.user_a end, false
+    from public.friendships f
+    where f.user_a = v_uid or f.user_b = v_uid
+  ),
+  base as (
+    select p.pid, p.me,
+           coalesce(to_jsonb(u) -> 'raw_user_meta_data', '{}'::jsonb) as meta,
+           lower(btrim(u.email)) as mail,
+           nullif(btrim(s.display_name), '') as dn,
+           public.safe_timezone(s.timezone) as tz,
+           p.me or coalesce(sh.share_steps, false) as sst,
+           p.me or coalesce(sh.share_sleep, false) as ssl,
+           p.me or coalesce(sh.share_calories, false) as sca
+    from people p
+    join auth.users u on u.id = p.pid
+    left join public.user_settings s on s.user_id = p.pid
+    left join public.friend_sharing sh on sh.user_id = p.pid
+  ),
+  b as (
+    select x.*, (now() at time zone x.tz)::date as today
+    from base x
+  )
+  select b.pid,
+         b.me,
+         coalesce(b.dn,
+                  nullif(btrim(b.meta ->> 'full_name'), ''),
+                  nullif(btrim(b.meta ->> 'name'), ''),
+                  b.mail, '')::text,
+         b.mail,
+         coalesce(nullif(btrim(b.meta ->> 'avatar_url'), ''),
+                  nullif(btrim(b.meta ->> 'picture'), ''))::text,
+         b.sst, b.ssl, b.sca,
+         case when b.sst then coalesce(h.st_today, 0) end,
+         case when b.sst then coalesce(h.st_week, 0) end,
+         case when b.ssl then coalesce(h.sl_today, 0) end,
+         case when b.ssl then coalesce(h.sl_avg, 0) end,
+         case when b.sca then coalesce(n.k_today, 0) end,
+         case when b.sca then coalesce(n.k_week, 0) end
+  from b
+  left join lateral (
+    select coalesce(sum(m.steps) filter (where m.metric_date = b.today), 0)::bigint as st_today,
+           coalesce(sum(m.steps), 0)::bigint as st_week,
+           coalesce(sum(m.sleep_minutes) filter (where m.metric_date = b.today), 0)::integer as sl_today,
+           coalesce(round(avg(m.sleep_minutes) filter (where m.sleep_minutes > 0)), 0)::integer as sl_avg
+    from public.daily_health_metrics m
+    where (b.sst or b.ssl)
+      and m.user_id = b.pid
+      and m.metric_date between v_week and least(v_week + 6, b.today)
+  ) h on true
+  left join lateral (
+    select coalesce(sum(nl.calories) filter (
+             where (nl.eaten_at at time zone b.tz)::date = b.today), 0)::numeric as k_today,
+           coalesce(sum(nl.calories), 0)::numeric as k_week
+    from public.nutrition_logs nl
+    where b.sca
+      and nl.user_id = b.pid
+      and nl.eaten_at >= v_week::timestamp at time zone b.tz
+      and nl.eaten_at < (v_week + 7)::timestamp at time zone b.tz
+  ) n on true
+  order by b.me desc, b.pid;
+end;
+$$;
+
+revoke all on function public.friend_leaderboard(date) from public, anon;
+grant execute on function public.friend_leaderboard(date) to authenticated;
+-- END friend_leaderboard
+-- =====================================================================
+
+-- =====================================================================
+-- BEGIN Görev kategorileri (sürüm 7) — idempotent
+--   * user_settings.task_categories: kullanıcının kategori listesi (jsonb
+--     dizi: {name, icon, color, enabled, custom}); null = yerleşik liste
+--     (İş, Ekip, Finans, Kişisel). RLS: mevcut owner-only user_settings
+--     politikası sütunu kendiliğinden kapsar.
+--   * tasks.category artık sabit listeyle sınırlı değil: 1..40 karakter
+--     (kısıt yukarıdaki 'Pusholder' → 'İş' bölümünde kurulur; burada yalnızca
+--     eski kısıt kaldıysa yeniden kurulur). 'Pusholder' tetikleyicisi aynen
+--     çalışır.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists task_categories jsonb;
+
+alter table public.user_settings
+  drop constraint if exists user_settings_task_categories_check;
+alter table public.user_settings
+  add constraint user_settings_task_categories_check
+  check (
+    task_categories is null
+    or (jsonb_typeof(task_categories) = 'array'
+        and jsonb_array_length(task_categories) <= 40)
+  );
+
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.tasks'::regclass
+      and conname = 'tasks_category_check'
+      and pg_get_constraintdef(oid) like '%Ekip%'
+  ) then
+    alter table public.tasks drop constraint tasks_category_check;
+    alter table public.tasks add constraint tasks_category_check
+      check (char_length(btrim(category)) between 1 and 40);
+  end if;
+end;
+$$;
+-- END Görev kategorileri (sürüm 7)

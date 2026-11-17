@@ -64,15 +64,27 @@ void main() {
 
     // Tembel liste: tüm bölümler ekrana gelsin diye sona kadar kaydırılır.
     final seen = <String>{};
-    for (var i = 0; i < 12; i++) {
-      for (final title in ['Bildirimler', 'Ekip', 'Bağlantılar', 'Hesap']) {
+    for (var i = 0; i < 18; i++) {
+      for (final title in [
+        'Bildirimler',
+        'Ekip',
+        'Görev kategorileri',
+        'Bağlantılar',
+        'Hesap',
+      ]) {
         if (find.text(title).evaluate().isNotEmpty) seen.add(title);
       }
       await tester.drag(find.byType(ListView), const Offset(0, -300));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     }
-    expect(seen, {'Bildirimler', 'Ekip', 'Bağlantılar', 'Hesap'});
+    expect(seen, {
+      'Bildirimler',
+      'Ekip',
+      'Görev kategorileri',
+      'Bağlantılar',
+      'Hesap',
+    });
     expect(find.text('Çıkış yap'), findsOneWidget);
   });
 

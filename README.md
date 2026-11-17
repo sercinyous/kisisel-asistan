@@ -259,7 +259,7 @@ Sıra önemli: **önce yeni yapı TestFlight'a düşer, sonra SQL çalıştırı
 
 1. **Supabase > Authentication > Sign In / Providers**: "Allow new users to sign up" **AÇIK** (eski "kapat" adımı kalktı; davetsizi kayıt kapısı engeller). "Confirm email" açık olsun: kapalıysa davet edilen adresle kayıt olan herkes daveti görür.
 2. **Google sağlayıcısı**: Google Cloud'da Web OAuth istemcisi aç, Supabase > Providers > Google'a Web + iOS kimliklerini yaz ("Skip nonce checks" açık). Ayrıntı: "Google ile giriş". Testing modunda arkadaşların Gmail'lerini **Audience > Test users**'a ekle.
-3. **SQL**: `supabase/schema.sql` dosyasını çalıştır, sonra `supabase/cron.sql`. İsteğe bağlı: Authentication > Hooks > Before User Created = `public.hook_before_user_created` (okunur red mesajı). İlk hesabı Dashboard'dan elle açacaksan: `alter table auth.users disable trigger signup_invite_gate;` ve işin sonunda `enable trigger`.
+3. **SQL**: `supabase/schema.sql` dosyasını çalıştır, sonra `supabase/cron.sql`. İsteğe bağlı: Authentication > Hooks > Before User Created = `public.hook_before_user_created` (okunur red mesajı). Dashboard'dan elle hesap açacaksan (tetikleyici kapatılamaz): önce `friend_requests` tablosuna o e-posta için bekleyen davet ekle, sonra Add user (Auto Confirm).
 4. **Fonksiyonlar ve secret'lar**:
    ```bash
    supabase secrets set GEMINI_API_KEY=... GEMINI_MODEL=gemini-3.8-flash AI_DAILY_LIMIT=100 CRON_SECRET=...

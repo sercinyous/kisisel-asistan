@@ -269,8 +269,8 @@ class TrendBarChart extends StatelessWidget {
                   getTooltipItem: (group, _, __, ___) {
                     final d = days[group.x];
                     if (d.status == DayStatus.future) return null;
-                    final when = DateFormat('d MMM EEE', AppDates.locale)
-                        .format(d.day);
+                    final when =
+                        DateFormat('d MMM EEE', AppDates.locale).format(d.day);
                     final text = d.value == null
                         ? '$when\nveri yok'
                         : '$when\n${formatTrendValue(metric, d.value!)}'

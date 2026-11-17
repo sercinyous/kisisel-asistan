@@ -11,6 +11,7 @@ import '../data/food_catalog.dart';
 import '../domain/food_item.dart';
 import 'health_format.dart';
 import 'health_providers.dart';
+import 'food_picker_sheet.dart';
 import 'health_widgets.dart';
 
 /// Öğün kalemi ekleme / düzenleme formu. "Besin ara" paketli listeden besin
@@ -146,9 +147,9 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
   void _fill(FoodItem food, double grams) {
     final macros = food.forGrams(grams);
     _calories.text = _fieldNumber(macros.kcal);
-    _protein.text = _fieldNumber(macros.protein);
-    _carbs.text = _fieldNumber(macros.carbs);
-    _fat.text = _fieldNumber(macros.fat);
+    _protein.text = _fieldNumber(macros.protein ?? 0);
+    _carbs.text = _fieldNumber(macros.carbs ?? 0);
+    _fat.text = _fieldNumber(macros.fat ?? 0);
     final amount = '${HealthFormat.plain(grams)} g';
     final index = _portionIndex;
     _quantity.text = index == null
@@ -348,8 +349,7 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
                   style: theme.textTheme.bodyLarge,
                 ),
                 subtitle: Text(
-                  '100 g: ${HealthFormat.kcal(food.kcal100)} · '
-                  'protein ${HealthFormat.grams(food.protein100)}',
+                  foodSummary(food),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall
@@ -396,10 +396,7 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Text(
-                '100 g için: ${HealthFormat.kcal(food.kcal100)} · '
-                'protein ${HealthFormat.grams(food.protein100)} · '
-                'karbonhidrat ${HealthFormat.grams(food.carbs100)} · '
-                'yağ ${HealthFormat.grams(food.fat100)}',
+                food100Detail(food),
                 style: secondary,
               ),
             ),

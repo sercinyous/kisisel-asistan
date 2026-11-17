@@ -68,9 +68,8 @@ class HealthChip extends StatelessWidget {
     final tint = color;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: tint == null
-            ? AppColors.surfaceHigh
-            : tint.withValues(alpha: 0.14),
+        color:
+            tint == null ? AppColors.surfaceHigh : tint.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(AppRadii.chip),
       ),
       child: Padding(

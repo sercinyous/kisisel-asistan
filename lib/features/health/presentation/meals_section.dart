@@ -6,6 +6,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import '../../operations/presentation/operations_widgets.dart';
+import 'food_picker_sheet.dart';
 import 'health_format.dart';
 import 'health_providers.dart';
 import 'health_widgets.dart';
@@ -65,7 +66,7 @@ class MealsSection extends ConsumerWidget {
         HealthSectionHeader(
           title: 'Bugünün öğünleri',
           actionLabel: 'Öğün ekle',
-          onAction: () => MealFormSheet.show(context),
+          onAction: () => FoodPickerSheet.show(context),
         ),
         logs.when(
           skipLoadingOnRefresh: true,
@@ -82,7 +83,7 @@ class MealsSection extends ConsumerWidget {
                 _MealGroupTile(
                   group: group,
                   onAdd: () =>
-                      MealFormSheet.show(context, mealType: group.mealType),
+                      FoodPickerSheet.show(context, mealType: group.mealType),
                   onEdit: (log) => MealFormSheet.show(context, log: log),
                   onDelete: (log) => _delete(context, log, confirm: true),
                   onRemove: (log) => _delete(context, log),

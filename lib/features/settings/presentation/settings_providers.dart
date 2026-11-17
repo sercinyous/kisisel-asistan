@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../operations/domain/task_category.dart';
 import '../data/settings_repository.dart';
 import '../domain/user_settings.dart';
 
@@ -20,6 +21,14 @@ class UserSettingsNotifier extends AsyncNotifier<UserSettings> {
     state = AsyncData(saved);
     return saved;
   }
+
+  /// Yalnızca görev kategorilerini yazar; diğer alanlar sunucudaki son
+  /// değerden alınır.
+  Future<UserSettings> saveTaskCategories(List<TaskCategory> categories) async {
+    final current =
+        state.valueOrNull ?? await ref.read(settingsRepositoryProvider).fetch();
+    return save(current.copyWith(taskCategories: categories));
+  }
 }
 
 /// Hedef ve tercihleri eşzamanlı okumak için: ayarlar yüklenene kadar (ya da
@@ -28,4 +37,15 @@ final settingsOrDefaultProvider = Provider<UserSettings>(
   (ref) =>
       ref.watch(userSettingsProvider).valueOrNull ??
       const UserSettings.defaults(),
+);
+
+/// Görev kategorileri tanımı (kapalılar dahil); ayarlar yüklenene kadar
+/// yerleşik liste.
+final taskCategoriesProvider = Provider<List<TaskCategory>>(
+  (ref) => ref.watch(settingsOrDefaultProvider).taskCategories,
+);
+
+/// Seçici, filtre ve AI önerisinde gösterilen açık kategori adları.
+final activeTaskCategoryNamesProvider = Provider<List<String>>(
+  (ref) => TaskCategory.activeNames(ref.watch(taskCategoriesProvider)),
 );

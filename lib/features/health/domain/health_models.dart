@@ -113,10 +113,9 @@ class MonthHealthSummary {
   /// HealthKit özeti bulunan gün sayısı.
   final int daysWithData;
 
-  double? get weightChangeKg =>
-      weightStartKg == null || weightEndKg == null
-          ? null
-          : weightEndKg! - weightStartKg!;
+  double? get weightChangeKg => weightStartKg == null || weightEndKg == null
+      ? null
+      : weightEndKg! - weightStartKg!;
 
   /// Ortalamalar yalnızca verisi olan günler üzerinden alınır: saat takılmayan
   /// ya da öğün girilmeyen gün ortalamayı sıfıra çekmez.
