@@ -11,8 +11,10 @@ import '../../../core/services/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/theme_mode.dart';
 import '../../../core/widgets/bento.dart';
+import '../../friends/presentation/friends_screen.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
+import '../../onboarding/presentation/onboarding_screen.dart';
 import '../domain/user_settings.dart';
 import 'health_source_settings.dart';
 import 'settings_providers.dart';
@@ -118,6 +120,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   final _birthYear = TextEditingController();
   final _leadDays = TextEditingController();
   final _eventMinutes = TextEditingController();
+  final _displayName = TextEditingController();
+  final _workDescription = TextEditingController();
   final _teamInput = TextEditingController();
 
   late List<TextEditingController> _numberFields;
@@ -156,6 +160,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       _birthYear,
       _leadDays,
       _eventMinutes,
+      // Metin alanları da aynı "değişti mi" izlemesinden geçer.
+      _displayName,
+      _workDescription,
     ];
     _load(widget.settings);
     for (final c in _numberFields) {
@@ -198,6 +205,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     _sex = s.sex;
     _leadDays.text = '${s.monthlyLeadDays}';
     _eventMinutes.text = '${s.eventRemindMinutes}';
+    _displayName.text = s.displayName ?? '';
+    _workDescription.text = s.workDescription ?? '';
     _savedTexts = [for (final c in _numberFields) c.text];
     _notificationsEnabled = s.notificationsEnabled;
     _routineNotifications = s.routineNotifications;
@@ -240,6 +249,23 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   static double? _parseDecimal(String text) =>
       double.tryParse(text.trim().replaceAll(',', '.'));
 
+  static String? _blankToNull(String text) {
+    final trimmed = text.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _openFriends() => Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => const FriendsScreen()),
+      );
+
+  /// Yalnızca 5 tanıtım kartı; hiçbir şey yazılmaz.
+  Future<void> _replayGuide() => Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => const OnboardingScreen(replay: true),
+        ),
+      );
+
   UserSettings _draft() => UserSettings(
         // numeric(5,2): iki ondalığa yuvarlanır.
         startWeightKg:
@@ -256,6 +282,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
         heightCm: int.tryParse(_height.text.trim()),
         birthYear: int.tryParse(_birthYear.text.trim()),
         sex: _sex,
+        // Boş metin null yazılır; ilk kurulum anı korunur (geri alınmaz).
+        displayName: _blankToNull(_displayName.text),
+        workDescription: _blankToNull(_workDescription.text),
+        onboardedAt: _saved.onboardedAt,
         notificationsEnabled: _notificationsEnabled,
         routineNotifications: _routineNotifications,
         monthlyLeadDays: int.parse(_leadDays.text.trim()),
@@ -516,6 +546,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                   const SizedBox(height: AppSpacing.grid),
                   _teamCard(),
                   const SizedBox(height: AppSpacing.grid),
+                  _shortcutsCard(),
+                  const SizedBox(height: AppSpacing.grid),
                   _connectionsCard(),
                   const SizedBox(height: AppSpacing.grid),
                   _accountCard(),
@@ -638,6 +670,18 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       title: 'Profil',
       color: AppColors.fitness,
       children: [
+        TextFormField(
+          key: const Key('settings-display-name'),
+          controller: _displayName,
+          maxLength: UserSettings.displayNameMax,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Görünen ad',
+            helperText: 'Arkadaşların seni bu adla görür.',
+            counterText: '',
+          ),
+        ),
+        const SizedBox(height: 12),
         _FieldRow(
           left: _NumberField(
             fieldKey: const Key('settings-height'),
@@ -682,6 +726,50 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           incomplete
               ? 'Enerji dengesi için boy, doğum yılı ve cinsiyet gerekli.'
               : 'Yalnızca enerji dengesi tahmininde kullanılır.',
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          key: const Key('settings-work-description'),
+          controller: _workDescription,
+          maxLength: UserSettings.workDescriptionMax,
+          minLines: 2,
+          maxLines: 4,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            labelText: 'Ne iş yapıyorsun? (isteğe bağlı)',
+            helperText: 'Yapay zekâ seni anlasın diye; yalnızca AI komutuna '
+                'girer, kimseyle paylaşılmaz.',
+            helperMaxLines: 3,
+            counterText: '',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shortcutsCard() {
+    return _Section(
+      icon: Icons.explore_rounded,
+      title: 'Arkadaşlar ve kılavuz',
+      color: AppColors.accent,
+      children: [
+        ListTile(
+          key: const Key('settings-friends'),
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.people_rounded, color: AppColors.textSecondary),
+          title: const Text('Arkadaşlar'),
+          subtitle: const Text('Davetler, arkadaş ekle, paylaşım anahtarları'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: _openFriends,
+        ),
+        ListTile(
+          key: const Key('settings-replay-guide'),
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.menu_book_rounded, color: AppColors.textSecondary),
+          title: const Text('Kılavuzu yeniden göster'),
+          subtitle: const Text('Uygulamanın kısa tanıtımı'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: _replayGuide,
         ),
       ],
     );

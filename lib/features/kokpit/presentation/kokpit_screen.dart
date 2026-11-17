@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../friends/presentation/friends_button.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -96,6 +97,7 @@ class KokpitScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const FriendsButton(),
                 IconButton(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(

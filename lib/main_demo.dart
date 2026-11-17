@@ -19,6 +19,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_theme_scope.dart';
 import 'core/theme/theme_mode.dart';
 import 'core/utils/date_utils.dart';
+import 'features/friends/data/friends_repository.dart';
 import 'demo/demo_backend.dart';
 import 'demo/demo_data.dart';
 import 'demo/demo_foods.dart';
@@ -98,6 +99,7 @@ Future<void> main() async {
             .overrideWithValue(DemoQuickAddRepository(data)),
         notificationServiceProvider
             .overrideWithValue(FakeNotificationService()),
+        friendsRepositoryProvider.overrideWithValue(DemoFriendsRepository()),
         settingsRepositoryProvider.overrideWithValue(data.settings),
         routinesRepositoryProvider.overrideWithValue(data.routines),
         tasksRepositoryProvider.overrideWithValue(data.tasks),
