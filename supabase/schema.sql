@@ -927,6 +927,7 @@ begin
     from planned p
     left join routine_completions c
       on c.routine_id = p.routine_id and c.completed_on = p.period_key
+     and c.user_id = p_user  -- başka kullanıcının tamamlaması sayılmaz (routine_owner_fk)
     group by p.day
   ),
   task_day as (
@@ -2217,3 +2218,61 @@ begin
 end;
 $$;
 -- END Görev kategorileri (sürüm 7)
+
+-- =====================================================================
+-- BEGIN routine_owner_fk — idempotent
+--   routine_completions.(user_id, routine_id) → routines.(user_id, id).
+--   Eski tek sütunlu FK yalnızca rutinin VARLIĞINI denetliyordu; B, A'nın
+--   routine_id'siyle kendi user_id'sine tamamlama yazabiliyordu (RLS yalnızca
+--   user_id'yi denetler). Bileşik FK rutinin aynı kullanıcıya ait olmasını
+--   zorunlu kılar (insert VE update). Rapor birleştirmesi ayrıca
+--   c.user_id = p_user koşulunu taşır (report_period_metrics, yukarıda).
+-- =====================================================================
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.routines'::regclass
+      and conname = 'routines_user_id_id_key'
+  ) then
+    alter table public.routines
+      add constraint routines_user_id_id_key unique (user_id, id);
+  end if;
+end;
+$$;
+
+-- Uyumsuz (başka kullanıcının rutinine bağlı) tamamlamalar SİLİNİR: bunlar
+-- yalnızca yukarıdaki açıkla oluşabilir, sahibinin verisi değildir ve FK
+-- kurulmadan önce kaldırılmaları gerekir. Silinen satır sayısı bildirilir.
+do $$
+declare
+  v_deleted integer;
+begin
+  delete from public.routine_completions c
+  using public.routines r
+  where r.id = c.routine_id and r.user_id <> c.user_id;
+  get diagnostics v_deleted = row_count;
+  if v_deleted > 0 then
+    raise warning 'routine_owner_fk: % çapraz kullanıcı tamamlaması silindi', v_deleted;
+  end if;
+end;
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.routine_completions'::regclass
+      and conname = 'routine_completions_user_routine_fkey'
+  ) then
+    alter table public.routine_completions
+      add constraint routine_completions_user_routine_fkey
+      foreign key (user_id, routine_id)
+      references public.routines (user_id, id) on delete cascade;
+  end if;
+  -- Bileşik FK eskisini kapsar; tek sütunlu FK kaldırılır.
+  alter table public.routine_completions
+    drop constraint if exists routine_completions_routine_id_fkey;
+end;
+$$;
+-- END routine_owner_fk

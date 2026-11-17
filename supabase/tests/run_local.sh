@@ -95,6 +95,8 @@ echo "== 2) rapor fonksiyonları ve yetkiler =="
 run -d fresh -f "$HERE/reports_test.sql"
 echo "== 2b) Google antrenman içe aktarımı (fitness_logs) =="
 run -d fresh -f "$HERE/fitness_import_test.sql"
+echo "== 2c) rutin tamamlaması sahiplik FK'sı (routine_owner_test.sql) =="
+run -d fresh -f "$HERE/routine_owner_test.sql"
 
 echo "== 3) sürüm 2 → 3 yükseltme =="
 if [ -z "$OLD_SCHEMA" ]; then
@@ -120,6 +122,7 @@ run -d upgrade -f "$HERE/reports_test.sql" >/dev/null 2>"$WORK/upgrade_reports.l
 }
 echo "tamam: rapor testleri yükseltilmiş veritabanında da geçti"
 run -d upgrade -f "$HERE/fitness_import_test.sql"
+run -d upgrade -f "$HERE/routine_owner_test.sql"
 # Yükseltilmiş veritabanında Faz 4B işlevleri de aynı davranır.
 run -d upgrade -f "$HERE/friends_test.sql" >/dev/null
 run -d upgrade -f "$HERE/ai_quota_test.sql" >/dev/null
@@ -151,6 +154,7 @@ else
   run -d upgrade3 -f "$HERE/friends_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/ai_quota_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/goal_parity_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/routine_owner_test.sql" >/dev/null
   echo "tamam: Faz 4B testleri sürüm 3'ten yükseltilmiş veritabanında da geçti"
   echo "tamam: sürüm 3 yükseltmesi"
 fi
