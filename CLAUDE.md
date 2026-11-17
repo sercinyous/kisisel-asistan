@@ -36,3 +36,10 @@
 
 ## 5. Tam kod
 - Hiçbir dosyada `// TODO` ya da yer tutucu bırakma; doğrudan çalışır production kodu yaz.
+
+## 6. Hafıza ve araçlar
+- Kalıcı kararlar `docs/KARARLAR.md` içindedir; yeni karar alınınca oraya bir satır eklenir.
+- Skill'ler `.claude/skills/` altındadır; Supabase, RLS, Edge Function ve şema işlerinde `supabase` ve
+  `supabase-postgres-best-practices` kullanılır. Skill önerisi bu dosyayla çelişirse bu dosya kazanır.
+- Supabase MCP (`.mcp.json`) salt-okunur ve tek projeye kilitlidir (`SUPABASE_PROJECT_REF` ortam değişkeni).
+  Yalnızca şema, politika, advisor ve log sorgulanır; kullanıcı tablolarında SELECT çalıştırılmaz.
