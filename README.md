@@ -26,6 +26,13 @@ Alt bar beş slotludur; beşi de gerçek ekrandır:
   bildirim tercihleri, sessiz saatler, ekip, bağlantılar (sağlık verisi kaynağı: Apple Health |
   Google Health, Google hesabı).
   Ekranı açmak bildirim izni istemez; izin yalnızca "İzin iste" ile ya da bildirimler eşitlenirken sorulur.
+- **İlk kurulum ve kılavuz**: yeni hesap ilk girişte 5 kartlık tanıtımı ve kısa soruları görür (görünen ad, boy,
+  doğum yılı, cinsiyet, kilo, hedef kilo, amaç, isteğe bağlı iş tanımı). Önerilen günlük hedefler (kalori = bazal × 1,4
+  −500 / 0 / +300, protein 1,8 g/kg, 8000 adım, 7,5 saat uyku) düzenlenebilir; ardından bildirim izni, sessiz saatler,
+  başlangıç rutinleri ve sağlık kaynağı seçilir. Mevcut hesaplar zorlanmaz; Ayarlar > "Kılavuzu yeniden göster"
+  tanıtımı yeniden açar. Ayarlar'da "Arkadaşlar" satırı da vardır.
+- **Şablonlar**: görev, sabit, öğün ve antrenman ekleme formlarının başındaki "Şablondan başla" çipleri formu doldurur
+  (her alan düzenlenir). Öğün şablonlarının değerleri yaklaşıktır.
 
 **Düzenle / sil her yerde**: görev, rutin, not, öğün ve antrenman satırlarında (Kokpit gün ve ay
 görünümü dahil) uzun basış menüsü (Düzenle / Sil) ve sola kaydırarak silme; silmeden önce onay sorulur,

@@ -8,7 +8,6 @@ import '../../../core/services/notification_service.dart';
 import '../../../core/services/supabase_providers.dart';
 import '../../../core/templates/routine_templates.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../health/data/health_repository.dart';
 import '../../health/domain/energy_balance.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../operations/presentation/operations_providers.dart';
@@ -313,7 +312,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
     if (picked == null || !mounted) return;
     final value = TimeOfDayValue(picked.hour, picked.minute);
-    setState(() => start ? _quietStart = value : _quietEnd = value);
+    setState(() {
+      if (start) {
+        _quietStart = value;
+      } else {
+        _quietEnd = value;
+      }
+    });
   }
 
   /// Sonucu yazar: tartı, rutinler, en son tek ayar kaydı. Başarıda ayar

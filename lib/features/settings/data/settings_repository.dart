@@ -15,6 +15,19 @@ class SettingsRepository {
 
   final SupabaseClient _client;
 
+  /// Veritabanı satırını ayarlara çevirir. Faz 4B öncesi şemada `onboarded_at`
+  /// sütunu hiç yoktur (anahtar satırda bulunmaz; sütun var ama boşsa anahtar
+  /// `null` ile gelir): mevcut hesap, SQL güncellemesi çalışana kadar kılavuza
+  /// zorlanmasın diye kurulumu bitmiş sayılır.
+  static UserSettings parseRow(Map<String, dynamic> row) {
+    if (row.containsKey('onboarded_at')) return UserSettings.fromMap(row);
+    return UserSettings.fromMap({
+      ...row,
+      'onboarded_at':
+          row['updated_at'] ?? DateTime.now().toUtc().toIso8601String(),
+    });
+  }
+
   String get _userId {
     final id = _client.auth.currentUser?.id;
     if (id == null) throw StateError('Oturum bulunamadı.');
@@ -29,7 +42,7 @@ class SettingsRepository {
         .select()
         .eq('user_id', userId)
         .maybeSingle();
-    if (existing != null) return UserSettings.fromMap(existing);
+    if (existing != null) return parseRow(existing);
 
     // Yalnızca kullanıcı kimliği yazılır: sütun varsayılanlarını (nötr
     // hedefler, boş `onboarded_at`) veritabanı verir; yeni hesap kılavuza düşer.
@@ -44,7 +57,7 @@ class SettingsRepository {
         .select()
         .eq('user_id', userId)
         .single();
-    return UserSettings.fromMap(created);
+    return parseRow(created);
   }
 
   Future<UserSettings> save(UserSettings settings) async {
@@ -56,6 +69,6 @@ class SettingsRepository {
         )
         .select()
         .single();
-    return UserSettings.fromMap(row);
+    return parseRow(row);
   }
 }

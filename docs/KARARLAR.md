@@ -111,6 +111,30 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4a-saglik-detay-design.md` (Net
   eski günlerin bazısında sağlık ya da öğün verisi bilerek yoktur (boş gün durumları görünsün); son üç hafta
   Raporlar demosuyla tutarlı kalsın diye eksiksizdir.
 
+## Faz 4B: ilk kurulum, kılavuz ve şablonlar
+Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (Netleştirmeler bölümü geçerli).
+- **Kapı**: giriş sonrası `user_settings.onboarded_at` boşsa `OnboardingGate` kılavuz ve soruları gösterir, doluysa ana kabuğu.
+  Kapı kullanıcı kimliğiyle anahtarlıdır (hesap değişince önceki kullanıcının değeri sızmaz) ve ayar satırı yeniden
+  okunurken ana kabuğu sökmez. Ayarlar okunamazsa "Tekrar dene" gösterilir; mevcut hesaplar zorlanmaz (migration `now()` yazar).
+- **Adımlar**: 5 kartlık tanıtım (atlanabilir) → sorular → önerilen hedefler → bildirim izni + sessiz saatler → başlangıç
+  rutinleri → sağlık kaynağı (Apple Health izni; Google Health sonra Ayarlar'dan). Zorunlu: görünen ad, boy, doğum yılı,
+  cinsiyet, kilo, amaç; hedef kilo boşsa mevcut kilo, iş tanımı isteğe bağlı. Doğum yılı üst sınırı bu yıl − 10.
+- **Öneri formülü** (`GoalSuggestion`, tıbbi tavsiye değil): kalori = 4A bazalı × 1,4 + (ver −500 / koru 0 / al +300);
+  protein 1,8 g/kg; yağ kalorinin %27'si, karbonhidrat kalan; adım 8000; uyku 450 dk. Açık hedefi 1200 kcal altına
+  inmez ve 18 yaş altına açık uygulanmaz (4A reşit olmayana açık hedefi koymaz). Hedefler düzenlenebilir; cevaplar
+  değişmedikçe düzenleme korunur, hesabı etkileyen cevap değişince yeniden önerilir.
+- **Yazım**: tartı kaydı (kilo cevabı) → seçilen rutinler (kişisel kapsam) → EN SON tek `user_settings` kaydı
+  (`onboarded_at = now()`). Ayar yazılana kadar kurulum bitmiş sayılmaz; hatada yeniden deneme önceki adımları
+  tekrarlamaz. Başlangıç rutinleri varsayılan seçili değildir; hiçbiri seçilmezse boş başlanır.
+- `UserSettings.toMap` `onboarded_at`'i yalnızca doluysa yazar (eski bir kopya kurulumu geri almasın); görünen ad ve iş
+  tanımı boşsa null yazılır. Ayarlar > Profil'de ikisi de düzenlenir; ayar satırı yoksa istemci yalnızca `user_id` açar
+  (varsayılanları veritabanı verir).
+- **Kılavuzu yeniden göster** (Ayarlar): yalnızca 5 tanıtım kartı; hiçbir şey yazmaz.
+- **Şablonlar** (`lib/core/templates/`): görev, rutin, öğün, antrenman sabit Türkçe listeleri; yeni kayıt formlarında
+  "Şablondan başla" çipleri (düzenlemede yok). Seçince form dolar, her alan düzenlenir. Öğün şablonlarının kalori ve
+  makroları yaygın porsiyonlar için YAKLAŞIKTIR (formda belirtilir); paketli besin listesinin doğrulanmış satırlarının
+  yerini tutmaz.
+
 ## Güvenlik kuralları
 - `service_role` ya da secret anahtar uygulamaya, repoya, sohbete girmez. Yalnızca anon/publishable anahtar.
 - `.p8`, `.p12`, parola ve anahtar değerleri sohbete yapıştırılmaz; yalnızca Codemagic'e girilir.
