@@ -3,21 +3,24 @@
 App Store Connect adı: **Ritim: Rutin, İş ve Sağlık** · iPhone'da görünen ad: **Ritim**
 
 Tek kullanıcılı, iOS Ad-Hoc dağıtımlı Flutter uygulaması.
-Flutter · Riverpod · Supabase · Gemini (`gemini-3.8-flash`) · HealthKit · yerel bildirimler.
+Flutter · Riverpod · Supabase · Gemini (`gemini-3.8-flash`) · HealthKit ya da Google Health (Fitbit) ·
+yerel bildirimler.
 
 ## Özellikler
 
 Alt bar beş slotludur; beşi de gerçek ekrandır:
 
-- **Kokpit**: günün rutinleri, yaklaşan görevler, beslenme ve HealthKit özeti; ay takvimi ve ay özeti.
+- **Kokpit**: günün rutinleri, yaklaşan görevler, beslenme ve sağlık özeti (HealthKit ya da Google Health);
+  ay takvimi ve ay özeti.
 - **Operasyon**: görevler (isteğe bağlı hatırlatma), sabitler (günlük/haftalık/aylık rutinler), notlar.
 - **+ (AI giriş)**: serbest metni Gemini ile ayrıştırır (görev, öğün, antrenman, kilo, not, rutin),
   önizletir ve tek transaction'da kaydeder.
 - **Sağlık**: kilo grafiği (30/90 gün, hedef çizgisi, ölçüm ekleme/silme), haftalık antrenman planı ve
-  7 günlük adım, bugünün öğünleri ve antrenman günlüğü (ekle/düzenle/sil), HealthKit durumu.
+  7 günlük adım, bugünün öğünleri ve antrenman günlüğü (ekle/düzenle/sil), sağlık verisi kaynağının durumu.
 - **Raporlar**: sunucuda otomatik üretilen **haftalık** ve **günlük** raporlar; iş/form yüzdeleri,
   günlük tamamlama grafiği, ortalamalar, AI değerlendirmesi, geçmiş listesi ve "Raporu yeniden oluştur".
-- **Ayarlar** (Kokpit'ten): hedefler, bildirim tercihleri, sessiz saatler, ekip, bağlantı durumu.
+- **Ayarlar** (Kokpit'ten): hedefler, bildirim tercihleri, sessiz saatler, ekip, bağlantılar (sağlık verisi
+  kaynağı: Apple Health | Google Health, Google hesabı).
   Ekranı açmak bildirim izni istemez; izin yalnızca "İzin iste" ile ya da bildirimler eşitlenirken sorulur.
 
 **Görünüm**: koyu (saf OLED siyah, varsayılan) ve açık (beyaz) tema. Ayarlar > Görünüm'den Sistem / Açık /
@@ -42,7 +45,8 @@ kisisel_asistan/
 │   ├── Info.plist.additions.xml        # Info.plist'e eklenecek anahtarlar
 │   └── Runner.entitlements             # HealthKit yetkisi
 ├── tool/
-│   └── configure_ios.sh                # ios/ klasörünü otomatik yapılandırır
+│   ├── configure_ios.sh                # ios/ klasörünü otomatik yapılandırır (Google girişi dahil)
+│   └── test/                           # configure_ios.sh testi (PlistBuddy taklidiyle, macOS gerekmez)
 ├── preview/                            # onaylanan ekran taslakları (HTML)
 ├── test/
 │   └── screenshots/                    # örnek veriyle ekran görüntüsü üretimi (out/*.png)
@@ -61,7 +65,10 @@ kisisel_asistan/
     │   ├── widgets/                    # bento.dart, app_bottom_bar.dart
     │   └── services/
     │       ├── supabase_providers.dart # client + oturum akışı
-    │       ├── health_service.dart     # HealthKit: adım, uyku, aktif kalori
+    │       ├── health_service.dart     # HealthKit: adım, uyku, aktif kalori + kaynak sözleşmesi
+    │       ├── health_source.dart      # sağlık verisi kaynağı tercihi (Apple | Google)
+    │       ├── google_auth.dart        # Google ile giriş (google_sign_in 7)
+    │       ├── google_health_api.dart  # Google Health API v4 REST istemcisi
     │       ├── notification_service.dart # saatli hatırlatma + rutin bildirimi
     │       ├── notification_plan.dart  # bekleyen bildirim planı (saf mantık)
     │       └── notification_sync.dart  # bekleyen bildirimleri veritabanıyla eşitler
@@ -91,7 +98,9 @@ kisisel_asistan/
         ├── health/                     # Sağlık sekmesi
         │   ├── domain/health_models.dart   # ölçüm, kilo, öğün (NutritionLog), antrenman (WorkoutLog)
         │   ├── data/health_repository.dart
-        │   └── presentation/           # health_providers.dart, health_screen.dart, weight_card.dart,
+        │   ├── data/google_health_source.dart  # Google Health kaynağı (okuma + antrenman aktarımı)
+        │   └── presentation/           # health_providers.dart, health_source_providers.dart,
+        │                               # health_screen.dart, weight_card.dart,
         │                               # activity_cards.dart, meals_section.dart, workouts_section.dart,
         │                               # *_form_sheet.dart, healthkit_card.dart
         └── reports/                    # Raporlar sekmesi (günlük ve haftalık)
@@ -118,7 +127,7 @@ Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
    ```bash
    git checkout -- pubspec.lock
    ```
-2. **iOS'u yapılandır** (HealthKit, Info.plist, iOS 15, bildirim delegesi):
+2. **iOS'u yapılandır** (HealthKit, Info.plist, iOS 15, bildirim delegesi; `GOOGLE_IOS_CLIENT_ID` verilirse Google girişi):
    ```bash
    flutter pub get
    ```
@@ -213,10 +222,94 @@ Notlar:
   denetiminden geçti, çalıştırılmadı; `cron.sql` (pg_cron, pg_net, Vault) ve yukarıdaki `supabase` CLI
   komutları bu ortamda çalıştırılamadı. İlk kurulumda 7. adımdaki elle denemeyi mutlaka yap.
 
+## Google Health ile bağlantı
+
+Fitbit Web API 2 Kasım 2026'da kapandı; Fitbit cihazının verisi artık **Google Health API**
+(`https://health.googleapis.com/v4/`) üzerinden okunur. Uygulama Google ile giriş yapar ve bu API'den
+günlük adım, aktif kalori, gecelik uyku ve antrenmanları çeker. Apple Health (HealthKit) varsayılan kaynak
+olarak kalır; **aynı anda yalnızca bir kaynak** okunur (ikisi birden toplansa adım ve uyku çift sayılırdı).
+
+### 1. Google Cloud Console (bir kez)
+
+1. [console.cloud.google.com](https://console.cloud.google.com) > proje seçici > **New project**
+   (ör. `ritim-health`) ve projeyi seç.
+2. **APIs & Services > Library** > "Google Health API" > **Enable**.
+3. **Google Auth Platform** (eski adıyla OAuth consent screen) > **Get started**:
+   uygulama adı `Ritim`, destek e-postası; **Audience: External**; iletişim e-postası; kaydet.
+4. **Audience** > yayın durumu **Testing** kalsın > **Test users > Add users**: Fitbit verisinin bağlı olduğu
+   kendi Google hesabın.
+5. **Data Access > Add or remove scopes**: aşağıdaki iki salt okuma kapsamını ekle (listede bulamazsan
+   "Manually add scopes" kutusuna yapıştır) ve kaydet. Başka kapsam gerekmez:
+   ```
+   https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly
+   https://www.googleapis.com/auth/googlehealth.sleep.readonly
+   ```
+   (adım, aktif kalori ve antrenmanlar "activity and fitness", uyku "sleep" kapsamındadır)
+6. **Clients > Create client**: Application type **iOS**, Bundle ID **`com.sercinyous.kisiselasistan`**
+   (App Store ID ve Team ID isteğe bağlı) > **Create**. Gösterilen **Client ID**'yi
+   (`…apps.googleusercontent.com` ile biten) kopyala. iOS istemcisinin gizli anahtarı yoktur.
+
+### 2. Codemagic
+
+Environment variables > **`app_secrets`** grubuna `GOOGLE_IOS_CLIENT_ID` = kopyaladığın Client ID.
+Bu değer gizli değildir (uygulamanın içinde durur); Secure işaretlemek zorunlu değil. Sonraki derlemede:
+- `tool/configure_ios.sh` Info.plist'e `GIDClientID` ve ters çevrilmiş kimlikle URL şemasını
+  (`com.googleusercontent.apps.…`, Google girişinin uygulamaya dönüş adresi) yazar,
+- iki derleme adımı değeri `--dart-define=GOOGLE_IOS_CLIENT_ID` ile uygulamaya verir.
+
+Değişken yoksa derleme yine başarılı olur; uygulamada Google seçeneği kapalı ve açıklamalı görünür.
+Biçimi bozuk bir değer derlemeyi bilerek durdurur. Yerelde (Mac) aynı anahtarı `dart_defines.json`'a yaz
+ve `GOOGLE_IOS_CLIENT_ID=… bash tool/configure_ios.sh` çalıştır. Betiğin Info.plist düzenlemeleri
+macOS olmadan da sınanabilir: `bash tool/test/configure_ios_test.sh` (gerçek bir `flutter create` iOS
+projesinde, PlistBuddy taklidiyle).
+
+**Şema**: Google antrenmanlarını kopyasız yazmak için `supabase/schema.sql` yeniden çalıştırılmalı
+(`fitness_logs.external_id`, `source = 'google'`, tekil dizin). Çalıştırılmazsa günlük değerler yine
+yazılır, yalnızca antrenman aktarımı başarısız olur.
+
+### 3. Uygulamada
+
+1. **Ayarlar > Bağlantılar > Google Health (Fitbit) > Google ile bağlan**. Google hesabını seç;
+   "Google bu uygulamayı doğrulamadı" uyarısı Testing modunda beklenir (**Devam**). İzin ekranında
+   iki kutuyu da işaretle; biri eksikse uygulama "izin eksik" der ve yeniden bağlanmanı ister.
+2. Aynı karttaki **Sağlık verisi kaynağı** seçiminden **Google Health**'e geç. Seçim cihazda saklanır,
+   hemen bugün ve son 7 gün yeni kaynaktan okunup `daily_health_metrics`'e yazılır (eski kaynağın aynı
+   günlerdeki değerlerinin üstüne; toplanmaz). Daha eski günler önceki kaynağın değerinde kalır.
+3. Kokpit ve Sağlık kartları etkin kaynağı gösterir: "Google Health · 14:05" ya da "HealthKit · 14:05".
+   Ayarlar'daki Google satırı hesabı ve son eşitlemeyi gösterir; **Şimdi eşitle** ve **Bağlantıyı kes**
+   (onaylı) buradadır. Apple Health'e dönmek için kaynağı yeniden **Apple Health** yap.
+
+Okunanlar (uygulama açılışında, öne gelişte ve elle yenilemede; HealthKit yoluyla aynı kurallar):
+- **Adım** ve **aktif kalori**: yerel takvim günü başına toplam (`dailyRollUp`).
+- **Uyku**: önceki gün 18:00 → o gün 18:00 penceresindeki uyku evreleri (hafif, derin, REM, uykuda;
+  uyanık ve huzursuz hariç); çakışan oturumlar bir kez sayılır, pencereyi aşan kısım kırpılır.
+- **Antrenmanlar**: son 7 gün ve bugün, antrenman günlüğüne "Google" işaretiyle eklenir. Aynı antrenman
+  yeniden eşitlemede kopyalanmaz; düzenlediğin kayıt ezilmez, sildiğin kayıt geri gelmez.
+
+### Haftalık yeniden bağlanma (Testing modu sınırı)
+
+Yayın durumu **Testing** olan ve harici kullanıcıya açık projelerde Google, yenileme anahtarını
+(refresh token) **7 gün** geçerli verir. Süre dolunca uygulama sessizce yenileyemez ve kartlarda
+**"Google oturumunun süresi doldu. Google'a yeniden bağlan."** yazar; dokununca tek adımda yeniden
+bağlanırsın, veri kaybolmaz ve uygulamanın geri kalanı çalışmaya devam eder. Kalıcı çözüm projeyi
+"In production" durumuna almaktır; Google Health kapsamları hassas/kısıtlı sınıfta olduğundan bu
+Google doğrulaması gerektirir. Tek kişilik kullanımda haftada bir yeniden bağlanmak pratik yoldur.
+
+**Sorun giderme**: "bu derlemede yapılandırılmamış" → `GOOGLE_IOS_CLIENT_ID` eksik ya da hatalı;
+"Google Health API … etkin değil" → 1.2. adım; "izin eksik" → yeniden bağlan ve iki kutuyu işaretle;
+"Biraz sonra tekrar dene" → Google'ın geçici yoğunluğu (429/5xx). İzni Google tarafından da kaldırabilirsin:
+myaccount.google.com > Güvenlik > Üçüncü taraf erişimi.
+
+**Doğrulama durumu**: REST istemcisi, API'nin resmi keşif belgesindeki (revizyon 20261114) uç noktalar,
+alanlar ve kapsamlarla yazıldı ve sahte HTTP ile sınandı. Gerçek bir Google hesabı ve iPhone ile bu
+ortamda denenmedi; ilk bağlantıda Ayarlar'daki son eşitleme saatini ve Kokpit değerlerini Fitbit
+uygulamasıyla karşılaştır.
+
 ## Tarayıcı demosu ve ekran görüntüleri
 
 Sunucu olmadan, örnek veriyle (bugünün öğünleri, antrenmanlar, 90 günlük kilo serisi, 3 haftalık ve
-7 günlük rapor) çalışan demo. Depoda `web/` klasörü tutulmaz; deneme için ayrı bir kopyada üretilir:
+7 günlük rapor) çalışan demo. Google Health seçeneği sahte bir hesapla çalışır (giriş penceresi açılmaz,
+ağa çıkılmaz). Depoda `web/` klasörü tutulmaz; deneme için ayrı bir kopyada üretilir:
 
 ```bash
 flutter create --platforms=web --project-name kisisel_asistan .
@@ -261,7 +354,8 @@ Uygulama App Store Connect'e yüklenir, iPhone'a **TestFlight** uygulamasından 
      Codemagic orada oluşturur), sonra "iOS provisioning profiles" bölümünde Bundle ID'n için
      **App Store** profilini çek (Fetch profiles).
    - Environment variables: `app_secrets` grubuna `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-     `GEMINI_API_KEY` ekle (Secure işaretli).
+     `GEMINI_API_KEY` ekle (Secure işaretli). İsteğe bağlı `GOOGLE_IOS_CLIENT_ID`: bkz.
+     "Google Health ile bağlantı".
 6. **`codemagic.yaml`** — en üstteki `definitions.vars` bloğunda iki değeri doldur:
    `BUNDLE_ID` (1. adım) ve `APP_STORE_APPLE_ID` (2. adım). İmzalama ayarları bu değeri okur.
    Örnek değerlerle derleme ilk adımda bilerek durur.
@@ -332,13 +426,15 @@ aynı yapılandırma ve kimlik adımları onun üzerinde çalışır.
   değiştirilince o rutinin eski işaretleri silinir (`routines_frequency_changed` tetikleyicisi).
 - **Şema yükseltmesi**: `supabase/schema.sql` yeniden çalıştırılabilir; eski sürümle kurulmuş veritabanını
   veriyi silmeden yükseltir (yeni sütunlar, `user_settings`, iki örnek aylık iş, rapor tabloları,
-  `tasks.notify`). **Bu sürümü kurmadan önce şemayı yeniden çalıştır**: uygulama görev kaydederken
+  `tasks.notify`, `fitness_logs.external_id` ve `source = 'google'`). **Bu sürümü kurmadan önce şemayı yeniden çalıştır**: uygulama görev kaydederken
   `notify` sütununu yazar.
 - **Görev hatırlatması**: formdaki "Hatırlat" kapalıysa (`tasks.notify = false`) görev termini olsa da
   bildirim almaz. AI ile eklenen görevler bildirimlidir; ayrı bir hatırlatma zamanı söylenmediyse
   bildirim, Ayarlar'daki "randevu kaç dk önce" süresi kadar önce gelir. Yükseltmede, eski formda hatırlatması kapalı
   kaydedilmiş görevler (elle eklenmiş, termini var, hatırlatma saati yok) bir kez kapalıya çevrilir.
 - **iOS, HealthKit okuma izninin reddini uygulamaya bildirmez**; reddedilirse değerler 0 görünür.
+- **Sağlık verisi tek kaynaktan gelir**: Apple Health (varsayılan) ya da Google Health; seçim cihazda
+  saklanır. Google bağlantısı Testing modunda haftada bir yenilenmelidir (bkz. "Google Health ile bağlantı").
 - **Ek tablolar**: istenen 6 tabloya ek olarak `routine_completions` (dönem bazlı tamamlanma),
-  `daily_health_metrics` (HealthKit günlük özeti), `user_settings` (kullanıcı başına tek satır) ve
+  `daily_health_metrics` (seçili sağlık kaynağının günlük özeti), `user_settings` (kullanıcı başına tek satır) ve
   `daily_reports` (günlük rapor) vardır.

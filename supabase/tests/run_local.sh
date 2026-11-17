@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # schema.sql'i yerel bir PostgreSQL 16 kümesinde sınar (Supabase gerekmez):
 #   1) temiz kurulum, iki kez (idempotent mi?)
-#   2) rapor fonksiyonları + yetkiler (reports_test.sql)
+#   2) rapor fonksiyonları + yetkiler (reports_test.sql), Google antrenman
+#      içe aktarımı (fitness_import_test.sql)
 #   3) sürüm 2 şemasıyla kurulmuş, verisi olan veritabanını yükseltme
 # Kullanım (postgres işletim sistemi kullanıcısıyla):
 #   PG_BIN=/usr/lib/postgresql/16/bin bash supabase/tests/run_local.sh [v2_schema.sql]
@@ -38,6 +39,8 @@ echo "tamam"
 
 echo "== 2) rapor fonksiyonları ve yetkiler =="
 run -d fresh -f "$HERE/reports_test.sql"
+echo "== 2b) Google antrenman içe aktarımı (fitness_logs) =="
+run -d fresh -f "$HERE/fitness_import_test.sql"
 
 echo "== 3) sürüm 2 → 3 yükseltme =="
 if [ -z "$OLD_SCHEMA" ]; then
@@ -58,5 +61,6 @@ run -d upgrade -f "$HERE/reports_test.sql" >/dev/null 2>"$WORK/upgrade_reports.l
   exit 1
 }
 echo "tamam: rapor testleri yükseltilmiş veritabanında da geçti"
+run -d upgrade -f "$HERE/fitness_import_test.sql"
 
 echo "TÜM ŞEMA TESTLERİ GEÇTİ"

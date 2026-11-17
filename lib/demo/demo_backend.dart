@@ -1,12 +1,15 @@
 // Bellekte çalışan depolar: tarayıcı demosu (lib/main_demo.dart) ve testler kullanır.
 import 'dart:async';
 
+import 'package:kisisel_asistan/core/services/google_auth.dart';
+import 'package:kisisel_asistan/core/services/google_health_api.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/gemini_parser_service.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/quick_add_repository.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
+import 'package:kisisel_asistan/features/health/data/google_health_source.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/domain/kokpit_models.dart';
@@ -152,6 +155,175 @@ class FakeHealthService implements HealthService {
   }) async {
     pastDayReads++;
     return snapshot.status == HealthStatus.ok ? List.of(pastDays) : const [];
+  }
+}
+
+/// Google ile girişin yerine geçer: pencere açılmaz, hesap bellekte durur.
+class FakeGoogleAuthClient implements GoogleAuthClient {
+  FakeGoogleAuthClient({
+    this.email = 'demo@gmail.com',
+    this.signedIn = false,
+    this.connectDelay = Duration.zero,
+  });
+
+  String email;
+
+  /// Kayıtlı oturum var mı ([silentToken] buna göre yanıt verir).
+  bool signedIn;
+  Duration connectDelay;
+
+  /// Doluysa [silentToken] bu hatayı fırlatır (ör. süresi dolmuş oturum).
+  GoogleAuthException? silentError;
+
+  /// Doluysa [connect] bu hatayı fırlatır (ör. kullanıcı vazgeçti).
+  GoogleAuthException? connectError;
+
+  /// Doluysa [connect] bu tamamlanana kadar bekler.
+  Completer<void>? connectGate;
+
+  int silentCalls = 0;
+  int connectCalls = 0;
+  int disconnectCalls = 0;
+
+  /// Son istenen kapsamlar.
+  List<String> lastScopes = const [];
+
+  @override
+  Future<GoogleToken> silentToken(List<String> scopes) async {
+    silentCalls++;
+    lastScopes = scopes;
+    final error = silentError;
+    if (error != null) throw error;
+    if (!signedIn) {
+      throw const GoogleAuthException(GoogleAuthErrorKind.noSession);
+    }
+    return GoogleToken(
+      accessToken: 'fake-google-token',
+      account: GoogleAccount(email: email),
+    );
+  }
+
+  @override
+  Future<GoogleAccount> connect(List<String> scopes) async {
+    connectCalls++;
+    lastScopes = scopes;
+    if (connectGate != null) await connectGate!.future;
+    if (connectDelay > Duration.zero) await Future<void>.delayed(connectDelay);
+    final error = connectError;
+    if (error != null) throw error;
+    signedIn = true;
+    silentError = null;
+    return GoogleAccount(email: email);
+  }
+
+  @override
+  Future<void> disconnect() async {
+    disconnectCalls++;
+    signedIn = false;
+  }
+}
+
+/// Ağa çıkmayan Google Health kaynağı. Oturumu gerçek bağlantı denetleyicisi
+/// ([link]) üzerinden doğrular; böylece "bağlı değil", "yeniden bağlan" ve son
+/// eşitleme durumları demoda ve testlerde gerçek akışla görünür.
+class FakeGoogleHealthSource implements GoogleHealthReader {
+  FakeGoogleHealthSource({
+    required this.link,
+    this.today = const HealthSnapshot(status: HealthStatus.ok),
+    List<HealthDayReading>? pastDays,
+    List<ExternalWorkout>? workouts,
+  })  : pastDays = pastDays ?? [],
+        workouts = workouts ?? [];
+
+  final GoogleHealthLink link;
+
+  /// Bugünün değerleri (durum ve kaynak alanları okumada belirlenir).
+  HealthSnapshot today;
+
+  /// [readPastDays] ne dönerse o.
+  List<HealthDayReading> pastDays;
+
+  /// [importWorkouts] her çağrıda bunları depoya gönderir.
+  List<ExternalWorkout> workouts;
+
+  /// Doluysa okumalar bu hatayı verir (ör. 429, 5xx).
+  GoogleHealthException? readError;
+
+  int todayReads = 0;
+  int pastDayReads = 0;
+  int importCalls = 0;
+
+  Future<GoogleHealthException?> _check() async {
+    if (!link.isConfigured) {
+      return const GoogleHealthException(GoogleHealthErrorKind.notConfigured);
+    }
+    try {
+      await link.accessToken();
+    } on GoogleHealthException catch (error) {
+      return error;
+    }
+    return readError;
+  }
+
+  @override
+  Future<HealthSnapshot> readToday({DateTime? now}) async {
+    todayReads++;
+    final error = await _check();
+    if (error != null) {
+      if (error.kind != GoogleHealthErrorKind.notConfigured) {
+        link.reportFailure(error);
+      }
+      return HealthSnapshot(
+        status: healthStatusForGoogleError(error.kind),
+        source: HealthSourceKind.googleHealth,
+        message: error.message,
+      );
+    }
+    final at = now ?? DateTime.now();
+    link.reportSynced(at);
+    return HealthSnapshot(
+      status: HealthStatus.ok,
+      steps: today.steps,
+      activeKcal: today.activeKcal,
+      sleepMinutes: today.sleepMinutes,
+      readAt: at,
+      source: HealthSourceKind.googleHealth,
+    );
+  }
+
+  @override
+  Future<List<HealthDayReading>> readPastDays({
+    int days = HealthService.backfillDays,
+    DateTime? now,
+  }) async {
+    pastDayReads++;
+    if (await _check() != null) return const [];
+    return [
+      for (final (:day, :snapshot) in pastDays)
+        (
+          day: day,
+          snapshot: HealthSnapshot(
+            status: snapshot.status,
+            steps: snapshot.steps,
+            activeKcal: snapshot.activeKcal,
+            sleepMinutes: snapshot.sleepMinutes,
+            readAt: snapshot.readAt,
+            source: HealthSourceKind.googleHealth,
+          ),
+        ),
+    ];
+  }
+
+  @override
+  Future<int> importWorkouts(
+    HealthRepository repository, {
+    int days = HealthService.backfillDays,
+    DateTime? now,
+  }) async {
+    importCalls++;
+    if (await _check() != null) return 0;
+    await repository.importExternalWorkouts(workouts);
+    return workouts.length;
   }
 }
 
@@ -517,6 +689,14 @@ class FakeHealthRepository implements HealthRepository {
   /// [upsertHealthDays] ile yazılan günler (verisi olmayanlar hariç).
   final List<DateTime> upsertedDays = [];
   final List<String> deletedIds = [];
+
+  /// Dış kaynaktan aktarılan antrenmanların `(source, externalId) → id`
+  /// eşlemesi; tablodaki `(user_id, source, external_id)` tekil dizininin
+  /// karşılığıdır.
+  final Map<(String, String), String> externalWorkoutIds = {};
+
+  /// [importExternalWorkouts] çağrı sayısı.
+  int importCalls = 0;
   int _nextId = 1;
 
   @override
@@ -634,6 +814,26 @@ class FakeHealthRepository implements HealthRepository {
     if (writeError != null) throw writeError!;
     deletedIds.add(id);
     workouts = workouts.where((w) => w.id != id).toList();
+    // Satır silinince tekil dizindeki kaydı da gider (gerçek tablo gibi).
+    externalWorkoutIds.removeWhere((_, value) => value == id);
+  }
+
+  /// Gerçek depo gibi ON CONFLICT DO NOTHING: aynı kaynak kimliği ikinci kez
+  /// yazılmaz, var olan satır (kullanıcı düzenlemiş olsa da) değişmez.
+  @override
+  Future<void> importExternalWorkouts(List<ExternalWorkout> items) async {
+    importCalls++;
+    if (writeError != null) throw writeError!;
+    for (final item in items) {
+      final key = (item.source, item.externalId);
+      if (externalWorkoutIds.containsKey(key)) continue;
+      final created = item.workout.copyWith(
+        id: 'workout-${_nextId++}',
+        source: item.source,
+      );
+      externalWorkoutIds[key] = created.id;
+      workouts = [...workouts, created];
+    }
   }
 
   @override

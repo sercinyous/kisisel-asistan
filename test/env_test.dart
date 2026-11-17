@@ -41,4 +41,39 @@ void main() {
       expect(normalizeSupabaseUrl('   '), '');
     });
   });
+
+  group('Google iOS istemci kimliği', () {
+    const id = '123456789012-abcdefghij0123456789klmnopqrstuv.apps.googleusercontent.com';
+
+    test('geçerli kimlik kırpılarak kabul edilir', () {
+      expect(normalizeGoogleClientId(id), id);
+      expect(normalizeGoogleClientId('  $id\n'), id);
+    });
+
+    test('boş ya da biçimi bozuk kimlik boş metne döner', () {
+      for (final raw in [
+        '',
+        '   ',
+        'abc.apps.googleusercontent.com',
+        '123456789012-abc',
+        '123456789012-ABC.apps.googleusercontent.com',
+        'https://$id',
+      ]) {
+        expect(normalizeGoogleClientId(raw), '', reason: raw);
+      }
+    });
+
+    test('ters kimlik URL şeması olarak üretilir', () {
+      expect(
+        reversedGoogleClientId(id),
+        'com.googleusercontent.apps.123456789012-abcdefghij0123456789klmnopqrstuv',
+      );
+      expect(reversedGoogleClientId('geçersiz'), '');
+    });
+
+    test('derlemede verilmediğinde Google kapalıdır', () {
+      expect(Env.googleIosClientId, '');
+      expect(Env.missingKeys, isNot(contains('GOOGLE_IOS_CLIENT_ID')));
+    });
+  });
 }

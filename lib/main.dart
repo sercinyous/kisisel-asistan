@@ -10,6 +10,7 @@ import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode.dart';
 import 'core/utils/date_utils.dart';
+import 'features/health/presentation/health_source_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,11 +35,18 @@ Future<void> main() async {
   final notifications = NotificationService();
   await notifications.init();
 
+  // Sağlık verisi kaynağı ve Google bağlantı izleri ilk okumadan önce
+  // bilinmeli (Google seçiliyken HealthKit izin penceresi açılmasın).
+  final healthSource = await loadInitialHealthSource();
+  final googleLink = await const GoogleLinkStore().load();
+
   runApp(
     ProviderScope(
       overrides: [
         notificationServiceProvider.overrideWithValue(notifications),
         initialThemeModeProvider.overrideWithValue(themeMode),
+        initialHealthSourceProvider.overrideWithValue(healthSource),
+        initialGoogleLinkProvider.overrideWithValue(googleLink),
       ],
       child: const KisiselAsistanApp(),
     ),

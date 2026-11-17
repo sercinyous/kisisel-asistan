@@ -16,6 +16,9 @@
 -- weekly_reports.ai_status / generated_at, rapor tablolarında salt okuma,
 -- rapor fonksiyonları (report_daily_metrics, report_weekly_metrics,
 -- save_daily_report, save_weekly_report — yalnızca service_role).
+-- Sürüm 4 (Google Health): fitness_logs.source 'google' değerini kabul eder,
+-- fitness_logs.external_id + (user_id, source, external_id) tekil dizini
+-- içe aktarılan antrenmanın yeniden eşitlemede kopyalanmasını önler.
 -- Eski bir sürümle kurulmuş veritabanında çalıştırıldığında yerinde yükseltir.
 -- =====================================================================
 
@@ -206,13 +209,48 @@ create table if not exists public.fitness_logs (
   weight_kg        numeric(5,2) check (weight_kg is null or weight_kg between 30 and 250),
   notes            text,
   logged_at        timestamptz not null default now(),
-  source           text not null default 'manual' check (source in ('manual', 'ai', 'healthkit')),
+  source           text not null default 'manual'
+                   check (source in ('manual', 'ai', 'healthkit', 'google')),
+  -- Dış kaynaktaki kimlik (Google Health veri noktası); elle/AI kayıtta boş.
+  external_id      text,
   created_at       timestamptz not null default now(),
   constraint fitness_logs_shape check (
     (log_type = 'workout' and workout_type is not null)
     or (log_type = 'weight' and weight_kg is not null)
+  ),
+  constraint fitness_logs_external_id_check check (
+    external_id is null
+    or (char_length(external_id) between 1 and 300 and source in ('healthkit', 'google'))
   )
 );
+
+-- Sürüm 3 → 4 yükseltmesi. Kaynak listesi sütun check'inde durduğu için
+-- source'u denetleyen eski check (adı ne olursa olsun) kaldırılır ve her
+-- çalıştırmada aynı adla yeniden kurulur (veri değişmez).
+alter table public.fitness_logs add column if not exists external_id text;
+do $$
+declare
+  c record;
+begin
+  for c in
+    select conname from pg_constraint
+    where conrelid = 'public.fitness_logs'::regclass
+      and contype = 'c'
+      and conname <> 'fitness_logs_external_id_check'
+      and pg_get_constraintdef(oid) ~ '\msource\M'
+  loop
+    execute format('alter table public.fitness_logs drop constraint %I', c.conname);
+  end loop;
+end;
+$$;
+alter table public.fitness_logs add constraint fitness_logs_source_check
+  check (source in ('manual', 'ai', 'healthkit', 'google'));
+alter table public.fitness_logs drop constraint if exists fitness_logs_external_id_check;
+alter table public.fitness_logs add constraint fitness_logs_external_id_check
+  check (
+    external_id is null
+    or (char_length(external_id) between 1 and 300 and source in ('healthkit', 'google'))
+  );
 
 -- ---------------------------------------------------------------------
 -- 5) nutrition_logs — öğün ve makro kayıtları
@@ -356,6 +394,12 @@ create index if not exists notes_user_category_idx
   on public.notes (user_id, category, created_at desc);
 create index if not exists fitness_logs_user_type_time_idx
   on public.fitness_logs (user_id, log_type, logged_at desc);
+-- İçe aktarma tekilleştirmesi. Kısmi değil, tam dizin: uygulama PostgREST
+-- upsert'inde on_conflict=user_id,source,external_id verir ve PostgREST kısmi
+-- dizinin koşulunu ON CONFLICT'e yazamaz. NULL'lar birbirine eşit sayılmadığı
+-- için external_id'si boş elle/AI kayıtları bu dizine takılmaz.
+create unique index if not exists fitness_logs_external_uidx
+  on public.fitness_logs (user_id, source, external_id);
 create index if not exists nutrition_logs_user_time_idx
   on public.nutrition_logs (user_id, eaten_at desc);
 create index if not exists weekly_reports_user_week_idx

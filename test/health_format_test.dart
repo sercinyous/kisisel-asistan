@@ -271,6 +271,11 @@ void main() {
         ),
         'Bugün 19:30',
       );
+      expect(
+        HealthFormat.workoutDetail(w.copyWith(source: 'google'), now: now),
+        'Bugün 19:30 · 60 dk · 5,2 km · Google',
+        reason: 'Google Health\'ten aktarılan antrenman işaretlenir',
+      );
     });
   });
 }

@@ -18,6 +18,10 @@
 #     SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_API_KEY
 #     İsteğe bağlı GEMINI_MODEL: Google bir modeli kaldırınca kod değiştirmeden
 #     yeni model adını buradan ver (varsayılan gemini-3.8-flash).
+#     İsteğe bağlı GOOGLE_IOS_CLIENT_ID: Google Health (Fitbit) bağlantısı için
+#     Google Cloud'daki iOS OAuth istemci kimliği (…apps.googleusercontent.com).
+#     Gizli değildir (uygulamanın içinde durur); verilmezse uygulama Google
+#     seçeneği kapalı olarak derlenir. Ayrıntı: README > "Google Health ile bağlantı".
 #  5) Aşağıdaki "vars" bloğunda BUNDLE_ID ve APP_STORE_APPLE_ID değerlerini doldur
 #     (imzalama ayarları BUNDLE_ID'yi buradan okur; başka yerde değiştirmek gerekmez).
 #
@@ -57,6 +61,10 @@ definitions:
         if [ -n "$(printf '%s' "$SUPABASE_URL" | sed -E 's#^https://[^/]+/?##')" ]; then
           echo "UYARI: SUPABASE_URL bir yol içeriyor; uygulama yalnızca https://alan-adı kısmını kullanır."
         fi
+        # İsteğe bağlı: biçimi tool/configure_ios.sh denetler (hatalıysa derleme durur).
+        if [ -z "${GOOGLE_IOS_CLIENT_ID:-}" ]; then
+          echo "BİLGİ: GOOGLE_IOS_CLIENT_ID yok; Google Health seçeneği kapalı derlenecek."
+        fi
 
     # ios/ depoda tutulmuyorsa burada üretilir (Mac gerekmez). --org, BUNDLE_ID'nin
     # son parçası hariç kısmıdır; depoda ios/ varsa bu adım hiçbir şey yapmaz.
@@ -87,8 +95,10 @@ definitions:
       name: Bağımlılıkları yükle
       script: flutter pub get
 
+    # app_secrets grubundaki GOOGLE_IOS_CLIENT_ID bu adıma da ortam değişkeni
+    # olarak gelir: varsa Info.plist'e GIDClientID ve Google URL şeması yazılır.
     - &configure_ios
-      name: iOS projesini yapılandır (HealthKit, Info.plist)
+      name: iOS projesini yapılandır (HealthKit, Info.plist, Google girişi)
       script: bash tool/configure_ios.sh
 
     # Uygulamanın kimliği (dosyadaki en kısa kimlik) BUNDLE_ID yapılır; ona bağlı
@@ -194,7 +204,8 @@ workflows:
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY" \
-            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}"
+            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}" \
+            --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}"
 
     artifacts: *artifacts
 
@@ -237,6 +248,7 @@ workflows:
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY" \
-            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}"
+            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}" \
+            --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}"
 
     artifacts: *artifacts

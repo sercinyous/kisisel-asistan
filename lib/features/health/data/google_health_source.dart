@@ -37,11 +37,23 @@ HealthStatus healthStatusForGoogleError(GoogleHealthErrorKind kind) =>
       _ => HealthStatus.failed,
     };
 
+/// Google kaynağının uygulamaya açılan yüzü; tarayıcı demosunun sahte
+/// kaynağı da bunu uygular.
+abstract interface class GoogleHealthReader implements HealthDataSource {
+  /// Son [days] tamamlanmış gün ve bugünün antrenmanlarını içe aktarır;
+  /// yazılmak üzere gönderilen kayıt sayısını döndürür.
+  Future<int> importWorkouts(
+    HealthRepository repository, {
+    int days = HealthService.backfillDays,
+    DateTime? now,
+  });
+}
+
 /// Google Health (Fitbit) okuma katmanı. Pencereler HealthKit yoluyla
 /// aynıdır ([healthDayWindows]): adım ve aktif kalori yerel takvim günü
 /// (`dailyRollUp`), uyku önceki gün 18:00 → o gün 18:00 penceresindeki
 /// uyku evrelerinin birleşimi.
-class GoogleHealthSource implements HealthDataSource {
+class GoogleHealthSource implements GoogleHealthReader {
   GoogleHealthSource({required this.link, required this.api});
 
   final GoogleHealthLink link;
@@ -91,6 +103,7 @@ class GoogleHealthSource implements HealthDataSource {
   /// eski) atlanır; kullanıcı aktarılan bir kaydı silerse geri gelmez. Aynı
   /// kayıt ikinci kez gelse de veritabanı dizini kopyayı reddeder. Yazılmak
   /// üzere gönderilen kayıt sayısını döndürür.
+  @override
   Future<int> importWorkouts(
     HealthRepository repository, {
     int days = HealthService.backfillDays,

@@ -1,5 +1,5 @@
 // Tarayıcı demosu: gerçek arayüz, bellekte duran örnek veri.
-// Supabase, Gemini, HealthKit ve bildirimler bağlı değildir.
+// Supabase, Gemini, HealthKit, Google Health ve bildirimler bağlı değildir.
 // Derleme: flutter build web -t lib/main_demo.dart --no-web-resources-cdn
 import 'dart:math' as math;
 
@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/services/google_auth.dart';
 import 'core/services/health_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/supabase_providers.dart';
@@ -23,6 +24,7 @@ import 'demo/demo_data.dart';
 import 'features/ai_quick_add/data/gemini_parser_service.dart';
 import 'features/ai_quick_add/data/quick_add_repository.dart';
 import 'features/health/data/health_repository.dart';
+import 'features/health/presentation/health_source_providers.dart';
 import 'features/kokpit/data/kokpit_repository.dart';
 import 'features/operations/data/notes_repository.dart';
 import 'features/operations/data/tasks_repository.dart';
@@ -49,6 +51,10 @@ Future<void> _loadFonts() async {
   }
 }
 
+/// Demoda Google seçeneği açık görünsün diye biçimce geçerli, gerçekte
+/// hiçbir projeye ait olmayan istemci kimliği (giriş sahtedir).
+const String _demoGoogleClientId = '1-demo.apps.googleusercontent.com';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting(AppDates.locale);
@@ -60,6 +66,15 @@ Future<void> main() async {
   );
   // Depo (localStorage) korumalı alanda hata verirse koyu temayla açılır.
   final themeMode = await loadInitialThemeMode();
+  // Kaynak tercihi ve Google bağlantı izi de tarayıcıda saklanır; Google
+  // girişi sahtedir (pencere açılmaz, ağa çıkılmaz).
+  final healthSource = await loadInitialHealthSource();
+  final googleLink = await const GoogleLinkStore().load();
+  final googleAuth = FakeGoogleAuthClient(
+    email: googleLink.email ?? 'demo@gmail.com',
+    signedIn: googleLink.email != null,
+    connectDelay: const Duration(milliseconds: 700),
+  );
 
   runApp(
     ProviderScope(
@@ -88,6 +103,16 @@ Future<void> main() async {
         healthRepositoryProvider.overrideWithValue(data.health),
         kokpitRepositoryProvider.overrideWithValue(data.kokpit),
         reportsRepositoryProvider.overrideWithValue(data.reports),
+        initialHealthSourceProvider.overrideWithValue(healthSource),
+        initialGoogleLinkProvider.overrideWithValue(googleLink),
+        googleClientIdProvider.overrideWithValue(_demoGoogleClientId),
+        googleAuthClientProvider.overrideWithValue(googleAuth),
+        googleHealthSourceProvider.overrideWith(
+          (ref) => demoGoogleHealthSource(
+            ref.watch(googleConnectionProvider.notifier),
+            DateTime.now(),
+          ),
+        ),
         healthServiceProvider.overrideWithValue(
           FakeHealthService(
             HealthSnapshot(

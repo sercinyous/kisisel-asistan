@@ -36,3 +36,27 @@
 <array>
   <string>UIInterfaceOrientationPortrait</string>
 </array>
+
+<!--
+  Google ile giriş (Google Health / Fitbit). İsteğe bağlıdır: tool/configure_ios.sh,
+  GOOGLE_IOS_CLIENT_ID ortam değişkeni verilince bu iki anahtarı kendisi yazar.
+  Elle eklenecekse İSTEMCİ_KİMLİĞİ yerine Google Cloud'daki iOS istemcisinin Client ID'si
+  (…apps.googleusercontent.com), TERS_KİMLİK yerine onun ters hali
+  (com.googleusercontent.apps.<Client ID'nin ".apps.googleusercontent.com" öncesi>) yazılır.
+
+<key>GIDClientID</key>
+<string>İSTEMCİ_KİMLİĞİ</string>
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleTypeRole</key>
+    <string>Editor</string>
+    <key>CFBundleURLName</key>
+    <string>GoogleSignIn</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>TERS_KİMLİK</string>
+    </array>
+  </dict>
+</array>
+-->

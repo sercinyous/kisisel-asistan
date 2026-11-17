@@ -14,6 +14,7 @@ import '../../../core/widgets/bento.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../domain/user_settings.dart';
+import 'health_source_settings.dart';
 import 'settings_providers.dart';
 
 /// Ayarlar: görünüm, hedefler, bildirimler, ekip, bağlantılar ve hesap.
@@ -733,25 +734,35 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   Widget _connectionsCard() {
     final health = ref.watch(healthTodayProvider);
     final permission = ref.watch(notificationPermissionProvider);
+    // Apple satırı yalnızca Apple Health seçiliyken HealthKit okumasını
+    // yorumlar; Google seçiliyken okuma Google'ındır.
+    final appleActive =
+        ref.watch(healthSourceProvider) == HealthSourceKind.appleHealth;
 
-    final (healthText, healthColor) = health.when(
-      skipLoadingOnRefresh: false,
-      loading: () => ('Kontrol ediliyor…', AppColors.textMuted),
-      error: (_, __) => ('Okunamadı', AppColors.warning),
-      data: (s) => switch (s.status) {
-        HealthStatus.ok when s.hasData => ('Bağlı', AppColors.accent),
-        HealthStatus.ok => (
-            'Bağlı, bugün için veri yok',
-            AppColors.textSecondary
-          ),
-        HealthStatus.denied => ('İzin verilmedi', AppColors.warning),
-        HealthStatus.unavailable => (
-            'Bu cihazda kullanılamıyor',
-            AppColors.textMuted
-          ),
-      },
-    );
-    final healthUnavailable =
+    final (healthText, healthColor) = !appleActive
+        ? ('Kaynak olarak seçili değil', AppColors.textMuted)
+        : health.when(
+            skipLoadingOnRefresh: false,
+            loading: () => ('Kontrol ediliyor…', AppColors.textMuted),
+            error: (_, __) => ('Okunamadı', AppColors.warning),
+            data: (s) => switch (s.status) {
+              HealthStatus.ok when s.hasData => ('Bağlı', AppColors.accent),
+              HealthStatus.ok => (
+                  'Bağlı, bugün için veri yok',
+                  AppColors.textSecondary
+                ),
+              HealthStatus.denied => ('İzin verilmedi', AppColors.warning),
+              HealthStatus.unavailable => (
+                  'Bu cihazda kullanılamıyor',
+                  AppColors.textMuted
+                ),
+              HealthStatus.notConnected ||
+              HealthStatus.reconnect ||
+              HealthStatus.failed =>
+                ('Okunamadı', AppColors.warning),
+            },
+          );
+    final healthUnavailable = !appleActive ||
         health.valueOrNull?.status == HealthStatus.unavailable;
 
     final (permissionText, permissionColor) = permission.when(
@@ -768,6 +779,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       title: 'Bağlantılar',
       color: AppColors.nutrition,
       children: [
+        const HealthSourcePicker(),
+        const Divider(height: 24),
         _StatusRow(
           icon: Icons.favorite_rounded,
           title: 'Apple Sağlık',
@@ -777,6 +790,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           onAction:
               health.isLoading || healthUnavailable ? null : _reconnectHealth,
         ),
+        const Divider(height: 16),
+        const GoogleHealthRow(),
         const Divider(height: 16),
         _StatusRow(
           icon: Icons.notifications_active_rounded,
