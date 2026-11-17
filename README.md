@@ -285,6 +285,10 @@ Okunanlar (uygulama açılışında, öne gelişte ve elle yenilemede; HealthKit
   uyanık ve huzursuz hariç); çakışan oturumlar bir kez sayılır, pencereyi aşan kısım kırpılır.
 - **Antrenmanlar**: son 7 gün ve bugün, antrenman günlüğüne "Google" işaretiyle eklenir. Aynı antrenman
   yeniden eşitlemede kopyalanmaz; düzenlediğin kayıt ezilmez, sildiğin kayıt geri gelmez.
+  Kendi kaydınla çift sayılmaz: elle ya da AI ile yazdığın bir antrenmanla aynı oturum olan (zamanı çakışan,
+  ya da türü uyumlu ve en çok 60 dk arayla) Google kaydı aktarılmaz; Google'dan önce aktarılmış bir kayıt
+  sonradan aynı oturumu yazarsan silinir (senin kaydın kalır). Ev işi, bahçe, meditasyon, düz yürüyüş ve
+  10 dakikadan kısa kayıtlar antrenman sayılmaz, aktarılmaz.
 
 ### Haftalık yeniden bağlanma (Testing modu sınırı)
 

@@ -295,6 +295,12 @@ class WorkoutLog {
   /// 'manual' | 'ai' | 'healthkit' | 'google'
   final String source;
 
+  /// Google Health'ten içe aktarılan kayıtların `source` değeri.
+  static const String googleSource = 'google';
+
+  /// Google Health'ten içe aktarılmış mı?
+  bool get isFromGoogle => source == googleSource;
+
   factory WorkoutLog.fromMap(Map<String, dynamic> map) => WorkoutLog(
         id: map['id'] as String,
         workoutType: map['workout_type'] as String? ?? 'other',
@@ -347,6 +353,32 @@ class WorkoutLog {
         loggedAt: loggedAt ?? this.loggedAt,
         source: source ?? this.source,
       );
+
+  /// Aynı oturumun iki kaydı sayılmak için iki kaydın zaman aralıkları
+  /// arasında bırakılabilecek en uzun boşluk. Kullanıcı antrenmanı genelde
+  /// bitince (AI hızlı ekleme "şimdi" saatiyle) yazar; takip cihazı ise
+  /// başlangıç anıyla kaydeder.
+  static const Duration sameSessionTolerance = Duration(minutes: 60);
+
+  /// Kaydın kapladığı süre; süre bilinmiyorsa başlangıç anından ibaret.
+  DateTime get endsAt => loggedAt.add(Duration(minutes: durationMin ?? 0));
+
+  /// [other] ile aynı antrenman oturumu mu? Zaman aralıkları çakışıyorsa evet:
+  /// aynı anda iki ayrı antrenman yapılamaz. Çakışmıyorsa, aralarındaki boşluk
+  /// [sameSessionTolerance] içinde ve türler uyumluysa (aynı tür ya da biri
+  /// 'other') evet; farklı türde, art arda iki antrenman ayrı kalır.
+  bool isSameSessionAs(WorkoutLog other) {
+    final gap = _latest(loggedAt, other.loggedAt)
+        .difference(_earliest(endsAt, other.endsAt));
+    if (gap <= Duration.zero) return true;
+    final compatible = workoutType == other.workoutType ||
+        workoutType == 'other' ||
+        other.workoutType == 'other';
+    return compatible && gap <= sameSessionTolerance;
+  }
+
+  static DateTime _latest(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
+  static DateTime _earliest(DateTime a, DateTime b) => a.isBefore(b) ? a : b;
 }
 
 /// Dış kaynaktan içe aktarılan antrenman (`fitness_logs`, source = 'google').

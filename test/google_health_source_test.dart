@@ -327,8 +327,8 @@ void main() {
           created: DateTime.utc(2026, 11, 15, 21),
         ),
         exercisePoint(
-          'walk-1',
-          'WALKING',
+          'hike-1',
+          'HIKING',
           DateTime(2026, 11, 14, 8),
           DateTime(2026, 11, 14, 19, 40),
           distanceMm: 0,
@@ -355,11 +355,11 @@ void main() {
           repository.workouts.firstWhere((w) => w.workoutType == 'weights');
       expect(lift.durationMin, 45,
           reason: 'activeDuration yoksa aralık süresi');
-      final walk =
+      final hike =
           repository.workouts.firstWhere((w) => w.workoutType == 'other');
-      expect(walk.durationMin, 600, reason: '700 dk → üst sınır 600');
-      expect(walk.distanceKm, isNull);
-      expect(walk.caloriesBurned, isNull);
+      expect(hike.durationMin, 600, reason: '700 dk → üst sınır 600');
+      expect(hike.distanceKm, isNull);
+      expect(hike.caloriesBurned, isNull);
       expect(link.watermark, DateTime.utc(2026, 11, 16, 8));
 
       final request = server.requests
@@ -406,6 +406,227 @@ void main() {
         hasLength(1),
       );
       expect(link.watermark, DateTime.utc(2026, 11, 17, 13, 5));
+    });
+
+    group('kullanıcının kendi kayıtlarıyla uzlaştırma', () {
+      WorkoutLog own(
+        String id,
+        String type,
+        DateTime at,
+        int minutes, {
+        String origin = 'ai',
+      }) =>
+          WorkoutLog(
+            id: id,
+            workoutType: type,
+            loggedAt: at,
+            durationMin: minutes,
+            source: origin,
+          );
+
+      List<WorkoutLog> googleRows() =>
+          repository.workouts.where((w) => w.source == 'google').toList();
+
+      test('AI/elle kayıtla çakışan Google oturumu aktarılmaz, işaret ilerler',
+          () async {
+        // Aynı kickboks seansı: AI hızlı ekleme 19:00, Fitbit 19:02–20:01.
+        repository.workouts = [
+          own('ai-1', 'kickboxing', DateTime(2026, 11, 16, 19), 60),
+        ];
+        server.exercises = [
+          exercisePoint(
+            'kick-1',
+            'KICKBOXING',
+            DateTime(2026, 11, 16, 19, 2),
+            DateTime(2026, 11, 16, 20, 1),
+            created: DateTime.utc(2026, 11, 16, 20, 5),
+          ),
+        ];
+
+        final changed = await source.importWorkouts(repository, now: now);
+
+        expect(changed, 0);
+        expect(googleRows(), isEmpty);
+        expect(repository.workouts.single.id, 'ai-1',
+            reason: 'kullanıcının kendi kaydı olduğu gibi kalır');
+        expect(link.watermark, DateTime.utc(2026, 11, 16, 20, 5),
+            reason: 'atlanan oturum her eşitlemede yeniden değerlendirilmez');
+      });
+
+      test('antrenman bitince yazılan kayıt (kullanıcı 20:10) da eşleşir',
+          () async {
+        repository.workouts = [
+          own('man-1', 'kickboxing', DateTime(2026, 11, 16, 20, 10), 60,
+              origin: 'manual'),
+        ];
+        server.exercises = [
+          exercisePoint(
+            'kick-1',
+            'KICKBOXING',
+            DateTime(2026, 11, 16, 19, 2),
+            DateTime(2026, 11, 16, 20, 1),
+          ),
+        ];
+
+        await source.importWorkouts(repository, now: now);
+
+        expect(googleRows(), isEmpty);
+      });
+
+      test('farklı türde, çakışmayan art arda antrenman ayrı kalır', () async {
+        repository.workouts = [
+          own('man-1', 'weights', DateTime(2026, 11, 16, 19), 45,
+              origin: 'manual'),
+        ];
+        server.exercises = [
+          // Ağırlıktan 20 dk sonra başlayan koşu: farklı oturum.
+          exercisePoint(
+            'run-2',
+            'RUNNING',
+            DateTime(2026, 11, 16, 20, 5),
+            DateTime(2026, 11, 16, 20, 45),
+          ),
+          // Aynı saatte ama türü "other" olan genel antrenman: aynı oturum.
+          exercisePoint(
+            'yoga-1',
+            'YOGA',
+            DateTime(2026, 11, 16, 20, 5),
+            DateTime(2026, 11, 16, 20, 45),
+          ),
+        ];
+
+        await source.importWorkouts(repository, now: now);
+
+        expect(googleRows().map((w) => w.workoutType), ['running']);
+      });
+
+      test('uzak saatteki kayıt eşleşmez: sabah koşusu akşam kaydını silmez',
+          () async {
+        repository.workouts = [
+          own('man-1', 'running', DateTime(2026, 11, 16, 19), 40,
+              origin: 'manual'),
+        ];
+        server.exercises = [
+          exercisePoint(
+            'run-1',
+            'RUNNING',
+            DateTime(2026, 11, 16, 7, 5),
+            DateTime(2026, 11, 16, 7, 50),
+          ),
+        ];
+
+        await source.importWorkouts(repository, now: now);
+
+        expect(googleRows(), hasLength(1));
+        expect(repository.workouts, hasLength(2));
+      });
+
+      test('antrenman sayılmayan ve çok kısa oturumlar aktarılmaz', () async {
+        server.exercises = [
+          // Fitbit'in otomatik algıladığı 12 dk yürüyüş.
+          exercisePoint(
+            'walk-1',
+            'WALKING',
+            DateTime(2026, 11, 14, 12),
+            DateTime(2026, 11, 14, 12, 12),
+            created: DateTime.utc(2026, 11, 14, 13),
+          ),
+          // Ev işi (30 dk) ve bahçe işi (90 dk): spor değil.
+          exercisePoint(
+            'chore-1',
+            'HOUSEHOLD_CHORES',
+            DateTime(2026, 11, 13, 10),
+            DateTime(2026, 11, 13, 10, 30),
+            created: DateTime.utc(2026, 11, 13, 11),
+          ),
+          exercisePoint(
+            'garden-1',
+            'GARDENING',
+            DateTime(2026, 11, 12, 10),
+            DateTime(2026, 11, 12, 11, 30),
+          ),
+          // Uzun yürüyüş bile düz yürüyüştür (adım sayısında vardır).
+          exercisePoint(
+            'walk-2',
+            'WALKING',
+            DateTime(2026, 11, 12, 15),
+            DateTime(2026, 11, 12, 16),
+          ),
+          // Spor türü ama 9 dk: otomatik algılama gürültüsü.
+          exercisePoint(
+            'short-1',
+            'WEIGHTLIFTING',
+            DateTime(2026, 11, 11, 18),
+            DateTime(2026, 11, 11, 18, 9),
+          ),
+          // Gerçek antrenman: aktarılır.
+          exercisePoint(
+            'lift-2',
+            'WEIGHTLIFTING',
+            DateTime(2026, 11, 16, 18),
+            DateTime(2026, 11, 16, 18, 50),
+            created: DateTime.utc(2026, 11, 16, 19),
+          ),
+        ];
+
+        final changed = await source.importWorkouts(repository, now: now);
+
+        expect(changed, 1);
+        expect(repository.workouts.single.workoutType, 'weights');
+        expect(repository.workouts.single.durationMin, 50);
+        // İşaret, atlananlar dahil tüm kayıtların en yenisidir.
+        expect(link.watermark, DateTime.utc(2026, 11, 16, 19));
+
+        // Oluşturulma anı bilinmeyen kayıtlar her eşitlemede yeniden sunulur
+        // ama yine elenir: ikinci eşitleme hiçbir şey yazmaz.
+        expect(await source.importWorkouts(repository, now: now), 0);
+        expect(repository.workouts, hasLength(1));
+      });
+
+      test('Google sonradan çakışan elle kayıttan sonra kopyayı siler',
+          () async {
+        server.exercises = [
+          exercisePoint(
+            'kick-1',
+            'KICKBOXING',
+            DateTime(2026, 11, 16, 19, 2),
+            DateTime(2026, 11, 16, 20, 1),
+            created: DateTime.utc(2026, 11, 16, 20, 5),
+          ),
+        ];
+        // Önce Google aktarır (kullanıcı henüz bir şey yazmadı).
+        expect(await source.importWorkouts(repository, now: now), 1);
+        expect(googleRows(), hasLength(1));
+
+        // Sonra kullanıcı aynı seansı AI hızlı ekleme ile yazar.
+        repository.workouts = [
+          ...repository.workouts,
+          own('ai-9', 'kickboxing', DateTime(2026, 11, 16, 20, 15), 60),
+        ];
+        final changed = await source.importWorkouts(repository, now: now);
+
+        expect(changed, 1, reason: 'silinen kopya sayılır (kartlar tazelensin)');
+        expect(googleRows(), isEmpty);
+        expect(repository.workouts.single.id, 'ai-9');
+        expect(repository.deletedIds, hasLength(1));
+
+        // Sonraki eşitlemelerde de geri gelmez.
+        await source.importWorkouts(repository, now: now);
+        expect(googleRows(), isEmpty);
+      });
+
+      test('kayıtlar okunamazsa hiçbir şey yazılmaz ve işaret ilerlemez',
+          () async {
+        repository.fetchError = Exception('ağ yok');
+
+        await expectLater(
+          source.importWorkouts(repository, now: now),
+          throwsException,
+        );
+
+        expect(repository.importCalls, 0);
+        expect(link.watermark, isNull);
+      });
     });
 
     test('Google hatasında hiçbir şey yazılmaz ve işaret değişmez', () async {

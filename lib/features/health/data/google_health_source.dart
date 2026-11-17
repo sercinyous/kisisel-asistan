@@ -41,7 +41,8 @@ HealthStatus healthStatusForGoogleError(GoogleHealthErrorKind kind) =>
 /// kaynağı da bunu uygular.
 abstract interface class GoogleHealthReader implements HealthDataSource {
   /// Son [days] tamamlanmış gün ve bugünün antrenmanlarını içe aktarır;
-  /// yazılmak üzere gönderilen kayıt sayısını döndürür.
+  /// yazılmak üzere gönderilen ve kullanıcının kendi kaydıyla çiftlendiği için
+  /// silinen kayıtların toplamını döndürür (0: günlük değişmedi).
   Future<int> importWorkouts(
     HealthRepository repository, {
     int days = HealthService.backfillDays,
@@ -60,7 +61,7 @@ class GoogleHealthSource implements GoogleHealthReader {
   final GoogleHealthApi api;
 
   /// İçe aktarılan antrenmanların `fitness_logs.source` değeri.
-  static const String workoutSource = 'google';
+  static const String workoutSource = WorkoutLog.googleSource;
 
   @override
   Future<HealthSnapshot> readToday({DateTime? now}) async {
@@ -101,8 +102,19 @@ class GoogleHealthSource implements GoogleHealthReader {
   /// Son [days] tamamlanmış gün ve bugünün antrenmanlarını `fitness_logs`'a
   /// aktarır. Daha önce aktarılanlar (Google'daki oluşturulma anı işaretten
   /// eski) atlanır; kullanıcı aktarılan bir kaydı silerse geri gelmez. Aynı
-  /// kayıt ikinci kez gelse de veritabanı dizini kopyayı reddeder. Yazılmak
-  /// üzere gönderilen kayıt sayısını döndürür.
+  /// kayıt ikinci kez gelse de veritabanı dizini kopyayı reddeder.
+  ///
+  /// Günlük kullanıcının kendi kayıtlarıyla (elle, AI hızlı ekleme) uzlaştırılır:
+  /// - Antrenman sayılmayan oturumlar ([isImportableExercise]: ev işi, bahçe,
+  ///   meditasyon, düz yürüyüş, 10 dk'dan kısa kayıtlar) aktarılmaz; yoksa
+  ///   planlı spor gününü "yapıldı" gösterir ve raporlara sayılırlardı.
+  /// - Kullanıcının kendi kaydıyla aynı oturum olan Google antrenmanı
+  ///   ([WorkoutLog.isSameSessionAs]) aktarılmaz; Google'dan daha önce
+  ///   aktarılmış bir kopya sonradan elle/AI kaydıyla çiftlenmişse silinir.
+  ///   Kullanıcının kendi kaydı her zaman kalır.
+  /// İşaret, atlananlar dahil Google'ın döndürdüğü her kayda göre ilerler;
+  /// böylece atlanan oturumlar her eşitlemede yeniden değerlendirilmez.
+  /// Döndürülen sayı yazılmak üzere gönderilen ve silinen kayıtların toplamıdır.
   @override
   Future<int> importWorkouts(
     HealthRepository repository, {
@@ -111,24 +123,42 @@ class GoogleHealthSource implements GoogleHealthReader {
   }) async {
     if (!link.isConfigured) return 0;
     final today = AppDates.startOfDay(now ?? DateTime.now());
+    final from = AppDates.addDays(today, -days);
+    final to = AppDates.addDays(today, 1);
     final List<GoogleExercise> exercises;
     try {
-      exercises = await api.exercises(
-        fromDay: AppDates.addDays(today, -days),
-        toDay: AppDates.addDays(today, 1),
-      );
+      exercises = await api.exercises(fromDay: from, toDay: to);
     } on GoogleHealthException catch (error) {
       link.reportFailure(error);
       return 0;
     }
-    final watermark = link.exerciseWatermark;
-    final fresh = [
-      for (final exercise in exercises)
-        if (watermark == null ||
-            exercise.createTime == null ||
-            exercise.createTime!.isAfter(watermark))
-          externalWorkoutFromGoogle(exercise),
+    // Pencerenin iki ucunda gün sınırını aşan oturumlar da eşleşsin diye
+    // okuma bir gün geniş tutulur. Okunamazsa hiçbir şey yazılmaz (kopya
+    // riski) ve işaret ilerlemez; sonraki eşitleme yeniden dener.
+    final existing = await repository.fetchWorkouts(
+      AppDates.addDays(from, -1),
+      AppDates.addDays(to, 1),
+    );
+    final own = [for (final w in existing) if (!w.isFromGoogle) w];
+    final duplicates = [
+      for (final w in existing)
+        if (w.isFromGoogle && own.any(w.isSameSessionAs)) w,
     ];
+    for (final duplicate in duplicates) {
+      await repository.deleteWorkout(duplicate.id);
+    }
+
+    final watermark = link.exerciseWatermark;
+    final fresh = <ExternalWorkout>[];
+    for (final exercise in exercises) {
+      final created = exercise.createTime;
+      final seen =
+          watermark != null && created != null && !created.isAfter(watermark);
+      if (seen || !isImportableExercise(exercise)) continue;
+      final item = externalWorkoutFromGoogle(exercise);
+      if (own.any(item.workout.isSameSessionAs)) continue;
+      fresh.add(item);
+    }
     await repository.importExternalWorkouts(fresh);
 
     DateTime? newest = watermark;
@@ -141,7 +171,7 @@ class GoogleHealthSource implements GoogleHealthReader {
     if (newest != null && newest != watermark) {
       await link.saveExerciseWatermark(newest);
     }
-    return fresh.length;
+    return fresh.length + duplicates.length;
   }
 
   Future<List<HealthDayReading>> _read(
@@ -192,6 +222,45 @@ class GoogleHealthSource implements GoogleHealthReader {
         source: HealthSourceKind.googleHealth,
         message: error.message,
       );
+}
+
+/// Antrenman günlüğüne alınmayan Google egzersiz türleri: ev işi, bahçe ve
+/// tamir işleri, meditasyon ve hobi etkinlikleri sporda sayılmaz. Düz yürüyüş
+/// de dışarıda kalır (adım sayısında zaten vardır); 'other' olarak girip
+/// planlı bir spor gününü yanlışlıkla "yapıldı" gösterirdi. Daha çaba isteyen
+/// yürüyüş türleri (HIKING, POWER_WALKING, NORDIC_WALKING …) alınır.
+const Set<String> nonWorkoutExerciseTypes = {
+  'CLEANING',
+  'GARDENING',
+  'HOUSEHOLD_CHORES',
+  'HOEING',
+  'WEEDING',
+  'MOWING_LAWN',
+  'SHOVELING',
+  'CARPENTRY',
+  'PAINTING',
+  'MEDITATE',
+  'FISHING',
+  'HUNTING',
+  'BILLIARDS',
+  'MUSICAL_PERFORMANCE',
+  'WALKING',
+  'STROLLER_WALK',
+};
+
+/// Bundan kısa oturumlar (cihazın otomatik algıladığı kısa hareketler)
+/// antrenman sayılmaz.
+const int minImportedWorkoutMinutes = 10;
+
+/// [exercise] antrenman günlüğüne aktarılır mı? Türü antrenman sayılıyor ve
+/// süresi en az [minImportedWorkoutMinutes] olmalı.
+bool isImportableExercise(GoogleExercise exercise) {
+  if (nonWorkoutExerciseTypes.contains(exercise.exerciseType.toUpperCase())) {
+    return false;
+  }
+  final duration =
+      exercise.activeDuration ?? exercise.end.difference(exercise.start);
+  return duration.inMinutes >= minImportedWorkoutMinutes;
 }
 
 /// Google antrenman türünü uygulamanın türüne çevirir

@@ -127,14 +127,43 @@ class HealthRepository {
     return [for (final row in rows) WorkoutLog.fromMap(row)];
   }
 
-  /// Yeni antrenman kaydı; [workout]'un `id`'si yok sayılır.
+  /// Yeni antrenman kaydı; [workout]'un `id`'si yok sayılır. Aynı oturum
+  /// Google'dan daha önce aktarılmışsa o kopya silinir: kullanıcının kendi
+  /// kaydı kalır, rapor ve haftalık plan oturumu iki kez saymaz.
   Future<WorkoutLog> createWorkout(WorkoutLog workout) async {
     final row = await _client
         .from('fitness_logs')
         .insert({...workout.toWriteMap(), 'source': 'manual'})
         .select(_workoutColumns)
         .single();
-    return WorkoutLog.fromMap(row);
+    final created = WorkoutLog.fromMap(row);
+    await _removeGoogleDuplicatesOf(created);
+    return created;
+  }
+
+  /// [workout] ile aynı oturum olan Google satırlarını siler. Kayıt zaten
+  /// yazılmıştır; temizlik başarısız olursa kullanıcıya hata gösterilmez
+  /// (yeniden deneyince ikinci kayıt oluşurdu), bir sonraki Google eşitlemesi
+  /// aynı ayıklamayı yapar.
+  Future<void> _removeGoogleDuplicatesOf(WorkoutLog workout) async {
+    try {
+      // Google oturumu en çok 600 dk sürer; başlangıcı kaydın başından o kadar
+      // (artı boşluk payı) önce olabilir.
+      final from = workout.loggedAt.subtract(
+        const Duration(minutes: WorkoutLog.durationMinMax) +
+            WorkoutLog.sameSessionTolerance,
+      );
+      final to = workout.endsAt.add(
+        WorkoutLog.sameSessionTolerance + const Duration(minutes: 1),
+      );
+      for (final candidate in await fetchWorkouts(from, to)) {
+        if (candidate.isFromGoogle && candidate.isSameSessionAs(workout)) {
+          await deleteWorkout(candidate.id);
+        }
+      }
+    } catch (_) {
+      // Bir sonraki eşitlemede yeniden denenir.
+    }
   }
 
   Future<WorkoutLog> updateWorkout(WorkoutLog workout) async {

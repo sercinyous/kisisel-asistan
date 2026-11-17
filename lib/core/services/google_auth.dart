@@ -120,6 +120,18 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
   Future<void>? _initialization;
   GoogleSignInAccount? _account;
 
+  /// Süren sessiz geri yükleme (`restorePreviousSignIn`). iOS'ta GIDSignIn'in
+  /// tek bir `_currentOptions` yuvası vardır: üst üste başlatılan her çağrı
+  /// öncekinin tamamlanma geri çağrısını ezer ve yalnızca sonuncusu döner;
+  /// ötekilerin vadesi hiç sonuçlanmaz. Bu yüzden eşzamanlı tüm istekler
+  /// (paralel adım/kalori/uyku okumaları, öne geliş, elle yenileme) tek yerel
+  /// çağrıyı paylaşır.
+  Future<GoogleSignInAccount?>? _restoring;
+
+  /// Süren etkileşimli işlem (giriş, bağlantıyı kesme). Aynı yuvayı kullanır;
+  /// bitene kadar yeni sessiz geri yükleme başlamaz.
+  Future<void>? _interactive;
+
   // Tekil örneğe ancak gerektiğinde erişilir (Google seçilmeyen derlemede
   // ve testlerde eklenti hiç başlatılmaz).
   GoogleSignIn get _signIn => _injected ?? GoogleSignIn.instance;
@@ -154,14 +166,13 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
     var account = _account;
     if (account == null) {
       try {
-        account = await _signIn.attemptLightweightAuthentication();
+        account = await _restoreAccount();
       } catch (error) {
         throw _translate(error, interactive: false);
       }
       if (account == null) {
         throw const GoogleAuthException(GoogleAuthErrorKind.noSession);
       }
-      _account = account;
     }
     final GoogleSignInClientAuthorization? authorization;
     try {
@@ -182,8 +193,56 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
     );
   }
 
+  /// Kayıtlı oturumu geri yükler; eşzamanlı çağrılar tek yerel çağrıyı
+  /// paylaşır ([_restoring]). Paylaşılan çağrı [timeout] ile sınırlıdır: yerel
+  /// tamamlanma hiç gelmezse kapı açılır ve sonraki çağrı yeniden dener.
+  /// Zaman aşımı [TimeoutException] olarak iletilir ([_translate] ağ hatası yapar).
+  Future<GoogleSignInAccount?> _restoreAccount() {
+    final inFlight = _restoring;
+    if (inFlight != null) return inFlight;
+    // Etkileşimli bir işlem sürüyorsa yuva onundur: bitmesini bekler.
+    final interactive = _interactive;
+    final restoring = Future<GoogleSignInAccount?>.sync(() async {
+      if (interactive != null) {
+        await interactive;
+        final known = _account;
+        if (known != null) return known;
+      }
+      final restored = await _signIn.attemptLightweightAuthentication();
+      if (restored != null) _account = restored;
+      return restored;
+    }).timeout(timeout).whenComplete(() => _restoring = null);
+    return _restoring = restoring;
+  }
+
+  /// Etkileşimli işlemi çalıştırır: o sırada yeni sessiz geri yükleme
+  /// başlamaz, daha önce başlamış olan bitmeden de işlem başlamaz (üçü de
+  /// GIDSignIn'in aynı yuvasını kullanır; üst üste binerlerse biri düşer).
+  Future<T> _runInteractive<T>(Future<T> Function() action) async {
+    final pending = _restoring;
+    final done = Completer<void>();
+    final marker = done.future;
+    _interactive = marker;
+    try {
+      if (pending != null) {
+        try {
+          await pending;
+        } catch (_) {
+          // Sonucu önemsenmez; yalnızca bitmesi beklenir.
+        }
+      }
+      return await action();
+    } finally {
+      if (identical(_interactive, marker)) _interactive = null;
+      done.complete();
+    }
+  }
+
   @override
-  Future<GoogleAccount> connect(List<String> scopes) async {
+  Future<GoogleAccount> connect(List<String> scopes) =>
+      _runInteractive(() => _connect(scopes));
+
+  Future<GoogleAccount> _connect(List<String> scopes) async {
     await _ensureInitialized();
     try {
       final account = await _signIn.authenticate(scopeHint: scopes);
@@ -205,7 +264,9 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
   }
 
   @override
-  Future<void> disconnect() async {
+  Future<void> disconnect() => _runInteractive(_disconnect);
+
+  Future<void> _disconnect() async {
     _account = null;
     try {
       await _ensureInitialized();
@@ -224,13 +285,24 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
       GoogleAccount(email: account.email, displayName: account.displayName);
 
   /// Eklenti hatalarını uygulamanın hata türüne çevirir. iOS'ta GIDSignIn
-  /// dışındaki hatalar (ağ, yenileme anahtarı reddi) `PlatformException`
-  /// olarak, kodu "alan: numara" biçiminde gelir.
+  /// dışındaki hatalar `PlatformException` olarak, kodu "alan: numara"
+  /// biçiminde gelir (örn. `org.openid.appauth.general: -5`).
+  ///
+  /// Sessiz yolda (yeniden yetkilendirme) yalnızca yenileme anahtarının
+  /// kesin reddi oturumu öldürür: AppAuth `org.openid.appauth.oauth_token`
+  /// alanı (invalid_grant gibi 4xx JSON hataları). Bağlantı hatası (`general:
+  /// -5`), Google 5xx (`-6`), JSON olmayan yanıt (`-7`, ör. oturum açma
+  /// sayfası) ve tanınmayan her `PlatformException` geçicidir: [network]
+  /// döner, bağlı oturum "yeniden bağlan" durumuna düşmez.
   static GoogleAuthException _translate(
     Object error, {
     required bool interactive,
   }) {
     if (error is GoogleAuthException) return error;
+    // Paylaşılan geri yükleme ya da üst süre aşıldı.
+    if (error is TimeoutException) {
+      return const GoogleAuthException(GoogleAuthErrorKind.network);
+    }
     if (error is GoogleSignInException) {
       return switch (error.code) {
         GoogleSignInExceptionCode.canceled =>
@@ -251,8 +323,17 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
           ),
       };
     }
-    if (error is PlatformException &&
-        error.code.startsWith('NSURLErrorDomain')) {
+    if (error is PlatformException) {
+      final code = error.code;
+      if (code.startsWith('NSURLErrorDomain')) {
+        return const GoogleAuthException(GoogleAuthErrorKind.network);
+      }
+      if (interactive) {
+        return const GoogleAuthException(GoogleAuthErrorKind.unknown);
+      }
+      if (code.startsWith('org.openid.appauth.oauth_token')) {
+        return const GoogleAuthException(GoogleAuthErrorKind.expired);
+      }
       return const GoogleAuthException(GoogleAuthErrorKind.network);
     }
     return GoogleAuthException(

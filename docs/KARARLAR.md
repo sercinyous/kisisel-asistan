@@ -40,6 +40,12 @@ alınınca bir satır eklenir. Şema için tek kaynak `supabase/schema.sql`, mim
   (`https://health.googleapis.com/v4/`). Google OAuth "Testing" modunda yenileme belirteci yaklaşık 7 günde
   biter; uygulama "Google'a yeniden bağlan" durumunu gösterir.
 - Aynı anda tek kaynak veri yazar (çift sayım olmasın).
+- Google oturumu: iOS GIDSignIn tek yuvalı olduğundan eşzamanlı sessiz geri yüklemeler tek yerel çağrıda toplanır; `connect`/`disconnect`
+  aynı yuvayı bekler. Sessiz yolda yalnızca `org.openid.appauth.oauth_token` hatası "yeniden bağlan" (expired) sayılır; ağ/5xx/JSON
+  olmayan yanıt ve tanınmayan `PlatformException` geçici hatadır (network).
+- Google antrenmanları kullanıcının kendi (manual/ai) kayıtlarıyla çift sayılmaz: aynı oturum (çakışan aralık, ya da ≤ 60 dk boşluk ve
+  uyumlu tür) aktarılmaz; kullanıcı kaydı kalır, çiftlenen Google kopyası silinir. Ev işi, bahçe, meditasyon, düz yürüyüş ve 10 dk'dan
+  kısa oturumlar aktarılmaz.
 
 ## Güvenlik kuralları
 - `service_role` ya da secret anahtar uygulamaya, repoya, sohbete girmez. Yalnızca anon/publishable anahtar.

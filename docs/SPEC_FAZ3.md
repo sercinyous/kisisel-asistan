@@ -537,6 +537,25 @@ Google Cloud ve Codemagic kurulumu için README > "Google Health ile bağlantı"
   `external_id` veri noktası adının son parçasıdır (`.../dataPoints/{id}`); ad yoksa `<başlangıç>-<tür>`.
 - Ek olarak cihazda bir işaret tutulur: içe aktarılan en yeni antrenmanın Google'daki `createTime`'ı. Daha eski kayıtlar bir daha
   gönderilmez; kullanıcı aktarılan bir antrenmanı silerse geri gelmez. Depo yazamazsa işaret ilerlemez (sonraki eşitlemede yeniden denenir).
+  İşaret, atlananlar dahil Google'ın döndürdüğü her kayda göre ilerler.
+
+**Uzlaştırma** (kullanıcının kendi `manual`/`ai` kayıtlarıyla çift sayım ve antrenman olmayan oturumlar;
+`GoogleHealthSource.importWorkouts`, `WorkoutLog.isSameSessionAs`). Tekil dizin yalnızca `(user_id, source, external_id)` korur; elle/AI
+satırların `external_id`'si boştur, bu yüzden aynı seansın Google kaydıyla çakışmaz. Rapor SQL'i (`workout_day`) ve haftalık plan her
+`workout` satırını sayar; uzlaştırma bu satırlar yazılmadan yapılır:
+- **Antrenman sayılmaz** (`isImportableExercise`): `CLEANING`, `GARDENING`, `HOUSEHOLD_CHORES`, `HOEING`, `WEEDING`, `MOWING_LAWN`,
+  `SHOVELING`, `CARPENTRY`, `PAINTING`, `MEDITATE`, `FISHING`, `HUNTING`, `BILLIARDS`, `MUSICAL_PERFORMANCE`, düz `WALKING` ve
+  `STROLLER_WALK` (hepsi `other`'a eşlenir ve planlı bir spor gününü yanlışlıkla "yapıldı" gösterirdi; adım sayısında zaten vardır) ve
+  10 dakikadan kısa her oturum. `HIKING`, `POWER_WALKING`, `NORDIC_WALKING` gibi çaba isteyen yürüyüşler alınır.
+- **Aynı oturum** (`isSameSessionAs`; iki kaydın `[logged_at, logged_at + duration_min]` aralıkları): aralıklar çakışıyorsa (türden bağımsız),
+  ya da aralarındaki boşluk ≤ 60 dk ve türler uyumluysa (aynı tür ya da biri `other`). Boşluk payı, kullanıcının antrenmanı bitince ("şimdi" saatiyle)
+  yazmasındandır; farklı türde art arda antrenman (ağırlıktan 20 dk sonra koşu) ayrı kalır.
+- İçe aktarmada, aynı oturum olan bir `manual`/`ai`/`healthkit` satırı varsa Google kaydı yazılmaz. Önceden aktarılmış bir `google`
+  satırı sonradan kullanıcının kaydıyla çiftlenmişse eşitlemede silinir; kullanıcının kendi kaydı her zaman kalır. Pencere iki uçtan bir gün
+  geniş okunur; okunamazsa hiçbir şey yazılmaz ve işaret ilerlemez. Dönen sayı yazılan + silinen kayıttır (kartlar tazelensin).
+- Ters sıra: `HealthRepository.createWorkout` (antrenman formu) kaydı yazdıktan sonra aynı oturumun Google satırını hemen siler (en iyi çabayla;
+  başarısızsa sonraki eşitleme yapar). AI hızlı ekleme (`quick_add_entries` RPC'si) bu yoldan geçmez; onun kopyası bir sonraki eşitlemede silinir.
+- Bilinen sınır: uzlaştırmada atlanan oturum işaretin gerisinde kalır; kullanıcı kendi kaydını sonradan silerse atlanan Google oturumu geri gelmez.
 
 **Mekanizma**
 1. `main()` `loadInitialHealthSource()` ve `GoogleLinkStore.load()` sonuçlarını `runApp`'ten önce override eder: ilk okuma doğru
@@ -547,6 +566,11 @@ Google Cloud ve Codemagic kurulumu için README > "Google Health ile bağlantı"
 3. Sessiz yeniden yetkilendirme: açılış (`backfillHealthKit`) ve öne geliş (`resyncHealthKit`) okumaları her istekte
    `silentToken` çağırır: kayıtlı oturum geri yüklenir, erişim anahtarı gerekirse yenilenir, hiçbir pencere açılmaz
    (`promptIfUnauthorized: false`). Üst süre 30 sn; aşılırsa ağ hatası sayılır, uygulama beklemez.
+   **Tek yerel geri yükleme**: iOS GIDSignIn'in tek bir `_currentOptions` yuvası vardır; üst üste başlatılan her
+   `restorePreviousSignIn` öncekinin tamamlanma geri çağrısını ezer (yalnızca sonuncusu döner, ötekilerin vadesi hiç sonuçlanmaz).
+   Soğuk açılışta adım, kalori ve uyku okumaları paralel başladığı için `GoogleSignInAuthClient` eşzamanlı tüm geri yüklemeleri tek
+   yerel çağrıda toplar (`_restoring`, kendi üst süresiyle: kayıp tamamlanma sonraki çağrıyı kilitlemez; zaman aşımı ağ hatasıdır).
+   `connect` ve `disconnect` aynı yuvayı kullandığından süren geri yüklemeyi bekler; giriş sürerken yeni geri yükleme başlamaz.
 4. Oturum yenilenemezse (Testing modunda yenileme anahtarı ~7 günde biter, kullanıcı erişimi hesabından kaldırır) durum
    `GoogleLinkStatus.reconnect` olur: Kokpit ve Sağlık kartları "Google oturumunun süresi doldu. Google'a yeniden bağlan." ve
    "Google'a yeniden bağlan" düğmesini gösterir, Ayarlar'daki satır aynı eylemi sunar. Okuma `HealthStatus.reconnect` döner;
@@ -555,6 +579,10 @@ Google Cloud ve Codemagic kurulumu için README > "Google Health ile bağlantı"
    `MISSING_OAUTH_SCOPE` / `INSUFFICIENT_SCOPE` (ya da `WWW-Authenticate: insufficient_scope`) → "izin eksik";
    403 + `SERVICE_DISABLED` / `API_DISABLED` / `ACCESS_NOT_CONFIGURED` → "API etkin değil"; diğer 403 → yeniden bağlan;
    429 → "biraz sonra tekrar dene"; 5xx → "Google Health yanıt vermiyor"; ağ/zaman aşımı → "internet bağlantını kontrol et".
+   Oturum katmanında (`GoogleSignInAuthClient`, sessiz yol) `PlatformException` kodu "alan: numara" biçimindedir:
+   yalnızca `org.openid.appauth.oauth_token: *` (yenileme anahtarı reddi, invalid_grant gibi 4xx JSON hatası) → `expired`
+   ("yeniden bağlan"); `org.openid.appauth.general: -5/-6/-7` (ağ yok, Google 5xx, JSON olmayan yanıt), `NSURLErrorDomain` ve tanınmayan
+   her `PlatformException` → `network` (oturum geçerli sayılır, durum `reconnect`'e düşmez; etkileşimli girişte tanınmayan kod `unknown`).
 6. `selectHealthSource` seçimi uygular ve yeni kaynaktan bugünü + son 7 günü yeniden okuyup yazar (eski kaynağın aynı gün
    satırlarının üstüne; toplanmaz). Google seçiliyse `backfillHealthKit` aynı dönemin antrenmanlarını da içe aktarır.
 7. Arayüz: Ayarlar > Bağlantılar'da "Sağlık verisi kaynağı" (Apple Health | Google Health; istemci kimliği yoksa Google

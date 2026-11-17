@@ -793,12 +793,23 @@ class FakeHealthRepository implements HealthRepository {
     ]..sort((a, b) => b.loggedAt.compareTo(a.loggedAt));
   }
 
+  /// Gerçek depo gibi: aynı oturum Google'dan aktarılmışsa o kopya silinir.
   @override
   Future<WorkoutLog> createWorkout(WorkoutLog workout) async {
     if (writeError != null) throw writeError!;
     final created =
         workout.copyWith(id: 'workout-${_nextId++}', source: 'manual');
-    workouts = [...workouts, created];
+    final duplicates = [
+      for (final w in workouts)
+        if (w.isFromGoogle && w.isSameSessionAs(created)) w.id,
+    ];
+    deletedIds.addAll(duplicates);
+    externalWorkoutIds.removeWhere((_, id) => duplicates.contains(id));
+    workouts = [
+      for (final w in workouts)
+        if (!duplicates.contains(w.id)) w,
+      created,
+    ];
     return created;
   }
 
