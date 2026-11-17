@@ -33,6 +33,19 @@ final friendsWithSummaryProvider =
   );
 });
 
+/// Kabul edilmiş arkadaşlar + kendin: bugün/bu hafta ham sayılar.
+final friendsLeaderboardProvider =
+    FutureProvider<List<LeaderboardEntry>>((ref) async {
+  final repo = ref.watch(friendsRepositoryProvider);
+  return repo.leaderboard(weekStartOf(DateTime.now()));
+});
+
+/// Sıralama metriği ve dönemi (ekran içi seçim).
+final leaderboardMetricProvider =
+    StateProvider<GoalMetric>((ref) => GoalMetric.steps);
+final leaderboardPeriodProvider =
+    StateProvider<RankPeriod>((ref) => RankPeriod.today);
+
 /// Bekleyen gelen davet sayısı (rozet). Uygulama açılınca ve öne gelince
 /// `FriendsButton` tarafından yenilenir.
 final pendingFriendRequestCountProvider = FutureProvider<int>((ref) async {
@@ -45,6 +58,7 @@ void refreshFriends(WidgetRef ref) {
   ref.invalidate(incomingRequestsProvider);
   ref.invalidate(outgoingRequestsProvider);
   ref.invalidate(friendsWithSummaryProvider);
+  ref.invalidate(friendsLeaderboardProvider);
   ref.invalidate(mySharingProvider);
   ref.invalidate(pendingFriendRequestCountProvider);
 }

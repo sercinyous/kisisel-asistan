@@ -134,4 +134,11 @@ class TasksRepository {
   Future<void> delete(String id) async {
     await _client.from('tasks').delete().eq('id', id);
   }
+
+  /// Yeniden adlandırılan kategoriyi kullanıcının görevlerine taşır (RLS
+  /// yalnızca kendi satırlarını günceller).
+  Future<void> renameCategory(String from, String to) async {
+    if (from == to) return;
+    await _client.from('tasks').update({'category': to}).eq('category', from);
+  }
 }

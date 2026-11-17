@@ -18,6 +18,7 @@ import '../../onboarding/presentation/onboarding_screen.dart';
 import '../domain/user_settings.dart';
 import 'health_source_settings.dart';
 import 'settings_providers.dart';
+import 'task_categories_settings.dart';
 
 /// Ayarlar: görünüm, hedefler, bildirimler, ekip, bağlantılar ve hesap.
 class SettingsScreen extends ConsumerWidget {
@@ -295,6 +296,11 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
         quietStart: _quietStart,
         quietEnd: _quietEnd,
         teamMembers: List.unmodifiable(_team),
+        // Kategoriler kendi kartında anında kaydedilir; formun eski kopyası
+        // onları ezmesin diye en güncel değer okunur.
+        taskCategoriesRaw:
+            ref.read(userSettingsProvider).valueOrNull?.taskCategoriesRaw ??
+                _saved.taskCategoriesRaw,
       );
 
   int get _birthYearMax => DateTime.now().year - SettingsLimits.birthYearMinAge;
@@ -545,6 +551,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                   _notificationsCard(),
                   const SizedBox(height: AppSpacing.grid),
                   _teamCard(),
+                  const SizedBox(height: AppSpacing.grid),
+                  const TaskCategoriesCard(),
                   const SizedBox(height: AppSpacing.grid),
                   _shortcutsCard(),
                   const SizedBox(height: AppSpacing.grid),

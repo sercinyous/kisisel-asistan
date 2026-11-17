@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/config/app_targets.dart';
 import '../../../core/templates/task_templates.dart';
 import '../../../core/templates/template_chips.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/tasks_repository.dart';
+import '../domain/task_category.dart';
 import '../domain/task_item.dart';
 import 'operations_providers.dart';
 import 'operations_widgets.dart';
@@ -51,9 +51,9 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     final task = widget.task;
     _title = TextEditingController(text: task?.title ?? '');
     _description = TextEditingController(text: task?.description ?? '');
-    _category = AppTargets.taskCategories.contains(task?.category)
-        ? task!.category
-        : 'Kişisel';
+    // Mevcut görev kategorisini korur (kapatılmış ya da silinmiş olsa bile).
+    _category = task?.category ??
+        TaskCategory.defaultName(ref.read(taskCategoriesProvider));
     _priority = task?.priority ?? 'medium';
     _assignee = task?.assignee;
     _offsetMinutes = ref.read(settingsOrDefaultProvider).eventRemindMinutes;
@@ -86,7 +86,9 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         _title.text = template.title;
         final description = template.description;
         if (description != null) _description.text = description;
-        if (AppTargets.taskCategories.contains(template.category)) {
+        if (ref
+            .read(activeTaskCategoryNamesProvider)
+            .contains(template.category)) {
           _category = template.category;
         }
         _priority = template.priority;
@@ -219,7 +221,11 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         ),
         const OpsFieldLabel('Kategori'),
         OpsChoiceWrap<String>(
-          options: [for (final c in AppTargets.taskCategories) (c, c)],
+          options: [
+            for (final c in ref.watch(activeTaskCategoryNamesProvider)) (c, c),
+            if (!ref.watch(activeTaskCategoryNamesProvider).contains(_category))
+              (_category, _category),
+          ],
           selected: _category,
           onSelected: (value) => setState(() => _category = value),
         ),

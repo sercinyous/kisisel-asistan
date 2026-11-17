@@ -152,3 +152,135 @@ class FriendWithSummary {
   final Friend friend;
   final List<GoalSummary> summaries;
 }
+
+/// Sıralama dönemi.
+enum RankPeriod {
+  today('Bugün'),
+  week('Bu hafta');
+
+  const RankPeriod(this.label);
+  final String label;
+}
+
+/// `friend_leaderboard` satırı: kabul edilmiş arkadaş ya da kişinin kendisi.
+/// Değerler yalnızca toplanmış sayılardır; paylaşılmayan metrik null gelir.
+class LeaderboardEntry {
+  const LeaderboardEntry({
+    required this.userId,
+    required this.isSelf,
+    required this.displayName,
+    required this.email,
+    this.avatarUrl,
+    this.stepsToday,
+    this.stepsWeek,
+    this.sleepToday,
+    this.sleepWeekAvg,
+    this.kcalToday,
+    this.kcalWeek,
+  });
+
+  factory LeaderboardEntry.fromMap(Map<String, dynamic> m) {
+    final email = (m['email'] as String?) ?? '';
+    final name = ((m['display_name'] as String?) ?? '').trim();
+    final avatar = ((m['avatar_url'] as String?) ?? '').trim();
+    return LeaderboardEntry(
+      userId: m['user_id'] as String,
+      isSelf: (m['is_self'] as bool?) ?? false,
+      displayName: name.isEmpty ? email : name,
+      email: email,
+      avatarUrl: avatar.isEmpty ? null : avatar,
+      stepsToday: _num(m['steps_today']),
+      stepsWeek: _num(m['steps_week']),
+      sleepToday: _num(m['sleep_today']),
+      sleepWeekAvg: _num(m['sleep_week_avg']),
+      kcalToday: _num(m['kcal_today']),
+      kcalWeek: _num(m['kcal_week']),
+    );
+  }
+
+  static num? _num(Object? v) => switch (v) {
+        num n => n,
+        String s => num.tryParse(s),
+        _ => null,
+      };
+
+  final String userId;
+  final bool isSelf;
+  final String displayName;
+  final String email;
+  final String? avatarUrl;
+  final num? stepsToday;
+  final num? stepsWeek;
+  final num? sleepToday;
+  final num? sleepWeekAvg;
+  final num? kcalToday;
+  final num? kcalWeek;
+
+  /// Seçilen metrik ve dönemin değeri; paylaşılmıyorsa null.
+  num? value(GoalMetric metric, RankPeriod period) => switch ((metric, period)) {
+        (GoalMetric.steps, RankPeriod.today) => stepsToday,
+        (GoalMetric.steps, RankPeriod.week) => stepsWeek,
+        (GoalMetric.sleep, RankPeriod.today) => sleepToday,
+        (GoalMetric.sleep, RankPeriod.week) => sleepWeekAvg,
+        (GoalMetric.calories, RankPeriod.today) => kcalToday,
+        (GoalMetric.calories, RankPeriod.week) => kcalWeek,
+      };
+
+  /// Ad soyadın baş harfleri (fotoğraf yoksa).
+  String get initials {
+    final source = displayName.contains('@')
+        ? displayName.split('@').first
+        : displayName;
+    final parts = source
+        .split(RegExp(r'[\s._-]+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return '?';
+    final first = parts.first.substring(0, 1);
+    final last = parts.length > 1 ? parts.last.substring(0, 1) : '';
+    return (first + last).toUpperCase();
+  }
+}
+
+/// En iyi değer önce; paylaşılmayanlar sona, eşitlikte ada göre.
+List<LeaderboardEntry> rankEntries(
+  List<LeaderboardEntry> entries,
+  GoalMetric metric,
+  RankPeriod period,
+) {
+  final list = [...entries];
+  list.sort((a, b) {
+    final va = a.value(metric, period);
+    final vb = b.value(metric, period);
+    if (va == null && vb != null) return 1;
+    if (vb == null && va != null) return -1;
+    if (va != null && vb != null && va != vb) return vb.compareTo(va);
+    return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+  });
+  return list;
+}
+
+/// Metrik değerinin Türkçe gösterimi.
+String formatMetricValue(GoalMetric metric, RankPeriod period, num? v) {
+  if (v == null) return 'paylaşmıyor';
+  String grouped(int n) {
+    final s = n.abs().toString();
+    final b = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) b.write('.');
+      b.write(s[i]);
+    }
+    return n < 0 ? '-$b' : b.toString();
+  }
+
+  switch (metric) {
+    case GoalMetric.steps:
+      return '${grouped(v.round())} adım';
+    case GoalMetric.calories:
+      return '${grouped(v.round())} kcal';
+    case GoalMetric.sleep:
+      final m = v.round();
+      final text = '${m ~/ 60} sa ${(m % 60).toString().padLeft(2, '0')} dk';
+      return period == RankPeriod.week ? 'ort. $text' : text;
+  }
+}

@@ -17,7 +17,21 @@ const _categories = <String>{
   'içecek',
   'diğer',
 };
-const _verifications = <String>{'iki kaynak', 'tek kaynak'};
+const _verifications = <String>{'iki kaynak', 'tek kaynak', 'yaklaşık'};
+const _userSource = 'Kullanıcı listesi (yaklaşık)';
+const _pickerCategories = <String>{
+  'İçecekler',
+  'Haşlanmış Yiyecekler',
+  'Kızartılmış Yiyecekler',
+  'Temel Gıdalar',
+  'Meyveler',
+  'Sebzeler',
+  'Kahvaltılık Ürünler',
+  'Öğle Atıştırmalıkları',
+  'Akşam Öğünleri',
+};
+
+bool _isUserRow(Map<String, dynamic> row) => row['source'] == _userSource;
 const _numericFields = <String>['kcal100', 'protein100', 'carbs100', 'fat100'];
 
 final _usdaRef = RegExp(r'USDA FDC \d+');
@@ -115,6 +129,8 @@ void main() {
       final label = _label(row);
       for (final field in _numericFields) {
         final value = row[field];
+        // Kullanıcı listesindeki satırlarda makro bilinmiyorsa boş kalır.
+        if (value == null && field != 'kcal100' && _isUserRow(row)) continue;
         expect(value, isA<num>(), reason: '$label: $field sayı olmalı');
         final n = value as num;
         expect(n.isFinite, isTrue, reason: '$label: $field sonlu olmalı');
@@ -142,6 +158,11 @@ void main() {
       expect(source, isA<String>(), reason: '$label: source');
       final s = (source as String).trim();
       expect(s, isNotEmpty, reason: '$label: source boş');
+      if (_isUserRow(row)) {
+        expect(row['verification'], 'yaklaşık', reason: label);
+        continue;
+      }
+      expect(row['verification'], isNot('yaklaşık'), reason: label);
       final hasUsda = _usdaRef.hasMatch(s);
       final hasTurkomp = _turkompRef.hasMatch(s);
       expect(hasUsda || hasTurkomp, isTrue,
@@ -157,6 +178,11 @@ void main() {
   test('Atwater: |kcal - (4*protein + 4*karb + 9*yağ)| <= max(%15, 10)', () {
     for (final row in rows) {
       final label = _label(row);
+      if (row['protein100'] == null ||
+          row['carbs100'] == null ||
+          row['fat100'] == null) {
+        continue;
+      }
       final kcal = (row['kcal100'] as num).toDouble();
       final protein = (row['protein100'] as num).toDouble();
       final carbs = (row['carbs100'] as num).toDouble();
@@ -165,6 +191,52 @@ void main() {
       final tolerance = (0.15 * kcal) > 10 ? 0.15 * kcal : 10.0;
       expect((kcal - atwater).abs() <= tolerance, isTrue,
           reason: '$label: kcal $kcal, Atwater $atwater, tolerans $tolerance');
+    }
+  });
+
+  test('categories seçici adlarından; kullanıcı satırları en az birinde', () {
+    for (final row in rows) {
+      final label = _label(row);
+      final categories = row['categories'];
+      expect(categories, isA<List<dynamic>>(), reason: '$label: categories');
+      final list = (categories as List<dynamic>).cast<String>();
+      expect(list.toSet(), hasLength(list.length), reason: '$label: tekrar');
+      for (final c in list) {
+        expect(_pickerCategories.contains(c), isTrue,
+            reason: '$label: geçersiz kategori $c');
+      }
+      if (_isUserRow(row)) {
+        expect(list, isNotEmpty, reason: '$label: kategorisiz');
+      }
+    }
+    for (final category in _pickerCategories) {
+      expect(
+        rows.any((r) => (r['categories'] as List).contains(category)),
+        isTrue,
+        reason: '$category boş',
+      );
+    }
+  });
+
+  test('kullanıcı listesi: aynı besin tek satır, kızartmalar notlu', () {
+    final user = rows.where(_isUserRow).toList();
+    final names = user.map((r) => r['name']).toList();
+    expect(names.toSet(), hasLength(names.length));
+    final egg = user.singleWhere((r) => r['name'] == 'Haşlanmış yumurta');
+    expect(egg['categories'], containsAll(<String>[
+      'Haşlanmış Yiyecekler',
+      'Kahvaltılık Ürünler',
+      'Öğle Atıştırmalıkları',
+    ]));
+    // Çiğ ve haşlanmış brokoli ayrı kalır.
+    expect(user.where((r) => (r['name'] as String).contains('rokoli')),
+        hasLength(2));
+    for (final row in user) {
+      final fried = (row['categories'] as List)
+          .contains('Kızartılmış Yiyecekler');
+      if (fried) {
+        expect(row['note'], 'Yağ miktarına göre değişir', reason: _label(row));
+      }
     }
   });
 }

@@ -6,10 +6,12 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/item_actions.dart';
+import '../../settings/presentation/settings_providers.dart';
 import '../domain/task_item.dart';
 import 'operations_providers.dart';
 import 'operations_screen.dart';
 import 'operations_widgets.dart';
+import 'task_category_style.dart';
 import 'task_form_sheet.dart';
 
 /// Görev formunu açar (yeni ya da düzenleme) ve sonucu bildirir. Operasyon
@@ -139,7 +141,12 @@ class TasksView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(taskCategoryFilterProvider);
+    final active = ref.watch(activeTaskCategoryNamesProvider);
+    final categories = ref.watch(taskCategoriesProvider);
+    final selectedFilter = ref.watch(taskCategoryFilterProvider);
+    // Kapatılan kategori filtrede kalmışsa Tümü'ye düşülür.
+    final filter =
+        active.contains(selectedFilter) ? selectedFilter : null;
     final tasks = ref.watch(opsTasksProvider);
 
     return RefreshIndicator(
@@ -152,7 +159,7 @@ class TasksView extends ConsumerWidget {
           OpsFilterChips<String?>(
             options: [
               (null, 'Tümü'),
-              for (final c in AppTargets.taskCategories) (c, c),
+              for (final c in active) (c, c),
             ],
             selected: filter,
             onSelected: (value) =>
@@ -196,6 +203,7 @@ class TasksView extends ConsumerWidget {
                           key: ValueKey('ops-task-${task.id}'),
                           task: task,
                           child: _TaskRow(
+                          categoryColor: taskCategoryColor(categories, task.category),
                             task: task,
                             onToggle: () => _toggle(context, ref, task),
                             onEdit: () => openTaskForm(context, task),
@@ -222,9 +230,11 @@ class _TaskRow extends StatelessWidget {
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
+    required this.categoryColor,
   });
 
   final TaskItem task;
+  final Color categoryColor;
   final VoidCallback onToggle;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -268,7 +278,7 @@ class _TaskRow extends StatelessWidget {
                         TextSpan(
                           text: task.category,
                           style: TextStyle(
-                            color: AppColors.forTaskCategory(task.category),
+                            color: categoryColor,
                           ),
                         ),
                         if (task.assignee != null)

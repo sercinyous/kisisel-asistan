@@ -54,6 +54,20 @@ class FoodCatalog {
   List<FoodItem> get items =>
       List.unmodifiable([for (final entry in _entries) entry.item]);
 
+  /// [category] kategorisindeki besinler (dosya sırasıyla).
+  List<FoodItem> inCategory(String category) => [
+        for (final entry in _entries)
+          if (entry.item.categories.contains(category)) entry.item,
+      ];
+
+  /// Kimliğe göre besin; yoksa `null`.
+  FoodItem? byId(String id) {
+    for (final entry in _entries) {
+      if (entry.item.id == id) return entry.item;
+    }
+    return null;
+  }
+
   static const Map<String, String> _fold = {
     'İ': 'i',
     'I': 'i',

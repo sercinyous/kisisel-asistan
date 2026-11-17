@@ -51,9 +51,26 @@ class FoodMacros {
   });
 
   final double kcal;
-  final double protein;
-  final double carbs;
-  final double fat;
+
+  /// Kaynağında makro yoksa `null` (yalnızca kalori bilinir).
+  final double? protein;
+  final double? carbs;
+  final double? fat;
+}
+
+/// Besin seçicideki kategori adları (kullanıcı listesi, sırası korunur).
+abstract final class FoodCategories {
+  static const List<String> all = [
+    'İçecekler',
+    'Haşlanmış Yiyecekler',
+    'Kızartılmış Yiyecekler',
+    'Temel Gıdalar',
+    'Meyveler',
+    'Sebzeler',
+    'Kahvaltılık Ürünler',
+    'Öğle Atıştırmalıkları',
+    'Akşam Öğünleri',
+  ];
 }
 
 /// Paketli besin listesinin (`assets/data/foods_tr.json`) bir satırı.
@@ -68,6 +85,8 @@ class FoodItem {
     required this.carbs100,
     required this.fat100,
     this.aliases = const [],
+    this.categories = const [],
+    this.note,
     this.portions = const [],
     this.source = '',
     this.verification = '',
@@ -90,6 +109,8 @@ class FoodItem {
         return value;
       }
 
+      double? optional(String key) => map[key] == null ? null : number(key);
+
       return FoodItem(
         id: id,
         name: name,
@@ -99,9 +120,17 @@ class FoodItem {
         ],
         category: map['category'] as String? ?? 'diğer',
         kcal100: number('kcal100'),
-        protein100: number('protein100'),
-        carbs100: number('carbs100'),
-        fat100: number('fat100'),
+        categories: [
+          for (final category
+              in (map['categories'] as List<dynamic>? ?? const []))
+            category as String,
+        ],
+        note: (map['note'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (map['note'] as String).trim(),
+        protein100: optional('protein100'),
+        carbs100: optional('carbs100'),
+        fat100: optional('fat100'),
         portions: [
           for (final portion
               in (map['portions'] as List<dynamic>? ?? const []))
@@ -124,15 +153,31 @@ class FoodItem {
   final List<String> aliases;
   final String category;
   final double kcal100;
-  final double protein100;
-  final double carbs100;
-  final double fat100;
+
+  /// 100 g makrolar; kaynağında yoksa `null`.
+  final double? protein100;
+  final double? carbs100;
+  final double? fat100;
   final List<FoodPortion> portions;
+
+  /// Seçicideki kategoriler ([FoodCategories.all] adları); bir besin birden
+  /// çok kategoride olabilir.
+  final List<String> categories;
+
+  /// Uyarı notu (ör. kızartmalarda "Yağ miktarına göre değişir").
+  final String? note;
+
+  /// Üç makro da biliniyor mu.
+  bool get hasMacros => protein100 != null && carbs100 != null && fat100 != null;
+
+  /// Varsayılan porsiyon: listedeki ilk porsiyon, yoksa 100 g.
+  FoodPortion get defaultPortion =>
+      portions.isNotEmpty ? portions.first : const FoodPortion(name: '100 g', grams: 100);
 
   /// `USDA FDC kimlik | TürKomp kod` biçiminde kaynak notu.
   final String source;
 
-  /// "iki kaynak" | "tek kaynak"
+  /// "iki kaynak" | "tek kaynak" | "yaklaşık"
   final String verification;
 
   /// [grams] gram için değerler. Gram sonlu ve pozitif değilse hepsi 0.
@@ -140,9 +185,9 @@ class FoodItem {
     final g = grams.isFinite && grams > 0 ? grams : 0.0;
     return FoodMacros(
       kcal: kcal100 * g / 100,
-      protein: protein100 * g / 100,
-      carbs: carbs100 * g / 100,
-      fat: fat100 * g / 100,
+      protein: protein100 == null ? null : protein100! * g / 100,
+      carbs: carbs100 == null ? null : carbs100! * g / 100,
+      fat: fat100 == null ? null : fat100! * g / 100,
     );
   }
 }

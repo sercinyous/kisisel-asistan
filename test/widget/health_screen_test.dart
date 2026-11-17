@@ -404,6 +404,7 @@ void main() {
     expect(container.read(todayNutritionProvider).requireValue.calories, 420);
 
     await tapVisible(tester, find.text('Öğün ekle'));
+    await tapVisible(tester, find.text('Elle gir'));
     await tapVisible(tester, find.widgetWithText(ChoiceChip, 'Öğle'));
     await tester.enterText(find.byKey(const Key('meal-name')), 'Tavuk göğsü');
     await tester.enterText(find.byKey(const Key('meal-quantity')), '150 g');
@@ -478,6 +479,7 @@ void main() {
     await pumpScreen(tester);
 
     await tapVisible(tester, find.text('Öğün ekle'));
+    await tapVisible(tester, find.text('Elle gir'));
     await tester.enterText(find.byKey(const Key('meal-calories')), '-5');
     await tester.enterText(find.byKey(const Key('meal-protein')), '10000');
     await tester.enterText(find.byKey(const Key('meal-carbs')), 'çok');

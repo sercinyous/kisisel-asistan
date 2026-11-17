@@ -153,7 +153,14 @@ class ParsedTask {
   final DateTime? dueAt;
   final DateTime? remindAt;
 
-  static ParsedTask? fromJson(Map<String, dynamic> json) {
+  /// [allowed]: kullanıcının açık kategorileri; model başka bir değer
+  /// yazarsa 'Kişisel' (açıksa) ya da ilk açık kategori seçilir.
+  static ParsedTask? fromJson(
+    Map<String, dynamic> json, {
+    List<String> allowed = categories,
+  }) {
+    final options = allowed.isEmpty ? categories : allowed;
+    final fallback = options.contains('Kişisel') ? 'Kişisel' : options.first;
     final title = _parseText(json['title']);
     if (title == null) return null;
     var dueAt = _parseDate(json['due_at']);
@@ -172,7 +179,7 @@ class ParsedTask {
     return ParsedTask(
       title: _truncate(title, 300),
       description: _parseText(json['description']),
-      category: _oneOf(_legacyWork(json['category']), categories, 'Kişisel'),
+      category: _oneOf(_legacyWork(json['category']), options, fallback),
       priority: _oneOf(json['priority'], priorities, 'medium'),
       assignee: _parseText(json['assignee']),
       dueAt: dueAt,
@@ -512,8 +519,16 @@ class ParsedEntry {
 
   bool get isEmpty => totalCount == 0;
 
-  factory ParsedEntry.fromJson(Map<String, dynamic> json) => ParsedEntry(
-        tasks: _parseList(json['tasks'], ParsedTask.fromJson),
+  /// [taskCategories]: görevler için izin verilen (açık) kategoriler.
+  factory ParsedEntry.fromJson(
+    Map<String, dynamic> json, {
+    List<String> taskCategories = ParsedTask.categories,
+  }) =>
+      ParsedEntry(
+        tasks: _parseList(
+          json['tasks'],
+          (m) => ParsedTask.fromJson(m, allowed: taskCategories),
+        ),
         nutrition: _parseList(json['nutrition'], ParsedNutrition.fromJson),
         workouts: _parseList(json['workouts'], ParsedWorkout.fromJson),
         weights: _parseList(json['weights'], ParsedWeight.fromJson),

@@ -18,6 +18,7 @@ abstract class FriendsRepository {
   Future<void> respond(String requestId, {required bool accept});
   Future<List<Friend>> friends();
   Future<List<GoalSummary>> goalSummary(String friendId, DateTime weekStart);
+  Future<List<LeaderboardEntry>> leaderboard(DateTime weekStart);
   Future<void> leave(String friendId);
   Future<FriendSharing> mySharing();
   Future<FriendSharing> saveSharing(FriendSharing sharing);
@@ -78,6 +79,12 @@ class SupabaseFriendsRepository implements FriendsRepository {
         'friend': friendId,
         'week_start': isoDate(weekStart),
       })).map(GoalSummary.fromMap).toList();
+
+  @override
+  Future<List<LeaderboardEntry>> leaderboard(DateTime weekStart) async =>
+      _rows(await _client.rpc('friend_leaderboard', params: {
+        'week_start': isoDate(weekStart),
+      })).map(LeaderboardEntry.fromMap).toList();
 
   @override
   Future<void> leave(String friendId) =>
@@ -193,6 +200,43 @@ class DemoFriendsRepository implements FriendsRepository {
       s(GoalMetric.sleep, f.shareSleep, 3),
       s(GoalMetric.calories, f.shareCalories, 2),
     ];
+  }
+
+  @override
+  Future<List<LeaderboardEntry>> leaderboard(DateTime weekStart) async {
+    final out = <LeaderboardEntry>[
+      const LeaderboardEntry(
+        userId: 'me',
+        isSelf: true,
+        displayName: 'Sen',
+        email: 'ben@example.com',
+        stepsToday: 6420,
+        stepsWeek: 31250,
+        sleepToday: 412,
+        sleepWeekAvg: 428,
+        kcalToday: 1840,
+        kcalWeek: 9870,
+      ),
+    ];
+    var i = 0;
+    for (final f in _friends) {
+      i++;
+      out.add(LeaderboardEntry(
+        userId: f.friendId,
+        isSelf: false,
+        displayName: f.displayName,
+        email: f.displayName.contains('@')
+            ? f.displayName
+            : '${f.displayName.toLowerCase()}@example.com',
+        stepsToday: f.shareSteps ? 4000 + i * 2100 : null,
+        stepsWeek: f.shareSteps ? 25000 + i * 9000 : null,
+        sleepToday: f.shareSleep ? 380 + i * 20 : null,
+        sleepWeekAvg: f.shareSleep ? 400 + i * 15 : null,
+        kcalToday: f.shareCalories ? 1600 + i * 150 : null,
+        kcalWeek: f.shareCalories ? 9000 + i * 700 : null,
+      ));
+    }
+    return out;
   }
 
   @override

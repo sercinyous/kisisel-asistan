@@ -54,7 +54,8 @@ select tf.eq('yeni hesabın ayar satırı nötr varsayılanlarla açılır',
     "notifications_enabled": true, "routine_notifications": true, "monthly_lead_days": 3,
     "event_remind_minutes": 30, "quiet_hours_enabled": true, "team_members": [],
     "height_cm": null, "birth_year": null, "sex": null,
-    "display_name": null, "work_description": null, "onboarded_at": null}'::jsonb);
+    "display_name": null, "work_description": null, "onboarded_at": null,
+    "task_categories": null}'::jsonb);
 select tf.eq('yeni hesaba rutin/görev/not/tartı/öğün/ekip yüklenmez',
   (select to_jsonb(
      (select count(*) from public.routines where user_id = :A)
@@ -110,10 +111,16 @@ select tf.eq('başkasının ayar satırı güncellenmez (0 satır)',
 
 -- 4) 'Pusholder' → 'İş' ---------------------------------------------------
 select tf.ok('kısıtlarda Pusholder kalmadı, İş var; her sütunda tek check',
+  -- tasks.category sürüm 7'den beri serbesttir (görev kategorileri); yalnızca
+  -- notlarda sabit liste kalır.
   (select bool_and(pg_get_constraintdef(c.oid) not like '%Pusholder%' and pg_get_constraintdef(c.oid) like '%İş%')
    from pg_constraint c
-   where c.conrelid in ('public.tasks'::regclass, 'public.notes'::regclass)
+   where c.conrelid = 'public.notes'::regclass
      and c.contype = 'c' and pg_get_constraintdef(c.oid) ~ '\mcategory\M')
+  and (select bool_and(pg_get_constraintdef(c.oid) not like '%Pusholder%')
+       from pg_constraint c
+       where c.conrelid = 'public.tasks'::regclass
+         and c.contype = 'c' and pg_get_constraintdef(c.oid) ~ '\mcategory\M')
   and (select bool_and(pg_get_constraintdef(c.oid) not like '%Pusholder%' and pg_get_constraintdef(c.oid) like '%İş%')
        from pg_constraint c
        where c.conrelid = 'public.routines'::regclass and c.contype = 'c'
@@ -182,8 +189,9 @@ select tf.ok('veritabanında hiç Pusholder değeri yok',
   and not exists (select 1 from public.routines where scope = 'Pusholder'));
 
 -- Bilinmeyen değer yine reddedilir.
-select tf.fails('bilinmeyen görev kategorisi reddedilir', 'authenticated', :A,
-  $q$insert into public.tasks (title, category) values ('x', 'Bilinmeyen') returning to_jsonb(id)$q$, '23514');
+-- Görev kategorisi sürüm 7'den beri kullanıcı tanımlıdır: boş ad reddedilir.
+select tf.fails('boş görev kategorisi reddedilir', 'authenticated', :A,
+  $q$insert into public.tasks (title, category) values ('x', ' ') returning to_jsonb(id)$q$, '23514');
 select tf.fails('bilinmeyen not kategorisi reddedilir', 'authenticated', :A,
   $q$insert into public.notes (title, category) values ('x', 'Bilinmeyen') returning to_jsonb(id)$q$, '23514');
 select tf.fails('bilinmeyen rutin kapsamı reddedilir', 'authenticated', :A,

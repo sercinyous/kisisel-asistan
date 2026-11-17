@@ -1,3 +1,5 @@
+import '../../operations/domain/task_category.dart';
+
 /// Gün içi saat (`time` sütunu). Flutter'ın `TimeOfDay`'inden bağımsızdır ki
 /// alan katmanı arayüz kitaplığına bağlanmasın.
 class TimeOfDayValue implements Comparable<TimeOfDayValue> {
@@ -69,6 +71,7 @@ class UserSettings {
     this.displayName,
     this.workDescription,
     this.onboardedAt,
+    this.taskCategoriesRaw,
   });
 
   const UserSettings.defaults()
@@ -94,7 +97,8 @@ class UserSettings {
         sex = null,
         displayName = null,
         workDescription = null,
-        onboardedAt = null;
+        onboardedAt = null,
+        taskCategoriesRaw = null;
 
   /// Profil alanlarının sınırları; supabase/schema.sql'deki check'lerle aynıdır.
   static const int heightCmMin = 100;
@@ -150,6 +154,18 @@ class UserSettings {
   /// İlk kurulumun (kılavuz ve sorular) bittiği an; `null` = henüz bitmedi.
   final DateTime? onboardedAt;
 
+  /// Kullanıcının kaydettiği görev kategorileri; `null` = hiç düzenlenmedi
+  /// (yerleşik liste geçerli ve sütun yazılmaz).
+  final List<TaskCategory>? taskCategoriesRaw;
+
+  /// Etkin görev kategorileri tanımı (kapalılar dahil).
+  List<TaskCategory> get taskCategories =>
+      taskCategoriesRaw ?? TaskCategory.defaults;
+
+  /// Seçici, filtre ve AI için açık kategori adları.
+  List<String> get activeTaskCategories =>
+      TaskCategory.activeNames(taskCategories);
+
   /// İlk kurulum tamamlandı mı?
   bool get isOnboarded => onboardedAt != null;
 
@@ -197,6 +213,9 @@ class UserSettings {
       displayName: _text(map['display_name'], displayNameMax),
       workDescription: _text(map['work_description'], workDescriptionMax),
       onboardedAt: _timestamp(map['onboarded_at']),
+      taskCategoriesRaw: map['task_categories'] is List
+          ? TaskCategory.parseList(map['task_categories'])
+          : null,
     );
   }
 
@@ -256,6 +275,10 @@ class UserSettings {
         // kurulumu geri alıp kullanıcıyı kılavuza döndürmesin.
         if (onboardedAt != null)
           'onboarded_at': onboardedAt!.toUtc().toIso8601String(),
+        // Yalnızca kullanıcı düzenlediyse yazılır: sütunu henüz olmayan şemada
+        // diğer ayarların kaydı bozulmasın.
+        if (taskCategoriesRaw != null)
+          'task_categories': TaskCategory.toJsonList(taskCategoriesRaw!),
       };
 
   UserSettings copyWith({
@@ -282,6 +305,7 @@ class UserSettings {
     String? displayName,
     String? workDescription,
     DateTime? onboardedAt,
+    List<TaskCategory>? taskCategories,
     bool clearHeightCm = false,
     bool clearBirthYear = false,
     bool clearSex = false,
@@ -315,5 +339,8 @@ class UserSettings {
             ? null
             : (workDescription ?? this.workDescription),
         onboardedAt: onboardedAt ?? this.onboardedAt,
+        taskCategoriesRaw: taskCategories == null
+            ? taskCategoriesRaw
+            : TaskCategory.ensureActive(taskCategories),
       );
 }
