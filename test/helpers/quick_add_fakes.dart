@@ -86,7 +86,9 @@ class QuickAddHarness {
   QuickAddHarness({
     Future<ParsedEntry> Function(String input)? work,
     Future<ParsedEntry> Function(String input)? health,
-  })  : work = FakeGeminiParserService(work ?? _empty),
+    FakeNotificationService? notifications,
+  })  : notifications = notifications ?? FakeNotificationService(),
+        work = FakeGeminiParserService(work ?? _empty),
         health = FakeGeminiParserService(health ?? _empty);
 
   static Future<ParsedEntry> _empty(String _) async => const ParsedEntry();
@@ -94,7 +96,7 @@ class QuickAddHarness {
   final FakeGeminiParserService work;
   final FakeGeminiParserService health;
   final RecordingQuickAddRepository repository = RecordingQuickAddRepository();
-  final FakeNotificationService notifications = FakeNotificationService();
+  final FakeNotificationService notifications;
   final FakeSettingsRepository settings = FakeSettingsRepository();
   final FakeRoutinesRepository routines = FakeRoutinesRepository();
   final CountingTasksRepository tasks = CountingTasksRepository();
