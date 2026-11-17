@@ -342,6 +342,26 @@ class HealthRepository {
         .or(sourceFilter(source));
   }
 
+  /// Seçili sağlık kaynağını sunucuya yazar (`user_settings.health_source`);
+  /// `report_period_metrics` ve `friend_leaderboard` yalnızca bu kaynağın
+  /// satırlarını okur ([sourceFilter] ile aynı kural).
+  Future<void> saveHealthSource(
+    HealthSourceKind source, {
+    required String ownerId,
+  }) async {
+    if (ownerId != currentUserId) return;
+    await _client.from('user_settings').upsert(
+      {'user_id': ownerId, 'health_source': source.name},
+      onConflict: 'user_id',
+    );
+  }
+
+  /// Bir satırın kaynağı ([rowSource], boş olabilir) seçili kaynağa mı ait?
+  /// Sunucudaki `coalesce(source, 'appleHealth') = health_source` ve
+  /// [sourceFilter] ile aynı kural: kaynağı boş satır Apple Health sayılır.
+  static bool rowMatchesSource(String? rowSource, HealthSourceKind source) =>
+      (rowSource ?? HealthSourceKind.appleHealth.name) == source.name;
+
   /// [source]'a ait satırların PostgREST `or` filtresi. Kaynak sütunu
   /// eklenmeden önce yazılan satırlar (`source` boş) yalnızca HealthKit
   /// döneminden kalmıştır; Apple Health'e sayılır.

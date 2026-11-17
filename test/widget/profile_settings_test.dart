@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/core/services/health_source.dart'
+    show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/supabase_providers.dart';
@@ -50,6 +52,9 @@ void main() {
           routinesRepositoryProvider.overrideWithValue(FakeRoutinesRepository()),
           tasksRepositoryProvider.overrideWithValue(FakeTasksRepository()),
           healthRepositoryProvider.overrideWithValue(FakeHealthRepository()),
+          appleHealthConsentStoreProvider.overrideWithValue(
+            MemoryAppleHealthConsentStore(grantAll: true),
+          ),
           healthServiceProvider.overrideWithValue(
             FakeHealthService(const HealthSnapshot(status: HealthStatus.denied)),
           ),

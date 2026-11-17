@@ -691,13 +691,23 @@ class FakeHealthRepository implements HealthRepository {
   @override
   String? get currentUserId => userId;
 
+  /// [saveHealthSource] ile sunucuya yazılan son kaynak.
+  HealthSourceKind? savedHealthSource;
+
+  @override
+  Future<void> saveHealthSource(
+    HealthSourceKind source, {
+    required String ownerId,
+  }) async {
+    if (_ownerOk(ownerId)) savedHealthSource = source;
+  }
+
   bool _ownerOk(String? ownerId) =>
       userId != null && (ownerId == null || ownerId == userId);
 
   bool _sourceMatches(DateTime day, HealthSourceKind source) =>
-      (metricSources[AppDates.startOfDay(day)] ??
-          HealthSourceKind.appleHealth) ==
-      source;
+      HealthRepository.rowMatchesSource(
+          metricSources[AppDates.startOfDay(day)]?.name, source);
 
   /// Hazır gün toplamları (kalem kalem kaydı olmayan geçmiş günler için).
   /// [fetchNutritionTotals] bunlara [nutritionLogs]'un toplamını ekler.

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/notification_sync.dart';
+import 'package:kisisel_asistan/demo/demo_backend.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/gemini_parser_service.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/domain/quick_add_mode.dart';
@@ -40,6 +42,35 @@ const Map<String, dynamic> _meal = {
 };
 const Map<String, dynamic> _workout = {'workout_type': 'weights', 'title': 'Ağırlık'};
 const Map<String, dynamic> _weight = {'weight_kg': 83.9};
+
+/// Bekleyen bildirimleri cihaz gibi tutar: resync hepsini siler.
+/// [onSchedule] eklenti çağrısı sürerken (kayıt düşmeden önce) çağrılır;
+/// çıkışı tam o ana sokmak için.
+class _PendingNotifications extends FakeNotificationService {
+  final Map<String, String> pending = {};
+  void Function(int count)? onSchedule;
+  int _count = 0;
+
+  @override
+  Future<void> scheduleReminder(ReminderSchedule reminder) async {
+    onSchedule?.call(++_count);
+    // Gerçek eklenti gibi asenkron: bu arada başka iş araya girebilir.
+    await Future<void>.delayed(Duration.zero);
+    await super.scheduleReminder(reminder);
+    pending['task:${reminder.taskId}'] = reminder.title;
+  }
+
+  @override
+  Future<void> resync({
+    required List<RoutineSchedule> routines,
+    required List<ReminderSchedule> reminders,
+  }) async {
+    await super.resync(routines: routines, reminders: reminders);
+    pending
+      ..clear()
+      ..addAll({for (final r in reminders) 'task:${r.taskId}': r.title});
+  }
+}
 
 /// Bir sağlayıcının kaç kez taze veri ürettiğini sayar (ilk yükleme = 1).
 class _RefreshCounter {
@@ -588,5 +619,43 @@ void main() {
       expect(await controller.save(), isFalse);
       expect(harness.repository.saved, isEmpty);
     });
+  });
+
+  test('iki görev planlanırken çıkış yapılırsa eski hesabın hiçbir bildirimi '
+      'kalmaz', () async {
+    final notifications = _PendingNotifications();
+    final h = QuickAddHarness(
+      work: (_) async => ParsedEntry.fromJson({
+        'tasks': [
+          _task,
+          {..._task, 'title': 'İkinci randevu'},
+        ],
+      }).restrictedTo(QuickAddMode.work),
+      notifications: notifications,
+    );
+    final c = ProviderContainer(overrides: h.overrides);
+    addTearDown(c.dispose);
+    final queue = c.read(notificationSyncQueueProvider);
+    final ended = <Future<void>>[];
+    // Birinci görev planlanırken (ikinciden önce) oturum biter.
+    notifications.onSchedule = (count) {
+      if (count == 1) ended.add(queue.endSession(notifications));
+    };
+
+    c.listen(quickAddControllerProvider(QuickAddMode.work), (_, __) {});
+    final controller =
+        c.read(quickAddControllerProvider(QuickAddMode.work).notifier);
+    await pumpEventQueue();
+    await controller.parse('metin');
+    expect(await controller.save(), isTrue);
+    await Future.wait(ended);
+    await pumpEventQueue();
+
+    expect(ended, hasLength(1));
+    expect(notifications.scheduled.map((r) => r.title),
+        isNot(contains('İkinci randevu')),
+        reason: 'ikinci görev çıkıştan sonra planlanmaz');
+    expect(notifications.pending.values, isNot(contains('Ayşe ile vardiya planı')));
+    expect(notifications.pending.values, isNot(contains('İkinci randevu')));
   });
 }

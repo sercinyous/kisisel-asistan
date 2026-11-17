@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
+import 'package:kisisel_asistan/core/services/health_source.dart'
+    show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/gemini_parser_service.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/data/quick_add_repository.dart';
@@ -86,7 +88,9 @@ class QuickAddHarness {
   QuickAddHarness({
     Future<ParsedEntry> Function(String input)? work,
     Future<ParsedEntry> Function(String input)? health,
-  })  : work = FakeGeminiParserService(work ?? _empty),
+    FakeNotificationService? notifications,
+  })  : notifications = notifications ?? FakeNotificationService(),
+        work = FakeGeminiParserService(work ?? _empty),
         health = FakeGeminiParserService(health ?? _empty);
 
   static Future<ParsedEntry> _empty(String _) async => const ParsedEntry();
@@ -94,7 +98,7 @@ class QuickAddHarness {
   final FakeGeminiParserService work;
   final FakeGeminiParserService health;
   final RecordingQuickAddRepository repository = RecordingQuickAddRepository();
-  final FakeNotificationService notifications = FakeNotificationService();
+  final FakeNotificationService notifications;
   final FakeSettingsRepository settings = FakeSettingsRepository();
   final FakeRoutinesRepository routines = FakeRoutinesRepository();
   final CountingTasksRepository tasks = CountingTasksRepository();
@@ -115,6 +119,9 @@ class QuickAddHarness {
         notesRepositoryProvider.overrideWithValue(notes),
         healthRepositoryProvider.overrideWithValue(healthData),
         kokpitRepositoryProvider.overrideWithValue(kokpit),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(
           FakeHealthService(
             const HealthSnapshot(status: HealthStatus.unavailable),

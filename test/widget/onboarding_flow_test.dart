@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/core/services/health_source.dart'
+    show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/supabase_providers.dart';
@@ -39,6 +41,9 @@ class _Harness {
         routinesRepositoryProvider.overrideWithValue(routines),
         healthRepositoryProvider.overrideWithValue(health),
         notificationServiceProvider.overrideWithValue(notifications),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(healthService),
         authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
         onboardingRepositoryProvider.overrideWithValue(onboarding),

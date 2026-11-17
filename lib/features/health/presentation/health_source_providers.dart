@@ -6,26 +6,12 @@ import '../../../core/services/google_auth.dart';
 import '../../../core/services/google_health_api.dart';
 import '../../../core/services/health_service.dart';
 import '../../../core/services/health_source.dart';
-import '../../../core/services/supabase_providers.dart';
 import '../data/google_health_source.dart';
 import '../data/health_repository.dart';
 
 export '../../../core/services/google_auth.dart'
     show GoogleAuthException, GoogleAuthErrorKind, googleHealthScopes;
 export '../../../core/services/health_source.dart';
-
-/// Sağlık okuma/yazmalarının sahibi olan Supabase kullanıcısı. Oturum akışı
-/// henüz ilk değerini vermediyse istemcideki mevcut kullanıcı; Supabase
-/// başlatılmamışsa (testler) `null`.
-final healthOwnerIdProvider = Provider<String?>((ref) {
-  try {
-    final session = ref.watch(authSessionProvider);
-    if (session.hasValue) return session.value?.user.id;
-    return ref.watch(supabaseClientProvider).auth.currentUser?.id;
-  } catch (_) {
-    return null;
-  }
-});
 
 /// Google bağlantısının cihazda saklanan izleri (Supabase'e yazılmaz). Her
 /// uygulama kullanıcısı için ayrı saklanır ([ownerId]); başka kullanıcının
@@ -469,6 +455,8 @@ class HealthWriteGuard {
       return repository.currentUserId == ownerId &&
           identical(_read(healthRepositoryProvider), repository) &&
           _read(healthSourceProvider) == source &&
+          (source != HealthSourceKind.appleHealth ||
+              _read(appleHealthConsentProvider.notifier).isGranted(ownerId)) &&
           _read(googleConnectionProvider.notifier).generation ==
               _googleGeneration;
     } catch (_) {
@@ -501,12 +489,17 @@ final googleHealthSourceProvider = Provider<GoogleHealthReader>((ref) {
   );
 });
 
-/// Seçili sağlık verisi kaynağı. Apple Health seçiliyken doğrudan
-/// [healthServiceProvider] döner (HealthKit davranışı değişmez); aynı anda
+/// Seçili sağlık verisi kaynağı. Apple Health seçiliyken [healthServiceProvider]
+/// oturumdaki kullanıcının uygulama içi onayına bağlanır
+/// ([ConsentGatedHealthSource]); aynı anda
 /// yalnızca biri okunur ve yedeklenir.
 final healthDataSourceProvider = Provider<HealthDataSource>(
   (ref) => switch (ref.watch(healthSourceProvider)) {
-    HealthSourceKind.appleHealth => ref.watch(healthServiceProvider),
+    HealthSourceKind.appleHealth => ConsentGatedHealthSource(
+        inner: ref.watch(healthServiceProvider),
+        ownerId: () => ref.read(healthRepositoryProvider).currentUserId,
+        consent: ref.watch(appleHealthConsentProvider.notifier),
+      ),
     HealthSourceKind.googleHealth => ref.watch(googleHealthSourceProvider),
   },
 );

@@ -111,6 +111,9 @@ void main() {
         ProviderScope(
           overrides: [
             healthRepositoryProvider.overrideWithValue(FakeHealthRepository()),
+            appleHealthConsentStoreProvider.overrideWithValue(
+              MemoryAppleHealthConsentStore(grantAll: true),
+            ),
             healthServiceProvider.overrideWithValue(
               FakeHealthService(
                 HealthSnapshot(

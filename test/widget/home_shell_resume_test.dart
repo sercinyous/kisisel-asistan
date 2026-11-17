@@ -141,6 +141,9 @@ void main() {
         reportsRepositoryProvider.overrideWithValue(reports),
         notificationServiceProvider
             .overrideWithValue(FakeNotificationService()),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(healthKit),
       ],
     );

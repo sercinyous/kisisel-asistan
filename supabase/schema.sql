@@ -2738,3 +2738,935 @@ $$;
 revoke all on function public.complete_onboarding(jsonb, uuid) from public, anon;
 grant execute on function public.complete_onboarding(jsonb, uuid) to authenticated;
 -- END complete_onboarding
+
+-- =====================================================================
+-- BEGIN report_claim_lease (kiralamalı yenileme) — idempotent
+--   claim_dirty_reports artık dirty'yi temizlemez: satırı claim_token ve
+--   claimed_at ile kiralar (p_lease, varsayılan 15 dk) ve o anki
+--   dirty_version'ı döndürür. Tetikleyici her kirletmede dirty_version'ı
+--   artırır. İş başarıyla bitince complete_report_claim /
+--   save_refreshed_report (jetonlu) dirty'yi YALNIZCA sürüm değişmediyse
+--   temizler (karşılaştır-ve-temizle); hata olursa release_report_claim
+--   kirayı bırakır. İşçi ölürse kira süresi dolunca rapor yeniden alınır.
+-- =====================================================================
+alter table public.daily_reports  add column if not exists dirty_version bigint not null default 0;
+alter table public.daily_reports  add column if not exists claim_token uuid;
+alter table public.daily_reports  add column if not exists claimed_at timestamptz;
+alter table public.weekly_reports add column if not exists dirty_version bigint not null default 0;
+alter table public.weekly_reports add column if not exists claim_token uuid;
+alter table public.weekly_reports add column if not exists claimed_at timestamptz;
+
+create or replace function public.mark_reports_dirty(p_user uuid, p_from date, p_to date)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if p_user is null or p_from is null or p_to is null then
+    return;
+  end if;
+  update daily_reports
+     set dirty = true, dirty_at = now(), dirty_version = dirty_version + 1
+   where user_id = p_user and report_date between p_from and p_to;
+  update weekly_reports
+     set dirty = true, dirty_at = now(), dirty_version = dirty_version + 1
+   where user_id = p_user
+     and week_start between date_trunc('week', p_from)::date and date_trunc('week', p_to)::date;
+end;
+$$;
+
+drop function if exists public.claim_dirty_reports(integer, interval);
+
+create or replace function public.claim_dirty_reports(
+  p_limit integer default 40,
+  p_settle interval default interval '10 minutes',
+  p_lease interval default interval '15 minutes'
+)
+returns table (kind text, user_id uuid, report_date date, claim_token uuid, dirty_version bigint)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_token uuid := gen_random_uuid();
+begin
+  return query
+  with picked as (
+    select 'daily'::text as k, d.id, d.dirty_at
+    from daily_reports d
+    join user_settings s on s.user_id = d.user_id and s.onboarded_at is not null
+    where d.dirty and d.dirty_at <= now() - p_settle
+      and (d.claimed_at is null or d.claimed_at <= now() - p_lease)
+    union all
+    select 'weekly'::text, w.id, w.dirty_at
+    from weekly_reports w
+    join user_settings s on s.user_id = w.user_id and s.onboarded_at is not null
+    where w.dirty and w.dirty_at <= now() - p_settle
+      and (w.claimed_at is null or w.claimed_at <= now() - p_lease)
+    order by 3
+    limit greatest(p_limit, 0)
+  ),
+  ud as (
+    update daily_reports d set claim_token = v_token, claimed_at = now()
+    from picked p where p.k = 'daily' and d.id = p.id
+    returning d.user_id, d.report_date, d.dirty_version
+  ),
+  uw as (
+    update weekly_reports w set claim_token = v_token, claimed_at = now()
+    from picked p where p.k = 'weekly' and w.id = p.id
+    returning w.user_id, w.week_start, w.dirty_version
+  )
+  select 'daily'::text, ud.user_id, ud.report_date, v_token, ud.dirty_version from ud
+  union all
+  select 'weekly'::text, uw.user_id, uw.week_start, v_token, uw.dirty_version from uw;
+end;
+$$;
+
+-- Kirayı bırakır (dirty olduğu gibi kalır; sonraki geçiş yeniden alır).
+create or replace function public.release_report_claim(
+  p_kind text, p_user uuid, p_date date, p_token uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if p_kind = 'daily' then
+    update daily_reports set claim_token = null, claimed_at = null
+    where user_id = p_user and report_date = p_date and claim_token = p_token;
+  elsif p_kind = 'weekly' then
+    update weekly_reports set claim_token = null, claimed_at = null
+    where user_id = p_user and week_start = p_date and claim_token = p_token;
+  else
+    raise exception 'p_kind daily ya da weekly olmalı: %', p_kind using errcode = '22023';
+  end if;
+end;
+$$;
+
+-- Başarılı yenilemeyi tamamlar: kira hâlâ bu jetondaysa ve alındığından beri
+-- yeni veri gelmediyse (dirty_version aynı) dirty temizlenir; her durumda
+-- kira bırakılır. Temizlendiyse true.
+create or replace function public.complete_report_claim(
+  p_kind text, p_user uuid, p_date date, p_token uuid, p_version bigint
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_cleared boolean;
+begin
+  if p_kind = 'daily' then
+    update daily_reports
+       set dirty = dirty and dirty_version <> p_version,
+           claim_token = null, claimed_at = null
+     where user_id = p_user and report_date = p_date and claim_token = p_token
+    returning not dirty into v_cleared;
+  elsif p_kind = 'weekly' then
+    update weekly_reports
+       set dirty = dirty and dirty_version <> p_version,
+           claim_token = null, claimed_at = null
+     where user_id = p_user and week_start = p_date and claim_token = p_token
+    returning not dirty into v_cleared;
+  else
+    raise exception 'p_kind daily ya da weekly olmalı: %', p_kind using errcode = '22023';
+  end if;
+  return coalesce(v_cleared, false);
+end;
+$$;
+
+-- Jetonlu kayıt: yorum geldiyse kaydedip karşılaştır-ve-temizle; yorum yoksa
+-- (kota/AI) eski 5 argümanlı yol sayıları yazar, dirty bırakır, kira bırakılır.
+create or replace function public.save_refreshed_report(
+  p_kind text, p_user uuid, p_date date, p_metrics jsonb, p_summary text,
+  p_token uuid, p_version bigint
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform public.save_refreshed_report(p_kind, p_user, p_date, p_metrics, p_summary);
+  if p_summary is not null then
+    perform public.complete_report_claim(p_kind, p_user, p_date, p_token, p_version);
+  else
+    perform public.release_report_claim(p_kind, p_user, p_date, p_token);
+  end if;
+end;
+$$;
+
+revoke all on function public.claim_dirty_reports(integer, interval, interval) from public, anon, authenticated;
+revoke all on function public.release_report_claim(text, uuid, date, uuid) from public, anon, authenticated;
+revoke all on function public.complete_report_claim(text, uuid, date, uuid, bigint) from public, anon, authenticated;
+revoke all on function public.save_refreshed_report(text, uuid, date, jsonb, text, uuid, bigint)
+  from public, anon, authenticated;
+grant execute on function public.claim_dirty_reports(integer, interval, interval) to service_role;
+grant execute on function public.release_report_claim(text, uuid, date, uuid) to service_role;
+grant execute on function public.complete_report_claim(text, uuid, date, uuid, bigint) to service_role;
+grant execute on function public.save_refreshed_report(text, uuid, date, jsonb, text, uuid, bigint)
+  to service_role;
+-- END report_claim_lease
+
+-- =====================================================================
+-- BEGIN friend_scope_source — idempotent
+--   1) Arkadaş paylaşımı kapsamı: share_steps/share_sleep/share_calories
+--      ("hedef paylaşımı") yalnızca hedefi tutturulan gün sayısını açar
+--      (friend_goal_summary). Ham değerler (adım, uyku dakikası, kcal) ayrı
+--      ve açık bir onayla (friend_sharing.share_details, varsayılan false)
+--      paylaşılır. Eski anahtardan GERİYE DOLDURULMAZ: eski sürümde hedef
+--      paylaşımını açmış kullanıcının ham değerleri yeni onay verene kadar
+--      arkadaşlara null döner. Kısıt sunucuda (friend_leaderboard) uygulanır;
+--      kişinin kendi satırı kendi değerlerini görür.
+--   2) Seçili sağlık kaynağı sunucuda: user_settings.health_source
+--      ('appleHealth' | 'googleHealth', boş = Apple Health). Rapor
+--      (report_period_metrics) ve arkadaş sıralaması (friend_leaderboard)
+--      daily_health_metrics'i yalnızca bu kaynaktan okur; kaynağı boş satır
+--      Apple Health sayılır (istemci HealthRepository.sourceFilter kuralı).
+-- =====================================================================
+alter table public.friend_sharing
+  add column if not exists share_details boolean not null default false;
+
+alter table public.user_settings
+  add column if not exists health_source text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.user_settings'::regclass
+      and conname = 'user_settings_health_source_check'
+  ) then
+    alter table public.user_settings
+      add constraint user_settings_health_source_check
+      check (health_source is null or health_source in ('appleHealth', 'googleHealth'));
+  end if;
+end;
+$$;
+
+create or replace function public.report_period_metrics(
+  p_user uuid,
+  p_from date,
+  p_to date,
+  p_with_days boolean
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_tz        text;
+  v_cal       integer;
+  v_pro       integer;
+  v_steps     integer;
+  v_sleep     integer;
+  v_today     date;
+  v_t0        timestamptz;
+  v_t1        timestamptz;
+  v_t1_tasks  timestamptz;
+  v_w_start   numeric;
+  v_w_end     numeric;
+  v_result    jsonb;
+  v_src       text;
+begin
+  if p_user is null or p_from is null or p_to is null or p_to < p_from then
+    raise exception 'Geçersiz rapor aralığı' using errcode = '22023';
+  end if;
+
+  select s.timezone, s.daily_calories, s.daily_protein_g, s.daily_steps, s.sleep_minutes
+    into v_tz, v_cal, v_pro, v_steps, v_sleep
+  from user_settings s
+  where s.user_id = p_user;
+
+  -- Seçili sağlık kaynağı (friend_scope_source). Boş = Apple Health.
+  select s.health_source into v_src
+  from user_settings s
+  where s.user_id = p_user;
+  v_src := coalesce(v_src, 'appleHealth');
+
+  -- Ayar satırı yoksa tablo varsayılanları geçerlidir.
+  v_tz    := coalesce(nullif(btrim(v_tz), ''), 'Europe/Istanbul');
+  v_cal   := coalesce(v_cal, 2000);
+  v_pro   := coalesce(v_pro, 120);
+  v_steps := coalesce(v_steps, 8000);
+  v_sleep := coalesce(v_sleep, 450);
+
+  -- Bozuk bir saat dilimi adı raporu düşürmesin.
+  begin
+    perform now() at time zone v_tz;
+  exception when others then
+    v_tz := 'Europe/Istanbul';
+  end;
+
+  v_today    := (now() at time zone v_tz)::date;
+  v_t0       := p_from::timestamp at time zone v_tz;
+  v_t1       := (p_to + 1)::timestamp at time zone v_tz;
+  v_t1_tasks := least(v_t1, (v_today + 1)::timestamp at time zone v_tz);
+
+  select f.weight_kg into v_w_end
+  from fitness_logs f
+  where f.user_id = p_user and f.log_type = 'weight'
+    and f.logged_at >= v_t0 and f.logged_at < v_t1
+  order by f.logged_at desc
+  limit 1;
+
+  select f.weight_kg into v_w_start
+  from fitness_logs f
+  where f.user_id = p_user and f.log_type = 'weight' and f.logged_at < v_t0
+  order by f.logged_at desc
+  limit 1;
+
+  if v_w_start is null then
+    select f.weight_kg into v_w_start
+    from fitness_logs f
+    where f.user_id = p_user and f.log_type = 'weight'
+      and f.logged_at >= v_t0 and f.logged_at < v_t1
+    order by f.logged_at asc
+    limit 1;
+  end if;
+
+  with days as (
+    select g::date as day, g::date <= v_today as elapsed
+    from generate_series(p_from::timestamp, p_to::timestamp, interval '1 day') as g
+  ),
+  planned as (
+    select d.day,
+           r.id as routine_id,
+           r.category,
+           case when r.frequency = 'monthly'
+                then date_trunc('month', d.day)::date
+                else d.day end as period_key
+    from days d
+    join routines r
+      on r.user_id = p_user
+     and r.is_active
+     and (r.created_at at time zone v_tz)::date <= d.day
+     and (
+       (r.frequency = 'weekly'
+        and extract(isodow from d.day)::smallint = any (r.days_of_week))
+       or
+       (r.frequency = 'monthly'
+        and extract(day from d.day)::integer = least(
+              r.day_of_month::integer,
+              extract(day from date_trunc('month', d.day)
+                               + interval '1 month' - interval '1 day')::integer))
+     )
+    where d.elapsed
+  ),
+  routine_day as (
+    select p.day,
+           count(*)                                        as planned,
+           count(c.id)                                     as done,
+           count(*) filter (where p.category = 'spor')     as workouts_planned
+    from planned p
+    left join routine_completions c
+      on c.routine_id = p.routine_id and c.completed_on = p.period_key
+     and c.user_id = p_user  -- başka kullanıcının tamamlaması sayılmaz (routine_owner_fk)
+    group by p.day
+  ),
+  task_day as (
+    select (t.due_at at time zone v_tz)::date              as day,
+           count(*)                                        as total,
+           count(*) filter (where t.status = 'done')       as done
+    from tasks t
+    where t.user_id = p_user and t.due_at >= v_t0 and t.due_at < v_t1_tasks
+    group by 1
+  ),
+  nutrition_day as (
+    select (n.eaten_at at time zone v_tz)::date            as day,
+           sum(n.calories)  as calories,
+           sum(n.protein_g) as protein_g,
+           sum(n.carbs_g)   as carbs_g,
+           sum(n.fat_g)     as fat_g,
+           count(*)         as entries
+    from nutrition_logs n
+    where n.user_id = p_user and n.eaten_at >= v_t0 and n.eaten_at < v_t1
+    group by 1
+  ),
+  workout_day as (
+    select (f.logged_at at time zone v_tz)::date as day, count(*) as done
+    from fitness_logs f
+    where f.user_id = p_user and f.log_type = 'workout'
+      and f.logged_at >= v_t0 and f.logged_at < v_t1
+    group by 1
+  ),
+  per_day as (
+    select d.day,
+           d.elapsed,
+           coalesce(t.total, 0)             as tasks_total,
+           coalesce(t.done, 0)              as tasks_done,
+           coalesce(r.planned, 0)           as routines_planned,
+           coalesce(r.done, 0)              as routines_done,
+           coalesce(r.workouts_planned, 0)  as workouts_planned,
+           coalesce(w.done, 0)              as workouts_done,
+           coalesce(n.calories, 0)          as calories,
+           coalesce(n.protein_g, 0)         as protein_g,
+           coalesce(n.carbs_g, 0)           as carbs_g,
+           coalesce(n.fat_g, 0)             as fat_g,
+           coalesce(n.entries, 0)           as entries,
+           coalesce(h.steps, 0)             as steps,
+           coalesce(h.sleep_minutes, 0)     as sleep_minutes,
+           coalesce(h.active_kcal, 0)       as active_kcal,
+           (coalesce(n.entries, 0) > 0
+             and n.protein_g >= v_pro * 0.9)::integer as protein_hit,
+           (coalesce(n.entries, 0) > 0
+             and n.calories between v_cal * 0.85 and v_cal * 1.10)::integer as calorie_ok
+    from days d
+    left join task_day t      on t.day = d.day
+    left join routine_day r   on r.day = d.day
+    left join workout_day w   on w.day = d.day
+    left join nutrition_day n on n.day = d.day
+    left join daily_health_metrics h
+      on h.user_id = p_user and h.metric_date = d.day
+     -- Yalnızca seçili kaynağın satırı; kaynağı boş (eski HealthKit) satır
+     -- Apple Health sayılır (istemci HealthRepository.sourceFilter ile aynı).
+     and coalesce(h.source, 'appleHealth') = v_src
+  ),
+  agg as (
+    select
+      sum(tasks_total)       as tasks_total,
+      sum(tasks_done)        as tasks_done,
+      sum(routines_planned)  as routines_planned,
+      sum(routines_done)     as routines_done,
+      sum(workouts_planned)  as workouts_planned,
+      sum(workouts_done)     as workouts_done,
+      sum(protein_hit)       as protein_days_hit,
+      sum(calorie_ok)        as calorie_days_in_range,
+      count(*) filter (where elapsed)       as elapsed_days,
+      count(*) filter (where entries > 0)   as days_logged,
+      avg(calories)  filter (where entries > 0) as calories,
+      avg(protein_g) filter (where entries > 0) as protein_g,
+      avg(carbs_g)   filter (where entries > 0) as carbs_g,
+      avg(fat_g)     filter (where entries > 0) as fat_g,
+      avg(steps)         filter (where steps > 0)         as steps,
+      avg(sleep_minutes) filter (where sleep_minutes > 0) as sleep_minutes,
+      avg(active_kcal)   filter (where active_kcal > 0)   as active_kcal,
+      count(*) filter (where steps > 0 or sleep_minutes > 0 or active_kcal > 0)
+        as days_with_data,
+      jsonb_agg(
+        jsonb_build_object(
+          'date', to_char(day, 'YYYY-MM-DD'),
+          'work_rate', round(100.0 * (tasks_done + routines_done)
+                             / nullif(tasks_total + routines_planned, 0))::integer,
+          'form_rate', case when elapsed then
+                         round(100.0 * (least(workouts_done, workouts_planned) + protein_hit)
+                               / (workouts_planned + 1))::integer
+                       end,
+          'calories', round(calories, 1),
+          'protein_g', round(protein_g, 1),
+          'steps', steps,
+          'sleep_minutes', sleep_minutes,
+          'workouts', workouts_done
+        ) order by day
+      ) as days
+    from per_day
+  )
+  select jsonb_build_object(
+    'period', jsonb_build_object(
+      'start', to_char(p_from, 'YYYY-MM-DD'),
+      'end', to_char(p_to, 'YYYY-MM-DD')),
+    'work', jsonb_build_object(
+      'tasks_total', a.tasks_total,
+      'tasks_done', a.tasks_done,
+      'routines_planned', a.routines_planned,
+      'routines_done', a.routines_done,
+      'rate', round(100.0 * (a.tasks_done + a.routines_done)
+                    / nullif(a.tasks_total + a.routines_planned, 0))::integer),
+    'form', jsonb_build_object(
+      'workouts_planned', a.workouts_planned,
+      'workouts_done', a.workouts_done,
+      'protein_days_hit', a.protein_days_hit,
+      'calorie_days_in_range', a.calorie_days_in_range,
+      'rate', round(100.0 * (least(a.workouts_done, a.workouts_planned) + a.protein_days_hit)
+                    / nullif(a.workouts_planned + a.elapsed_days, 0))::integer),
+    'nutrition', jsonb_build_object(
+      'calories', coalesce(round(a.calories, 1), 0),
+      'protein_g', coalesce(round(a.protein_g, 1), 0),
+      'carbs_g', coalesce(round(a.carbs_g, 1), 0),
+      'fat_g', coalesce(round(a.fat_g, 1), 0),
+      'days_logged', a.days_logged),
+    'health', jsonb_build_object(
+      'steps', coalesce(round(a.steps), 0)::integer,
+      'sleep_minutes', coalesce(round(a.sleep_minutes), 0)::integer,
+      'active_kcal', coalesce(round(a.active_kcal), 0)::integer,
+      'days_with_data', a.days_with_data),
+    'weight', jsonb_build_object(
+      'start_kg', v_w_start,
+      'end_kg', v_w_end,
+      'change_kg', v_w_end - v_w_start),
+    'targets', jsonb_build_object(
+      'calories', v_cal,
+      'protein_g', v_pro,
+      'steps', v_steps,
+      'sleep_minutes', v_sleep)
+  ) || case when p_with_days
+            then jsonb_build_object('days', a.days)
+            else '{}'::jsonb end
+  into v_result
+  from agg a;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.report_period_metrics(uuid, date, date, boolean)
+  from public, anon, authenticated;
+grant execute on function public.report_period_metrics(uuid, date, date, boolean)
+  to service_role;
+
+-- Dönüş tipi değişmez (önceki blok tekrar çalıştırılabilsin). Arkadaşın
+-- share_* sütunları hedef paylaşımıdır; ham değerler yalnızca hedef
+-- paylaşımı VE share_details açıkken doludur, aksi halde null.
+create or replace function public.friend_leaderboard(week_start date)
+returns table (
+  user_id         uuid,
+  is_self         boolean,
+  display_name    text,
+  email           text,
+  avatar_url      text,
+  share_steps     boolean,
+  share_sleep     boolean,
+  share_calories  boolean,
+  steps_today     bigint,
+  steps_week      bigint,
+  sleep_today     integer,
+  sleep_week_avg  integer,
+  kcal_today      numeric,
+  kcal_week       numeric
+)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid  uuid := auth.uid();
+  v_week date := friend_leaderboard.week_start;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_week is null or extract(isodow from v_week) <> 1 then
+    raise exception 'week_start Pazartesi olmalı: %', v_week using errcode = '22023';
+  end if;
+
+  return query
+  with people as (
+    select v_uid as pid, true as me
+    union
+    select case when f.user_a = v_uid then f.user_b else f.user_a end, false
+    from public.friendships f
+    where f.user_a = v_uid or f.user_b = v_uid
+  ),
+  base as (
+    select p.pid, p.me,
+           coalesce(to_jsonb(u) -> 'raw_user_meta_data', '{}'::jsonb) as meta,
+           lower(btrim(u.email)) as mail,
+           nullif(btrim(s.display_name), '') as dn,
+           public.safe_timezone(s.timezone) as tz,
+           coalesce(s.health_source, 'appleHealth') as src,
+           coalesce(sh.share_steps, false) as gst,
+           coalesce(sh.share_sleep, false) as gsl,
+           coalesce(sh.share_calories, false) as gca,
+           p.me or (coalesce(sh.share_steps, false) and coalesce(sh.share_details, false)) as sst,
+           p.me or (coalesce(sh.share_sleep, false) and coalesce(sh.share_details, false)) as ssl,
+           p.me or (coalesce(sh.share_calories, false) and coalesce(sh.share_details, false)) as sca
+    from people p
+    join auth.users u on u.id = p.pid
+    left join public.user_settings s on s.user_id = p.pid
+    left join public.friend_sharing sh on sh.user_id = p.pid
+  ),
+  b as (
+    select x.*, (now() at time zone x.tz)::date as today
+    from base x
+  )
+  select b.pid,
+         b.me,
+         coalesce(b.dn,
+                  nullif(btrim(b.meta ->> 'full_name'), ''),
+                  nullif(btrim(b.meta ->> 'name'), ''),
+                  b.mail, '')::text,
+         b.mail,
+         coalesce(nullif(btrim(b.meta ->> 'avatar_url'), ''),
+                  nullif(btrim(b.meta ->> 'picture'), ''))::text,
+         b.me or b.gst, b.me or b.gsl, b.me or b.gca,
+         case when b.sst then coalesce(h.st_today, 0) end,
+         case when b.sst then coalesce(h.st_week, 0) end,
+         case when b.ssl then coalesce(h.sl_today, 0) end,
+         case when b.ssl then coalesce(h.sl_avg, 0) end,
+         case when b.sca then coalesce(n.k_today, 0) end,
+         case when b.sca then coalesce(n.k_week, 0) end
+  from b
+  left join lateral (
+    select coalesce(sum(m.steps) filter (where m.metric_date = b.today), 0)::bigint as st_today,
+           coalesce(sum(m.steps), 0)::bigint as st_week,
+           coalesce(sum(m.sleep_minutes) filter (where m.metric_date = b.today), 0)::integer as sl_today,
+           coalesce(round(avg(m.sleep_minutes) filter (where m.sleep_minutes > 0)), 0)::integer as sl_avg
+    from public.daily_health_metrics m
+    where (b.sst or b.ssl)
+      and m.user_id = b.pid
+      and coalesce(m.source, 'appleHealth') = b.src
+      and m.metric_date between v_week and least(v_week + 6, b.today)
+  ) h on true
+  left join lateral (
+    select coalesce(sum(nl.calories) filter (
+             where (nl.eaten_at at time zone b.tz)::date = b.today), 0)::numeric as k_today,
+           coalesce(sum(nl.calories), 0)::numeric as k_week
+    from public.nutrition_logs nl
+    where b.sca
+      and nl.user_id = b.pid
+      and nl.eaten_at >= v_week::timestamp at time zone b.tz
+      and nl.eaten_at < (v_week + 7)::timestamp at time zone b.tz
+  ) n on true
+  order by b.me desc, b.pid;
+end;
+$$;
+
+revoke all on function public.friend_leaderboard(date) from public, anon;
+grant execute on function public.friend_leaderboard(date) to authenticated;
+
+-- Hedef gün sayısı da arkadaşın seçili kaynağını okur (aynı kural).
+create or replace function public.friend_goal_summary(friend uuid, week_start date)
+returns table (metric text, shared boolean, goal_days integer, data_days integer)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid        uuid := auth.uid();
+  v_friend     uuid := friend_goal_summary.friend;
+  v_week       date := friend_goal_summary.week_start;
+  v_is_friend  boolean := false;
+  v_sh_steps   boolean := false;
+  v_sh_sleep   boolean := false;
+  v_sh_cal     boolean := false;
+  v_tz         text;
+  v_t_steps    integer;
+  v_t_sleep    integer;
+  v_t_cal      integer;
+  v_today      date;
+  v_t0         timestamptz;
+  v_t1         timestamptz;
+  v_s_goal     integer := 0;
+  v_s_data     integer := 0;
+  v_l_goal     integer := 0;
+  v_l_data     integer := 0;
+  v_c_goal     integer := 0;
+  v_c_data     integer := 0;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_week is null or extract(isodow from v_week) <> 1 then
+    raise exception 'week_start Pazartesi olmalı: %', v_week using errcode = '22023';
+  end if;
+
+  if v_friend is not null and v_friend <> v_uid then
+    v_is_friend := exists (
+      select 1 from public.friendships f
+      where f.user_a = least(v_uid, v_friend) and f.user_b = greatest(v_uid, v_friend)
+    );
+  end if;
+
+  if v_is_friend then
+    select coalesce(sh.share_steps, false), coalesce(sh.share_sleep, false),
+           coalesce(sh.share_calories, false)
+      into v_sh_steps, v_sh_sleep, v_sh_cal
+    from public.friend_sharing sh
+    where sh.user_id = v_friend;
+    v_sh_steps := coalesce(v_sh_steps, false);
+    v_sh_sleep := coalesce(v_sh_sleep, false);
+    v_sh_cal   := coalesce(v_sh_cal, false);
+  end if;
+
+  if v_sh_steps or v_sh_sleep or v_sh_cal then
+    select s.timezone, s.daily_steps, s.sleep_minutes, s.daily_calories
+      into v_tz, v_t_steps, v_t_sleep, v_t_cal
+    from public.user_settings s
+    where s.user_id = v_friend;
+    v_tz      := public.safe_timezone(v_tz);
+    v_t_steps := coalesce(v_t_steps, 8000);
+    v_t_sleep := coalesce(v_t_sleep, 450);
+    v_t_cal   := coalesce(v_t_cal, 2000);
+    v_today   := (now() at time zone v_tz)::date;
+    v_t0      := v_week::timestamp at time zone v_tz;
+    v_t1      := (v_week + 7)::timestamp at time zone v_tz;
+  end if;
+
+  if v_sh_steps then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_s_goal, v_s_data
+    from (
+      select d.day,
+             coalesce(h.steps, 0) > 0 as has_data,
+             public.goal_steps_hit(coalesce(h.steps, 0), v_t_steps) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join public.daily_health_metrics h
+        on h.user_id = v_friend and h.metric_date = d.day
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  if v_sh_sleep then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_l_goal, v_l_data
+    from (
+      select d.day,
+             coalesce(h.sleep_minutes, 0) > 0 as has_data,
+             public.goal_sleep_hit(coalesce(h.sleep_minutes, 0), v_t_sleep) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join public.daily_health_metrics h
+        on h.user_id = v_friend and h.metric_date = d.day
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  if v_sh_cal then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_c_goal, v_c_data
+    from (
+      select d.day,
+             n.kcal is not null as has_data,
+             public.goal_calories_hit(n.kcal, v_t_cal) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join (
+        select (nl.eaten_at at time zone v_tz)::date as day, sum(nl.calories) as kcal
+        from public.nutrition_logs nl
+        where nl.user_id = v_friend and nl.eaten_at >= v_t0 and nl.eaten_at < v_t1
+        group by 1
+      ) n on n.day = d.day
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  return query values
+    ('steps'::text,    v_sh_steps, v_s_goal, v_s_data),
+    ('sleep'::text,    v_sh_sleep, v_l_goal, v_l_data),
+    ('calories'::text, v_sh_cal,   v_c_goal, v_c_data);
+end;
+$$;
+
+
+revoke all on function public.friend_goal_summary(uuid, date) from public, anon;
+grant execute on function public.friend_goal_summary(uuid, date) to authenticated;
+
+-- Kaynak değişince kullanıcının mevcut raporları dirty işaretlenir; saatlik
+-- yenileme sayıları yeni kaynaktan yeniden hesaplar.
+create or replace function public.health_source_dirty_trigger()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_from date;
+  v_to   date;
+begin
+  if coalesce(new.health_source, 'appleHealth')
+     is distinct from coalesce(old.health_source, 'appleHealth') then
+    select least(min(d), max(d)), greatest(max(d), min(d)) into v_from, v_to
+    from (
+      select report_date as d from daily_reports where user_id = new.user_id
+      union all
+      select week_start from weekly_reports where user_id = new.user_id
+      union all
+      select week_start + 6 from weekly_reports where user_id = new.user_id
+    ) x;
+    perform public.mark_reports_dirty(new.user_id, v_from, v_to);
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.health_source_dirty_trigger() from public, anon, authenticated;
+
+drop trigger if exists user_settings_health_source_dirty on public.user_settings;
+create trigger user_settings_health_source_dirty
+  after update of health_source on public.user_settings
+  for each row execute function public.health_source_dirty_trigger();
+
+-- Hedef gün sayısı da arkadaşın seçili kaynağını okur (aynı kural).
+create or replace function public.friend_goal_summary(friend uuid, week_start date)
+returns table (metric text, shared boolean, goal_days integer, data_days integer)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid        uuid := auth.uid();
+  v_friend     uuid := friend_goal_summary.friend;
+  v_week       date := friend_goal_summary.week_start;
+  v_is_friend  boolean := false;
+  v_sh_steps   boolean := false;
+  v_sh_sleep   boolean := false;
+  v_sh_cal     boolean := false;
+  v_tz         text;
+  v_src        text;
+  v_t_steps    integer;
+  v_t_sleep    integer;
+  v_t_cal      integer;
+  v_today      date;
+  v_t0         timestamptz;
+  v_t1         timestamptz;
+  v_s_goal     integer := 0;
+  v_s_data     integer := 0;
+  v_l_goal     integer := 0;
+  v_l_data     integer := 0;
+  v_c_goal     integer := 0;
+  v_c_data     integer := 0;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_week is null or extract(isodow from v_week) <> 1 then
+    raise exception 'week_start Pazartesi olmalı: %', v_week using errcode = '22023';
+  end if;
+
+  if v_friend is not null and v_friend <> v_uid then
+    v_is_friend := exists (
+      select 1 from public.friendships f
+      where f.user_a = least(v_uid, v_friend) and f.user_b = greatest(v_uid, v_friend)
+    );
+  end if;
+
+  if v_is_friend then
+    select coalesce(sh.share_steps, false), coalesce(sh.share_sleep, false),
+           coalesce(sh.share_calories, false)
+      into v_sh_steps, v_sh_sleep, v_sh_cal
+    from public.friend_sharing sh
+    where sh.user_id = v_friend;
+    v_sh_steps := coalesce(v_sh_steps, false);
+    v_sh_sleep := coalesce(v_sh_sleep, false);
+    v_sh_cal   := coalesce(v_sh_cal, false);
+  end if;
+
+  if v_sh_steps or v_sh_sleep or v_sh_cal then
+    select s.timezone, s.daily_steps, s.sleep_minutes, s.daily_calories, s.health_source
+      into v_tz, v_t_steps, v_t_sleep, v_t_cal, v_src
+    from public.user_settings s
+    where s.user_id = v_friend;
+    v_tz      := public.safe_timezone(v_tz);
+    v_src     := coalesce(v_src, 'appleHealth');
+    v_t_steps := coalesce(v_t_steps, 8000);
+    v_t_sleep := coalesce(v_t_sleep, 450);
+    v_t_cal   := coalesce(v_t_cal, 2000);
+    v_today   := (now() at time zone v_tz)::date;
+    v_t0      := v_week::timestamp at time zone v_tz;
+    v_t1      := (v_week + 7)::timestamp at time zone v_tz;
+  end if;
+
+  if v_sh_steps then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_s_goal, v_s_data
+    from (
+      select d.day,
+             coalesce(h.steps, 0) > 0 as has_data,
+             public.goal_steps_hit(coalesce(h.steps, 0), v_t_steps) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join public.daily_health_metrics h
+        on h.user_id = v_friend and h.metric_date = d.day
+       and coalesce(h.source, 'appleHealth') = v_src
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  if v_sh_sleep then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_l_goal, v_l_data
+    from (
+      select d.day,
+             coalesce(h.sleep_minutes, 0) > 0 as has_data,
+             public.goal_sleep_hit(coalesce(h.sleep_minutes, 0), v_t_sleep) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join public.daily_health_metrics h
+        on h.user_id = v_friend and h.metric_date = d.day
+       and coalesce(h.source, 'appleHealth') = v_src
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  if v_sh_cal then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_c_goal, v_c_data
+    from (
+      select d.day,
+             n.kcal is not null as has_data,
+             public.goal_calories_hit(n.kcal, v_t_cal) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join (
+        select (nl.eaten_at at time zone v_tz)::date as day, sum(nl.calories) as kcal
+        from public.nutrition_logs nl
+        where nl.user_id = v_friend and nl.eaten_at >= v_t0 and nl.eaten_at < v_t1
+        group by 1
+      ) n on n.day = d.day
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  return query values
+    ('steps'::text,    v_sh_steps, v_s_goal, v_s_data),
+    ('sleep'::text,    v_sh_sleep, v_l_goal, v_l_data),
+    ('calories'::text, v_sh_cal,   v_c_goal, v_c_data);
+end;
+$$;
+
+
+revoke all on function public.friend_goal_summary(uuid, date) from public, anon;
+grant execute on function public.friend_goal_summary(uuid, date) to authenticated;
+
+-- Kaynak değişince kullanıcının mevcut raporları dirty işaretlenir; saatlik
+-- yenileme sayıları yeni kaynaktan yeniden hesaplar.
+create or replace function public.health_source_dirty_trigger()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_from date;
+  v_to   date;
+begin
+  if coalesce(new.health_source, 'appleHealth')
+     is distinct from coalesce(old.health_source, 'appleHealth') then
+    select min(x.d), max(x.d) into v_from, v_to
+    from (
+      select r.report_date as d from daily_reports r where r.user_id = new.user_id
+      union all
+      select w.week_start from weekly_reports w where w.user_id = new.user_id
+    ) x;
+    perform public.mark_reports_dirty(new.user_id, v_from, v_to);
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.health_source_dirty_trigger() from public, anon, authenticated;
+
+drop trigger if exists user_settings_health_source_dirty on public.user_settings;
+create trigger user_settings_health_source_dirty
+  after update of health_source on public.user_settings
+  for each row execute function public.health_source_dirty_trigger();
+-- END friend_scope_source
+-- =====================================================================

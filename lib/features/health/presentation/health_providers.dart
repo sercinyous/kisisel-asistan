@@ -202,6 +202,7 @@ void invalidateHealthData(ProviderContainer container) {
 /// Uygulama açılışında çağrılır; öne gelişte ve elle yenilemede
 /// [resyncHealthKit] kullanılır.
 Future<void> backfillHealthKit(ProviderContainer container) async {
+  pushHealthSourceToServer(container);
   var workoutsImported = false;
   try {
     // Kullanıcı, kaynak ve Google bağlantısı işlem başında sabitlenir; her
@@ -230,7 +231,10 @@ Future<void> backfillHealthKit(ProviderContainer container) async {
           }
         }
       } else {
-        final days = await container.read(healthServiceProvider).readPastDays();
+        // Onay denetimli kaynak: bu kullanıcı onay vermediyse HealthKit
+        // okunmaz (boş liste); yazma da [HealthWriteGuard] ile engellenir.
+        final days =
+            await container.read(healthDataSourceProvider).readPastDays();
         if (guard.isValid) {
           await repository.upsertHealthDays(days, ownerId: guard.ownerId);
         }
@@ -275,7 +279,38 @@ Future<void> selectHealthSource(
   if (selection.current == kind) return;
   await selection.select(kind);
   if (selection.current != kind) return;
+  pushHealthSourceToServer(container);
   await resyncHealthKit(container);
+}
+
+/// Seçili kaynağı sunucuya yazar (`user_settings.health_source`): raporlar ve
+/// arkadaş sıralaması grafikle aynı kaynağı okur. Açılışta (eşitleme) ve
+/// seçim değişince çağrılır; beklenmez, hata akışı durdurmaz (sonraki
+/// açılışta yeniden yazılır).
+void pushHealthSourceToServer(ProviderContainer container) {
+  try {
+    final repository = container.read(healthRepositoryProvider);
+    final owner = repository.currentUserId;
+    if (owner == null) return;
+    repository
+        .saveHealthSource(container.read(healthSourceProvider), ownerId: owner)
+        .catchError((Object _) {});
+  } catch (_) {
+    // Kapsayıcı kapanmış ya da Supabase başlatılmamış (testler).
+  }
+}
+
+/// Oturumdaki kullanıcının Apple Health verisinin kendi hesabına aktarılmasına
+/// onay verir ve hemen eşitler. Yalnızca kullanıcı dokunuşuyla çağrılır;
+/// cihazdaki HealthKit izni tek başına onay sayılmaz. Oturum yoksa `false`.
+Future<bool> approveAppleHealth(ProviderContainer container) async {
+  final owner = container.read(healthRepositoryProvider).currentUserId;
+  if (owner == null) return false;
+  await container.read(appleHealthConsentProvider.notifier).grant(owner);
+  if (container.read(healthSourceProvider) == HealthSourceKind.appleHealth) {
+    await resyncHealthKit(container);
+  }
+  return true;
 }
 
 /// Google giriş penceresini açar; başarıda Google seçiliyse hemen eşitler.

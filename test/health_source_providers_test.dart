@@ -61,6 +61,9 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         healthRepositoryProvider.overrideWithValue(store),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(healthKit),
         routinesRepositoryProvider.overrideWithValue(FakeRoutinesRepository()),
         tasksRepositoryProvider.overrideWithValue(FakeTasksRepository()),

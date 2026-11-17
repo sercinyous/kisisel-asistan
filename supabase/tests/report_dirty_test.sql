@@ -101,7 +101,10 @@ declare
 begin
   foreach f in array array[
     'public.mark_reports_dirty(uuid,date,date)',
-    'public.claim_dirty_reports(integer,interval)',
+    'public.claim_dirty_reports(integer,interval,interval)',
+    'public.release_report_claim(text,uuid,date,uuid)',
+    'public.complete_report_claim(text,uuid,date,uuid,bigint)',
+    'public.save_refreshed_report(text,uuid,date,jsonb,text,uuid,bigint)',
     'public.refresh_report_metrics(text,uuid,date)',
     'public.save_refreshed_report(text,uuid,date,jsonb,text)']
   loop
@@ -110,7 +113,7 @@ begin
       raise exception 'BAŞARISIZ: % authenticated/anon için açık', f;
     end if;
   end loop;
-  if not has_function_privilege('service_role', 'public.claim_dirty_reports(integer,interval)', 'execute') then
+  if not has_function_privilege('service_role', 'public.claim_dirty_reports(integer,interval,interval)', 'execute') then
     raise exception 'BAŞARISIZ: service_role claim_dirty_reports çalıştıramıyor';
   end if;
   raise notice 'tamam: toplu fonksiyonlar yalnızca service_role';
@@ -138,9 +141,12 @@ create temp table claimed as select * from public.claim_dirty_reports(40, interv
 select rd.ok('claim: işaretli gün ve haftalar alınır',
   (select count(*) filter (where kind = 'daily' and report_date = '2026-11-15') = 1
       and count(*) filter (where kind = 'weekly') = 2 from claimed));
-select rd.ok('claim: alınanların işareti kalkar',
-  (select not bool_or(dirty) from public.daily_reports where user_id = :U)
-  and (select not bool_or(dirty) from public.weekly_reports where user_id = :U));
+select rd.ok('claim: alınanlar kiralanır, dirty iş bitene dek kalır',
+  (select bool_and(dirty and claim_token is not null) from public.daily_reports
+   where user_id = :U and report_date = '2026-11-15')
+  and (select bool_and(dirty and claim_token is not null) from public.weekly_reports where user_id = :U));
+select rd.ok('claim: kiralı rapor yeniden alınmaz',
+  (select count(*) = 0 from public.claim_dirty_reports(40, interval '10 minutes')));
 select rd.ok('claim: limit uygulanır',
   (select count(*) = 0 from public.claim_dirty_reports(0, interval '0')));
 

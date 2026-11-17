@@ -145,6 +145,11 @@ class QuickAddController
     if (entry == null || entry.isEmpty || state.isBusy) return false;
 
     state = state.copyWith(status: QuickAddStatus.saving);
+    // Oturum nesli kayıt başlarken saklanır: kayıt ya da planlama sürerken
+    // çıkış yapılırsa (endSession) eski hesabın başlıkları yeniden planlanmaz.
+    final queue = ref.read(notificationSyncQueueProvider);
+    final generation = queue.generation;
+    bool current() => queue.generation == generation;
     try {
       final result = await ref.read(quickAddRepositoryProvider).saveAll(entry);
 
@@ -162,9 +167,13 @@ class QuickAddController
                 Duration(minutes: settings.eventRemindMinutes),
               );
           if (when == null) continue;
+          final reminder =
+              ReminderSchedule(taskId: task.id, title: task.title, when: when);
           try {
-            await notifications.scheduleReminder(
-              ReminderSchedule(taskId: task.id, title: task.title, when: when),
+            // Eşitleme turlarıyla aynı sıradan geçer; oturum bittiyse düşer.
+            await queue.run(
+              current,
+              () => notifications.scheduleReminder(reminder),
             );
           } catch (_) {
             // Bildirim planlanamasa da kayıt geçerlidir.

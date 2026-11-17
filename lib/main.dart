@@ -37,11 +37,11 @@ Future<void> main() async {
 
   // Sağlık verisi kaynağı ve Google bağlantı izleri ilk okumadan önce
   // bilinmeli (Google seçiliyken HealthKit izin penceresi açılmasın).
-  final healthSource = await loadInitialHealthSource();
-  // Google bağlantı izleri oturumdaki kullanıcıya göre saklanır; başka
-  // kullanıcının bağlantısı okunmaz.
-  final googleLink = await const GoogleLinkStore()
-      .load(userId: Supabase.instance.client.auth.currentUser?.id);
+  // Kaynak tercihi ve Google bağlantı izleri oturumdaki kullanıcıya göre
+  // saklanır; başka kullanıcınınki okunmaz.
+  final userId = Supabase.instance.client.auth.currentUser?.id;
+  final healthSource = await loadInitialHealthSource(userId: userId);
+  final googleLink = await const GoogleLinkStore().load(userId: userId);
 
   runApp(
     ProviderScope(
@@ -49,6 +49,7 @@ Future<void> main() async {
         notificationServiceProvider.overrideWithValue(notifications),
         initialThemeModeProvider.overrideWithValue(themeMode),
         initialHealthSourceProvider.overrideWithValue(healthSource),
+        initialHealthSourceOwnerProvider.overrideWithValue(userId),
         initialGoogleLinkProvider.overrideWithValue(googleLink),
       ],
       child: const KisiselAsistanApp(),

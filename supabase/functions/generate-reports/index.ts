@@ -107,8 +107,40 @@ const store: ReportStore = {
   async claimDirty(limit) {
     const { data, error } = await admin.rpc("claim_dirty_reports", { p_limit: limit });
     if (error !== null) throw new Error(error.message);
-    return ((data ?? []) as { kind: ReportKind; user_id: string; report_date: string }[])
-      .map((row) => ({ kind: row.kind, userId: row.user_id, date: row.report_date }));
+    return ((data ?? []) as {
+      kind: ReportKind;
+      user_id: string;
+      report_date: string;
+      claim_token: string;
+      dirty_version: number;
+    }[]).map((row) => ({
+      kind: row.kind,
+      userId: row.user_id,
+      date: row.report_date,
+      token: row.claim_token,
+      version: row.dirty_version,
+    }));
+  },
+
+  async releaseClaim(report) {
+    const { error } = await admin.rpc("release_report_claim", {
+      p_kind: report.kind,
+      p_user: report.userId,
+      p_date: report.date,
+      p_token: report.token,
+    });
+    if (error !== null) throw new Error(error.message);
+  },
+
+  async completeClaim(report) {
+    const { error } = await admin.rpc("complete_report_claim", {
+      p_kind: report.kind,
+      p_user: report.userId,
+      p_date: report.date,
+      p_token: report.token,
+      p_version: report.version,
+    });
+    if (error !== null) throw new Error(error.message);
   },
 
   async refreshMetrics(kind: ReportKind, userId, date) {
@@ -122,13 +154,15 @@ const store: ReportStore = {
     return { metrics: result.metrics, changed: result.changed === true };
   },
 
-  async saveRefreshed(kind: ReportKind, userId, date, metrics, summary) {
+  async saveRefreshed(report, metrics, summary) {
     const { error } = await admin.rpc("save_refreshed_report", {
-      p_kind: kind,
-      p_user: userId,
-      p_date: date,
+      p_kind: report.kind,
+      p_user: report.userId,
+      p_date: report.date,
       p_metrics: metrics,
       p_summary: summary,
+      p_token: report.token,
+      p_version: report.version,
     });
     if (error !== null) throw new Error(error.message);
   },

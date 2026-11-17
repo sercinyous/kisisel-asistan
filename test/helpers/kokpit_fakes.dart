@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
+import 'package:kisisel_asistan/core/services/health_source.dart'
+    show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
@@ -88,6 +90,9 @@ class KokpitHarness {
         healthRepositoryProvider.overrideWithValue(healthStore),
         settingsRepositoryProvider.overrideWithValue(settings),
         healthServiceProvider.overrideWithValue(health),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         notificationServiceProvider.overrideWithValue(notifications),
         ...overrides,
       ],
