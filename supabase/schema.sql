@@ -2034,3 +2034,28 @@ $$;
 revoke all on function public.consume_ai_quota(uuid, text, integer)
   from public, anon, authenticated;
 grant execute on function public.consume_ai_quota(uuid, text, integer) to service_role;
+
+-- Gemini geçici hata verdiğinde (5xx/zaman aşımı) düşülen birimi geri verir.
+-- Sayaç 0'ın altına inmez; yalnızca service_role çağırır.
+create or replace function public.refund_ai_quota(p_user uuid, p_kind text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_tz  text;
+  v_day date;
+begin
+  if p_user is null or p_kind is null or char_length(p_kind) not between 1 and 40 then
+    raise exception 'Geçersiz kota isteği' using errcode = '22023';
+  end if;
+  select s.timezone into v_tz from public.user_settings s where s.user_id = p_user;
+  v_day := (now() at time zone public.safe_timezone(v_tz))::date;
+  update public.ai_usage u set count = u.count - 1
+   where u.user_id = p_user and u.kind = p_kind and u.day = v_day and u.count > 0;
+end;
+$$;
+
+revoke all on function public.refund_ai_quota(uuid, text) from public, anon, authenticated;
+grant execute on function public.refund_ai_quota(uuid, text) to service_role;

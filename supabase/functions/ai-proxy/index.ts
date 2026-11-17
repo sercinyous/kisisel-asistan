@@ -48,6 +48,11 @@ const store: ProxyStore = {
     if (error !== null) throw new Error(error.message);
     return data === true;
   },
+
+  async refundQuota(userId, kind) {
+    const { error } = await admin.rpc("refund_ai_quota", { p_user: userId, p_kind: kind });
+    if (error !== null) throw new Error(error.message);
+  },
 };
 
 const handler = createHandler({

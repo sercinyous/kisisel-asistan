@@ -26,6 +26,8 @@ export interface ProxyStore {
   userIdFromJwt(token: string): Promise<string | null>;
   /** consume_ai_quota: kota içindeyse sayacı atomik artırıp true. */
   consumeQuota: ConsumeQuota;
+  /** Upstream geçici hatasında düşülen birimi geri verir (en iyi çaba). */
+  refundQuota?: (userId: string, kind: string) => Promise<void>;
 }
 
 export interface ProxyDeps {
@@ -60,6 +62,14 @@ function fail(status: number, error: string): Response {
 export function createHandler(deps: ProxyDeps): (req: Request) => Promise<Response> {
   const maxBodyBytes = deps.maxBodyBytes ?? MAX_BODY_BYTES;
   const upstreamTimeoutMs = deps.upstreamTimeoutMs ?? UPSTREAM_TIMEOUT_MS;
+
+  const refund = async (userId: string) => {
+    try {
+      await deps.store.refundQuota?.(userId, AI_QUOTA_KIND);
+    } catch (error) {
+      deps.log(`Kota iade edilemedi: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
 
   return async (req) => {
     if (req.method === "OPTIONS") {
@@ -123,6 +133,7 @@ export function createHandler(deps: ProxyDeps): (req: Request) => Promise<Respon
     } catch (error) {
       const name = error instanceof Error ? error.name : "hata";
       deps.log(`Gemini çağrısı başarısız: ${name}`);
+      await refund(userId);
       return name === "TimeoutError" || name === "AbortError"
         ? fail(504, MESSAGES.upstreamTimeout)
         : fail(503, MESSAGES.upstreamUnreachable);
@@ -130,6 +141,7 @@ export function createHandler(deps: ProxyDeps): (req: Request) => Promise<Respon
 
     if (!upstream.ok) {
       deps.log(`Gemini HTTP ${upstream.status}`);
+      if (upstream.status >= 500) await refund(userId);
       const mapped = mapUpstreamError(upstream.status);
       return fail(mapped.status, mapped.error);
     }
@@ -141,6 +153,7 @@ export function createHandler(deps: ProxyDeps): (req: Request) => Promise<Respon
     } catch (error) {
       const name = error instanceof Error ? error.name : "hata";
       deps.log(`Gemini yanıtı okunamadı: ${name}`);
+      await refund(userId);
       return name === "TimeoutError" || name === "AbortError"
         ? fail(504, MESSAGES.upstreamTimeout)
         : fail(503, MESSAGES.upstreamUnreachable);

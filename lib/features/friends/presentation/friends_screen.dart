@@ -87,7 +87,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     Widget title(String t) => Padding(
-          padding: const EdgeInsets.fromLTRB(4, 18, 4, 8),
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xs, AppSpacing.section, AppSpacing.xs, 8),
           child: Text(t, style: theme.textTheme.titleMedium),
         );
 
@@ -126,7 +127,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       hintText: 'ornek@gmail.com',
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   FilledButton.icon(
                     onPressed: _sending ? null : _send,
                     icon: const Icon(Icons.person_add_alt_1_rounded),
@@ -170,7 +171,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   Widget _loading() => const BentoCard(
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(AppSpacing.grid),
             child: SizedBox(
               width: 22,
               height: 22,
@@ -269,11 +270,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                         style: theme.textTheme.labelSmall
                             ?.copyWith(color: AppColors.textMuted),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: AppSpacing.sm),
                       for (final s in item.summaries)
                         if (s.metric != null)
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                             child: Row(
                               children: [
                                 Expanded(child: Text(s.metric!.label)),
@@ -344,7 +345,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
         return BentoCard(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.cardPadding,
-            vertical: 6,
+            vertical: AppSpacing.sm,
           ),
           child: Column(
             children: [

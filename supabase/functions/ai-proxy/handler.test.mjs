@@ -447,3 +447,23 @@ test("hata yanıtlarında anahtar ya da istek metni yoktur", async () => {
   const text = await response.text();
   assert.ok(!text.includes(GEMINI_KEY) && !text.includes(USER_TEXT));
 });
+
+test("Gemini 5xx ya da ağ hatasında düşülen kota iade edilir; 4xx'te edilmez", async () => {
+  for (const [fetchImpl, refunds] of [
+    [async () => new Response("{}", { status: 503 }), 1],
+    [async () => { throw new Error("ağ"); }, 1],
+    [async () => new Response("{}", { status: 400 }), 0],
+  ]) {
+    const refunded = [];
+    const { handler } = setup({
+      fetch: fetchImpl,
+      store: { refundQuota: async (u, k) => { refunded.push([u, k]); } },
+    });
+    await handler(new Request("https://x/functions/v1/ai-proxy", {
+      method: "POST",
+      headers: { Authorization: "Bearer jwt-ali", "Content-Type": "application/json" },
+      body: JSON.stringify(geminiBody()),
+    }));
+    assert.equal(refunded.length, refunds);
+  }
+});

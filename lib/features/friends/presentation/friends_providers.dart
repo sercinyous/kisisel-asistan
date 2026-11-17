@@ -25,7 +25,9 @@ final friendsWithSummaryProvider =
     list.map(
       (f) async => FriendWithSummary(
         friend: f,
-        summaries: await repo.goalSummary(f.friendId, week),
+        summaries: await repo
+            .goalSummary(f.friendId, week)
+            .catchError((_) => <GoalSummary>[]),
       ),
     ),
   );

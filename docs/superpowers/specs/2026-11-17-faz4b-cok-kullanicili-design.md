@@ -154,3 +154,8 @@ test yazımı, `CLAUDE.md` ve `KARARLAR.md` güncellemeleri ("tek kullanıcılı
 `flutter analyze`, tüm testler, SQL testleri (RLS ve işlevlerde yetki sınırları dahil: bir kullanıcı başkasının
 satırını ve ham verisini okuyamaz), Edge Function testleri, web demo. Gerçek Google girişi, iki hesapla arkadaşlık
 ve kota gerçek projede denenmeden bitmiş sayılmaz.
+
+## Bilinen kalan riskler (kabul edildi)
+- Kayıt kapısı e-posta sorgulama oracle'ı olabilir: GoTrue kayıtlı adrese gizlenmiş başarı döner, davetsiz kayıtsız adres reddedilir; kayıtlı/kayıtsız ayrımı `/auth/v1/signup` üzerinden anlaşılabilir. Az üyeli tek kullanıcılı uygulamada kabul edildi.
+- Davet, bir adresin ön-kapılması için kullanılabilir: Supabase > Authentication > Providers > Email > "Confirm email" AÇIK kalmalıdır (kapalıysa saldırgan davet edilen adresi parolayla doğrulanmış açabilir).
+- ai-proxy kotası Gemini 5xx/zaman aşımında `refund_ai_quota` ile iade edilir (en iyi çaba).

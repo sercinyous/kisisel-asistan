@@ -49,7 +49,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.page),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
@@ -57,20 +57,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 children: [
                   Icon(Icons.dashboard_rounded,
                       size: 44, color: AppColors.accent),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                   Text(
                     'Ritim',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     'Devam etmek için giriş yap.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: AppColors.textSecondary),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xl),
                   if (googleAvailable) ...[
                     FilledButton.icon(
                       key: const Key('sign-in-google'),
@@ -86,7 +86,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             : 'Google ile devam et',
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     if (!_emailOpen)
                       OutlinedButton(
                         key: const Key('sign-in-email-toggle'),
@@ -101,14 +101,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ],
                   if (showForm) ...[
                     if (googleAvailable) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         'veya e-posta ile',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: AppColors.textMuted),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.md),
                     ],
                     Form(
                       key: _formKey,
@@ -130,7 +130,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                       ? 'Geçerli bir e-posta gir.'
                                       : null,
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: AppSpacing.md),
                             TextFormField(
                               controller: _password,
                               enabled: !busy,
@@ -151,7 +151,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                   ],
                   if (state.error != null) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.md),
                     Text(
                       state.error!,
                       key: const Key('sign-in-error'),
@@ -160,7 +160,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                   ],
                   if (showForm) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.lg),
                     googleAvailable
                         ? OutlinedButton(
                             key: const Key('sign-in-submit'),
@@ -185,7 +185,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             ),
                           ),
                   ],
-                  const SizedBox(height: 20),
+                  const SizedBox(height: AppSpacing.lg),
                   Text(
                     'Hesabın yoksa Ritim kullanan bir arkadaşının seni '
                     'davet etmesi gerekir.',

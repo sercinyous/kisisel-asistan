@@ -115,4 +115,18 @@ select tf.fails('negatif sayaç yazılamaz', 'postgres', null,
   $q$with i as (insert into public.ai_usage (user_id, kind, day, count) values ('c1000000-0000-0000-0000-000000000001', 'neg', current_date, -1) returning 1)
      select to_jsonb(count(*)) from i$q$, '23514');
 
+-- İade: sayaç bir azalır, 0'ın altına inmez; authenticated çağıramaz.
+select tf.fails('authenticated refund_ai_quota çalıştıramaz', 'authenticated', :A,
+  $q$select to_jsonb(public.refund_ai_quota('c1000000-0000-0000-0000-000000000001', 'ai'))$q$, '42501');
+select tf.eq('iade sonrası sayaç bir azalır',
+  jsonb_build_array(
+    tf.run('service_role', null, $q$select to_jsonb(public.consume_ai_quota('c2000000-0000-0000-0000-000000000002', 'iade', 5))$q$),
+    (select to_jsonb(count) from public.ai_usage where user_id='c2000000-0000-0000-0000-000000000002' and kind='iade')),
+  '[true, 1]'::jsonb);
+select tf.run('service_role', null, $q$select to_jsonb(1) from (select public.refund_ai_quota('c2000000-0000-0000-0000-000000000002', 'iade')) x$q$);
+select tf.run('service_role', null, $q$select to_jsonb(1) from (select public.refund_ai_quota('c2000000-0000-0000-0000-000000000002', 'iade')) x$q$);
+select tf.eq('iade sayacı 0 yapar, negatife indirmez',
+  (select to_jsonb(count) from public.ai_usage where user_id='c2000000-0000-0000-0000-000000000002' and kind='iade'),
+  '0'::jsonb);
+
 \echo tamam: AI kotası testleri geçti
