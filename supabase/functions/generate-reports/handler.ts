@@ -43,24 +43,29 @@ export interface ReportStore {
     summary: string | null,
     status: "ok" | "failed",
   ): Promise<void>;
-  /** claim_dirty_reports: işaretli raporları alır ve işaretini kaldırır. */
+  /** claim_dirty_reports: işaretli raporları kiralar (dirty iş bitene dek kalır). */
   claimDirty(limit: number): Promise<DirtyReport[]>;
+  /** release_report_claim: hata sonrası kirayı bırakır; rapor sonraki geçişte yeniden alınır. */
+  releaseClaim(report: DirtyReport): Promise<void>;
+  /** complete_report_claim: sayılar değişmediyse; sürüm aynıysa dirty temizlenir. */
+  completeClaim(report: DirtyReport): Promise<void>;
   /** refresh_report_metrics: sayıları yeniden hesaplar; changed=false ise yorum güncel. */
   refreshMetrics(kind: ReportKind, userId: string, date: string): Promise<RefreshedMetrics>;
-  /** save_refreshed_report: summary null → sayılar yazılır, eski yorum kalır, yeniden dirty. */
-  saveRefreshed(
-    kind: ReportKind,
-    userId: string,
-    date: string,
-    metrics: unknown,
-    summary: string | null,
-  ): Promise<void>;
+  /**
+   * save_refreshed_report (jetonlu): summary null → sayılar yazılır, eski yorum kalır,
+   * dirty kalır; doluysa sürüm değişmediyse dirty temizlenir. Her durumda kira bırakılır.
+   */
+  saveRefreshed(report: DirtyReport, metrics: unknown, summary: string | null): Promise<void>;
 }
 
 export interface DirtyReport {
   kind: ReportKind;
   userId: string;
   date: string;
+  /** Kira jetonu (claim_token). */
+  token: string;
+  /** Alındığı andaki dirty_version; yalnızca değişmediyse dirty temizlenir. */
+  version: number;
 }
 
 export interface RefreshedMetrics {
@@ -183,7 +188,8 @@ type RefreshOutcome = "unchanged" | "ai" | "deferred" | "failed";
 /**
  * Tek bir işaretli raporu yeniler. Sayılar her zaman yeniden hesaplanır; AI
  * yalnızca sayılar yorumun dayanağından farklıysa ve kota izin verirse çağrılır.
- * Kota dolar ya da AI başarısız olursa eski yorum kalır, rapor yeniden işaretlenir.
+ * Kota dolar ya da AI başarısız olursa eski yorum kalır, rapor dirty kalır.
+ * Hata olursa kira bırakılır; böylece rapor sonraki geçişte yeniden alınır.
  */
 async function refreshOne(
   deps: HandlerDeps,
@@ -192,7 +198,10 @@ async function refreshOne(
 ): Promise<RefreshOutcome> {
   try {
     const fresh = await deps.store.refreshMetrics(report.kind, report.userId, report.date);
-    if (!fresh.changed) return "unchanged";
+    if (!fresh.changed) {
+      await deps.store.completeClaim(report);
+      return "unchanged";
+    }
     const allowed = await deps.store.consumeQuota(
       report.userId,
       REPORT_REFRESH_QUOTA_KIND,
@@ -201,19 +210,22 @@ async function refreshOne(
     const summary = allowed
       ? await generateSummary(deps, report.kind, report.date, fresh.metrics)
       : null;
-    await deps.store.saveRefreshed(
-      report.kind,
-      report.userId,
-      report.date,
-      fresh.metrics,
-      summary,
-    );
+    await deps.store.saveRefreshed(report, fresh.metrics, summary);
     return summary === null ? "deferred" : "ai";
   } catch (error) {
     deps.log(
       `Rapor yenilenemedi (${report.kind}, ${report.userId}, ${report.date}): ` +
         (error instanceof Error ? error.message : String(error)),
     );
+    // Kira bırakılır; bırakılamazsa süresi dolunca rapor yeniden alınır.
+    try {
+      await deps.store.releaseClaim(report);
+    } catch (releaseError) {
+      deps.log(
+        `Kira bırakılamadı (${report.kind}, ${report.userId}, ${report.date}): ` +
+          (releaseError instanceof Error ? releaseError.message : String(releaseError)),
+      );
+    }
     return "failed";
   }
 }

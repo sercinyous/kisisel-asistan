@@ -11,7 +11,7 @@ import 'health_providers.dart';
 import 'health_widgets.dart';
 
 /// Kartın düğmesinin yaptığı iş.
-enum _CardAction { resync, connectGoogle }
+enum _CardAction { resync, connectGoogle, approveApple }
 
 /// Sağlık verisi kaynağının durumu: etkin kaynak (HealthKit ya da Google
 /// Health), son eşitleme ve yeniden bağlanma.
@@ -102,7 +102,11 @@ class HealthKitCard extends ConsumerWidget {
             'Yeniden bağlan',
             _CardAction.resync,
           ),
-        HealthStatus.notConnected ||
+        HealthStatus.notConnected => (
+            data.message ?? appleHealthConsentMessage,
+            'Bu hesap için onayla',
+            _CardAction.approveApple,
+          ),
         HealthStatus.reconnect ||
         HealthStatus.failed =>
           (
@@ -153,6 +157,8 @@ class HealthKitCard extends ConsumerWidget {
     switch (kind) {
       case _CardAction.resync:
         await resyncHealthKit(container);
+      case _CardAction.approveApple:
+        await approveAppleHealth(container);
       case _CardAction.connectGoogle:
         final messenger = ScaffoldMessenger.of(context);
         final error = await connectGoogleHealth(container);

@@ -88,6 +88,9 @@ class KokpitHarness {
         healthRepositoryProvider.overrideWithValue(healthStore),
         settingsRepositoryProvider.overrideWithValue(settings),
         healthServiceProvider.overrideWithValue(health),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         notificationServiceProvider.overrideWithValue(notifications),
         ...overrides,
       ],

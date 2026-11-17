@@ -21,9 +21,11 @@ update auth.users set raw_user_meta_data = '{"name": "Deniz", "picture": "https:
 
 insert into public.friendships (user_a, user_b)
 values ('f7100000-0000-0000-0000-000000000001', 'f7200000-0000-0000-0000-000000000002');
-insert into public.friend_sharing (user_id, share_steps, share_sleep, share_calories)
-values ('f7200000-0000-0000-0000-000000000002', true, false, false)
-on conflict (user_id) do update set share_steps = true, share_sleep = false, share_calories = false;
+-- Ham değerler ayrı onayla açılır (friend_scope_test.sql onaysız durumu sınar).
+insert into public.friend_sharing (user_id, share_steps, share_sleep, share_calories, share_details)
+values ('f7200000-0000-0000-0000-000000000002', true, false, false, true)
+on conflict (user_id) do update set share_steps = true, share_sleep = false,
+  share_calories = false, share_details = true;
 update public.user_settings set timezone = 'Europe/Istanbul'
   where user_id in ('f7100000-0000-0000-0000-000000000001', 'f7200000-0000-0000-0000-000000000002');
 

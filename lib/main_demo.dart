@@ -119,6 +119,10 @@ Future<void> main() async {
         kokpitRepositoryProvider.overrideWithValue(data.kokpit),
         reportsRepositoryProvider.overrideWithValue(data.reports),
         initialHealthSourceProvider.overrideWithValue(healthSource),
+        // Demo tek kullanıcılıdır ve HealthKit sahtedir: onay verilmiş sayılır.
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         initialGoogleLinkProvider.overrideWithValue(googleLink),
         googleClientIdProvider.overrideWithValue(_demoGoogleClientId),
         googleAuthClientProvider.overrideWithValue(googleAuth),

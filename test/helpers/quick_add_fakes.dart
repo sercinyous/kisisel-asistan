@@ -117,6 +117,9 @@ class QuickAddHarness {
         notesRepositoryProvider.overrideWithValue(notes),
         healthRepositoryProvider.overrideWithValue(healthData),
         kokpitRepositoryProvider.overrideWithValue(kokpit),
+        appleHealthConsentStoreProvider.overrideWithValue(
+          MemoryAppleHealthConsentStore(grantAll: true),
+        ),
         healthServiceProvider.overrideWithValue(
           FakeHealthService(
             const HealthSnapshot(status: HealthStatus.unavailable),

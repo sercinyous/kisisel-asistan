@@ -75,6 +75,8 @@ run -d faz4b -f "$HERE/goal_parity_test.sql" >/dev/null
 echo "tamam: SQL-Dart eşlik (SQL tarafı)"
 run -d faz4b -f "$HERE/friend_leaderboard_test.sql" >/dev/null
 echo "tamam: arkadaş sıralaması (friend_leaderboard)"
+run -d faz4b -f "$HERE/friend_scope_test.sql" >/dev/null
+echo "tamam: arkadaş paylaşım kapsamı ve sağlık kaynağı (friend_scope_test)"
 
 # Atomiklik: 8 paralel oturum aynı kullanıcı için 5'er çağrı yapar, limit 10.
 # Tam 10 çağrı true almalı, sayaç tam 10 olmalı (aşım ve kayıp artış yok).
@@ -103,6 +105,9 @@ run -d fresh -f "$HERE/routine_owner_test.sql"
 echo "== 2d) geç gelen veriyle rapor yenileme (report_dirty_test.sql) =="
 run -d fresh -f "$HERE/report_dirty_test.sql" >/dev/null
 echo "tamam: report_dirty"
+echo "== 2e) kiralamalı rapor yenileme (report_claim_test.sql) =="
+run -d fresh -f "$HERE/report_claim_test.sql" >/dev/null
+echo "tamam: report_claim_lease"
 
 echo "== 3) sürüm 2 → 3 yükseltme =="
 if [ -z "$OLD_SCHEMA" ]; then
@@ -135,6 +140,8 @@ run -d upgrade -f "$HERE/friends_test.sql" >/dev/null
 run -d upgrade -f "$HERE/ai_quota_test.sql" >/dev/null
 run -d upgrade -f "$HERE/goal_parity_test.sql" >/dev/null
 run -d upgrade -f "$HERE/report_dirty_test.sql" >/dev/null
+run -d upgrade -f "$HERE/friend_scope_test.sql" >/dev/null
+run -d upgrade -f "$HERE/report_claim_test.sql" >/dev/null
 echo "tamam: Faz 4B testleri sürüm 2'den yükseltilmiş veritabanında da geçti"
 
 echo "== 4) sürüm 3 → güncel yükseltme =="
@@ -163,7 +170,9 @@ else
   run -d upgrade3 -f "$HERE/ai_quota_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/goal_parity_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/report_dirty_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/report_claim_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/routine_owner_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/friend_scope_test.sql" >/dev/null
   echo "tamam: Faz 4B testleri sürüm 3'ten yükseltilmiş veritabanında da geçti"
   echo "tamam: sürüm 3 yükseltmesi"
 fi

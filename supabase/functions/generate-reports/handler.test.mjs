@@ -14,7 +14,7 @@ function geminiOk(text = "Güzel bir gün.") {
 }
 
 function setup(overrides = {}) {
-  const calls = { metrics: [], save: [], fetch: [], log: [], quota: [], claim: [], refresh: [], saveRefreshed: [] };
+  const calls = { metrics: [], save: [], fetch: [], log: [], quota: [], claim: [], refresh: [], saveRefreshed: [], release: [], complete: [] };
   const store = {
     userIdFromJwt: async (token) => (token === "gecerli-jwt" ? "user-1" : null),
     listUsers: async () => [
@@ -41,8 +41,14 @@ function setup(overrides = {}) {
       calls.refresh.push({ kind, userId, date });
       return { metrics: METRICS, changed: true };
     },
-    saveRefreshed: async (kind, userId, date, metrics, summary) => {
-      calls.saveRefreshed.push({ kind, userId, date, metrics, summary });
+    saveRefreshed: async (report, metrics, summary) => {
+      calls.saveRefreshed.push({ ...report, metrics, summary });
+    },
+    releaseClaim: async (report) => {
+      calls.release.push(report);
+    },
+    completeClaim: async (report) => {
+      calls.complete.push(report);
     },
     ...overrides.store,
   };
@@ -365,8 +371,8 @@ test("kullanıcı yoksa 200 ve users 0", async () => {
 // ---------------------------------------------------------------------
 const CRON = { "x-cron-secret": "cron-gizli" };
 const DIRTY = [
-  { kind: "daily", userId: "user-1", date: "2026-11-15" },
-  { kind: "weekly", userId: "user-2", date: "2026-11-09" },
+  { kind: "daily", userId: "user-1", date: "2026-11-15", token: "jeton-1", version: 3 },
+  { kind: "weekly", userId: "user-2", date: "2026-11-09", token: "jeton-2", version: 7 },
 ];
 
 test("cron: previous ile günlük rapor biten gün (kullanıcının dünü) için", async () => {
@@ -473,4 +479,57 @@ test("refresh: bir raporun hatası diğerini durdurmaz; işaretli yoksa 200", as
 test("refresh: işaretli raporlar alınamazsa 500", async () => {
   const { handler } = setup({ store: { claimDirty: async () => { throw new Error("db"); } } });
   assert.equal((await handler(post({ kind: "refresh" }, CRON))).status, 500);
+});
+
+test("refresh: hata yolunda kira bırakılır (release), kayıt yapılmaz", async () => {
+  const { handler, calls } = setup({
+    store: {
+      claimDirty: async () => [DIRTY[0]],
+      refreshMetrics: async () => { throw new Error("db"); },
+    },
+  });
+  const body = await (await handler(post({ kind: "refresh" }, CRON))).json();
+  assert.equal(body.failed, 1);
+  assert.deepEqual(calls.release, [DIRTY[0]]);
+  assert.equal(calls.saveRefreshed.length, 0);
+  assert.equal(calls.complete.length, 0);
+});
+
+test("refresh: kayıt hatasında da kira bırakılır; release hatası yutulur", async () => {
+  const { handler, calls } = setup({
+    store: {
+      claimDirty: async () => [DIRTY[1]],
+      saveRefreshed: async () => { throw new Error("yazılamadı"); },
+      releaseClaim: async (report) => {
+        calls.release.push(report);
+        throw new Error("bırakılamadı");
+      },
+    },
+  });
+  const response = await handler(post({ kind: "refresh" }, CRON));
+  assert.equal(response.status, 500);
+  assert.deepEqual(calls.release, [DIRTY[1]]);
+  assert.ok(calls.log.some((m) => m.includes("Kira bırakılamadı")));
+});
+
+test("refresh: başarıda jeton ve sürüm kayda geçer; release çağrılmaz", async () => {
+  const { handler, calls } = setup({ store: { claimDirty: async () => DIRTY } });
+  await handler(post({ kind: "refresh" }, CRON));
+  assert.deepEqual(
+    calls.saveRefreshed.map((c) => [c.token, c.version]).sort(),
+    [["jeton-1", 3], ["jeton-2", 7]],
+  );
+  assert.equal(calls.release.length, 0);
+});
+
+test("refresh: sayılar değişmediyse completeClaim jetonla çağrılır", async () => {
+  const { handler, calls } = setup({
+    store: {
+      claimDirty: async () => DIRTY,
+      refreshMetrics: async () => ({ metrics: METRICS, changed: false }),
+    },
+  });
+  await handler(post({ kind: "refresh" }, CRON));
+  assert.deepEqual(calls.complete.map((c) => c.token).sort(), ["jeton-1", "jeton-2"]);
+  assert.equal(calls.release.length, 0);
 });

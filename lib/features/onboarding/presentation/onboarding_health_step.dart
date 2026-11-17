@@ -46,6 +46,14 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
 
   Future<void> _activate(HealthSourceKind kind) async {
     final container = ProviderScope.containerOf(context, listen: false);
+    if (kind == HealthSourceKind.appleHealth) {
+      // Kullanıcı bu adımda Apple Sağlık'ı kendisi seçti: bu hesap için onay.
+      final owner = container.read(healthRepositoryProvider).currentUserId;
+      if (owner != null) {
+        await container.read(appleHealthConsentProvider.notifier).grant(owner);
+      }
+      if (!mounted) return;
+    }
     try {
       await selectHealthSource(container, kind);
     } catch (_) {

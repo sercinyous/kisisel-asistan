@@ -230,7 +230,10 @@ Future<void> backfillHealthKit(ProviderContainer container) async {
           }
         }
       } else {
-        final days = await container.read(healthServiceProvider).readPastDays();
+        // Onay denetimli kaynak: bu kullanıcı onay vermediyse HealthKit
+        // okunmaz (boş liste); yazma da [HealthWriteGuard] ile engellenir.
+        final days =
+            await container.read(healthDataSourceProvider).readPastDays();
         if (guard.isValid) {
           await repository.upsertHealthDays(days, ownerId: guard.ownerId);
         }
@@ -276,6 +279,19 @@ Future<void> selectHealthSource(
   await selection.select(kind);
   if (selection.current != kind) return;
   await resyncHealthKit(container);
+}
+
+/// Oturumdaki kullanıcının Apple Health verisinin kendi hesabına aktarılmasına
+/// onay verir ve hemen eşitler. Yalnızca kullanıcı dokunuşuyla çağrılır;
+/// cihazdaki HealthKit izni tek başına onay sayılmaz. Oturum yoksa `false`.
+Future<bool> approveAppleHealth(ProviderContainer container) async {
+  final owner = container.read(healthRepositoryProvider).currentUserId;
+  if (owner == null) return false;
+  await container.read(appleHealthConsentProvider.notifier).grant(owner);
+  if (container.read(healthSourceProvider) == HealthSourceKind.appleHealth) {
+    await resyncHealthKit(container);
+  }
+  return true;
 }
 
 /// Google giriş penceresini açar; başarıda Google seçiliyse hemen eşitler.
