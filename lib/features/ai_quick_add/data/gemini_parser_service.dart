@@ -512,6 +512,8 @@ $_commonRules''';
       400 => 'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
       401 || 403 => 'Gemini API anahtarı geçersiz ya da yetkisiz.',
       404 => 'Gemini modeli bulunamadı: $_model',
+      402 => 'Gemini bakiyesi ya da faturalandırma tükendi (402). '
+          'AI Studio > Billing bölümünden kredi ekleyin.',
       429 => 'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.',
       _ => 'AI servisi hata verdi ($code). Lütfen tekrar deneyin.',
     };
