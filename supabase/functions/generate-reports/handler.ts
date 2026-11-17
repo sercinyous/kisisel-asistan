@@ -43,7 +43,40 @@ export interface ReportStore {
     summary: string | null,
     status: "ok" | "failed",
   ): Promise<void>;
+  /** claim_dirty_reports: işaretli raporları alır ve işaretini kaldırır. */
+  claimDirty(limit: number): Promise<DirtyReport[]>;
+  /** refresh_report_metrics: sayıları yeniden hesaplar; changed=false ise yorum güncel. */
+  refreshMetrics(kind: ReportKind, userId: string, date: string): Promise<RefreshedMetrics>;
+  /** save_refreshed_report: summary null → sayılar yazılır, eski yorum kalır, yeniden dirty. */
+  saveRefreshed(
+    kind: ReportKind,
+    userId: string,
+    date: string,
+    metrics: unknown,
+    summary: string | null,
+  ): Promise<void>;
 }
+
+export interface DirtyReport {
+  kind: ReportKind;
+  userId: string;
+  date: string;
+}
+
+export interface RefreshedMetrics {
+  metrics: unknown;
+  /** Yorumun dayandığı sayılardan farklı mı (AI yorumu yenilenmeli mi). */
+  changed: boolean;
+}
+
+/** Geç veriyle yorum yenilemenin sayaç türü (ai_usage.kind). */
+export const REPORT_REFRESH_QUOTA_KIND = "report_refresh";
+
+/** Kişi başına günde en çok otomatik yorum yenilemesi (REPORT_REFRESH_DAILY_LIMIT). */
+export const DEFAULT_REPORT_REFRESH_DAILY_LIMIT = 6;
+
+/** Bir yenileme geçişinde en çok işlenen rapor sayısı. */
+export const REFRESH_BATCH_LIMIT = 40;
 
 export interface HandlerDeps {
   store: ReportStore;
@@ -52,6 +85,8 @@ export interface HandlerDeps {
   geminiModel: string;
   /** Kişi başına günde en çok "Raporu yeniden oluştur" sayısı (varsayılan 10). */
   regenDailyLimit?: number;
+  /** Kişi başına günde en çok otomatik yorum yenilemesi (varsayılan 6). */
+  refreshDailyLimit?: number;
   fetch: typeof fetch;
   now: () => Date;
   log: (message: string) => void;
@@ -116,9 +151,10 @@ async function generateForUser(
   deps: HandlerDeps,
   kind: ReportKind,
   requestedDate: string | null,
+  previous: boolean,
   user: ReportUser,
 ): Promise<UserOutcome> {
-  const target = resolveTarget(kind, requestedDate, user.timeZone, deps.now());
+  const target = resolveTarget(kind, requestedDate, user.timeZone, deps.now(), previous);
   if (!target.ok) return { status: "rejected", error: target.error };
   try {
     const metrics = await deps.store.metrics(kind, user.id, target.date);
@@ -142,12 +178,85 @@ async function generateForUser(
   }
 }
 
+type RefreshOutcome = "unchanged" | "ai" | "deferred" | "failed";
+
+/**
+ * Tek bir işaretli raporu yeniler. Sayılar her zaman yeniden hesaplanır; AI
+ * yalnızca sayılar yorumun dayanağından farklıysa ve kota izin verirse çağrılır.
+ * Kota dolar ya da AI başarısız olursa eski yorum kalır, rapor yeniden işaretlenir.
+ */
+async function refreshOne(
+  deps: HandlerDeps,
+  report: DirtyReport,
+  refreshLimit: number,
+): Promise<RefreshOutcome> {
+  try {
+    const fresh = await deps.store.refreshMetrics(report.kind, report.userId, report.date);
+    if (!fresh.changed) return "unchanged";
+    const allowed = await deps.store.consumeQuota(
+      report.userId,
+      REPORT_REFRESH_QUOTA_KIND,
+      refreshLimit,
+    );
+    const summary = allowed
+      ? await generateSummary(deps, report.kind, report.date, fresh.metrics)
+      : null;
+    await deps.store.saveRefreshed(
+      report.kind,
+      report.userId,
+      report.date,
+      fresh.metrics,
+      summary,
+    );
+    return summary === null ? "deferred" : "ai";
+  } catch (error) {
+    deps.log(
+      `Rapor yenilenemedi (${report.kind}, ${report.userId}, ${report.date}): ` +
+        (error instanceof Error ? error.message : String(error)),
+    );
+    return "failed";
+  }
+}
+
+async function runRefresh(deps: HandlerDeps, refreshLimit: number): Promise<Response> {
+  let reports: DirtyReport[];
+  try {
+    reports = await deps.store.claimDirty(REFRESH_BATCH_LIMIT);
+  } catch (error) {
+    deps.log(`İşaretli raporlar alınamadı: ${error instanceof Error ? error.message : String(error)}`);
+    return json(500, { ok: false, error: "İşaretli raporlar alınamadı." });
+  }
+  const outcomes: RefreshOutcome[] = new Array(reports.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < reports.length) {
+      const index = next++;
+      outcomes[index] = await refreshOne(deps, reports[index], refreshLimit);
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(USER_CONCURRENCY, reports.length) }, worker),
+  );
+  const count = (o: RefreshOutcome) => outcomes.filter((x) => x === o).length;
+  const failed = count("failed");
+  return json(reports.length > 0 && failed === reports.length ? 500 : 200, {
+    ok: failed === 0,
+    kind: "refresh",
+    reports: reports.length,
+    unchanged: count("unchanged"),
+    ai: count("ai"),
+    deferred: count("deferred"),
+    failed,
+  });
+}
+
 export function regenQuotaMessage(limit: number): string {
   return `Bugünlük rapor yenileme hakkın doldu (${limit}). Yarın yeniden dene.`;
 }
 
 export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Response> {
   const regenLimit = deps.regenDailyLimit ?? DEFAULT_REPORT_REGEN_DAILY_LIMIT;
+  const refreshLimit = deps.refreshDailyLimit ?? DEFAULT_REPORT_REFRESH_DAILY_LIMIT;
   return async (req) => {
     if (req.method !== "POST") {
       return json(405, { ok: false, error: "Yalnızca POST desteklenir." });
@@ -179,6 +288,12 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     }
     const parsed = parseRequest(body);
     if (!parsed.ok) return json(400, { ok: false, error: parsed.error });
+    if (parsed.kind === "refresh") {
+      // Toplu yenileme yalnızca zamanlayıcıya açıktır.
+      if (!isCron) return json(403, { ok: false, error: "Yalnızca zamanlayıcı çağırabilir." });
+      return runRefresh(deps, refreshLimit);
+    }
+    const kind = parsed.kind;
 
     let users: ReportUser[];
     try {
@@ -200,7 +315,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     // "Raporu yeniden oluştur": kişi başına günlük sınır. Geçersiz tarih
     // (gelecek) kotayı yemez; kota düşülemezse maliyeti korumak için reddedilir.
     if (jwtUserId !== null) {
-      const target = resolveTarget(parsed.kind, parsed.date, users[0].timeZone, deps.now());
+      const target = resolveTarget(kind, parsed.date, users[0].timeZone, deps.now(), parsed.previous);
       if (!target.ok) return json(400, { ok: false, error: target.error });
       let allowed: boolean;
       try {
@@ -217,7 +332,13 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     const worker = async () => {
       while (next < users.length) {
         const index = next++;
-        outcomes[index] = await generateForUser(deps, parsed.kind, parsed.date, users[index]);
+        outcomes[index] = await generateForUser(
+          deps,
+          kind,
+          parsed.date,
+          parsed.previous,
+          users[index],
+        );
       }
     };
     await Promise.all(
@@ -233,7 +354,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     const failed = outcomes.length - saved.length;
     const result = {
       ok: failed === 0,
-      kind: parsed.kind,
+      kind,
       // Kullanıcılar farklı saat dilimlerindeyse gün farklı olabilir; ilk kaydedilen bildirilir.
       date: saved.length > 0 ? saved[0].date : parsed.date,
       users: users.length,

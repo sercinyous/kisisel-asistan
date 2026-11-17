@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/health_source.dart' show healthSourceProvider;
 import '../../../core/utils/date_utils.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/health_repository.dart';
@@ -66,7 +67,11 @@ Future<List<EnergyDay>> _energyDays(
   if (first.isAfter(last)) return const [];
 
   final repository = ref.watch(healthRepositoryProvider);
-  final metricsRead = repository.fetchDailyMetrics(first, last);
+  final metricsRead = repository.fetchDailyMetrics(
+    first,
+    last,
+    source: ref.watch(healthSourceProvider),
+  );
   final nutritionRead =
       repository.fetchNutritionTotals(first, AppDates.endOfDay(last));
   final workoutsRead = repository.fetchWorkouts(first, AppDates.endOfDay(last));

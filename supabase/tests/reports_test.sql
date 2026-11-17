@@ -361,7 +361,7 @@ select public.save_weekly_report(:A, '2026-09-28',
   public.report_weekly_metrics(:A, '2026-09-28'), 'Özet metni', 'ok');
 
 select t.eq('save_weekly_report: tek satır, sütunlar metrics''ten',
-  (select jsonb_agg(to_jsonb(w) - 'id' - 'metrics' - 'generated_at' - 'created_at')
+  (select jsonb_agg(to_jsonb(w) - 'id' - 'metrics' - 'generated_at' - 'created_at' - 'dirty' - 'dirty_at' - 'ai_basis')
    from public.weekly_reports w where user_id = :A),
   '[{
     "user_id": "aaaaaaaa-0000-0000-0000-000000000001", "week_start": "2026-09-28",
@@ -379,7 +379,7 @@ select t.eq('save_weekly_report: metrics aynen saklanır',
 select public.save_weekly_report(:B, '2026-09-28',
   public.report_weekly_metrics(:B, '2026-09-28'), null, 'failed');
 select t.eq('save_weekly_report: veri yoksa ortalamalar null',
-  (select to_jsonb(w) - 'id' - 'metrics' - 'generated_at' - 'created_at' - 'user_id'
+  (select to_jsonb(w) - 'id' - 'metrics' - 'generated_at' - 'created_at' - 'dirty' - 'dirty_at' - 'ai_basis' - 'user_id'
    from public.weekly_reports w where user_id = :B),
   '{
     "week_start": "2026-09-28", "tasks_total": 0, "tasks_done": 0, "task_completion_rate": 0,

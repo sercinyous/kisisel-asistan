@@ -26,18 +26,22 @@ class HealthRepository {
       'id, workout_type, title, duration_min, distance_km, calories_burned, '
       'notes, logged_at, source';
 
-  /// [from]..[to] (iki uç dahil, yerel gün) aralığının HealthKit özetleri,
+  /// [from]..[to] (iki uç dahil, yerel gün) aralığının sağlık özetleri,
   /// eskiden yeniye.
+  /// [source] verildiyse yalnızca o kaynağın satırları döner: kaynak
+  /// değişince eski kaynağın sayıları yeni kaynağınmış gibi gösterilmez.
   Future<List<DailyHealthMetric>> fetchDailyMetrics(
     DateTime from,
-    DateTime to,
-  ) async {
-    final rows = await _client
+    DateTime to, {
+    HealthSourceKind? source,
+  }) async {
+    var query = _client
         .from('daily_health_metrics')
         .select('metric_date, steps, active_kcal, sleep_minutes')
         .gte('metric_date', AppDates.ymd(from))
-        .lte('metric_date', AppDates.ymd(to))
-        .order('metric_date', ascending: true);
+        .lte('metric_date', AppDates.ymd(to));
+    if (source != null) query = query.or(sourceFilter(source));
+    final rows = await query.order('metric_date', ascending: true);
     return [for (final row in rows) DailyHealthMetric.fromMap(row)];
   }
 
@@ -209,12 +213,30 @@ class HealthRepository {
         .eq('log_type', 'weight');
   }
 
+  /// Şu an oturum açmış kullanıcı. Sağlık yazmaları işlem başında bunu
+  /// sabitler ([HealthWriteGuard]) ve yazarken `ownerId` olarak verir.
+  String? get currentUserId => _client.auth.currentUser?.id;
+
+  /// Yazmanın sahibi: [ownerId] verildiyse oturum hâlâ o kullanıcıya ait
+  /// olmalıdır (aksi halde `null`, yazma yapılmaz); verilmediyse o anki
+  /// kullanıcı.
+  String? _owner(String? ownerId) {
+    final current = currentUserId;
+    if (current == null) return null;
+    if (ownerId != null && ownerId != current) return null;
+    return current;
+  }
+
   /// Dış kaynaktan (Google Health) gelen antrenmanları yazar. Aynı kaynak
   /// kimliği daha önce yazıldıysa satıra dokunulmaz (ON CONFLICT DO NOTHING):
   /// yeniden eşitleme kopya üretmez, kullanıcının sonradan yaptığı düzenleme
-  /// de ezilmez.
-  Future<void> importExternalWorkouts(List<ExternalWorkout> workouts) async {
-    final userId = _client.auth.currentUser?.id;
+  /// de ezilmez. [ownerId] verildiyse oturum başka kullanıcıya geçmişse
+  /// hiçbir şey yazılmaz.
+  Future<void> importExternalWorkouts(
+    List<ExternalWorkout> workouts, {
+    String? ownerId,
+  }) async {
+    final userId = _owner(ownerId);
     if (userId == null || workouts.isEmpty) return;
     await _client.from('fitness_logs').upsert(
       [for (final w in workouts) w.toInsertMap(userId)],
@@ -223,49 +245,108 @@ class HealthRepository {
     );
   }
 
-  /// HealthKit'ten okunan günlük özeti raporlar için saklar.
+  /// Bugünün okumasını raporlar için saklar ([snapshot.source] ile).
+  ///
+  /// - Verisi olan okuma o günün satırının yerine geçer (kaynak da güncellenir).
+  /// - Tamamı sıfır olan başarılı okuma yalnızca aynı kaynağın o güne ait
+  ///   satırını sıfırlar (gerçek düzeltme). Satır yoksa ya da başka kaynağa
+  ///   aitse yazılmaz: HealthKit okuma izninin reddini bildirmez, sıfır
+  ///   "izin yok" da olabilir; yeni satır açılmaz, başka kaynağın değeri de
+  ///   bu kaynağın sıfırıyla ezilmez.
+  /// [ownerId] verildiyse oturum başka kullanıcıya geçmişse yazılmaz.
   Future<void> upsertHealthMetrics(
-      DateTime day, HealthSnapshot snapshot) async {
-    final userId = _client.auth.currentUser?.id;
-    if (userId == null ||
-        snapshot.status != HealthStatus.ok ||
-        !snapshot.hasData) {
+    DateTime day,
+    HealthSnapshot snapshot, {
+    String? ownerId,
+  }) async {
+    final userId = _owner(ownerId);
+    if (userId == null || snapshot.status != HealthStatus.ok) return;
+    final syncedAt = DateTime.now().toUtc().toIso8601String();
+    if (snapshot.hasData) {
+      await _client.from('daily_health_metrics').upsert(
+            _metricRow(userId, day, snapshot, syncedAt),
+            onConflict: 'user_id,metric_date',
+          );
       return;
     }
-    await _client.from('daily_health_metrics').upsert(
+    await _zeroSameSource(userId, day, snapshot.source, syncedAt);
+  }
+
+  /// Tamamlanmış günlerin gün sonu değerlerini yazar
+  /// ([HealthService.readPastDays]). Verisi olan günler tek istekte yazılır.
+  /// Sıfır gün: Google Health'te (izin belirsizliği yok) aynı kaynağın kayıtlı
+  /// satırı sıfırlanır; HealthKit'te atlanır (izin geri alınmışsa kayıtlı
+  /// geçmişin üstüne sıfır yazılmaz).
+  Future<void> upsertHealthDays(
+    List<HealthDayReading> days, {
+    String? ownerId,
+  }) async {
+    final userId = _owner(ownerId);
+    if (userId == null) return;
+    final syncedAt = DateTime.now().toUtc().toIso8601String();
+    final rows = [
+      for (final (:day, :snapshot) in days)
+        if (snapshot.status == HealthStatus.ok && snapshot.hasData)
+          _metricRow(userId, day, snapshot, syncedAt),
+    ];
+    if (rows.isNotEmpty) {
+      await _client
+          .from('daily_health_metrics')
+          .upsert(rows, onConflict: 'user_id,metric_date');
+    }
+    for (final (:day, :snapshot) in days) {
+      if (snapshot.status == HealthStatus.ok &&
+          !snapshot.hasData &&
+          snapshot.source == HealthSourceKind.googleHealth) {
+        if (_owner(userId) == null) return;
+        await _zeroSameSource(userId, day, snapshot.source, syncedAt);
+      }
+    }
+  }
+
+  Map<String, dynamic> _metricRow(
+    String userId,
+    DateTime day,
+    HealthSnapshot snapshot,
+    String syncedAt,
+  ) =>
       {
         'user_id': userId,
         'metric_date': AppDates.ymd(day),
         'steps': snapshot.steps,
         'active_kcal': snapshot.activeKcal,
         'sleep_minutes': snapshot.sleepMinutes,
-        'synced_at': DateTime.now().toUtc().toIso8601String(),
-      },
-      onConflict: 'user_id,metric_date',
-    );
-  }
+        'source': snapshot.source.name,
+        'synced_at': syncedAt,
+      };
 
-  /// Tamamlanmış günlerin gün sonu değerlerini tek istekte yazar
-  /// ([HealthService.readPastDays]). Verisi olmayan gün atlanır: izin geri
-  /// alınmışsa kayıtlı geçmişin üstüne sıfır yazılmaz.
-  Future<void> upsertHealthDays(List<HealthDayReading> days) async {
-    final userId = _client.auth.currentUser?.id;
-    final syncedAt = DateTime.now().toUtc().toIso8601String();
-    final rows = [
-      for (final (:day, :snapshot) in days)
-        if (snapshot.status == HealthStatus.ok && snapshot.hasData)
-          {
-            'user_id': userId,
-            'metric_date': AppDates.ymd(day),
-            'steps': snapshot.steps,
-            'active_kcal': snapshot.activeKcal,
-            'sleep_minutes': snapshot.sleepMinutes,
-            'synced_at': syncedAt,
-          },
-    ];
-    if (userId == null || rows.isEmpty) return;
+  /// Yalnızca [source]'a ait (Apple Health için kaynağı bilinmeyen eski
+  /// satırlar da) mevcut satırı sıfırlar; satır yoksa bir şey eklemez.
+  Future<void> _zeroSameSource(
+    String userId,
+    DateTime day,
+    HealthSourceKind source,
+    String syncedAt,
+  ) async {
     await _client
         .from('daily_health_metrics')
-        .upsert(rows, onConflict: 'user_id,metric_date');
+        .update({
+          'steps': 0,
+          'active_kcal': 0,
+          'sleep_minutes': 0,
+          'source': source.name,
+          'synced_at': syncedAt,
+        })
+        .eq('user_id', userId)
+        .eq('metric_date', AppDates.ymd(day))
+        .or(sourceFilter(source));
   }
+
+  /// [source]'a ait satırların PostgREST `or` filtresi. Kaynak sütunu
+  /// eklenmeden önce yazılan satırlar (`source` boş) yalnızca HealthKit
+  /// döneminden kalmıştır; Apple Health'e sayılır.
+  static String sourceFilter(HealthSourceKind source) =>
+      source == HealthSourceKind.appleHealth
+          ? 'source.eq.${source.name},source.is.null'
+          : 'source.eq.${source.name}';
 }

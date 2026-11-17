@@ -49,22 +49,30 @@ class _LoggingHealthRepository extends FakeHealthRepository {
   @override
   Future<List<DailyHealthMetric>> fetchDailyMetrics(
     DateTime from,
-    DateTime to,
-  ) {
+    DateTime to, {
+    HealthSourceKind? source,
+  }) {
     log.add('metrics');
-    return super.fetchDailyMetrics(from, to);
+    return super.fetchDailyMetrics(from, to, source: source);
   }
 
   @override
-  Future<void> upsertHealthMetrics(DateTime day, HealthSnapshot snapshot) {
+  Future<void> upsertHealthMetrics(
+    DateTime day,
+    HealthSnapshot snapshot, {
+    String? ownerId,
+  }) {
     log.add('upsert');
-    return super.upsertHealthMetrics(day, snapshot);
+    return super.upsertHealthMetrics(day, snapshot, ownerId: ownerId);
   }
 
   @override
-  Future<void> upsertHealthDays(List<HealthDayReading> days) {
+  Future<void> upsertHealthDays(
+    List<HealthDayReading> days, {
+    String? ownerId,
+  }) {
     log.add('upsert-days');
-    return super.upsertHealthDays(days);
+    return super.upsertHealthDays(days, ownerId: ownerId);
   }
 }
 

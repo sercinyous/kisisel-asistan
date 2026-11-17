@@ -12,7 +12,10 @@
 -- Tekrar çalıştırılabilir: aynı adlı işler silinip yeniden kurulur.
 --
 -- Zamanlar UTC'dir (pg_cron UTC çalışır):
---   45 20 * * *  → her gün 23:45 İstanbul: o günün günlük raporu
+--   15 21 * * *  → her gün 00:15 İstanbul: biten günün (dünün) günlük raporu
+--   20 * * * *   → saatte bir: geç gelen veriyle dirty işaretlenmiş günlük/haftalık
+--                  raporların sayıları yenilenir; AI yorumu yalnızca sayılar
+--                  değiştiyse (kişi başına günde en çok REPORT_REFRESH_DAILY_LIMIT)
 --   0 4 * * 1    → her Pazartesi 07:00 İstanbul: biten haftanın raporu
 --   30 3 * * 0   → her Pazar: 60 günden eski günlük AI kota sayaçları silinir
 --
@@ -39,13 +42,13 @@ $$;
 select cron.unschedule(jobid)
 from cron.job
 where jobname in ('kisisel-asistan-gunluk-rapor', 'kisisel-asistan-haftalik-rapor',
-                  'kisisel-asistan-kota-temizlik');
+                  'kisisel-asistan-kota-temizlik', 'kisisel-asistan-rapor-yenile');
 
 -- Adres ve gizli anahtar her çalışmada Vault'tan okunur; iş tanımında
 -- (cron.job.command) gizli değer saklanmaz.
 select cron.schedule(
   'kisisel-asistan-gunluk-rapor',
-  '45 20 * * *',
+  '15 21 * * *',
   $job$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
@@ -55,7 +58,7 @@ select cron.schedule(
       'x-cron-secret',
       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
     ),
-    body := jsonb_build_object('kind', 'daily'),
+    body := jsonb_build_object('kind', 'daily', 'previous', true),
     timeout_milliseconds := 120000
   );
   $job$
@@ -74,6 +77,26 @@ select cron.schedule(
       (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
     ),
     body := jsonb_build_object('kind', 'weekly'),
+    timeout_milliseconds := 120000
+  );
+  $job$
+);
+
+-- Geç gelen veri (ertesi sabah yedeklenen sağlık verisi, sonradan girilen öğün
+-- ya da görev) raporu dirty işaretler; bu iş onları toplu yeniler.
+select cron.schedule(
+  'kisisel-asistan-rapor-yenile',
+  '20 * * * *',
+  $job$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
+           || '/functions/v1/generate-reports',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret',
+      (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    ),
+    body := jsonb_build_object('kind', 'refresh'),
     timeout_milliseconds := 120000
   );
   $job$

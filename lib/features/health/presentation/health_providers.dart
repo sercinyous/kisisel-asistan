@@ -151,8 +151,11 @@ final weekWorkoutPlanProvider = FutureProvider<WeekWorkoutPlan>((ref) async {
 final weekStepsProvider = FutureProvider<List<DailyHealthMetric>>((ref) async {
   final today = AppDates.startOfDay(DateTime.now());
   final from = AppDates.addDays(today, -6);
-  final rows =
-      await ref.watch(healthRepositoryProvider).fetchDailyMetrics(from, today);
+  final rows = await ref.watch(healthRepositoryProvider).fetchDailyMetrics(
+        from,
+        today,
+        source: ref.watch(healthSourceProvider),
+      );
   final byDay = {for (final m in rows) AppDates.startOfDay(m.day): m};
   return [
     for (var i = 0; i < 7; i++)
@@ -201,23 +204,35 @@ void invalidateHealthData(ProviderContainer container) {
 Future<void> backfillHealthKit(ProviderContainer container) async {
   var workoutsImported = false;
   try {
+    // Kullanıcı, kaynak ve Google bağlantısı işlem başında sabitlenir; her
+    // await sonrası hâlâ geçerli mi bakılır (çıkış/başka hesap, kaynak ya da
+    // Google hesabı değiştiyse okunan değerler yazılmaz).
+    final guard = HealthWriteGuard.capture(container.read);
     // Bugünün okuması ve yedeği bitsin; izin penceresi de orada açılır.
     final today = await container.read(healthTodayProvider.future);
-    if (today.status == HealthStatus.ok) {
-      final selection = container.read(healthSourceProvider.notifier);
-      final repository = container.read(healthRepositoryProvider);
+    if (guard != null &&
+        guard.isValid &&
+        today.status == HealthStatus.ok &&
+        today.source == guard.source) {
+      final repository = guard.repository;
       if (today.source == HealthSourceKind.googleHealth) {
         final google = container.read(googleHealthSourceProvider);
         final days = await google.readPastDays();
-        // Okuma sürerken kaynak değiştiyse yazılmaz (iki kaynak karışmasın).
-        if (selection.current == HealthSourceKind.googleHealth) {
-          await repository.upsertHealthDays(days);
-          workoutsImported = await google.importWorkouts(repository) > 0;
+        if (guard.isValid) {
+          await repository.upsertHealthDays(days, ownerId: guard.ownerId);
+          if (guard.isValid) {
+            workoutsImported = await google.importWorkouts(
+                  repository,
+                  ownerId: guard.ownerId,
+                  isValid: () => guard.isValid,
+                ) >
+                0;
+          }
         }
       } else {
         final days = await container.read(healthServiceProvider).readPastDays();
-        if (selection.current == HealthSourceKind.appleHealth) {
-          await repository.upsertHealthDays(days);
+        if (guard.isValid) {
+          await repository.upsertHealthDays(days, ownerId: guard.ownerId);
         }
       }
     }

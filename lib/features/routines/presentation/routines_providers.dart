@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/health_source.dart' show healthSourceProvider;
 import '../../../core/services/notification_sync.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../health/data/health_repository.dart';
@@ -167,7 +168,11 @@ final monthOverviewProvider =
   final routinesFuture = routinesRepository.fetchActive();
   final completionsFuture = routinesRepository.fetchCompletions(month, lastDay);
   final tasksFuture = tasksRepository.fetchInRange(month, nextMonth);
-  final metricsFuture = healthRepository.fetchDailyMetrics(month, lastDay);
+  final metricsFuture = healthRepository.fetchDailyMetrics(
+    month,
+    lastDay,
+    source: ref.watch(healthSourceProvider),
+  );
   final nutritionFuture = healthRepository.fetchNutritionTotals(month, nextMonth);
   final weightsFuture = healthRepository.fetchWeights(month, nextMonth);
   // Paralel okuma. Future.wait ilk hatayı özgün türüyle iletir (ekranlar

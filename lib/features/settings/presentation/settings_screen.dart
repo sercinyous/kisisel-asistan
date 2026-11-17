@@ -506,6 +506,14 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
 
     setState(() => _signingOut = true);
     try {
+      // Çıkıştan önce bekleyen bildirimler silinir: özel başlıklar kilit
+      // ekranında kalmasın. Silme hatası çıkışı engellemez (oturum kapanınca
+      // kapı aynı silmeyi yeniden dener).
+      try {
+        await ref
+            .read(notificationSyncQueueProvider)
+            .endSession(ref.read(notificationServiceProvider));
+      } catch (_) {}
       await ref.read(supabaseClientProvider).auth.signOut();
       // Oturum kapanınca kök ekran giriş sayfasına döner; ayarlar üstte kalmasın.
       navigator.popUntil((route) => route.isFirst);

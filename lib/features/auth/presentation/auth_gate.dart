@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/notification_sync.dart';
 import '../../../core/services/supabase_providers.dart';
 import '../../onboarding/presentation/onboarding_gate.dart';
 import 'sign_in_screen.dart';
@@ -12,6 +13,8 @@ class AuthGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Çıkışta ya da hesap değişiminde bekleyen bildirimleri siler.
+    ref.watch(notificationSessionGuardProvider);
     final session = ref.watch(authSessionProvider);
     return session.when(
       loading: () => const Scaffold(

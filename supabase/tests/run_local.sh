@@ -53,6 +53,9 @@ run -d fresh -f "$HERE/profile_columns_test.sql"
 echo "== 1b2) görev kategorileri (user_settings.task_categories, tasks.category) =="
 run -d fresh -f "$HERE/task_categories_test.sql"
 
+echo "== 1b3) ilk kurulum RPC'si (complete_onboarding: tek transaction, idempotent) =="
+run -d fresh -f "$HERE/complete_onboarding_test.sql"
+
 echo "== 1c) Faz 4B: kayıt kapısı, arkadaşlar, kota, eşlik =="
 export GOAL_VECTORS="$HERE/goal_vectors.json"
 run -d postgres -c "create database faz4b"
@@ -95,6 +98,11 @@ echo "== 2) rapor fonksiyonları ve yetkiler =="
 run -d fresh -f "$HERE/reports_test.sql"
 echo "== 2b) Google antrenman içe aktarımı (fitness_logs) =="
 run -d fresh -f "$HERE/fitness_import_test.sql"
+echo "== 2c) rutin tamamlaması sahiplik FK'sı (routine_owner_test.sql) =="
+run -d fresh -f "$HERE/routine_owner_test.sql"
+echo "== 2d) geç gelen veriyle rapor yenileme (report_dirty_test.sql) =="
+run -d fresh -f "$HERE/report_dirty_test.sql" >/dev/null
+echo "tamam: report_dirty"
 
 echo "== 3) sürüm 2 → 3 yükseltme =="
 if [ -z "$OLD_SCHEMA" ]; then
@@ -119,11 +127,14 @@ run -d upgrade -f "$HERE/reports_test.sql" >/dev/null 2>"$WORK/upgrade_reports.l
   exit 1
 }
 echo "tamam: rapor testleri yükseltilmiş veritabanında da geçti"
+run -d upgrade -f "$HERE/complete_onboarding_test.sql"
 run -d upgrade -f "$HERE/fitness_import_test.sql"
+run -d upgrade -f "$HERE/routine_owner_test.sql"
 # Yükseltilmiş veritabanında Faz 4B işlevleri de aynı davranır.
 run -d upgrade -f "$HERE/friends_test.sql" >/dev/null
 run -d upgrade -f "$HERE/ai_quota_test.sql" >/dev/null
 run -d upgrade -f "$HERE/goal_parity_test.sql" >/dev/null
+run -d upgrade -f "$HERE/report_dirty_test.sql" >/dev/null
 echo "tamam: Faz 4B testleri sürüm 2'den yükseltilmiş veritabanında da geçti"
 
 echo "== 4) sürüm 3 → güncel yükseltme =="
@@ -151,6 +162,8 @@ else
   run -d upgrade3 -f "$HERE/friends_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/ai_quota_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/goal_parity_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/report_dirty_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/routine_owner_test.sql" >/dev/null
   echo "tamam: Faz 4B testleri sürüm 3'ten yükseltilmiş veritabanında da geçti"
   echo "tamam: sürüm 3 yükseltmesi"
 fi

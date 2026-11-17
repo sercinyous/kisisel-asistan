@@ -13,6 +13,7 @@ import 'package:kisisel_asistan/features/health/data/google_health_source.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/domain/kokpit_models.dart';
+import 'package:kisisel_asistan/features/onboarding/data/onboarding_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/operations/domain/note_item.dart';
@@ -319,10 +320,13 @@ class FakeGoogleHealthSource implements GoogleHealthReader {
     HealthRepository repository, {
     int days = HealthService.backfillDays,
     DateTime? now,
+    String? ownerId,
+    bool Function()? isValid,
   }) async {
     importCalls++;
     if (await _check() != null) return 0;
-    await repository.importExternalWorkouts(workouts);
+    if (!(isValid?.call() ?? true)) return 0;
+    await repository.importExternalWorkouts(workouts, ownerId: ownerId);
     return workouts.length;
   }
 }
@@ -676,6 +680,25 @@ class FakeHealthRepository implements HealthRepository {
   List<DailyHealthMetric> metrics;
   List<WeightEntry> weights;
 
+  /// Oturumdaki kullanıcı; `null` çıkış yapılmış demektir. Sağlık yazmaları
+  /// gerçek depo gibi `ownerId` bununla aynı değilse yazılmaz.
+  String? userId = 'demo-user';
+
+  /// [metrics] satırlarının kaynağı (gün başı → kaynak). Kaydı olmayan satır
+  /// kaynak sütunundan önceki (HealthKit) satır sayılır.
+  final Map<DateTime, HealthSourceKind> metricSources = {};
+
+  @override
+  String? get currentUserId => userId;
+
+  bool _ownerOk(String? ownerId) =>
+      userId != null && (ownerId == null || ownerId == userId);
+
+  bool _sourceMatches(DateTime day, HealthSourceKind source) =>
+      (metricSources[AppDates.startOfDay(day)] ??
+          HealthSourceKind.appleHealth) ==
+      source;
+
   /// Hazır gün toplamları (kalem kalem kaydı olmayan geçmiş günler için).
   /// [fetchNutritionTotals] bunlara [nutritionLogs]'un toplamını ekler.
   List<DailyNutritionTotal> nutrition;
@@ -709,14 +732,18 @@ class FakeHealthRepository implements HealthRepository {
   @override
   Future<List<DailyHealthMetric>> fetchDailyMetrics(
     DateTime from,
-    DateTime to,
-  ) async {
+    DateTime to, {
+    HealthSourceKind? source,
+  }) async {
     if (fetchError != null) throw fetchError!;
     final start = AppDates.startOfDay(from);
     final end = AppDates.startOfDay(to);
     return [
       for (final m in metrics)
-        if (!m.day.isBefore(start) && !m.day.isAfter(end)) m,
+        if (!m.day.isBefore(start) &&
+            !m.day.isAfter(end) &&
+            (source == null || _sourceMatches(m.day, source)))
+          m,
     ]..sort((a, b) => a.day.compareTo(b.day));
   }
 
@@ -839,9 +866,13 @@ class FakeHealthRepository implements HealthRepository {
   /// Gerçek depo gibi ON CONFLICT DO NOTHING: aynı kaynak kimliği ikinci kez
   /// yazılmaz, var olan satır (kullanıcı düzenlemiş olsa da) değişmez.
   @override
-  Future<void> importExternalWorkouts(List<ExternalWorkout> items) async {
+  Future<void> importExternalWorkouts(
+    List<ExternalWorkout> items, {
+    String? ownerId,
+  }) async {
     importCalls++;
     if (writeError != null) throw writeError!;
+    if (!_ownerOk(ownerId)) return;
     for (final item in items) {
       final key = (item.source, item.externalId);
       if (externalWorkoutIds.containsKey(key)) continue;
@@ -875,26 +906,48 @@ class FakeHealthRepository implements HealthRepository {
 
   @override
   Future<void> upsertHealthMetrics(
-      DateTime day, HealthSnapshot snapshot) async {
+    DateTime day,
+    HealthSnapshot snapshot, {
+    String? ownerId,
+  }) async {
     if (upsertError != null) throw upsertError!;
+    if (!_ownerOk(ownerId)) return;
     upsertedHealth.add(snapshot);
-    _storeMetric(day, snapshot);
+    _storeMetric(day, snapshot, allowZero: true);
   }
 
   @override
-  Future<void> upsertHealthDays(List<HealthDayReading> days) async {
+  Future<void> upsertHealthDays(
+    List<HealthDayReading> days, {
+    String? ownerId,
+  }) async {
     if (upsertError != null) throw upsertError!;
+    if (!_ownerOk(ownerId)) return;
     for (final (:day, :snapshot) in days) {
-      if (_storeMetric(day, snapshot)) {
+      final allowZero = snapshot.source == HealthSourceKind.googleHealth;
+      if (_storeMetric(day, snapshot, allowZero: allowZero)) {
         upsertedDays.add(AppDates.startOfDay(day));
       }
     }
   }
 
-  /// Gerçek depo gibi: verisi olan okuma o günün satırının yerine geçer.
-  bool _storeMetric(DateTime day, HealthSnapshot snapshot) {
-    if (snapshot.status != HealthStatus.ok || !snapshot.hasData) return false;
+  /// Gerçek depo gibi: verisi olan okuma o günün satırının yerine geçer;
+  /// tamamı sıfır okuma ([allowZero]) yalnızca aynı kaynağın var olan
+  /// satırını sıfırlar.
+  bool _storeMetric(
+    DateTime day,
+    HealthSnapshot snapshot, {
+    required bool allowZero,
+  }) {
+    if (snapshot.status != HealthStatus.ok) return false;
     final key = AppDates.startOfDay(day);
+    if (!snapshot.hasData) {
+      final exists = metrics.any((m) => AppDates.startOfDay(m.day) == key);
+      if (!allowZero || !exists || !_sourceMatches(key, snapshot.source)) {
+        return false;
+      }
+    }
+    metricSources[key] = snapshot.source;
     metrics = [
       for (final m in metrics)
         if (AppDates.startOfDay(m.day) != key) m,
@@ -942,6 +995,63 @@ class FakeSettingsRepository implements SettingsRepository {
     saved.add(value);
     settings = value;
     return value;
+  }
+}
+
+/// `complete_onboarding` RPC'sinin bellekteki karşılığı: tartı, rutinler ve
+/// ayar satırını sahte depolara TEK işlem gibi yazar (bir adım düşerse
+/// öncekiler geri alınır) ve işlem anahtarıyla tekrar çağrıda yazmaz.
+class FakeOnboardingRepository implements OnboardingRepository {
+  FakeOnboardingRepository({
+    required this.settings,
+    required this.routines,
+    required this.health,
+  });
+
+  final FakeSettingsRepository settings;
+  final FakeRoutinesRepository routines;
+  final FakeHealthRepository health;
+
+  /// Tamamlanmış işlem anahtarı → döndürülen ayar satırı.
+  final Map<String, UserSettings> completed = {};
+  final List<String> calls = [];
+
+  @override
+  Future<UserSettings> complete(
+    Map<String, dynamic> payload,
+    String opKey,
+  ) async {
+    calls.add(opKey);
+    final replay = completed[opKey];
+    if (replay != null) return replay;
+
+    final weightsBefore = health.weights;
+    final routinesBefore = routines.routines;
+    final savedBefore = List.of(settings.saved);
+    final settingsBefore = settings.settings;
+    try {
+      await health.addWeight((payload['weight_kg'] as num).toDouble());
+      for (final raw in payload['routines'] as List) {
+        await routines.create(
+          Routine.fromMap({...Map<String, dynamic>.from(raw as Map), 'id': ''}),
+        );
+      }
+      final saved = await settings.save(
+        UserSettings.fromMap(
+          Map<String, dynamic>.from(payload['settings'] as Map),
+        ),
+      );
+      completed[opKey] = saved;
+      return saved;
+    } catch (_) {
+      health.weights = weightsBefore;
+      routines.routines = routinesBefore;
+      settings.saved
+        ..clear()
+        ..addAll(savedBefore);
+      settings.settings = settingsBefore;
+      rethrow;
+    }
   }
 }
 

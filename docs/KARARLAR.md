@@ -164,3 +164,5 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (
   besin listesinin TürKomp ile çapraz doğrulanması (erişim gelince), Faz 4A sayılarının gerçek cihazda
   karşılaştırılması, `flutter analyze`/`flutter test` ilk tam koşusu, gerçek Google girişinin iki hesapla denenmesi,
   arkadaş akışının iki hesapla uçtan uca denenmesi.
+- Günlük rapor 00:15'te (İstanbul) biten gün için üretilir; geç gelen veri raporu dirty işaretler, saatlik refresh sayıları yeniler; AI yorumu yalnızca ai_basis değişince ve report_refresh kotası (6/gün) içinde.
+- Sağlık yazmaları işlem başında kullanıcıyı sabitler (HealthWriteGuard; her await sonrası kullanıcı/kaynak/Google nesli denetlenir); Google Health izleri Supabase kullanıcısına göre saklanır, kullanıcı değişince açık yeniden bağlanma gerekir, anahtarın hesabı kayıtlı hesapla eşleşmeli; daily_health_metrics.source tutulur, grafikler seçili kaynağı okur (kaynaksız eski satır = Apple Health), aynı kaynağın sıfır okuması yalnızca var olan satırı günceller, HealthKit geçmiş gün sıfırı yazılmaz.

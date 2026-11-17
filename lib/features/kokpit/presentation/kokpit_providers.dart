@@ -42,24 +42,34 @@ final todayNutritionProvider = FutureProvider<NutritionSummary>(
 );
 
 /// Seçili kaynaktan (HealthKit ya da Google Health) bugünün verisini okur ve
-/// Supabase'e yedekler.
+/// Supabase'e yedekler. Okuma başında kullanıcı, kaynak ve Google bağlantısı
+/// sabitlenir ([HealthWriteGuard]); okuma sürerken biri değiştiyse (ör. çıkış
+/// yapıp başka hesapla girildi) okunan değer yazılmaz, yazma sabit kullanıcıyla
+/// yapılır.
 final healthTodayProvider = FutureProvider<HealthSnapshot>((ref) async {
-  final repository = ref.watch(healthRepositoryProvider);
-  final selection = ref.watch(healthSourceProvider.notifier);
-  final snapshot = await ref.watch(healthDataSourceProvider).readToday();
-  // iOS okuma izninin reddini bildirmez; tamamı sıfır olan okuma "veri yok"
-  // demektir ve gerçek veri gibi saklanmaz. Okuma sürerken kaynak
-  // değiştirildiyse eski kaynağın değeri yazılmaz (iki kaynak karışmasın).
-  if (snapshot.status == HealthStatus.ok &&
-      snapshot.hasData &&
-      snapshot.source == selection.current) {
+  // Kullanıcı değişince sağlayıcı yeniden kurulur.
+  ref.watch(healthRepositoryProvider);
+  final source = ref.watch(healthDataSourceProvider);
+  final guard = HealthWriteGuard.capture(ref.read);
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  final snapshot = await source.readToday();
+  // Okuma sürerken kaynak değiştiyse eski kaynağın değeri yazılmaz (iki kaynak
+  // karışmasın). Tamamı sıfır okuma kuralları depodadır
+  // ([HealthRepository.upsertHealthMetrics]).
+  if (guard != null &&
+      !disposed &&
+      guard.isValid &&
+      snapshot.status == HealthStatus.ok &&
+      snapshot.source == guard.source) {
     try {
-      await repository.upsertHealthMetrics(
+      await guard.repository.upsertHealthMetrics(
         snapshot.readAt ?? DateTime.now(),
         snapshot,
+        ownerId: guard.ownerId,
       );
     } catch (_) {
-      // Yedekleme başarısız olsa da ekranda HealthKit verisi gösterilir.
+      // Yedekleme başarısız olsa da ekranda okunan veri gösterilir.
     }
   }
   return snapshot;

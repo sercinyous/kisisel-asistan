@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/templates/routine_templates.dart';
 import 'package:kisisel_asistan/features/health/domain/energy_balance.dart';
+import 'package:kisisel_asistan/features/onboarding/data/onboarding_op_key_store.dart';
+import 'package:kisisel_asistan/features/onboarding/data/onboarding_repository.dart';
 import 'package:kisisel_asistan/features/onboarding/data/onboarding_writer.dart';
 import 'package:kisisel_asistan/features/onboarding/domain/goal_suggestion.dart';
 import 'package:kisisel_asistan/features/onboarding/domain/onboarding_answers.dart';
@@ -165,99 +167,76 @@ void main() {
     });
   });
 
-  group('OnboardingWriter', () {
-    late List<String> log;
-    late List<Routine> created;
-    late OnboardingWriter writer;
-    Object? weightError;
-    Object? routineError;
-    Object? settingsError;
-
-    setUp(() {
-      log = [];
-      created = [];
-      weightError = null;
-      routineError = null;
-      settingsError = null;
-      writer = OnboardingWriter(
-        addWeight: (kg) async {
-          if (weightError != null) throw weightError!;
-          log.add('weight:$kg');
-        },
-        createRoutine: (routine) async {
-          if (routineError != null) throw routineError!;
-          created.add(routine);
-          log.add('routine:${routine.title}');
-        },
-        saveSettings: (settings) async {
-          if (settingsError != null) throw settingsError!;
-          log.add('settings');
-          return settings;
-        },
-      );
-    });
-
-    test('sıra: tartı, rutinler, en son tek ayar kaydı', () async {
-      final result = _build();
-      final saved = await writer.complete(result);
-      expect(log, ['weight:70.5', 'routine:Yürüyüş yap', 'routine:Kirayı öde', 'settings']);
-      expect(saved.onboardedAt, isNotNull);
-    });
-
-    test('ayar kaydı başarısızsa kurulum bitmiş sayılmaz; yeniden denemede '
-        'tartı ve rutinler tekrarlanmaz', () async {
-      final result = _build();
-      settingsError = StateError('ağ yok');
-      await expectLater(writer.complete(result), throwsStateError);
-      expect(log, ['weight:70.5', 'routine:Yürüyüş yap', 'routine:Kirayı öde']);
-
-      settingsError = null;
-      await writer.complete(result);
+  group('OnboardingWriter: tek RPC, işlem anahtarı', () {
+    test('gövde: tartı, rutinler ve onboarded_at dolu ayar satırı', () {
+      final payload = onboardingPayload(_build());
+      expect(payload['weight_kg'], 70.5);
       expect(
-        log,
-        ['weight:70.5', 'routine:Yürüyüş yap', 'routine:Kirayı öde', 'settings'],
+        [for (final r in payload['routines'] as List) (r as Map)['title']],
+        ['Yürüyüş yap', 'Kirayı öde'],
       );
-      expect(created, hasLength(2));
+      expect((payload['settings'] as Map)['onboarded_at'], isNotNull);
     });
 
-    test('tartı başarısızsa hiçbir şey yazılmaz ve ayar kaydına geçilmez',
+    test('başarıda anahtar silinir; sonraki kurulum yeni anahtar alır',
         () async {
-      weightError = StateError('hata');
+      final calls = <String>[];
+      var n = 0;
+      final keys = OnboardingOpKeyStore(
+        scope: 'u',
+        open: () async => throw StateError('depo yok'),
+        newKey: () => 'k${n++}',
+      );
+      final writer = OnboardingWriter(
+        repository: _RecordingRepository(calls),
+        keys: keys,
+      );
+      final saved = await writer.complete(_build());
+      expect(saved.onboardedAt, isNotNull);
+      await writer.complete(_build());
+      expect(calls, ['k0', 'k1']);
+    });
+
+    test('hata sonrası yeniden deneme aynı anahtarı kullanır', () async {
+      final calls = <String>[];
+      final repo = _RecordingRepository(calls)..failNext = true;
+      final keys = OnboardingOpKeyStore(
+        scope: 'u',
+        open: () async => throw StateError('depo yok'),
+      );
+      final writer = OnboardingWriter(repository: repo, keys: keys);
       await expectLater(writer.complete(_build()), throwsStateError);
-      expect(log, isEmpty);
-    });
-
-    test('rutin yazımı yarıda kesilirse yeniden denemede kalandan sürer',
-        () async {
-      final result = _build();
-      var calls = 0;
-      final flaky = OnboardingWriter(
-        addWeight: (kg) async => log.add('weight'),
-        createRoutine: (routine) async {
-          calls++;
-          if (calls == 2) throw StateError('ikinci rutin düştü');
-          log.add('routine:${routine.title}');
-        },
-        saveSettings: (settings) async {
-          log.add('settings');
-          return settings;
-        },
+      await writer.complete(_build());
+      expect(calls, hasLength(2));
+      expect(calls.first, calls.last);
+      expect(
+        RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-'
+                r'[0-9a-f]{12}$')
+            .hasMatch(calls.first),
+        isTrue,
       );
-      await expectLater(flaky.complete(result), throwsStateError);
-      expect(log, ['weight', 'routine:Yürüyüş yap']);
-
-      await flaky.complete(result);
-      expect(log, [
-        'weight',
-        'routine:Yürüyüş yap',
-        'routine:Kirayı öde',
-        'settings',
-      ]);
-    });
-
-    test('rutin seçilmediyse yalnızca tartı ve ayar yazılır', () async {
-      await writer.complete(_build(routines: const []));
-      expect(log, ['weight:70.5', 'settings']);
     });
   });
+}
+
+class _RecordingRepository implements OnboardingRepository {
+  _RecordingRepository(this.calls);
+
+  final List<String> calls;
+  bool failNext = false;
+
+  @override
+  Future<UserSettings> complete(
+    Map<String, dynamic> payload,
+    String opKey,
+  ) async {
+    calls.add(opKey);
+    if (failNext) {
+      failNext = false;
+      throw StateError('ağ yok');
+    }
+    return UserSettings.fromMap(
+      Map<String, dynamic>.from(payload['settings'] as Map),
+    );
+  }
 }

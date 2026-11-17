@@ -43,10 +43,16 @@ abstract interface class GoogleHealthReader implements HealthDataSource {
   /// Son [days] tamamlanmış gün ve bugünün antrenmanlarını içe aktarır;
   /// yazılmak üzere gönderilen ve kullanıcının kendi kaydıyla çiftlendiği için
   /// silinen kayıtların toplamını döndürür (0: günlük değişmedi).
+  ///
+  /// [ownerId] verilirse yazmalar o kullanıcıyla yapılır (oturum başka
+  /// kullanıcıya geçtiyse yazılmaz); [isValid] her `await` sonrasında
+  /// denetlenir, `false` dönerse işlem yazmadan (işaret de ilerlemeden) durur.
   Future<int> importWorkouts(
     HealthRepository repository, {
     int days = HealthService.backfillDays,
     DateTime? now,
+    String? ownerId,
+    bool Function()? isValid,
   });
 }
 
@@ -120,8 +126,13 @@ class GoogleHealthSource implements GoogleHealthReader {
     HealthRepository repository, {
     int days = HealthService.backfillDays,
     DateTime? now,
+    String? ownerId,
+    bool Function()? isValid,
   }) async {
     if (!link.isConfigured) return 0;
+    final owner = ownerId ?? repository.currentUserId;
+    bool stale() =>
+        !(isValid?.call() ?? true) || repository.currentUserId != owner;
     final today = AppDates.startOfDay(now ?? DateTime.now());
     final from = AppDates.addDays(today, -days);
     final to = AppDates.addDays(today, 1);
@@ -132,6 +143,7 @@ class GoogleHealthSource implements GoogleHealthReader {
       link.reportFailure(error);
       return 0;
     }
+    if (stale()) return 0;
     // Pencerenin iki ucunda gün sınırını aşan oturumlar da eşleşsin diye
     // okuma bir gün geniş tutulur. Okunamazsa hiçbir şey yazılmaz (kopya
     // riski) ve işaret ilerlemez; sonraki eşitleme yeniden dener.
@@ -147,9 +159,12 @@ class GoogleHealthSource implements GoogleHealthReader {
       for (final w in existing)
         if (w.isFromGoogle && own.any(w.isSameSessionAs)) w,
     ];
+    if (stale()) return 0;
     for (final duplicate in duplicates) {
+      if (stale()) return 0;
       await repository.deleteWorkout(duplicate.id);
     }
+    if (stale()) return 0;
 
     final watermark = link.exerciseWatermark;
     final fresh = <ExternalWorkout>[];
@@ -162,7 +177,9 @@ class GoogleHealthSource implements GoogleHealthReader {
       if (own.any(item.workout.isSameSessionAs)) continue;
       fresh.add(item);
     }
-    await repository.importExternalWorkouts(fresh);
+    if (stale() || owner == null) return 0;
+    await repository.importExternalWorkouts(fresh, ownerId: owner);
+    if (stale()) return 0;
 
     DateTime? newest = watermark;
     for (final exercise in exercises) {

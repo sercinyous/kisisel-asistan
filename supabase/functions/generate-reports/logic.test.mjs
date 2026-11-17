@@ -17,13 +17,43 @@ import {
 } from "./logic.ts";
 
 test("parseRequest: geçerli gövdeler", () => {
-  assert.deepEqual(parseRequest({ kind: "daily" }), { ok: true, kind: "daily", date: null });
+  assert.deepEqual(parseRequest({ kind: "daily" }), { ok: true, kind: "daily", date: null, previous: false });
   assert.deepEqual(parseRequest({ kind: "weekly", date: "2026-11-09" }), {
     ok: true,
     kind: "weekly",
     date: "2026-11-09",
+    previous: false,
   });
-  assert.deepEqual(parseRequest({ kind: "daily", date: null }), { ok: true, kind: "daily", date: null });
+  assert.deepEqual(parseRequest({ kind: "daily", date: null }), {
+    ok: true,
+    kind: "daily",
+    date: null,
+    previous: false,
+  });
+  assert.deepEqual(parseRequest({ kind: "daily", previous: true }), {
+    ok: true,
+    kind: "daily",
+    date: null,
+    previous: true,
+  });
+  assert.deepEqual(parseRequest({ kind: "refresh" }), { ok: true, kind: "refresh", date: null, previous: false });
+});
+
+test("parseRequest: previous yalnızca tarihsiz günlükte, boolean", () => {
+  for (const body of [
+    { kind: "weekly", previous: true },
+    { kind: "daily", previous: true, date: "2026-11-15" },
+    { kind: "daily", previous: "evet" },
+  ]) {
+    assert.equal(parseRequest(body).ok, false, JSON.stringify(body));
+  }
+});
+
+test("resolveTarget: previous → kullanıcının dünü (biten gün)", () => {
+  // 16 Kasım 21:15 UTC = 17 Kasım 00:15 İstanbul.
+  const now = new Date("2026-11-16T21:15:00Z");
+  assert.deepEqual(resolveTarget("daily", null, "Europe/Istanbul", now, true), { ok: true, date: "2026-11-16" });
+  assert.deepEqual(resolveTarget("daily", null, "Europe/Istanbul", now), { ok: true, date: "2026-11-17" });
 });
 
 test("parseRequest: kind eksik ya da geçersiz", () => {

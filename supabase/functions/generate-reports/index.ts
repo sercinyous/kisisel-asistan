@@ -4,6 +4,9 @@
 //
 // Çağıranlar:
 //   - pg_cron (supabase/cron.sql): `x-cron-secret` başlığıyla, tüm kullanıcılar için.
+//   - pg_cron saatlik {kind:"refresh"}: geç gelen veriyle dirty işaretlenmiş
+//     raporların sayılarını yeniler; AI yorumu yalnızca sayılar değiştiyse,
+//     kişi başına günde REPORT_REFRESH_DAILY_LIMIT (varsayılan 6) kez.
 //   - Uygulama ("Raporu yeniden oluştur"): kullanıcı JWT'siyle, yalnızca o kullanıcı için;
 //     kişi başına günde en çok 10 kez (ai_usage kind 'report_regen').
 // Yalnızca ilk kurulumunu bitirmiş (user_settings.onboarded_at dolu) kullanıcılar için üretilir.
@@ -15,7 +18,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { DEFAULT_REPORT_REGEN_DAILY_LIMIT, parseLimit } from "../_shared/quota.ts";
-import { createHandler, type ReportStore } from "./handler.ts";
+import {
+  createHandler,
+  DEFAULT_REPORT_REFRESH_DAILY_LIMIT,
+  type ReportStore,
+} from "./handler.ts";
 import type { ReportKind } from "./logic.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -96,6 +103,35 @@ const store: ReportStore = {
       });
     if (error !== null) throw new Error(error.message);
   },
+
+  async claimDirty(limit) {
+    const { data, error } = await admin.rpc("claim_dirty_reports", { p_limit: limit });
+    if (error !== null) throw new Error(error.message);
+    return ((data ?? []) as { kind: ReportKind; user_id: string; report_date: string }[])
+      .map((row) => ({ kind: row.kind, userId: row.user_id, date: row.report_date }));
+  },
+
+  async refreshMetrics(kind: ReportKind, userId, date) {
+    const { data, error } = await admin.rpc("refresh_report_metrics", {
+      p_kind: kind,
+      p_user: userId,
+      p_date: date,
+    });
+    if (error !== null) throw new Error(error.message);
+    const result = data as { metrics: unknown; changed: boolean };
+    return { metrics: result.metrics, changed: result.changed === true };
+  },
+
+  async saveRefreshed(kind: ReportKind, userId, date, metrics, summary) {
+    const { error } = await admin.rpc("save_refreshed_report", {
+      p_kind: kind,
+      p_user: userId,
+      p_date: date,
+      p_metrics: metrics,
+      p_summary: summary,
+    });
+    if (error !== null) throw new Error(error.message);
+  },
 };
 
 const handler = createHandler({
@@ -106,6 +142,10 @@ const handler = createHandler({
   regenDailyLimit: parseLimit(
     Deno.env.get("REPORT_REGEN_DAILY_LIMIT"),
     DEFAULT_REPORT_REGEN_DAILY_LIMIT,
+  ),
+  refreshDailyLimit: parseLimit(
+    Deno.env.get("REPORT_REFRESH_DAILY_LIMIT"),
+    DEFAULT_REPORT_REFRESH_DAILY_LIMIT,
   ),
   fetch,
   now: () => new Date(),
