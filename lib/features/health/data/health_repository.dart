@@ -180,6 +180,20 @@ class HealthRepository {
         .eq('log_type', 'weight');
   }
 
+  /// Dış kaynaktan (Google Health) gelen antrenmanları yazar. Aynı kaynak
+  /// kimliği daha önce yazıldıysa satıra dokunulmaz (ON CONFLICT DO NOTHING):
+  /// yeniden eşitleme kopya üretmez, kullanıcının sonradan yaptığı düzenleme
+  /// de ezilmez.
+  Future<void> importExternalWorkouts(List<ExternalWorkout> workouts) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null || workouts.isEmpty) return;
+    await _client.from('fitness_logs').upsert(
+      [for (final w in workouts) w.toInsertMap(userId)],
+      onConflict: 'user_id,source,external_id',
+      ignoreDuplicates: true,
+    );
+  }
+
   /// HealthKit'ten okunan günlük özeti raporlar için saklar.
   Future<void> upsertHealthMetrics(DateTime day, HealthSnapshot snapshot) async {
     final userId = _client.auth.currentUser?.id;

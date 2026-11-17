@@ -4,15 +4,54 @@ import 'package:health/health.dart';
 
 final healthServiceProvider = Provider<HealthService>((ref) => HealthService());
 
+/// Adım, aktif kalori ve uykunun okunduğu kaynak. Aynı anda yalnızca biri
+/// `daily_health_metrics` tablosunu ve arayüzü besler (ikisi birden çift
+/// sayardı); seçim cihazda saklanır (`health_source.dart`).
+enum HealthSourceKind {
+  appleHealth('Apple Health', 'HealthKit'),
+  googleHealth('Google Health', 'Google Health');
+
+  const HealthSourceKind(this.label, this.shortLabel);
+
+  /// Seçim düğmesindeki ad.
+  final String label;
+
+  /// Kartlarda verinin nereden geldiğini gösteren kısa ad
+  /// ("HealthKit · 14:05", "Google Health · 14:05").
+  final String shortLabel;
+
+  /// Kayıt yoksa ya da okunamazsa kullanılan kaynak.
+  static const HealthSourceKind fallback = HealthSourceKind.appleHealth;
+
+  /// Saklanan metni kaynağa çevirir; tanınmayan değer [fallback] olur.
+  static HealthSourceKind parse(String? raw) {
+    for (final kind in values) {
+      if (kind.name == raw) return kind;
+    }
+    return fallback;
+  }
+}
+
 enum HealthStatus {
   /// Veri okundu.
   ok,
 
-  /// Platform HealthKit desteklemiyor (simülatör dışı iOS harici ortamlar).
+  /// Kaynak bu cihazda/derlemede kullanılamıyor (HealthKit iPhone dışında,
+  /// Google ise istemci kimliği verilmemiş derlemede).
   unavailable,
 
-  /// İzin penceresi reddedildi ya da tamamlanamadı.
+  /// İzin penceresi reddedildi ya da tamamlanamadı (HealthKit).
   denied,
+
+  /// Google hesabı bağlı değil.
+  notConnected,
+
+  /// Google oturumu yenilenemedi ya da izin eksik: kullanıcı yeniden
+  /// bağlanmalı. Ayrıntı [HealthSnapshot.message] içindedir.
+  reconnect,
+
+  /// Geçici hata (ağ, yoğunluk, sunucu); sonra tekrar denenebilir.
+  failed,
 }
 
 class HealthSnapshot {
@@ -22,6 +61,8 @@ class HealthSnapshot {
     this.activeKcal = 0,
     this.sleepMinutes = 0,
     this.readAt,
+    this.source = HealthSourceKind.appleHealth,
+    this.message,
   });
 
   final HealthStatus status;
@@ -30,11 +71,67 @@ class HealthSnapshot {
   final int sleepMinutes;
   final DateTime? readAt;
 
+  /// Okumayı yapan kaynak.
+  final HealthSourceKind source;
+
+  /// Durumun kullanıcıya gösterilecek Türkçe açıklaması (yalnızca Google
+  /// okumasında; HealthKit metinleri arayüzde sabittir).
+  final String? message;
+
   bool get hasData => steps > 0 || activeKcal > 0 || sleepMinutes > 0;
 }
 
-/// Bir günün HealthKit okuması ([day] yerel gün başı).
+/// Bir günün sağlık okuması ([day] yerel gün başı).
 typedef HealthDayReading = ({DateTime day, HealthSnapshot snapshot});
+
+/// Sağlık verisi kaynağı sözleşmesi: Apple HealthKit ([HealthService]) ve
+/// Google Health aynı pencerelerle ([healthDayWindows]) okur.
+abstract interface class HealthDataSource {
+  /// Bugünün adım ve aktif kalorisi + dün geceki uyku süresi.
+  Future<HealthSnapshot> readToday({DateTime? now});
+
+  /// Bugünden önceki [days] tamamlanmış günün gün sonu değerleri, eskiden
+  /// yeniye. Okunamazsa boş liste.
+  Future<List<HealthDayReading>> readPastDays({
+    int days = HealthService.backfillDays,
+    DateTime? now,
+  });
+}
+
+/// [intervals] içindeki aralıkların [start, end) penceresine düşen kısmını
+/// kırpar, çakışanları birleştirir ve toplam dakikayı döndürür. Uyku
+/// toplamının ortak kuralıdır: birden fazla kaynak aynı aralığı yazabilir,
+/// pencereyi aşan kısım sayılmaz.
+int sleepMinutesInWindow(
+  Iterable<(DateTime, DateTime)> intervals,
+  DateTime start,
+  DateTime end,
+) {
+  return mergedIntervalMinutes([
+    for (final (from, to) in intervals)
+      if (to.isAfter(start) && from.isBefore(end))
+        (from.isBefore(start) ? start : from, to.isAfter(end) ? end : to),
+  ]);
+}
+
+/// Çakışan aralıkları birleştirip toplam dakikayı döndürür.
+int mergedIntervalMinutes(List<(DateTime, DateTime)> intervals) {
+  if (intervals.isEmpty) return 0;
+  intervals.sort((a, b) => a.$1.compareTo(b.$1));
+  var total = Duration.zero;
+  var (start, end) = intervals.first;
+  for (final (s, e) in intervals.skip(1)) {
+    if (s.isAfter(end)) {
+      total += end.difference(start);
+      start = s;
+      end = e;
+    } else if (e.isAfter(end)) {
+      end = e;
+    }
+  }
+  total += end.difference(start);
+  return total.inMinutes;
+}
 
 /// Bir yerel günün HealthKit sorgu pencereleri.
 class HealthDayWindow {
@@ -83,7 +180,7 @@ List<HealthDayWindow> healthDayWindows(
 
 /// Apple HealthKit okuma katmanı (Fitbit verisi HealthKit'e senkronlandığı
 /// sürece buradan görünür). Yalnızca OKUMA izni ister.
-class HealthService {
+class HealthService implements HealthDataSource {
   /// Açılışta ve öne gelişte yeniden okunan tamamlanmış gün sayısı. 7: Pazartesi
   /// açılan uygulama biten haftanın (Pzt–Paz) tamamını kapsamalıdır.
   static const int backfillDays = 7;
@@ -128,6 +225,7 @@ class HealthService {
   }
 
   /// Bugünün adım ve aktif kalorisi + dün geceki uyku süresi.
+  @override
   Future<HealthSnapshot> readToday({DateTime? now}) async {
     if (!isSupported) {
       return const HealthSnapshot(status: HealthStatus.unavailable);
@@ -149,6 +247,7 @@ class HealthService {
   /// yeniye. [readToday] günü ancak okuma anına kadar görür; gün bittikten
   /// sonra eksik kalan toplam buradan tamamlanır. Desteklenmiyorsa ya da izin
   /// yoksa boş liste döner.
+  @override
   Future<List<HealthDayReading>> readPastDays({
     int days = backfillDays,
     DateTime? now,
@@ -201,7 +300,7 @@ class HealthService {
       startTime: window.sleepStart,
       endTime: window.sleepEnd,
     );
-    final sleepMinutes = _mergedMinutes([
+    final sleepMinutes = mergedIntervalMinutes([
       for (final p in sleepPoints)
         if (p.dateTo.isAfter(window.sleepStart) &&
             p.dateFrom.isBefore(window.sleepEnd))
@@ -220,24 +319,5 @@ class HealthService {
       sleepMinutes: sleepMinutes,
       readAt: readAt,
     );
-  }
-
-  /// Çakışan aralıkları birleştirip toplam dakikayı döndürür.
-  static int _mergedMinutes(List<(DateTime, DateTime)> intervals) {
-    if (intervals.isEmpty) return 0;
-    intervals.sort((a, b) => a.$1.compareTo(b.$1));
-    var total = Duration.zero;
-    var (start, end) = intervals.first;
-    for (final (s, e) in intervals.skip(1)) {
-      if (s.isAfter(end)) {
-        total += end.difference(start);
-        start = s;
-        end = e;
-      } else if (e.isAfter(end)) {
-        end = e;
-      }
-    }
-    total += end.difference(start);
-    return total.inMinutes;
   }
 }

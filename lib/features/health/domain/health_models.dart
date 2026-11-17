@@ -292,7 +292,7 @@ class WorkoutLog {
   /// Yerel saat.
   final DateTime loggedAt;
 
-  /// 'manual' | 'ai' | 'healthkit'
+  /// 'manual' | 'ai' | 'healthkit' | 'google'
   final String source;
 
   factory WorkoutLog.fromMap(Map<String, dynamic> map) => WorkoutLog(
@@ -347,6 +347,37 @@ class WorkoutLog {
         loggedAt: loggedAt ?? this.loggedAt,
         source: source ?? this.source,
       );
+}
+
+/// Dış kaynaktan içe aktarılan antrenman (`fitness_logs`, source = 'google').
+/// [externalId] kaynaktaki kimliktir; `(user_id, source, external_id)` tekil
+/// dizini yeniden eşitlemede aynı oturumun ikinci kez yazılmasını önler.
+class ExternalWorkout {
+  const ExternalWorkout({
+    required this.source,
+    required this.externalId,
+    required this.workout,
+  });
+
+  /// `fitness_logs.source` değeri ('google').
+  final String source;
+
+  /// Kaynaktaki kimlik (Google Health veri noktası adı).
+  final String externalId;
+
+  /// Yazılacak antrenman; `id` ve `source` alanları kullanılmaz.
+  final WorkoutLog workout;
+
+  /// `external_id` sütun sınırı (schema.sql check'i).
+  static const int externalIdMaxLength = 300;
+
+  /// Tek satırlık ekleme gövdesi.
+  Map<String, dynamic> toInsertMap(String userId) => {
+        ...workout.toWriteMap(),
+        'user_id': userId,
+        'source': source,
+        'external_id': externalId,
+      };
 }
 
 /// Kilo ölçümünün veritabanı check sınırları (`fitness_logs.weight_kg`).
