@@ -7,8 +7,10 @@ import '../../routines/data/routines_repository.dart';
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../data/health_repository.dart';
+import 'health_source_providers.dart';
 
 export '../data/health_repository.dart';
+export 'health_source_providers.dart';
 
 /// Kilo grafiğinin seçilebilir pencereleri (gün).
 const List<int> weightSeriesWindows = [30, 90];
@@ -182,20 +184,37 @@ void invalidateHealthData(ProviderContainer container) {
     ..invalidate(monthOverviewProvider);
 }
 
-/// HealthKit'in son [HealthService.backfillDays] tamamlanmış gününü gün sonu
-/// değerleriyle yeniden yedekler. Bugünün okuması günü ancak o ana kadar
-/// görür; gün bittikten sonra kimse yeniden okumazsa raporlar, 7 günlük adım
-/// grafiği ve Ay ortalamaları eksik kalır. Bitince bu satırları okuyan
-/// sağlayıcılar tazelenir (bugünün yedeği de o zamana dek yazılmıştır).
+/// Seçili kaynağın (HealthKit ya da Google Health) son
+/// [HealthService.backfillDays] tamamlanmış gününü gün sonu değerleriyle
+/// yeniden yedekler. Bugünün okuması günü ancak o ana kadar görür; gün
+/// bittikten sonra kimse yeniden okumazsa raporlar, 7 günlük adım grafiği ve
+/// Ay ortalamaları eksik kalır. Google seçiliyse aynı dönemin antrenmanları
+/// da `fitness_logs`'a aktarılır. Bitince bu satırları okuyan sağlayıcılar
+/// tazelenir (bugünün yedeği de o zamana dek yazılmıştır).
 /// Uygulama açılışında çağrılır; öne gelişte ve elle yenilemede
 /// [resyncHealthKit] kullanılır.
 Future<void> backfillHealthKit(ProviderContainer container) async {
+  var workoutsImported = false;
   try {
     // Bugünün okuması ve yedeği bitsin; izin penceresi de orada açılır.
     final today = await container.read(healthTodayProvider.future);
     if (today.status == HealthStatus.ok) {
-      final days = await container.read(healthServiceProvider).readPastDays();
-      await container.read(healthRepositoryProvider).upsertHealthDays(days);
+      final selection = container.read(healthSourceProvider.notifier);
+      final repository = container.read(healthRepositoryProvider);
+      if (today.source == HealthSourceKind.googleHealth) {
+        final google = container.read(googleHealthSourceProvider);
+        final days = await google.readPastDays();
+        // Okuma sürerken kaynak değiştiyse yazılmaz (iki kaynak karışmasın).
+        if (selection.current == HealthSourceKind.googleHealth) {
+          await repository.upsertHealthDays(days);
+          workoutsImported = await google.importWorkouts(repository) > 0;
+        }
+      } else {
+        final days = await container.read(healthServiceProvider).readPastDays();
+        if (selection.current == HealthSourceKind.appleHealth) {
+          await repository.upsertHealthDays(days);
+        }
+      }
     }
   } catch (_) {
     // Okuma hatası kartta gösterilir; yedekleme hatası ekranı bozmaz.
@@ -204,15 +223,59 @@ Future<void> backfillHealthKit(ProviderContainer container) async {
     container
       ..invalidate(weekStepsProvider)
       ..invalidate(monthOverviewProvider);
+    if (workoutsImported) {
+      container
+        ..invalidate(recentWorkoutsProvider)
+        ..invalidate(weekWorkoutPlanProvider);
+    }
   } on StateError {
     // Okuma sürerken kapsayıcı kapanmış (çıkış, test sonu).
   }
 }
 
-/// HealthKit'i yeniden okur (bugün + son günler) ve yedekler; bitince 7 günlük
-/// adım grafiği ile Ay ortalamaları tazelenir. `healthTodayProvider` doğrudan
-/// tazelenirse bu ikisi yedeklenen yeni satırı görmez; onun yerine bu çağrılır.
+/// Seçili kaynağı yeniden okur (bugün + son günler) ve yedekler; bitince 7
+/// günlük adım grafiği ile Ay ortalamaları tazelenir. `healthTodayProvider`
+/// doğrudan tazelenirse bu ikisi yedeklenen yeni satırı görmez; onun yerine
+/// bu çağrılır.
 Future<void> resyncHealthKit(ProviderContainer container) {
   container.invalidate(healthTodayProvider);
   return backfillHealthKit(container);
+}
+
+/// Sağlık verisi kaynağını değiştirir ve yeni kaynaktan bugünü ve son
+/// günleri yeniden okuyup yazar (eski kaynağın satırlarının üstüne). Aynı
+/// anda tek kaynak okunduğu için değerler çift sayılmaz.
+Future<void> selectHealthSource(
+  ProviderContainer container,
+  HealthSourceKind kind,
+) async {
+  final selection = container.read(healthSourceProvider.notifier);
+  if (selection.current == kind) return;
+  await selection.select(kind);
+  if (selection.current != kind) return;
+  await resyncHealthKit(container);
+}
+
+/// Google giriş penceresini açar; başarıda Google seçiliyse hemen eşitler.
+/// Gösterilecek hata metnini döndürür (başarıda ve kullanıcı vazgeçince
+/// `null`). Yalnızca kullanıcı dokunuşuyla çağrılır.
+Future<String?> connectGoogleHealth(ProviderContainer container) async {
+  try {
+    await container.read(googleConnectionProvider.notifier).connect();
+  } on GoogleAuthException catch (error) {
+    return error.kind == GoogleAuthErrorKind.canceled ? null : error.message;
+  }
+  if (container.read(healthSourceProvider) == HealthSourceKind.googleHealth) {
+    await resyncHealthKit(container);
+  }
+  return null;
+}
+
+/// Google bağlantısını keser. Google seçiliyse kartlar "bağlı değil"
+/// durumunu göstersin diye okuma yenilenir; kayıtlı değerler silinmez.
+Future<void> disconnectGoogleHealth(ProviderContainer container) async {
+  await container.read(googleConnectionProvider.notifier).disconnect();
+  if (container.read(healthSourceProvider) == HealthSourceKind.googleHealth) {
+    await resyncHealthKit(container);
+  }
 }

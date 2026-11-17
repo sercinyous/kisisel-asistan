@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
-# iOS projesini HealthKit + yerel bildirimler için yapılandırır.
+# iOS projesini HealthKit + yerel bildirimler + Google ile giriş için yapılandırır.
 # macOS'ta, proje kökünden çalıştırılır:  bash tool/configure_ios.sh
 # Tekrar tekrar çalıştırılabilir (idempotent). Codemagic de her derlemede çağırır.
+#
+# İsteğe bağlı ortam değişkeni:
+#   GOOGLE_IOS_CLIENT_ID  Google Cloud'daki iOS OAuth istemci kimliği
+#                         (1234567890-abc...xyz.apps.googleusercontent.com).
+#                         Verilirse Info.plist'e GIDClientID ve ters kimlikle
+#                         URL şeması yazılır; verilmezse bu adım atlanır.
+#   PLISTBUDDY            PlistBuddy yolu (yalnızca testlerde değiştirilir).
 set -euo pipefail
 
 PLIST="ios/Runner/Info.plist"
@@ -10,7 +17,7 @@ APP_DELEGATE="ios/Runner/AppDelegate.swift"
 ENTITLEMENTS="ios/Runner/Runner.entitlements"
 PODFILE="ios/Podfile"
 MIN_IOS="15.0"
-BUDDY="/usr/libexec/PlistBuddy"
+BUDDY="${PLISTBUDDY:-/usr/libexec/PlistBuddy}"
 
 if [[ ! -f "$PLIST" || ! -f "$PBXPROJ" ]]; then
   echo "HATA: ios/ klasörü yok." >&2
@@ -84,6 +91,55 @@ if [[ -f "$APP_DELEGATE" ]] && ! grep -q "UNUserNotificationCenter.current().del
   echo "  UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate" >&2
 else
   echo "✓ AppDelegate bildirim delegesi ayarlı"
+fi
+
+# --- 5) Google ile giriş (google_sign_in) ----------------------------------
+# GIDClientID: istemci kimliği. CFBundleURLTypes: Google girişinin uygulamaya
+# dönüş adresi, ters çevrilmiş istemci kimliği (com.googleusercontent.apps.…).
+# Bu betiğin eklediği giriş "GoogleSignIn" adını taşır; her çalıştırmada eski
+# Google girişleri silinip tek giriş yeniden yazılır (kimlik değişse de kopya
+# kalmaz).
+GOOGLE_CLIENT_ID="$(printf '%s' "${GOOGLE_IOS_CLIENT_ID:-}" | tr -d '[:space:]')"
+GOOGLE_URL_NAME="GoogleSignIn"
+GOOGLE_SUFFIX=".apps.googleusercontent.com"
+if [[ -z "$GOOGLE_CLIENT_ID" ]]; then
+  echo "• GOOGLE_IOS_CLIENT_ID verilmedi: Google ile giriş yapılandırılmadı (uygulamada Google Health seçeneği kapalı kalır)."
+else
+  if [[ ! "$GOOGLE_CLIENT_ID" =~ ^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$ ]]; then
+    echo "HATA: GOOGLE_IOS_CLIENT_ID beklenen biçimde değil." >&2
+    echo "Google Cloud > APIs & Services > Credentials'taki iOS istemcisinin" >&2
+    echo "'Client ID' değerini (…${GOOGLE_SUFFIX} ile biten) olduğu gibi gir." >&2
+    exit 1
+  fi
+  GOOGLE_REVERSED="com.googleusercontent.apps.${GOOGLE_CLIENT_ID%"$GOOGLE_SUFFIX"}"
+  set_string GIDClientID "$GOOGLE_CLIENT_ID"
+
+  if ! "$BUDDY" -c "Print :CFBundleURLTypes" "$PLIST" >/dev/null 2>&1; then
+    "$BUDDY" -c "Add :CFBundleURLTypes array" "$PLIST"
+  fi
+  # Girişleri say; sondan başa doğru Google girişlerini sil (indeks kaymasın).
+  count=0
+  while "$BUDDY" -c "Print :CFBundleURLTypes:$count" "$PLIST" >/dev/null 2>&1; do
+    count=$((count + 1))
+  done
+  for ((i = count - 1; i >= 0; i--)); do
+    name="$("$BUDDY" -c "Print :CFBundleURLTypes:$i:CFBundleURLName" "$PLIST" 2>/dev/null || true)"
+    schemes="$("$BUDDY" -c "Print :CFBundleURLTypes:$i:CFBundleURLSchemes" "$PLIST" 2>/dev/null || true)"
+    if [[ "$name" == "$GOOGLE_URL_NAME" || "$schemes" == *com.googleusercontent.apps.* ]]; then
+      "$BUDDY" -c "Delete :CFBundleURLTypes:$i" "$PLIST"
+      count=$((count - 1))
+    fi
+  done
+  "$BUDDY" -c "Add :CFBundleURLTypes:$count dict" "$PLIST"
+  "$BUDDY" -c "Add :CFBundleURLTypes:$count:CFBundleTypeRole string Editor" "$PLIST"
+  "$BUDDY" -c "Add :CFBundleURLTypes:$count:CFBundleURLName string $GOOGLE_URL_NAME" "$PLIST"
+  "$BUDDY" -c "Add :CFBundleURLTypes:$count:CFBundleURLSchemes array" "$PLIST"
+  "$BUDDY" -c "Add :CFBundleURLTypes:$count:CFBundleURLSchemes:0 string $GOOGLE_REVERSED" "$PLIST"
+  if [[ "$("$BUDDY" -c "Print :CFBundleURLTypes:$count:CFBundleURLSchemes:0" "$PLIST")" != "$GOOGLE_REVERSED" ]]; then
+    echo "HATA: Google URL şeması Info.plist'e yazılamadı." >&2
+    exit 1
+  fi
+  echo "✓ Google ile giriş: GIDClientID ve URL şeması ($GOOGLE_REVERSED)"
 fi
 
 echo "iOS yapılandırması tamam."

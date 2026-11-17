@@ -1,5 +1,6 @@
 {
   "SUPABASE_URL": "https://PROJE_REF.supabase.co",
   "SUPABASE_ANON_KEY": "supabase-anon-public-key",
-  "GEMINI_API_KEY": "gemini-api-key"
+  "GEMINI_API_KEY": "gemini-api-key",
+  "GOOGLE_IOS_CLIENT_ID": ""
 }

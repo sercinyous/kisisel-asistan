@@ -1,7 +1,9 @@
+import '../core/services/health_service.dart';
 import '../core/utils/date_utils.dart';
 import '../features/ai_quick_add/data/quick_add_repository.dart';
 import '../features/ai_quick_add/domain/parsed_entry.dart';
 import '../features/ai_quick_add/domain/quick_add_mode.dart';
+import '../features/health/data/google_health_source.dart';
 import '../features/health/data/health_repository.dart';
 import '../features/operations/domain/note_item.dart';
 import '../features/operations/domain/task_item.dart';
@@ -251,6 +253,56 @@ class DemoData {
       ),
     );
   }
+}
+
+/// Demodaki Google Health kaynağı: bugünün ve son 7 günün sayıları HealthKit
+/// demosundan farklıdır (kaynak değişince kartlarda fark görülür) ve dünün
+/// sabah koşusu içe aktarılır (yeniden eşitlemede kopyası oluşmaz).
+FakeGoogleHealthSource demoGoogleHealthSource(
+  GoogleHealthLink link,
+  DateTime now,
+) {
+  final today = AppDates.startOfDay(now);
+  HealthSnapshot googleDay(DateTime day) {
+    final m = _demoMetric(day);
+    return HealthSnapshot(
+      status: HealthStatus.ok,
+      steps: m.steps + 640,
+      activeKcal: m.activeKcal + 45,
+      sleepMinutes: m.sleepMinutes - 12,
+      readAt: now,
+      source: HealthSourceKind.googleHealth,
+    );
+  }
+
+  final yesterday = AppDates.addDays(today, -1);
+  return FakeGoogleHealthSource(
+    link: link,
+    today: googleDay(today),
+    pastDays: [
+      for (var back = HealthService.backfillDays; back >= 1; back--)
+        (
+          day: AppDates.addDays(today, -back),
+          snapshot: googleDay(AppDates.addDays(today, -back)),
+        ),
+    ],
+    workouts: [
+      ExternalWorkout(
+        source: GoogleHealthSource.workoutSource,
+        externalId: 'demo-google-run-${AppDates.ymd(yesterday)}',
+        workout: WorkoutLog(
+          id: '',
+          workoutType: 'running',
+          title: 'Sabah koşusu',
+          durationMin: 38,
+          distanceKm: 6.12,
+          caloriesBurned: 402,
+          loggedAt: yesterday.add(const Duration(hours: 7, minutes: 5)),
+          source: GoogleHealthSource.workoutSource,
+        ),
+      ),
+    ],
+  );
 }
 
 // --- Demo sayıları: tarihe bağlıdır, sayfa her açıldığında aynı çıkar. --------

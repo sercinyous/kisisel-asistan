@@ -76,6 +76,49 @@ void main() {
       expect(await health.fetchWorkouts(day, AppDates.endOfDay(day)), hasLength(1));
     });
 
+    test('antrenman: aynı oturumun Google kopyası kullanıcı kaydı eklenince silinir',
+        () async {
+      await health.importExternalWorkouts([
+        ExternalWorkout(
+          source: 'google',
+          externalId: 'kick-1',
+          workout: WorkoutLog(
+            id: '',
+            workoutType: 'kickboxing',
+            loggedAt: day.add(const Duration(hours: 19, minutes: 2)),
+            durationMin: 59,
+          ),
+        ),
+        ExternalWorkout(
+          source: 'google',
+          externalId: 'run-1',
+          workout: WorkoutLog(
+            id: '',
+            workoutType: 'running',
+            loggedAt: day.add(const Duration(hours: 7)),
+            durationMin: 40,
+          ),
+        ),
+      ]);
+      expect(health.workouts, hasLength(2));
+
+      final created = await health.createWorkout(
+        WorkoutLog(
+          id: '',
+          workoutType: 'kickboxing',
+          loggedAt: day.add(const Duration(hours: 20, minutes: 10)),
+          durationMin: 60,
+        ),
+      );
+
+      expect(health.workouts.map((w) => w.workoutType).toSet(),
+          {'kickboxing', 'running'});
+      expect(health.workouts.where((w) => w.isFromGoogle).single.workoutType,
+          'running');
+      expect(health.workouts.any((w) => w.id == created.id), isTrue);
+      expect(health.externalWorkoutIds.keys, [('google', 'run-1')]);
+    });
+
     test('kilo: ekle ve sil', () async {
       final entry = await health.addWeight(83.4, at: day.add(const Duration(hours: 8)));
       expect(entry.weightKg, 83.4);

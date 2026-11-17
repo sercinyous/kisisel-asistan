@@ -65,12 +65,14 @@ class KokpitHarness {
     );
   }
 
-  /// Ekranı kurar. [month] verilirse Ay görünümü o ayla açılır.
+  /// Ekranı kurar. [month] verilirse Ay görünümü o ayla açılır; [overrides]
+  /// varsayılan sahtelerin ardından eklenir (ör. Google Health kaynağı).
   Future<ProviderContainer> pump(
     WidgetTester tester, {
     Size size = const Size(375, 667),
     double textScale = 1.0,
     DateTime? month,
+    List<Override> overrides = const [],
   }) async {
     tester.view.devicePixelRatio = 2;
     tester.view.physicalSize = size * 2;
@@ -87,6 +89,7 @@ class KokpitHarness {
         settingsRepositoryProvider.overrideWithValue(settings),
         healthServiceProvider.overrideWithValue(health),
         notificationServiceProvider.overrideWithValue(notifications),
+        ...overrides,
       ],
     );
     addTearDown(container.dispose);

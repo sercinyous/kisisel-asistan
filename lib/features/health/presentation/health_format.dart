@@ -49,7 +49,8 @@ abstract final class HealthFormat {
     return title.isEmpty ? workoutLabel(workout.workoutType) : title;
   }
 
-  /// "Bugün 19:30 · 60 dk · 5,2 km"
+  /// "Bugün 19:30 · 60 dk · 5,2 km"; Google Health'ten aktarılanda sonda
+  /// "· Google".
   static String workoutDetail(WorkoutLog workout, {DateTime? now}) {
     final duration = workout.durationMin;
     final distance = workout.distanceKm;
@@ -57,6 +58,7 @@ abstract final class HealthFormat {
       AppDates.relativeDayTime(workout.loggedAt, now: now),
       if (duration != null) '$duration dk',
       if (distance != null && distance > 0) '${plain(distance)} km',
+      if (workout.source == 'google') 'Google',
     ].join(' · ');
   }
 }

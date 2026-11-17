@@ -292,8 +292,14 @@ class WorkoutLog {
   /// Yerel saat.
   final DateTime loggedAt;
 
-  /// 'manual' | 'ai' | 'healthkit'
+  /// 'manual' | 'ai' | 'healthkit' | 'google'
   final String source;
+
+  /// Google Health'ten içe aktarılan kayıtların `source` değeri.
+  static const String googleSource = 'google';
+
+  /// Google Health'ten içe aktarılmış mı?
+  bool get isFromGoogle => source == googleSource;
 
   factory WorkoutLog.fromMap(Map<String, dynamic> map) => WorkoutLog(
         id: map['id'] as String,
@@ -347,6 +353,63 @@ class WorkoutLog {
         loggedAt: loggedAt ?? this.loggedAt,
         source: source ?? this.source,
       );
+
+  /// Aynı oturumun iki kaydı sayılmak için iki kaydın zaman aralıkları
+  /// arasında bırakılabilecek en uzun boşluk. Kullanıcı antrenmanı genelde
+  /// bitince (AI hızlı ekleme "şimdi" saatiyle) yazar; takip cihazı ise
+  /// başlangıç anıyla kaydeder.
+  static const Duration sameSessionTolerance = Duration(minutes: 60);
+
+  /// Kaydın kapladığı süre; süre bilinmiyorsa başlangıç anından ibaret.
+  DateTime get endsAt => loggedAt.add(Duration(minutes: durationMin ?? 0));
+
+  /// [other] ile aynı antrenman oturumu mu? Zaman aralıkları çakışıyorsa evet:
+  /// aynı anda iki ayrı antrenman yapılamaz. Çakışmıyorsa, aralarındaki boşluk
+  /// [sameSessionTolerance] içinde ve türler uyumluysa (aynı tür ya da biri
+  /// 'other') evet; farklı türde, art arda iki antrenman ayrı kalır.
+  bool isSameSessionAs(WorkoutLog other) {
+    final gap = _latest(loggedAt, other.loggedAt)
+        .difference(_earliest(endsAt, other.endsAt));
+    if (gap <= Duration.zero) return true;
+    final compatible = workoutType == other.workoutType ||
+        workoutType == 'other' ||
+        other.workoutType == 'other';
+    return compatible && gap <= sameSessionTolerance;
+  }
+
+  static DateTime _latest(DateTime a, DateTime b) => a.isAfter(b) ? a : b;
+  static DateTime _earliest(DateTime a, DateTime b) => a.isBefore(b) ? a : b;
+}
+
+/// Dış kaynaktan içe aktarılan antrenman (`fitness_logs`, source = 'google').
+/// [externalId] kaynaktaki kimliktir; `(user_id, source, external_id)` tekil
+/// dizini yeniden eşitlemede aynı oturumun ikinci kez yazılmasını önler.
+class ExternalWorkout {
+  const ExternalWorkout({
+    required this.source,
+    required this.externalId,
+    required this.workout,
+  });
+
+  /// `fitness_logs.source` değeri ('google').
+  final String source;
+
+  /// Kaynaktaki kimlik (Google Health veri noktası adı).
+  final String externalId;
+
+  /// Yazılacak antrenman; `id` ve `source` alanları kullanılmaz.
+  final WorkoutLog workout;
+
+  /// `external_id` sütun sınırı (schema.sql check'i).
+  static const int externalIdMaxLength = 300;
+
+  /// Tek satırlık ekleme gövdesi.
+  Map<String, dynamic> toInsertMap(String userId) => {
+        ...workout.toWriteMap(),
+        'user_id': userId,
+        'source': source,
+        'external_id': externalId,
+      };
 }
 
 /// Kilo ölçümünün veritabanı check sınırları (`fitness_logs.weight_kg`).

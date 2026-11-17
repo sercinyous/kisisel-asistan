@@ -145,6 +145,57 @@ void main() {
       });
     });
 
+    group('isSameSessionAs (takip cihazı + elle/AI kayıt eşleşmesi)', () {
+      WorkoutLog log(String type, DateTime at, int? minutes) => WorkoutLog(
+            id: type,
+            workoutType: type,
+            loggedAt: at,
+            durationMin: minutes,
+          );
+      final seven = DateTime(2026, 11, 16, 19);
+
+      test('çakışan aralıklar türden bağımsız aynı oturumdur', () {
+        final a = log('kickboxing', seven, 60);
+        expect(a.isSameSessionAs(log('kickboxing', seven.add(const Duration(minutes: 2)), 59)), isTrue);
+        expect(a.isSameSessionAs(log('running', seven.add(const Duration(minutes: 30)), 20)), isTrue,
+            reason: 'aynı anda iki ayrı antrenman yapılamaz');
+        // Süresiz kayıt başlangıç anından ibarettir; aralığın içindeyse eşleşir.
+        expect(a.isSameSessionAs(log('weights', seven.add(const Duration(minutes: 10)), null)), isTrue);
+      });
+
+      test('simetriktir', () {
+        final a = log('kickboxing', seven, 60);
+        final b = log('kickboxing', seven.add(const Duration(minutes: 100)), 30);
+        expect(a.isSameSessionAs(b), b.isSameSessionAs(a));
+        expect(a.isSameSessionAs(b), isTrue);
+      });
+
+      test('bitince yazılan kayıt: boşluk 60 dk içinde ve tür uyumluysa eşleşir', () {
+        final tracker = log('kickboxing', seven, 59);
+        // AI "şimdi" saatiyle 20:10'da yazdı.
+        expect(tracker.isSameSessionAs(log('kickboxing', DateTime(2026, 11, 16, 20, 10), 60)), isTrue);
+        expect(tracker.isSameSessionAs(log('kickboxing', DateTime(2026, 11, 16, 20, 59), 60)), isTrue,
+            reason: 'boşluk tam 60 dk (cihaz kaydı 19:59 biter)');
+        expect(tracker.isSameSessionAs(log('kickboxing', DateTime(2026, 11, 16, 21), 60)), isFalse,
+            reason: 'boşluk 61 dk');
+      });
+
+      test('türler uyumlu olmalı: aynı tür ya da biri other', () {
+        final tracker = log('running', seven, 30);
+        final later = DateTime(2026, 11, 16, 19, 50);
+        expect(tracker.isSameSessionAs(log('weights', later, 45)), isFalse);
+        expect(tracker.isSameSessionAs(log('running', later, 45)), isTrue);
+        expect(tracker.isSameSessionAs(log('other', later, 45)), isTrue);
+        expect(log('other', seven, 30).isSameSessionAs(log('football', later, 45)), isTrue);
+      });
+
+      test('gün içinde uzak saatlerdeki antrenmanlar ayrıdır', () {
+        final morning = log('running', DateTime(2026, 11, 16, 7), 40);
+        final evening = log('running', DateTime(2026, 11, 16, 19), 40);
+        expect(morning.isSameSessionAs(evening), isFalse);
+      });
+    });
+
     test('copyWith: clear bayrakları isteğe bağlı alanları siler', () {
       final w = WorkoutLog(
         id: 'w1',

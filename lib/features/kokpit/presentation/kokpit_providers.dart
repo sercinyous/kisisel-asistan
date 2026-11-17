@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/health_service.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../health/data/health_repository.dart';
+import '../../health/presentation/health_source_providers.dart';
 import '../../operations/data/tasks_repository.dart';
 import '../../operations/domain/task_item.dart';
 import '../data/kokpit_repository.dart';
@@ -40,13 +41,18 @@ final todayNutritionProvider = FutureProvider<NutritionSummary>(
       ref.watch(kokpitRepositoryProvider).fetchNutritionFor(DateTime.now()),
 );
 
-/// HealthKit'ten bugünün verisini okur ve Supabase'e yedekler.
+/// Seçili kaynaktan (HealthKit ya da Google Health) bugünün verisini okur ve
+/// Supabase'e yedekler.
 final healthTodayProvider = FutureProvider<HealthSnapshot>((ref) async {
   final repository = ref.watch(healthRepositoryProvider);
-  final snapshot = await ref.watch(healthServiceProvider).readToday();
+  final selection = ref.watch(healthSourceProvider.notifier);
+  final snapshot = await ref.watch(healthDataSourceProvider).readToday();
   // iOS okuma izninin reddini bildirmez; tamamı sıfır olan okuma "veri yok"
-  // demektir ve gerçek veri gibi saklanmaz.
-  if (snapshot.status == HealthStatus.ok && snapshot.hasData) {
+  // demektir ve gerçek veri gibi saklanmaz. Okuma sürerken kaynak
+  // değiştirildiyse eski kaynağın değeri yazılmaz (iki kaynak karışmasın).
+  if (snapshot.status == HealthStatus.ok &&
+      snapshot.hasData &&
+      snapshot.source == selection.current) {
     try {
       await repository.upsertHealthMetrics(
         snapshot.readAt ?? DateTime.now(),

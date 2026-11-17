@@ -458,3 +458,172 @@ Açık temada vurgular koyulaştırılmıştır; metin ve grafik rengi olarak be
   `platformBrightnessTestValue`'yu izlemesi; Ayarlar'da "Açık"a dokununca zeminin değişip tercihin yazılması.
 - `test/screenshots/app_screens_test.dart` — aynı akış iki temada: 01–15 koyu, 16–30 açık (`NN_acik_<ad>.png`).
   Açık çekimde gölgeler cihazdaki gibi bulanık çizilir (`debugDisableShadows = false`).
+
+## 11. Google Health kaynağı
+
+Fitbit takibi artık Google Health'te durur (Fitbit Web API kapatıldı; halefi **Google Health API**, `https://health.googleapis.com/v4/`).
+Uygulama Google ile giriş yapar ve adım, aktif kalori, uyku ile antrenmanları buradan okur. Apple Health (HealthKit) varsayılan
+kaynak olarak kalır; **aynı anda yalnızca biri** `daily_health_metrics` tablosunu ve arayüzü besler (ikisi birden çift sayardı).
+Google Cloud ve Codemagic kurulumu için README > "Google Health ile bağlantı".
+
+**Dosyalar**
+- `lib/core/config/env.dart` — `Env.googleIosClientId` (`--dart-define=GOOGLE_IOS_CLIENT_ID`, **isteğe bağlı**),
+  `normalizeGoogleClientId` (`<proje no>-<kimlik>.apps.googleusercontent.com` değilse boş), `reversedGoogleClientId`
+  (`com.googleusercontent.apps.<…>`, iOS URL şeması). Boşsa Google seçeneği kapalıdır; uygulama derlenir ve çalışır.
+- `lib/core/services/google_auth.dart` — `googleHealthScopes`, `GoogleAuthClient` arayüzü (`silentToken`, `connect`, `disconnect`),
+  gerçek uygulama `GoogleSignInAuthClient` (`google_sign_in` 7.2: `GoogleSignIn.instance.initialize(clientId:)`,
+  `attemptLightweightAuthentication`, `authenticate(scopeHint:)`, `authorizationClient.authorizationForScopes` /
+  `authorizeScopes`, `disconnect`/`signOut`), `GoogleAuthException(kind)` (`noSession`, `scopesMissing`, `expired`,
+  `canceled`, `configuration`, `network`, `unknown`), `googleClientIdProvider`, `googleAuthClientProvider`.
+- `lib/core/services/google_health_api.dart` — `GoogleHealthApi` REST istemcisi (`package:http`, `client:` ve `accessToken:`
+  enjekte edilir), `GoogleHealthException(kind)` ve Türkçe mesajlar, `googleHealthErrorFor(status, body, headers)`.
+- `lib/core/services/health_source.dart` — `HealthSourceStore` (`shared_preferences`, anahtar `health_source`; her okuma/yazma
+  try/catch + 2 sn zaman aşımı, hata olursa Apple Health), `healthSourceProvider` (`Notifier<HealthSourceKind>`;
+  `select(kind)` hemen uygular sonra yazar; istemci kimliği yokken Google seçilmez ve kayıtlı Google tercihi Apple olur),
+  `initialHealthSourceProvider`, `loadInitialHealthSource()`.
+- `lib/core/services/health_service.dart` — `HealthSourceKind { appleHealth, googleHealth }` (`label`, `shortLabel`:
+  "HealthKit" / "Google Health", `parse`, `fallback`), `HealthStatus`'a `notConnected`, `reconnect`, `failed` eklendi,
+  `HealthSnapshot.source` + `message`, `HealthDataSource` arayüzü (`readToday`, `readPastDays`; `HealthService` uygular),
+  uyku birleştirme yardımcıları `sleepMinutesInWindow` / `mergedIntervalMinutes` (iki kaynağın ortak kuralı).
+- `lib/features/health/data/google_health_source.dart` — `GoogleHealthSource` (`GoogleHealthReader`: `HealthDataSource` +
+  `importWorkouts`), `GoogleHealthLink` (denetleyicinin kaynağa açılan yüzü), `externalWorkoutFromGoogle`, `workoutTypeForGoogle`.
+- `lib/features/health/presentation/health_source_providers.dart` — `GoogleLinkStore` (cihazda: hesap e-postası, son eşitleme,
+  antrenman işareti; anahtarlar `google_health_email`, `google_health_last_sync`, `google_health_exercise_watermark`),
+  `GoogleConnectionController` (`googleConnectionProvider`; durum `GoogleLinkStatus { notConfigured, disconnected, connecting,
+  connected, reconnect }`), `googleHealthSourceProvider`, `healthDataSourceProvider` (seçime göre `HealthService` ya da Google).
+- `lib/features/health/presentation/health_providers.dart` — mevcut adlar korunur ve seçili kaynağa yönlenir:
+  `backfillHealthKit`, `resyncHealthKit`; yeni: `selectHealthSource`, `connectGoogleHealth`, `disconnectGoogleHealth`.
+  `healthTodayProvider` (kokpit_providers.dart) `healthDataSourceProvider`'dan okur.
+- `lib/features/settings/presentation/health_source_settings.dart` — Ayarlar > Bağlantılar: `HealthSourcePicker`
+  ("Sağlık verisi kaynağı", `Key('settings-health-source')`) ve `GoogleHealthRow` (`settings-google-row`).
+- `lib/demo/demo_backend.dart`, `demo_data.dart` — `FakeGoogleAuthClient`, `FakeGoogleHealthSource`, `demoGoogleHealthSource`;
+  `FakeHealthRepository.importExternalWorkouts`.
+- `supabase/schema.sql`, `tool/configure_ios.sh`, `codemagic.yaml`, `ios_setup/Info.plist.additions.xml`.
+
+**Kapsamlar** (yalnızca salt okuma; yazma kapsamı istenmez)
+- `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly` — adım, aktif kalori, antrenman.
+- `https://www.googleapis.com/auth/googlehealth.sleep.readonly` — uyku.
+
+**Veri eşlemesi** (HealthKit yoluyla aynı pencereler: `healthDayWindows`)
+
+| Alan | API çağrısı | Alan yolu |
+|---|---|---|
+| Adım | `POST users/me/dataTypes/steps/dataPoints:dailyRollUp` | `rollupDataPoints[].steps.countSum` (metin olarak int64) |
+| Aktif kalori | `POST users/me/dataTypes/active-energy-burned/dataPoints:dailyRollUp` | `rollupDataPoints[].activeEnergyBurned.kcalSum` |
+| Uyku | `GET users/me/dataTypes/sleep/dataPoints?filter=sleep.interval.end_time >= "…" AND sleep.interval.end_time < "…"` | `dataPoints[].sleep.interval`, `sleep.stages[]` |
+| Antrenman | `GET users/me/dataTypes/exercise/dataPoints?filter=exercise.interval.civil_start_time >= "YYYY-MM-DD" AND … < "YYYY-MM-DD"` | `dataPoints[].exercise` |
+
+- `dailyRollUp` gövdesi: `range {start, end}` (`CivilDateTime`: `date {year, month, day}` + isteğe bağlı `time`; yerel saat),
+  `windowSizeDays: 1`, `pageSize: 90`, `pageToken`. Tek istekte en çok 90 gün: daha uzun aralık 90 günlük parçalara bölünür.
+  Bugünün aralığı şu ana kadardır (bitiş sivil saat). Anahtar `civilStartTime.date`'tir (yerel gün). Verisi olmayan gün 0 sayılır.
+- Uyku, `dailyRollUp` desteklemez: oturumların uyku evreleri (`LIGHT`, `DEEP`, `REM`, `ASLEEP`; `AWAKE` ve `RESTLESS` hariç;
+  evresiz oturumda oturumun tamamı) toplanır. Pencere HealthKit ile aynıdır: önceki gün 18:00 → o gün 18:00; pencereyi aşan kısım
+  kırpılır, çakışan aralıklar bir kez sayılır (`sleepMinutesInWindow`). Uyku `list` yalnızca bitiş zamanıyla süzüldüğü için bitiş
+  süzgeci pencereden bir gün geniş verilir.
+- `list` sayfalama: `pageSize` uyku ve antrenmanda en çok 25; `nextPageToken` boşalana ya da tekrar edene kadar (en çok 200 sayfa)
+  izlenir. Her istek `Authorization: Bearer <erişim anahtarı>` taşır; anahtar her istekte `GoogleAuthClient.silentToken` ile alınır.
+- Antrenman → `fitness_logs` (`source = 'google'`): `exerciseType` → `workoutTypeForGoogle` (ağırlık/kuvvet türleri `weights`,
+  dövüş türleri `kickboxing`, `RUNNING`/`TRAIL_RUN`/`TREADMILL`/`INCLINE_RUN` `running`, `SOCCER` `football`, gerisi `other`);
+  süre `activeDuration` (yoksa bitiş − başlangıç) dakika, 1–600'e sıkıştırılır; `metricsSummary.distanceMillimeters` → km;
+  `metricsSummary.caloriesKcal`; başlık `displayName`; not `notes`; zaman `interval.startTime` (yerel).
+
+**Tekilleştirme** (`fitness_logs`, schema.sql sürüm 4; tek idempotent betik)
+- `source` check'i `('manual','ai','healthkit','google')`; eski check'ler (adı ne olursa olsun) kaldırılıp aynı adla yeniden kurulur.
+- `external_id text` (1–300 karakter; yalnızca `healthkit`/`google` kaynağında dolu olabilir) ve
+  `unique index fitness_logs_external_uidx (user_id, source, external_id)`. Kısmi dizin değildir: PostgREST `on_conflict`
+  sütun listesiyle çıkarım yapar, kısmi dizinin koşulunu yazamaz. NULL'lar eşit sayılmadığından elle/AI kayıtlar takılmaz.
+- `HealthRepository.importExternalWorkouts` → `upsert(onConflict: 'user_id,source,external_id', ignoreDuplicates: true)`
+  (`ON CONFLICT DO NOTHING`): yeniden eşitleme kopya üretmez, kullanıcının sonradan yaptığı düzenleme ezilmez.
+  `external_id` veri noktası adının son parçasıdır (`.../dataPoints/{id}`); ad yoksa `<başlangıç>-<tür>`.
+- Ek olarak cihazda bir işaret tutulur: içe aktarılan en yeni antrenmanın Google'daki `createTime`'ı. Daha eski kayıtlar bir daha
+  gönderilmez; kullanıcı aktarılan bir antrenmanı silerse geri gelmez. Depo yazamazsa işaret ilerlemez (sonraki eşitlemede yeniden denenir).
+  İşaret, atlananlar dahil Google'ın döndürdüğü her kayda göre ilerler.
+
+**Uzlaştırma** (kullanıcının kendi `manual`/`ai` kayıtlarıyla çift sayım ve antrenman olmayan oturumlar;
+`GoogleHealthSource.importWorkouts`, `WorkoutLog.isSameSessionAs`). Tekil dizin yalnızca `(user_id, source, external_id)` korur; elle/AI
+satırların `external_id`'si boştur, bu yüzden aynı seansın Google kaydıyla çakışmaz. Rapor SQL'i (`workout_day`) ve haftalık plan her
+`workout` satırını sayar; uzlaştırma bu satırlar yazılmadan yapılır:
+- **Antrenman sayılmaz** (`isImportableExercise`): `CLEANING`, `GARDENING`, `HOUSEHOLD_CHORES`, `HOEING`, `WEEDING`, `MOWING_LAWN`,
+  `SHOVELING`, `CARPENTRY`, `PAINTING`, `MEDITATE`, `FISHING`, `HUNTING`, `BILLIARDS`, `MUSICAL_PERFORMANCE`, düz `WALKING` ve
+  `STROLLER_WALK` (hepsi `other`'a eşlenir ve planlı bir spor gününü yanlışlıkla "yapıldı" gösterirdi; adım sayısında zaten vardır) ve
+  10 dakikadan kısa her oturum. `HIKING`, `POWER_WALKING`, `NORDIC_WALKING` gibi çaba isteyen yürüyüşler alınır.
+- **Aynı oturum** (`isSameSessionAs`; iki kaydın `[logged_at, logged_at + duration_min]` aralıkları): aralıklar çakışıyorsa (türden bağımsız),
+  ya da aralarındaki boşluk ≤ 60 dk ve türler uyumluysa (aynı tür ya da biri `other`). Boşluk payı, kullanıcının antrenmanı bitince ("şimdi" saatiyle)
+  yazmasındandır; farklı türde art arda antrenman (ağırlıktan 20 dk sonra koşu) ayrı kalır.
+- İçe aktarmada, aynı oturum olan bir `manual`/`ai`/`healthkit` satırı varsa Google kaydı yazılmaz. Önceden aktarılmış bir `google`
+  satırı sonradan kullanıcının kaydıyla çiftlenmişse eşitlemede silinir; kullanıcının kendi kaydı her zaman kalır. Pencere iki uçtan bir gün
+  geniş okunur; okunamazsa hiçbir şey yazılmaz ve işaret ilerlemez. Dönen sayı yazılan + silinen kayıttır (kartlar tazelensin).
+- Ters sıra: `HealthRepository.createWorkout` (antrenman formu) kaydı yazdıktan sonra aynı oturumun Google satırını hemen siler (en iyi çabayla;
+  başarısızsa sonraki eşitleme yapar). AI hızlı ekleme (`quick_add_entries` RPC'si) bu yoldan geçmez; onun kopyası bir sonraki eşitlemede silinir.
+- Bilinen sınır: uzlaştırmada atlanan oturum işaretin gerisinde kalır; kullanıcı kendi kaydını sonradan silerse atlanan Google oturumu geri gelmez.
+
+**Mekanizma**
+1. `main()` `loadInitialHealthSource()` ve `GoogleLinkStore.load()` sonuçlarını `runApp`'ten önce override eder: ilk okuma doğru
+   kaynaktan yapılır (Google seçiliyken HealthKit izin penceresi açılmaz).
+2. Sağlık okuması hep `healthTodayProvider` → `healthDataSourceProvider` üzerinden geçer. Apple Health seçiliyken doğrudan
+   `healthServiceProvider` okunur: HealthKit davranışı değişmez ve Google hiç çağrılmaz. Kaynak değişince sağlayıcı yeniden kurulur;
+   okuma sürerken kaynak değiştiyse eski kaynağın değeri `daily_health_metrics`'e yazılmaz (`snapshot.source == seçili kaynak`).
+3. Sessiz yeniden yetkilendirme: açılış (`backfillHealthKit`) ve öne geliş (`resyncHealthKit`) okumaları her istekte
+   `silentToken` çağırır: kayıtlı oturum geri yüklenir, erişim anahtarı gerekirse yenilenir, hiçbir pencere açılmaz
+   (`promptIfUnauthorized: false`). Üst süre 30 sn; aşılırsa ağ hatası sayılır, uygulama beklemez.
+   **Tek yerel geri yükleme**: iOS GIDSignIn'in tek bir `_currentOptions` yuvası vardır; üst üste başlatılan her
+   `restorePreviousSignIn` öncekinin tamamlanma geri çağrısını ezer (yalnızca sonuncusu döner, ötekilerin vadesi hiç sonuçlanmaz).
+   Soğuk açılışta adım, kalori ve uyku okumaları paralel başladığı için `GoogleSignInAuthClient` eşzamanlı tüm geri yüklemeleri tek
+   yerel çağrıda toplar (`_restoring`, kendi üst süresiyle: kayıp tamamlanma sonraki çağrıyı kilitlemez; zaman aşımı ağ hatasıdır).
+   `connect` ve `disconnect` aynı yuvayı kullandığından süren geri yüklemeyi bekler; giriş sürerken yeni geri yükleme başlamaz.
+4. Oturum yenilenemezse (Testing modunda yenileme anahtarı ~7 günde biter, kullanıcı erişimi hesabından kaldırır) durum
+   `GoogleLinkStatus.reconnect` olur: Kokpit ve Sağlık kartları "Google oturumunun süresi doldu. Google'a yeniden bağlan." ve
+   "Google'a yeniden bağlan" düğmesini gösterir, Ayarlar'daki satır aynı eylemi sunar. Okuma `HealthStatus.reconnect` döner;
+   hiçbir şey yazılmaz ve uygulamanın geri kalanı etkilenmez. Giriş penceresi yalnızca kullanıcı dokunuşuyla açılır.
+5. Hata eşlemesi (`googleHealthErrorFor`): 401 → yeniden bağlan; 403 + `ACCESS_TOKEN_SCOPE_INSUFFICIENT` /
+   `MISSING_OAUTH_SCOPE` / `INSUFFICIENT_SCOPE` (ya da `WWW-Authenticate: insufficient_scope`) → "izin eksik";
+   403 + `SERVICE_DISABLED` / `API_DISABLED` / `ACCESS_NOT_CONFIGURED` → "API etkin değil"; diğer 403 → yeniden bağlan;
+   429 → "biraz sonra tekrar dene"; 5xx → "Google Health yanıt vermiyor"; ağ/zaman aşımı → "internet bağlantını kontrol et".
+   Oturum katmanında (`GoogleSignInAuthClient`, sessiz yol) `PlatformException` kodu "alan: numara" biçimindedir:
+   yalnızca `org.openid.appauth.oauth_token: *` (yenileme anahtarı reddi, invalid_grant gibi 4xx JSON hatası) → `expired`
+   ("yeniden bağlan"); `org.openid.appauth.general: -5/-6/-7` (ağ yok, Google 5xx, JSON olmayan yanıt), `NSURLErrorDomain` ve tanınmayan
+   her `PlatformException` → `network` (oturum geçerli sayılır, durum `reconnect`'e düşmez; etkileşimli girişte tanınmayan kod `unknown`).
+6. `selectHealthSource` seçimi uygular ve yeni kaynaktan bugünü + son 7 günü yeniden okuyup yazar (eski kaynağın aynı gün
+   satırlarının üstüne; toplanmaz). Google seçiliyse `backfillHealthKit` aynı dönemin antrenmanlarını da içe aktarır.
+7. Arayüz: Ayarlar > Bağlantılar'da "Sağlık verisi kaynağı" (Apple Health | Google Health; istemci kimliği yoksa Google
+   kapalı ve açıklamalı), Google satırı (yapılandırılmamış / bağlı değil → "Google ile bağlan" / bağlı: e-posta + son eşitleme →
+   "Şimdi eşitle" ve onaylı "Bağlantıyı kes" / yeniden bağlan). Sağlık sekmesi kartı ve Kokpit kartı etkin kaynağı adlandırır
+   ("Google Health · 14:05" ya da "HealthKit · 14:05"). Antrenman günlüğünde Google'dan gelen satırın ayrıntısı "· Google" ile biter.
+
+**iOS** (`tool/configure_ios.sh`, ortam değişkeni `GOOGLE_IOS_CLIENT_ID`; değişken yoksa adım mesajla atlanır)
+- `Info.plist` → `GIDClientID` = istemci kimliği ve `CFBundleURLTypes` içinde ters kimlikli URL şeması
+  (`com.googleusercontent.apps.<…>`, `CFBundleURLName = GoogleSignIn`). Betik her çalıştırmada eski Google girişlerini silip
+  tek giriş yazar (idempotent; başka URL türlerine dokunmaz). Biçimi bozuk kimlik derlemeyi durdurur.
+- `codemagic.yaml`: iki derleme adımı `--dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}"` verir; değişken
+  `app_secrets` grubundan configure adımında da görünür.
+- `google_sign_in_ios 6.4.0`: en düşük iOS 15.0 (projeyle aynı; `MIN_IOS` değişmez), hem Swift Package Manager (`Package.swift`,
+  GoogleSignIn-iOS 9.0.0 ≤ s < 11.0.0) hem CocoaPods (`GoogleSignIn >= 9.0, < 11.0`) destekler; CI'ın SPM yolu ek ayar istemez.
+  Info.plist'e `GIDClientID` ve URL şemasından başka anahtar gerekmez. İstemci kimliği Dart'tan da (`initialize(clientId:)`)
+  verilir; böylece `GoogleService-Info.plist` gerekmez.
+
+**Tarayıcı demosu**: `googleClientIdProvider` biçimce geçerli sahte kimlikle ezilir; `FakeGoogleAuthClient` (pencere yok) ve
+`FakeGoogleHealthSource` (bellekte; sayılar HealthKit demosundan farklı, bir antrenman içe aktarılır) kullanılır. `google_sign_in_web`
+eklentisi, tarayıcıda kayıtlıyken sayfa açılırken Google'ın giriş betiğini (`accounts.google.com/gsi/client`) yükler; demo bunu
+kullanmaz ve oturum açılmaz.
+
+**Doğrulama kaynağı**: uç noktalar, alan adları ve kapsamlar Google'ın resmi keşif belgesinden
+(`https://health.googleapis.com/$discovery/rest?version=v4`, revizyon 20261114) doğrulandı. `developers.google.com` sayfaları bu
+ortamdan açılamadığından belgelerdeki açıklama metinleri arama özetlerinden alındı.
+
+**Testler**
+- `test/google_health_api_test.dart` — `MockClient`: istek adresi, başlıklar, gövde, sayfalama, `dailyRollUp` ayrıştırma ve 90 gün
+  bölme, uyku/antrenman süzgeçleri ve ayrıştırma, hata eşlemesi (401/403/429/5xx/ağ/bozuk yanıt).
+- `test/google_health_source_test.dart` — gece yarısını geçen ve çakışan uyku oturumları, geçici ve kalıcı hatalar, antrenman
+  eşleme ve tekilleştirme (işaret, silinen kayıt geri gelmez, yazma hatasında işaret ilerlemez).
+- `test/google_auth_test.dart` — gerçek `GoogleSignInAuthClient`, sahte `GoogleSignInPlatform` ile: sessiz geri yükleme,
+  süresi dolmuş oturum, kapsam eksikliği, ağ hatası, zaman aşımı, bağlan/vazgeç, bağlantıyı kes.
+- `test/health_source_test.dart` — kaynak tercihi saklama, `GoogleLinkStore`, `GoogleConnectionController`.
+- `test/health_source_providers_test.dart` — seçili kaynağın kullanılması (çift sayım yok), kaynak değişimi, bağlan/kes.
+- `test/widget/settings_health_source_test.dart`, `test/widget/health_source_cards_test.dart` — Ayarlar satırları ve kartlar her
+  durumda (375×667, metin ölçeği 1.3).
+- `test/env_test.dart` — istemci kimliği biçimi ve ters kimlik.
+- `supabase/tests/fitness_import_test.sql` (`run_local.sh` içinde, temiz kurulum ve yükseltilmiş veritabanında) — kaynak check'i,
+  `external_id` sınırları, tekil dizin ve `ON CONFLICT DO NOTHING`, kullanıcı başına tekillik ve RLS, raporların içe aktarılan
+  antrenmanı saymasını.
+- `tool/test/configure_ios_test.sh` — gerçek `flutter create --platforms=ios` Info.plist'inde, PlistBuddy taklidiyle
+  (`tool/test/plistbuddy_stub.py`): atlama, yazma, idempotentlik, kimlik değişimi, bozuk kimlik.

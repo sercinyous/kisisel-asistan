@@ -66,6 +66,7 @@ class _TodayBento extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final nutrition = ref.watch(todayNutritionProvider);
     final health = ref.watch(healthTodayProvider);
+    final source = ref.watch(healthSourceProvider);
 
     return BentoGrid(
       children: [
@@ -91,7 +92,7 @@ class _TodayBento extends ConsumerWidget {
             BentoCell(
               child: KokpitInlineMessage(
                 icon: Icons.heart_broken_rounded,
-                message: 'HealthKit verisi okunamadı.',
+                message: '${source.shortLabel} verisi okunamadı.',
                 actionLabel: 'Tekrar dene',
                 onAction: () => resyncHealthKit(
                   ProviderScope.containerOf(context, listen: false),
@@ -100,12 +101,13 @@ class _TodayBento extends ConsumerWidget {
             ),
           ],
           data: (snapshot) => switch (snapshot.status) {
-            HealthStatus.unavailable => const [
+            HealthStatus.unavailable => [
                 BentoCell(
                   child: KokpitInlineMessage(
                     icon: Icons.phonelink_off_rounded,
-                    message: 'Adım, uyku ve aktif kalori yalnızca iPhone\'da '
-                        'HealthKit üzerinden okunur.',
+                    message: snapshot.message ??
+                        'Adım, uyku ve aktif kalori yalnızca iPhone\'da '
+                            'HealthKit üzerinden okunur.',
                   ),
                 ),
               ],
@@ -122,6 +124,33 @@ class _TodayBento extends ConsumerWidget {
                   ),
                 ),
               ],
+            HealthStatus.notConnected || HealthStatus.reconnect => [
+                BentoCell(
+                  child: KokpitInlineMessage(
+                    icon: snapshot.status == HealthStatus.reconnect
+                        ? Icons.sync_problem_rounded
+                        : Icons.link_off_rounded,
+                    message: snapshot.message ?? 'Google Health bağlı değil.',
+                    actionLabel: snapshot.status == HealthStatus.reconnect
+                        ? 'Yeniden bağlan'
+                        : 'Bağlan',
+                    onAction: () => _connectGoogle(context),
+                  ),
+                ),
+              ],
+            HealthStatus.failed => [
+                BentoCell(
+                  child: KokpitInlineMessage(
+                    icon: Icons.cloud_off_rounded,
+                    message: snapshot.message ??
+                        '${snapshot.source.shortLabel} verisi okunamadı.',
+                    actionLabel: 'Tekrar dene',
+                    onAction: () => resyncHealthKit(
+                      ProviderScope.containerOf(context, listen: false),
+                    ),
+                  ),
+                ),
+              ],
             HealthStatus.ok => [
                 BentoCell(span: 1, child: _StepsCard(snapshot: snapshot)),
                 BentoCell(span: 1, child: _SleepCard(snapshot: snapshot)),
@@ -130,6 +159,17 @@ class _TodayBento extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  /// Google giriş penceresi; hata olursa alt çubukta gösterilir.
+  static Future<void> _connectGoogle(BuildContext context) async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final error = await connectGoogleHealth(container);
+    if (error == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(error)));
   }
 }
 
@@ -403,8 +443,9 @@ class _SleepCard extends StatelessWidget {
           _FitLeft(
             child: Text(
               readAt == null
-                  ? 'HealthKit'
-                  : 'HealthKit · ${AppDates.hourMinute(readAt)}',
+                  ? snapshot.source.shortLabel
+                  : '${snapshot.source.shortLabel} · '
+                      '${AppDates.hourMinute(readAt)}',
               style: theme.textTheme.labelSmall
                   ?.copyWith(color: AppColors.textMuted),
             ),
