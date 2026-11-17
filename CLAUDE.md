@@ -2,7 +2,7 @@
 
 ## 1. Teknoloji ve mimari
 - Flutter (Dart) + Riverpod 2.x (kod üretimi yok) + Supabase + Gemini Flash API.
-- Tek kullanıcılı iOS kişisel asistan uygulaması; Ad-Hoc dağıtım, Codemagic.
+- 3–5 kişilik (sahip + davetli arkadaşlar) çok kullanıcılı iOS kişisel asistan uygulaması; her kullanıcının verisi RLS ile ayrıdır; Ad-Hoc dağıtım, Codemagic.
 - Klasör yapısı feature-first: `lib/features/<özellik>/{domain,data,presentation}`, ortak kod `lib/core/`.
 - Ayrıntılı sözleşme: `docs/SPEC_FAZ2.md`.
 

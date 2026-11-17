@@ -183,10 +183,7 @@ Liste satırı alanları: `id`, `name`, `aliases`, `category`, `kcal100`, `prote
 Her satır USDA FoodData Central ve Türkiye Gıda Kompozisyon Veri Tabanı (TürKomp) ile çapraz doğrulanır;
 doğrulanamayan satır eklenmez. `test/foods_data_test.dart` biçimi, kaynak izini ve Atwater tutarlılığını
 (`kcal ≈ 4·protein + 4·karbonhidrat + 9·yağ`, tolerans max(%15, 10 kcal)) denetler.
-**Durum: liste henüz doldurulmadı** (`[]`): bu ortamdan her iki kaynağa ağ erişimi yoktu ve değer uydurulmaz.
-Liste boşken arama "Listede yok. Ad ve değerleri aşağıdan elle gir." der; liste doldurulana kadar
-`test/foods_data_test.dart` içindeki "en az 60 satır" testi bilerek kırmızıdır. Tarayıcı demosu liste boşsa
-küçük bir örnek liste kullanır (`lib/demo/demo_foods.dart`, `verification: 'demo'`).
+**Durum: liste dolu** (198 satır, USDA SR Legacy 2018-04, hepsi `tek kaynak`). TürKomp bu ortamdan erişilemedi; TürKomp çapraz doğrulaması yapılmadı. Tarayıcı demosu yalnızca liste boşsa `lib/demo/demo_foods.dart` örneğine düşer.
 
 ### Enerji dengesi
 
@@ -246,8 +243,8 @@ Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
    `ios/` klasörünü depoya koymak isteğe bağlıdır. Xcode'da elle değişiklik (ek yetki, uzantı,
    uygulama simgesi) yaptıysan koy: Codemagic depodaki klasörü kullanır, yeniden oluşturmaz.
 3. **Supabase**: yeni proje aç → SQL Editor'da `supabase/schema.sql` dosyasını çalıştır →
-   Authentication > Users bölümünden kendi kullanıcını (e-posta + şifre) oluştur.
-   Başlangıç verisi kullanıcı oluştuğu anda yüklenir. Authentication > Sign In / Providers altında
+   kendi hesabını Google ile ya da e-posta + şifreyle aç (ilk hesap için aşağıdaki kayıt kapısı notuna bak).
+   Başlangıç satırı kullanıcı oluştuğu anda açılır. Authentication > Sign In / Providers altında
    "Allow new users to sign up" seçeneği **açık** kalır (Google ile ilk giriş yeni kullanıcı oluşturur);
    davet almamış e-postayı kayıt kapısı engeller ("Bu e-posta için davet yok"). Ayrıntı: "Google ile giriş".
 4. **Anahtarlar**: `dart_defines.example.json` dosyasını `dart_defines.json` olarak kopyala ve doldur.
@@ -255,6 +252,26 @@ Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
    ```bash
    flutter run --dart-define-from-file=dart_defines.json
    ```
+
+## Faz 4B kurulumu (çok kullanıcılı)
+
+Sıra önemli: **önce yeni yapı TestFlight'a düşer, sonra SQL çalıştırılır** (eski yapı 'Pusholder' yazar; tetikleyici 'İş'e çevirir).
+
+1. **Supabase > Authentication > Sign In / Providers**: "Allow new users to sign up" **AÇIK** (eski "kapat" adımı kalktı; davetsizi kayıt kapısı engeller). "Confirm email" açık olsun: kapalıysa davet edilen adresle kayıt olan herkes daveti görür.
+2. **Google sağlayıcısı**: Google Cloud'da Web OAuth istemcisi aç, Supabase > Providers > Google'a Web + iOS kimliklerini yaz ("Skip nonce checks" açık). Ayrıntı: "Google ile giriş". Testing modunda arkadaşların Gmail'lerini **Audience > Test users**'a ekle.
+3. **SQL**: `supabase/schema.sql` dosyasını çalıştır, sonra `supabase/cron.sql`. İsteğe bağlı: Authentication > Hooks > Before User Created = `public.hook_before_user_created` (okunur red mesajı). İlk hesabı Dashboard'dan elle açacaksan: `alter table auth.users disable trigger signup_invite_gate;` ve işin sonunda `enable trigger`.
+4. **Fonksiyonlar ve secret'lar**:
+   ```bash
+   supabase secrets set GEMINI_API_KEY=... GEMINI_MODEL=gemini-3.8-flash AI_DAILY_LIMIT=100 CRON_SECRET=...
+   supabase functions deploy ai-proxy --no-verify-jwt
+   supabase functions deploy generate-reports --no-verify-jwt
+   ```
+   İsteğe bağlı: `REPORT_REGEN_DAILY_LIMIT` (varsayılan 10). Uygulama `GEMINI_API_KEY` dart-define'ı boşsa `ai-proxy` kullanır.
+5. **Codemagic `app_secrets`**: `GOOGLE_WEB_CLIENT_ID` (ve mevcut `GOOGLE_IOS_CLIENT_ID`). `GEMINI_API_KEY` artık gerekmez.
+6. **TestFlight daveti**: arkadaşları App Store Connect > Kullanıcılar ve Erişim'den ekle (dahili) ya da harici test grubuna e-postayla davet et.
+7. **Arkadaş ekleme**: uygulamada Kokpit > kişi ikonu > e-posta ile istek. İstek gönderilmeden arkadaş kayıt olamaz.
+
+**Sahibin kontrol listesi**: [ ] Sign up açık, Confirm email açık [ ] Google sağlayıcısı + Web istemcisi [ ] Test kullanıcıları eklendi [ ] Yeni yapı TestFlight'ta [ ] schema.sql + cron.sql çalıştı [ ] secret'lar + iki fonksiyon dağıtıldı [ ] Codemagic `GOOGLE_WEB_CLIENT_ID` [ ] TestFlight davetleri [ ] iki hesapla giriş ve arkadaşlık denemesi [ ] `flutter analyze` / `flutter test` temiz.
 
 ## Otomatik raporlar
 
@@ -557,9 +574,7 @@ aynı yapılandırma ve kimlik adımları onun üzerinde çalışır.
 
 - **Rapor yorumları için Gemini anahtarı sunucudadır** (Edge Function secret); aşağıdaki not yalnızca
   AI hızlı giriş için geçerlidir.
-- **Gemini anahtarı uygulamanın içinde.** Tek kişilik dağıtım (dahili TestFlight / Ad-Hoc) için kabul edilebilir; .ipa başka
-  birine verilirse anahtar çıkarılabilir. Google AI Studio'da anahtara kota sınırı koy. Daha sıkı güvenlik
-  için çağrı bir Supabase Edge Function arkasına alınabilir.
+- **AI çağrıları `ai-proxy` üzerinden gider** (Faz 4B); Gemini anahtarı uygulamada değil, fonksiyon secret'ındadır. Günlük kota kullanıcı başınadır.
 - **AI kaydı iki adımlıdır**: Ayrıştır → önizle → Kaydet. Kaydetme tek transaction'dır
   (`quick_add_entries` RPC): bir tablo hata verirse hiçbiri yazılmaz.
 - **Makro değerleri tahmindir.** Gemini standart besin değerlerinden hesaplar; önizlemede kontrol et.

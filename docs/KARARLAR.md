@@ -135,6 +135,17 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (
   makroları yaygın porsiyonlar için YAKLAŞIKTIR (formda belirtilir); paketli besin listesinin doğrulanmış satırlarının
   yerini tutmaz.
 
+### Faz 4B: çok kullanıcı, arkadaşlar, ai-proxy
+- **Kayıt**: "Allow new users to sign up" AÇIK; `auth.users` üzerindeki `signup_invite_gate` tetikleyicisi davetsiz e-postayı reddeder ("Bu e-posta için davet yok"). İsteğe bağlı Before User Created kancası `public.hook_before_user_created` (okunur 403). Sahip elle hesap açacaksa tetikleyiciyi geçici kapatır, işi bitince açar.
+- **Davet eşleşmesi** yalnızca doğrulanmış e-posta (`email_confirmed_at`) ya da hedef kullanıcı ile; Supabase'te "Confirm email" açık önerilir (kapalıysa davet edilen adresle kayıt olan daveti görür; sızıntı açılan anahtar kadar).
+- **Arkadaşlık**: istek e-postayla, her durumda "İstek gönderildi"; en çok 20 bekleyen istek; kabulde sıralı çift `friendships`. Paylaşım `friend_sharing` anahtarları (adım/uyku/kalori), hepsi varsayılan kapalı. Arkadaş yalnızca hedef tutan gün sayısını görür (`friend_goal_summary`, Pzt–Paz, her zaman 3 satır, paylaşılmıyorsa `shared=false`); ham veri asla. İstemci yazımı yalnızca kendi `friend_sharing` satırı; geri kalanı RPC.
+- **ai-proxy**: Gemini çağrıları Edge Function'dan geçer; anahtar yalnızca secret'ta (`GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_DAILY_LIMIT` varsayılan 100). Günlük kota `consume_ai_quota` (atomik, kullanıcı saat dilimine göre); "Raporu yeniden oluştur" günde 10. Hatalar Türkçe: 401/429/402/404. `GEMINI_API_KEY` dart-define boşsa istemci proxy kullanır.
+- **Nötr 'İş'**: 'Pusholder' herkes için 'İş' olur; eski değer yalnızca okunurken eşlenir, şema tetikleyicisi yazımı çevirir. Yeni satır varsayılanları nötr (70 kg, 2000 kcal, 120 g protein, 8000 adım, 450 dk uyku); ekip varsayılan boş. `work_description` AI komutuna veri olarak eklenir.
+- **Onboarding**: bkz. yukarıdaki Faz 4B bölümü; mevcut hesaplar migration ile `onboarded_at = now()` alır. Raporlar yalnızca `onboarded_at` dolu kullanıcılara üretilir.
+- **Google giriş**: bkz. Güvenlik kuralları; Gmail test kullanıcıları Google Cloud'da elle eklenir.
+- **Besin listesi**: `foods_tr.json` 198 satır, USDA SR Legacy 2018-04'ten, hepsi `tek kaynak`. TürKomp bu ortamdan erişilemedi (bağlantı kurulamadı), hiçbir satırda TürKomp kodu yok; çapraz doğrulama yapılmadı. Atwater'ı geçemeyen 12 satır çıkarıldı.
+- **Dağıtım sırası**: yeni yapı TestFlight'a düşünce SQL çalıştırılır (eski yapı 'İş' satırlarını kapsam filtresinde göremeyebilir; kabul edildi).
+
 ## Güvenlik kuralları
 - `service_role` ya da secret anahtar uygulamaya, repoya, sohbete girmez. Yalnızca anon/publishable anahtar.
 - `.p8`, `.p12`, parola ve anahtar değerleri sohbete yapıştırılmaz; yalnızca Codemagic'e girilir.
@@ -147,6 +158,7 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (
 ## Süreç
 - Hız kuralı: dosya başına analyze/test yok, iş bitince tek seferlik kontrol.
 - Son kapsamlı inceleme yapı kurulduktan sonra yapılır.
-- Bekleyenler: Gemini faturası, otomatik rapor dağıtımı, özel uygulama ikonu, Google Health PR'ı, besin listesinin
-  (`assets/data/foods_tr.json`) USDA FDC ve TürKomp'tan doğrulanarak doldurulması, Faz 4A sayılarının gerçek
-  cihazda Fitbit/Sağlık uygulamasıyla karşılaştırılması.
+- Bekleyenler: Gemini faturası, `ai-proxy` ve `generate-reports` dağıtımı, özel uygulama ikonu, Google Health PR'ı,
+  besin listesinin TürKomp ile çapraz doğrulanması (erişim gelince), Faz 4A sayılarının gerçek cihazda
+  karşılaştırılması, `flutter analyze`/`flutter test` ilk tam koşusu, gerçek Google girişinin iki hesapla denenmesi,
+  arkadaş akışının iki hesapla uçtan uca denenmesi.
