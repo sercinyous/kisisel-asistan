@@ -1929,10 +1929,11 @@ grant execute on function public.leave_friendship(uuid) to authenticated;
 -- hook_before_user_created işlevi Dashboard > Authentication > Hooks >
 -- "Before User Created" olarak seçilebilir (isteğe bağlı; tetikleyici her
 -- durumda ikinci kapı olarak kalır).
--- Geçici olarak kapatmak (ör. Dashboard'dan elle hesap açmak) için:
---   alter table auth.users disable trigger signup_invite_gate;
--- ve işin sonunda:
---   alter table auth.users enable trigger signup_invite_gate;
+-- Supabase'de auth.users sahibi olunmadığı için tetikleyici kapatılamaz
+-- ("must be owner of table users"). Dashboard'dan elle hesap açmak için önce
+-- o e-postaya bekleyen bir davet ekle, sonra Add user (Auto Confirm) kullan:
+--   insert into public.friend_requests (from_user, target_email)
+--   select id, 'yeni@ornek.com' from auth.users where email = 'SAHIP_EPOSTASI';
 -- ---------------------------------------------------------------------
 create or replace function public.has_pending_invite(p_email text)
 returns boolean
