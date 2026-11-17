@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Kalpte Tik",
+  "idea": "Dolu bir kalbin içine negatif boşlukla oyulmuş tik, tamamlanan işin ve sağlığın aynı yerde atmasını anlatır.",
+  "bg": "#000000",
+  "fg": "#5EEAD4",
+  "svg": "<path d='M50 84C22 64 14 51 14 38C14 26 23 17 33.5 17C41 17 47 22 50 28C53 22 59 17 66.5 17C77 17 86 26 86 38C86 51 78 64 50 84Z' fill='#5EEAD4'/><path d='M34 51L45 62L66 40' fill='none' stroke='#000000' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'/>"
+ },
+ {
+  "name": "Yarım Kalp",
+  "idea": "Kalbin sol yarısı dolu kalır, sivri ucundan yükselen tek kol tiki tamamlar.",
+  "bg": "#F4F1EA",
+  "fg": "#0E736B",
+  "svg": "<g transform='translate(3 0)'><path d='M47 84C19 64 11 51 11 38C11 26 20 17 30.5 17C38 17 44 22 47 28Z' fill='#0E736B'/><path d='M55 72L84 33' fill='none' stroke='#0E736B' stroke-width='12' stroke-linecap='round'/></g>"
+ },
+ {
+  "name": "Kıvrık Tik",
+  "idea": "Tikin uzun kolu yukarıda kıvrılıp kalbin sağ lobunu çizer; tek çizgide hem tamam hem kalp.",
+  "bg": "#0B1F1D",
+  "fg": "#5EEAD4",
+  "svg": "<path d='M26 55L46 75L70 51C80 41 77 26 64 26C56 26 51 32 48 39' fill='none' stroke='#5EEAD4' stroke-width='12' stroke-linecap='round' stroke-linejoin='round'/>"
+ }
+]
