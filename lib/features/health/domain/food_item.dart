@@ -29,7 +29,8 @@ class FoodPortion {
 
   static String _number(double value) {
     final rounded = (value * 100).round() / 100;
-    if (rounded == rounded.truncateToDouble()) return rounded.toInt().toString();
+    if (rounded == rounded.truncateToDouble())
+      return rounded.toInt().toString();
     return rounded.toString().replaceAll('.', ',');
   }
 
@@ -132,8 +133,7 @@ class FoodItem {
         carbs100: optional('carbs100'),
         fat100: optional('fat100'),
         portions: [
-          for (final portion
-              in (map['portions'] as List<dynamic>? ?? const []))
+          for (final portion in (map['portions'] as List<dynamic>? ?? const []))
             FoodPortion.fromMap(portion as Map<String, dynamic>),
         ],
         source: map['source'] as String? ?? '',
@@ -168,11 +168,13 @@ class FoodItem {
   final String? note;
 
   /// Üç makro da biliniyor mu.
-  bool get hasMacros => protein100 != null && carbs100 != null && fat100 != null;
+  bool get hasMacros =>
+      protein100 != null && carbs100 != null && fat100 != null;
 
   /// Varsayılan porsiyon: listedeki ilk porsiyon, yoksa 100 g.
-  FoodPortion get defaultPortion =>
-      portions.isNotEmpty ? portions.first : const FoodPortion(name: '100 g', grams: 100);
+  FoodPortion get defaultPortion => portions.isNotEmpty
+      ? portions.first
+      : const FoodPortion(name: '100 g', grams: 100);
 
   /// `USDA FDC kimlik | TürKomp kod` biçiminde kaynak notu.
   final String source;

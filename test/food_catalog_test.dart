@@ -62,7 +62,8 @@ Map<String, dynamic> row(String id, String name) => {
 void main() {
   group('FoodItem', () {
     test('forGrams 143 kcal/100 g için 150 g = 214,5 kcal', () {
-      final food = item('x', 'Deneme', kcal: 143, protein: 12, carbs: 2, fat: 9);
+      final food =
+          item('x', 'Deneme', kcal: 143, protein: 12, carbs: 2, fat: 9);
       final macros = food.forGrams(150);
       expect(macros.kcal, 214.5);
       expect(macros.protein, 18);
@@ -90,7 +91,8 @@ void main() {
       expect(food.category, 'sebze');
       expect(food.kcal100, 20);
       expect(food.fat100, 0.2);
-      expect(food.portions.single, const FoodPortion(name: '1 adet', grams: 80));
+      expect(
+          food.portions.single, const FoodPortion(name: '1 adet', grams: 80));
       expect(food.source, 'USDA FDC 1 | TürKomp 2');
       expect(food.verification, 'iki kaynak');
     });
@@ -153,11 +155,14 @@ void main() {
           ...row('a', 'A'),
           'categories': ['Meyveler', 'Öğle Atıştırmalıkları'],
         }),
-        FoodItem.fromMap({...row('b', 'B'), 'categories': ['Sebzeler']}),
+        FoodItem.fromMap({
+          ...row('b', 'B'),
+          'categories': ['Sebzeler']
+        }),
       ]);
       expect(catalog.inCategory('Meyveler').map((f) => f.id), ['a']);
-      expect(catalog.inCategory('Öğle Atıştırmalıkları').map((f) => f.id),
-          ['a']);
+      expect(
+          catalog.inCategory('Öğle Atıştırmalıkları').map((f) => f.id), ['a']);
       expect(catalog.byId('b')?.name, 'B');
       expect(catalog.byId('x'), isNull);
     });

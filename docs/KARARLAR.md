@@ -154,6 +154,8 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (
 - Supabase MCP salt-okunur ve tek projeye kilitli (`.mcp.json`); yazan araçlar `.claude/settings.json` ile
   engelli. Yalnızca şema, politika, advisor ve log sorgulanır; kullanıcı tablolarında SELECT çalıştırılmaz.
   Salt-okunur kip prompt injection ile veri sızmasını engellemez, bu yüzden bu kural elle uygulanır.
+- Görev kategorileri kullanıcı yönetimlidir: `user_settings.task_categories` jsonb (null = İş/Ekip/Finans/Kişisel);
+  aç/kapat, taslak ve özel kategori Ayarlar'da; `tasks.category` 1..40 karakter serbest; AI yalnızca açıkları önerir.
 
 ## Süreç
 - Hız kuralı: dosya başına analyze/test yok, iş bitince tek seferlik kontrol.

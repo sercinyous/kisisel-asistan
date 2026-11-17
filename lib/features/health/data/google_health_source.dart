@@ -139,7 +139,10 @@ class GoogleHealthSource implements GoogleHealthReader {
       AppDates.addDays(from, -1),
       AppDates.addDays(to, 1),
     );
-    final own = [for (final w in existing) if (!w.isFromGoogle) w];
+    final own = [
+      for (final w in existing)
+        if (!w.isFromGoogle) w
+    ];
     final duplicates = [
       for (final w in existing)
         if (w.isFromGoogle && own.any(w.isSameSessionAs)) w,

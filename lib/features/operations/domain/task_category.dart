@@ -104,7 +104,7 @@ class TaskCategory {
       .replaceAll('ı', 'i')
       .toLowerCase();
 
-  /// Kırpılmış, tek boşluklu ad; geçersizse `null`. 'Pusholder' 'İş'e eşlenir.
+  /// Kırpılmış, tek boşluklu ad; geçersizse `null`. Eski iş adı 'İş'e eşlenir.
   static String? cleanName(Object? value) {
     if (value is! String) return null;
     final text = value.replaceAll(RegExp(r'\s+'), ' ').trim();

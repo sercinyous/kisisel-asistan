@@ -69,8 +69,7 @@ Future<List<EnergyDay>> _energyDays(
   final metricsRead = repository.fetchDailyMetrics(first, last);
   final nutritionRead =
       repository.fetchNutritionTotals(first, AppDates.endOfDay(last));
-  final workoutsRead =
-      repository.fetchWorkouts(first, AppDates.endOfDay(last));
+  final workoutsRead = repository.fetchWorkouts(first, AppDates.endOfDay(last));
   final weightsRead = repository.fetchWeights(
     AppDates.addDays(first, -energyWeightLookbackDays),
     AppDates.endOfDay(last),

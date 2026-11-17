@@ -30,12 +30,13 @@ class HealthKitCard extends ConsumerWidget {
 
     final (String message, String? action, _CardAction kind) = health.when(
       skipLoadingOnRefresh: true,
-      loading: () => ('${source.shortLabel} okunuyor…', null, _CardAction.resync),
+      loading: () =>
+          ('${source.shortLabel} okunuyor…', null, _CardAction.resync),
       error: (_, __) => (
-          '${source.shortLabel} verisi okunamadı.',
-          'Tekrar dene',
-          _CardAction.resync,
-        ),
+        '${source.shortLabel} verisi okunamadı.',
+        'Tekrar dene',
+        _CardAction.resync,
+      ),
       data: (data) => data.source == HealthSourceKind.googleHealth
           ? _googleMessage(data)
           : _healthKitMessage(data),
@@ -63,9 +64,7 @@ class HealthKitCard extends ConsumerWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(
-                onPressed: health.isLoading
-                    ? null
-                    : () => _run(context, kind),
+                onPressed: health.isLoading ? null : () => _run(context, kind),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(healthMinTouch, healthMinTouch),
@@ -79,7 +78,8 @@ class HealthKitCard extends ConsumerWidget {
     );
   }
 
-  static (String, String?, _CardAction) _healthKitMessage(HealthSnapshot data) =>
+  static (String, String?, _CardAction) _healthKitMessage(
+          HealthSnapshot data) =>
       switch (data.status) {
         HealthStatus.unavailable => (
             'Adım, uyku ve aktif kalori yalnızca iPhone\'da HealthKit '

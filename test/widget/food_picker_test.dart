@@ -116,21 +116,22 @@ void main() {
   testWidgets('9 kategori çipi var; kategori listeyi süzer', (tester) async {
     await pumpPicker(tester);
     for (final c in FoodCategories.all) {
-      expect(find.byKey(Key('food-category-$c')), findsOneWidget);
+      expect(find.byKey(Key('food-category-$c'), skipOffstage: false),
+          findsOneWidget);
     }
     expect(find.byKey(const Key('picker-food-k-muz')), findsOneWidget);
 
     await tapVisible(tester, find.byKey(const Key('food-category-Meyveler')));
     expect(find.byKey(const Key('picker-food-k-muz')), findsOneWidget);
-    expect(find.byKey(const Key('picker-food-k-yumurta-haslama')),
-        findsNothing);
+    expect(
+        find.byKey(const Key('picker-food-k-yumurta-haslama')), findsNothing);
   });
 
   testWidgets('satır porsiyon ve 100 g kalorisini, kızartma notunu gösterir',
       (tester) async {
     await pumpPicker(tester);
-    expect(find.text('1 adet (50 g): 78 kcal · 100 g: 156 kcal'),
-        findsOneWidget);
+    expect(
+        find.text('1 adet (50 g): 78 kcal · 100 g: 156 kcal'), findsOneWidget);
     expect(find.textContaining('Yağ miktarına göre değişir'), findsOneWidget);
   });
 
@@ -139,8 +140,8 @@ void main() {
     await tester.enterText(
         find.byKey(const Key('food-picker-search')), 'haslanmis');
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('picker-food-k-yumurta-haslama')),
-        findsOneWidget);
+    expect(
+        find.byKey(const Key('picker-food-k-yumurta-haslama')), findsOneWidget);
     expect(find.byKey(const Key('picker-food-k-muz')), findsNothing);
   });
 

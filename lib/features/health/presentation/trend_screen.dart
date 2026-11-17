@@ -44,8 +44,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen>
   late DateTime _today;
   late DateTime _anchor;
 
-  DateTime _readToday() =>
-      AppDates.startOfDay(ref.read(trendClockProvider)());
+  DateTime _readToday() => AppDates.startOfDay(ref.read(trendClockProvider)());
 
   TrendQuery get _query =>
       TrendQuery(metric: _metric, period: _period, anchor: _anchor);
@@ -140,8 +139,7 @@ class _TrendScreenState extends ConsumerState<TrendScreen>
                     tooltip: 'Önceki dönem',
                     icon: const Icon(Icons.chevron_left_rounded),
                     color: AppColors.textSecondary,
-                    onPressed: () =>
-                        _select(anchor: query.shifted(-1).anchor),
+                    onPressed: () => _select(anchor: query.shifted(-1).anchor),
                   ),
                   Expanded(
                     child: Text(

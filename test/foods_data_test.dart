@@ -223,17 +223,19 @@ void main() {
     final names = user.map((r) => r['name']).toList();
     expect(names.toSet(), hasLength(names.length));
     final egg = user.singleWhere((r) => r['name'] == 'Haşlanmış yumurta');
-    expect(egg['categories'], containsAll(<String>[
-      'Haşlanmış Yiyecekler',
-      'Kahvaltılık Ürünler',
-      'Öğle Atıştırmalıkları',
-    ]));
+    expect(
+        egg['categories'],
+        containsAll(<String>[
+          'Haşlanmış Yiyecekler',
+          'Kahvaltılık Ürünler',
+          'Öğle Atıştırmalıkları',
+        ]));
     // Çiğ ve haşlanmış brokoli ayrı kalır.
     expect(user.where((r) => (r['name'] as String).contains('rokoli')),
         hasLength(2));
     for (final row in user) {
-      final fried = (row['categories'] as List)
-          .contains('Kızartılmış Yiyecekler');
+      final fried =
+          (row['categories'] as List).contains('Kızartılmış Yiyecekler');
       if (fried) {
         expect(row['note'], 'Yağ miktarına göre değişir', reason: _label(row));
       }

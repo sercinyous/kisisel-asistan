@@ -224,7 +224,8 @@ class HealthRepository {
   }
 
   /// HealthKit'ten okunan günlük özeti raporlar için saklar.
-  Future<void> upsertHealthMetrics(DateTime day, HealthSnapshot snapshot) async {
+  Future<void> upsertHealthMetrics(
+      DateTime day, HealthSnapshot snapshot) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null ||
         snapshot.status != HealthStatus.ok ||

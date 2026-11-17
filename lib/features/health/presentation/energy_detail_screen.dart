@@ -42,8 +42,7 @@ enum _EnergyView { net, lines }
 class EnergyDetailScreen extends ConsumerStatefulWidget {
   const EnergyDetailScreen({super.key});
 
-  static Future<void> open(BuildContext context) =>
-      Navigator.of(context).push(
+  static Future<void> open(BuildContext context) => Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (_) => const EnergyDetailScreen()),
       );
 
@@ -58,8 +57,7 @@ class _EnergyDetailScreenState extends ConsumerState<EnergyDetailScreen>
   late DateTime _today;
   late DateTime _anchor;
 
-  DateTime _readToday() =>
-      AppDates.startOfDay(ref.read(trendClockProvider)());
+  DateTime _readToday() => AppDates.startOfDay(ref.read(trendClockProvider)());
 
   // Dönem günleri için ortak pencere hesabı; metrik yalnızca zorunlu alandır.
   TrendQuery get _window => TrendQuery(
@@ -146,8 +144,7 @@ class _EnergyDetailScreenState extends ConsumerState<EnergyDetailScreen>
                     tooltip: 'Önceki dönem',
                     icon: const Icon(Icons.chevron_left_rounded),
                     color: AppColors.textSecondary,
-                    onPressed: () =>
-                        _select(anchor: window.shifted(-1).anchor),
+                    onPressed: () => _select(anchor: window.shifted(-1).anchor),
                   ),
                   Expanded(
                     child: Text(

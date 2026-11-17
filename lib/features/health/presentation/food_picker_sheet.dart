@@ -129,8 +129,8 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
     FocusScope.of(context).unfocus();
     final navigator = Navigator.of(context);
     final route = ModalRoute.of(context);
-    final saved =
-        await FoodAmountSheet.show(context, food: food, mealType: widget.mealType);
+    final saved = await FoodAmountSheet.show(context,
+        food: food, mealType: widget.mealType);
     if (saved) closeOpsSheet(navigator, route);
   }
 
@@ -200,7 +200,8 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
         style:
             theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
       ),
-      trailing: Icon(Icons.add_circle_outline_rounded, color: AppColors.nutrition),
+      trailing:
+          Icon(Icons.add_circle_outline_rounded, color: AppColors.nutrition),
       onTap: () => _open(food),
     );
   }
@@ -254,7 +255,8 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: Text('Besin ekle', style: theme.textTheme.titleLarge),
+                    child:
+                        Text('Besin ekle', style: theme.textTheme.titleLarge),
                   ),
                   TextButton.icon(
                     key: const Key('food-picker-manual'),
@@ -286,10 +288,10 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
               const SizedBox(height: 8),
               SizedBox(
                 height: 40,
-                child: ListView(
+                child: SingleChildScrollView(
                   key: const Key('food-picker-categories'),
                   scrollDirection: Axis.horizontal,
-                  children: [
+                  child: Row(children: [
                     for (final category in FoodCategories.all)
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -303,7 +305,7 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
                           ),
                         ),
                       ),
-                  ],
+                  ]),
                 ),
               ),
               Expanded(
