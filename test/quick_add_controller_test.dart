@@ -15,7 +15,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'helpers/quick_add_fakes.dart';
 
 const Map<String, dynamic> _task = {
-  'title': 'Duhan ile vardiya planı',
+  'title': 'Ayşe ile vardiya planı',
   'category': 'Ekip',
   'priority': 'medium',
   'due_at': '2099-01-05T15:00:00+03:00',
@@ -23,7 +23,7 @@ const Map<String, dynamic> _task = {
 const Map<String, dynamic> _undatedTask = {'title': 'Tarihsiz iş'};
 const Map<String, dynamic> _routine = {
   'title': 'Maaş ödemeleri',
-  'scope': 'Pusholder',
+  'scope': 'İş',
   'category': 'finans',
   'frequency': 'monthly',
   'day_of_month': 15,
@@ -470,7 +470,7 @@ void main() {
       expect(payload['routines'], [
         {
           'title': 'Maaş ödemeleri',
-          'scope': 'Pusholder',
+          'scope': 'İş',
           'category': 'finans',
           'frequency': 'monthly',
           'days_of_week': [1, 2, 3, 4, 5, 6, 7],
@@ -487,7 +487,7 @@ void main() {
       });
 
       final reminder = harness.notifications.scheduled.single;
-      expect(reminder.title, 'Duhan ile vardiya planı');
+      expect(reminder.title, 'Ayşe ile vardiya planı');
       // 15:00 (+03:00) randevu, varsayılan 30 dk önce.
       expect(reminder.when.toUtc(), DateTime.utc(2099, 1, 5, 11, 30));
     });

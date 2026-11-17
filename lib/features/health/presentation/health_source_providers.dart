@@ -181,8 +181,13 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
                 GoogleHealthErrorKind.reconnect,
                 message: 'Google oturumu bulunamadı. Google\'a yeniden bağlan.',
               ),
-        GoogleAuthErrorKind.scopesMissing =>
-          const GoogleHealthException(GoogleHealthErrorKind.missingScope),
+        // Google ile giriş yapılmışsa eklenti o hesabı sessizce bulur ama Health
+        // kapsamları onaylı değildir. Health bağlantısı hiç kurulmadıysa (kayıtlı
+        // hesap yok) bu "izin eksik" değil "bağlı değil" demektir; Health yalnızca
+        // kullanıcı Ayarlar'dan bağlanınca bağlı sayılır.
+        GoogleAuthErrorKind.scopesMissing => state.email == null
+            ? const GoogleHealthException(GoogleHealthErrorKind.notConnected)
+            : const GoogleHealthException(GoogleHealthErrorKind.missingScope),
         GoogleAuthErrorKind.network =>
           const GoogleHealthException(GoogleHealthErrorKind.network),
         GoogleAuthErrorKind.configuration => GoogleHealthException(

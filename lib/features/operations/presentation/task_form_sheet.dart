@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/config/app_targets.dart';
+import '../../../core/templates/task_templates.dart';
+import '../../../core/templates/template_chips.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/tasks_repository.dart';
@@ -77,6 +79,18 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     _description.dispose();
     super.dispose();
   }
+
+  /// Şablon başlığı, kategoriyi ve önceliği doldurur; tarih ve kişi kullanıcıda
+  /// kalır. Her alan sonradan düzenlenir.
+  void _applyTemplate(TaskTemplate template) => setState(() {
+        _title.text = template.title;
+        final description = template.description;
+        if (description != null) _description.text = description;
+        if (AppTargets.taskCategories.contains(template.category)) {
+          _category = template.category;
+        }
+        _priority = template.priority;
+      });
 
   Future<void> _pickDate() async {
     final today = AppDates.startOfDay(DateTime.now());
@@ -180,6 +194,12 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       error: _error,
       onSave: _save,
       children: [
+        if (widget.task == null)
+          TemplateChips<TaskTemplate>(
+            templates: TaskTemplates.all,
+            labelOf: (template) => template.label,
+            onSelected: _applyTemplate,
+          ),
         TextFormField(
           controller: _title,
           maxLength: _titleMax,

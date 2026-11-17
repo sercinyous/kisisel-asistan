@@ -15,13 +15,21 @@
 #     iOS Distribution sertifikasını ekle (yoksa Codemagic orada oluşturabilir), ardından
 #     "Fetch profiles" ile BUNDLE_ID için App Store (ve istersen Ad-Hoc) profilini çek.
 #  4) Codemagic > Environment variables > "app_secrets" grubu (hepsi Secure):
-#     SUPABASE_URL, SUPABASE_ANON_KEY, GEMINI_API_KEY
-#     İsteğe bağlı GEMINI_MODEL: Google bir modeli kaldırınca kod değiştirmeden
-#     yeni model adını buradan ver (varsayılan gemini-3.8-flash).
+#     SUPABASE_URL, SUPABASE_ANON_KEY
+#     GEMINI_API_KEY artık gerekmez: boş bırakılırsa uygulama AI çağrılarını Supabase'teki
+#     ai-proxy Edge Function'ından yapar (anahtar yalnızca fonksiyon secret'ındadır).
+#     Eski doğrudan çağrı için doldurulabilir (geçiş); ai-proxy doğrulanınca sil.
+#     İsteğe bağlı GEMINI_MODEL (yalnızca doğrudan çağrıda kullanılır; proxy modelini
+#     fonksiyonun GEMINI_MODEL secret'ı belirler): Google bir modeli kaldırınca kod
+#     değiştirmeden yeni model adını buradan ver (varsayılan gemini-3.8-flash).
 #     İsteğe bağlı GOOGLE_IOS_CLIENT_ID: Google Health (Fitbit) bağlantısı için
 #     Google Cloud'daki iOS OAuth istemci kimliği (…apps.googleusercontent.com).
 #     Gizli değildir (uygulamanın içinde durur); verilmezse uygulama Google
 #     seçeneği kapalı olarak derlenir. Ayrıntı: README > "Google Health ile bağlantı".
+#     İsteğe bağlı GOOGLE_WEB_CLIENT_ID: "Google ile devam et" girişi için Google Cloud'daki
+#     WEB OAuth istemci kimliği (…apps.googleusercontent.com; Supabase > Authentication >
+#     Providers > Google > "Authorized Client IDs"e de eklenir). Gizli değildir. Boşsa ya da
+#     GOOGLE_IOS_CLIENT_ID yoksa giriş ekranında Google düğmesi gizlenir (e-posta girişi kalır).
 #  5) Aşağıdaki "vars" bloğunda BUNDLE_ID ve APP_STORE_APPLE_ID değerlerini doldur
 #     (imzalama ayarları BUNDLE_ID'yi buradan okur; başka yerde değiştirmek gerekmez).
 #
@@ -44,7 +52,7 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -e
-        for key in SUPABASE_URL SUPABASE_ANON_KEY GEMINI_API_KEY; do
+        for key in SUPABASE_URL SUPABASE_ANON_KEY; do
           if [ -z "${!key}" ]; then
             echo "Eksik ortam değişkeni: $key (app_secrets grubuna ekle)"
             exit 1
@@ -64,6 +72,12 @@ definitions:
         # İsteğe bağlı: biçimi tool/configure_ios.sh denetler (hatalıysa derleme durur).
         if [ -z "${GOOGLE_IOS_CLIENT_ID:-}" ]; then
           echo "BİLGİ: GOOGLE_IOS_CLIENT_ID yok; Google Health seçeneği kapalı derlenecek."
+        fi
+        if [ -z "${GOOGLE_WEB_CLIENT_ID:-}" ]; then
+          echo "BİLGİ: GOOGLE_WEB_CLIENT_ID yok; giriş ekranında Google düğmesi gizli derlenecek."
+        elif ! printf '%s' "$GOOGLE_WEB_CLIENT_ID" | grep -Eq '^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$'; then
+          echo "HATA: GOOGLE_WEB_CLIENT_ID beklenen biçimde değil (…apps.googleusercontent.com)." >&2
+          exit 1
         fi
 
     # ios/ depoda tutulmuyorsa burada üretilir (Mac gerekmez). --org, BUNDLE_ID'nin
@@ -203,9 +217,10 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY" \
+            --dart-define=GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
             --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}" \
-            --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}"
+            --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}" \
+            --dart-define=GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}"
 
     artifacts: *artifacts
 
@@ -247,8 +262,9 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=GEMINI_API_KEY="$GEMINI_API_KEY" \
+            --dart-define=GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
             --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}" \
-            --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}"
+            --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}" \
+            --dart-define=GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}"
 
     artifacts: *artifacts

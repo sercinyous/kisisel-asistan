@@ -33,13 +33,13 @@ List<Routine> sampleRoutines() => [
       }),
       Routine.fromMap(const {
         'id': 'r2',
-        'title': 'Sabah push performans kontrolü (CTR, teslim oranı)',
+        'title': 'Sabah görev ve takvim kontrolü (plan, öncelik)',
         'category': 'operasyon',
         'time_of_day': '09:00:00',
       }),
       Routine.fromMap(const {
         'id': 'r3',
-        'title': 'Editör vardiya kontrolü (Duhan, İlhan, Mehmet, Sedat)',
+        'title': 'Ekip planı kontrolü (Ayşe, Can, Elif, Deniz)',
         'category': 'operasyon',
         'time_of_day': '09:30:00',
       }),
@@ -64,7 +64,7 @@ List<TaskItem> sampleReminders() => [
         category: 'Ekip',
         priority: 'high',
         status: 'todo',
-        assignee: 'Duhan',
+        assignee: 'Ayşe',
         remindAt: DateTime(2099, 1, 5, 14, 30),
         dueAt: DateTime(2099, 1, 5, 15),
       ),
@@ -72,7 +72,7 @@ List<TaskItem> sampleReminders() => [
         id: 't2',
         title: 'Push bildirim performans raporunu hazırla ve ekip ile paylaş, '
             'ardından haftalık toplantıda sun',
-        category: 'Pusholder',
+        category: 'İş',
         priority: 'high',
         status: 'todo',
         dueAt: DateTime(2099, 1, 6, 12),
@@ -224,7 +224,7 @@ void main() {
       await scrollThrough(tester);
       expect(find.text('Bugün ve yaklaşanlar'), findsOneWidget);
       expect(find.text('Haftalık vardiya çizelgesini yayınla'), findsOneWidget);
-      expect(find.textContaining('Ekip · Duhan'), findsOneWidget);
+      expect(find.textContaining('Ekip · Ayşe'), findsOneWidget);
     });
 
     testWidgets('kalori hedefi aşılınca "fazla" yazar', (tester) async {

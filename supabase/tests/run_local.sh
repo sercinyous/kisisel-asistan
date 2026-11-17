@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # schema.sql'i yerel bir PostgreSQL 16 kümesinde sınar (Supabase gerekmez):
 #   1) temiz kurulum, iki kez (idempotent mi?)
+#   1c) Faz 4B (ayrı veritabanında): kayıt kapısı (varsayılan açık kurulum),
+#      şema/nötr seed/Pusholder→İş, arkadaşlar ve yetki sınırları, AI kotası
+#      (paralel oturumlarla atomiklik), SQL-Dart hedef eşliği (SQL tarafı;
+#      Dart tarafı test/friend_goal_parity_test.dart, aynı goal_vectors.json)
 #   2) rapor fonksiyonları + yetkiler (reports_test.sql), Google antrenman
 #      içe aktarımı (fitness_import_test.sql), profil sütunları
 #      (profile_columns_test.sql)
@@ -46,6 +50,42 @@ echo "tamam"
 echo "== 1b) profil sütunları (user_settings: boy, doğum yılı, cinsiyet) =="
 run -d fresh -f "$HERE/profile_columns_test.sql"
 
+echo "== 1c) Faz 4B: kayıt kapısı, arkadaşlar, kota, eşlik =="
+export GOAL_VECTORS="$HERE/goal_vectors.json"
+run -d postgres -c "create database faz4b"
+run -d faz4b -f "$HERE/auth_stub.sql"
+run -d faz4b -f "$SCHEMA"
+run -d faz4b -f "$SCHEMA"
+# Kapı testi şema yeni kurulmuşken İLK çalışır (varsayılan: kapı açık).
+run -d faz4b -f "$HERE/signup_gate_test.sql" >/dev/null
+echo "tamam: kayıt kapısı"
+run -d faz4b -f "$HERE/faz4b_schema_test.sql" >/dev/null
+echo "tamam: şema, nötr seed, Pusholder → İş, rapor zamanlayıcısı yetkisi"
+run -d faz4b -f "$HERE/friends_test.sql" >/dev/null
+echo "tamam: arkadaşlar ve yetki sınırları"
+run -d faz4b -f "$HERE/ai_quota_test.sql" >/dev/null
+echo "tamam: AI kotası"
+run -d faz4b -f "$HERE/goal_parity_test.sql" >/dev/null
+echo "tamam: SQL-Dart eşlik (SQL tarafı)"
+
+# Atomiklik: 8 paralel oturum aynı kullanıcı için 5'er çağrı yapar, limit 10.
+# Tam 10 çağrı true almalı, sayaç tam 10 olmalı (aşım ve kayıp artış yok).
+run -d faz4b -c "alter table auth.users disable trigger signup_invite_gate" \
+  -c "insert into auth.users (id, email) values ('e1000000-0000-0000-0000-000000000001', 'paralel@example.com') on conflict do nothing" \
+  -c "alter table auth.users enable trigger signup_invite_gate"
+for i in 1 2 3 4 5 6 7 8; do
+  run -d faz4b -At -c "select count(*) from generate_series(1, 5) where public.consume_ai_quota('e1000000-0000-0000-0000-000000000001', 'paralel', 10)" \
+    > "$WORK/quota_$i.out" &
+done
+wait
+TRUES=$(cat "$WORK"/quota_*.out | awk '{ s += $1 } END { print s + 0 }')
+COUNT=$(run -d faz4b -At -c "select count from public.ai_usage where user_id = 'e1000000-0000-0000-0000-000000000001' and kind = 'paralel'")
+if [ "$TRUES" != "10" ] || [ "$COUNT" != "10" ]; then
+  echo "BAŞARISIZ: paralel kota: true=$TRUES sayaç=$COUNT (ikisi de 10 olmalı)" >&2
+  exit 1
+fi
+echo "tamam: paralel kota atomik (true=$TRUES, sayaç=$COUNT)"
+
 echo "== 2) rapor fonksiyonları ve yetkiler =="
 run -d fresh -f "$HERE/reports_test.sql"
 echo "== 2b) Google antrenman içe aktarımı (fitness_logs) =="
@@ -64,6 +104,8 @@ run -d upgrade -f "$SCHEMA"
 run -d upgrade -f "$SCHEMA"
 run -d upgrade -f "$HERE/upgrade_test.sql"
 run -d upgrade -v fixture_user=eeeeeeee-0000-0000-0000-000000000005 \
+  -f "$HERE/upgrade_faz4b_test.sql"
+run -d upgrade -v fixture_user=eeeeeeee-0000-0000-0000-000000000005 \
   -v fixture_calories=2400 -f "$HERE/profile_columns_test.sql"
 # Yükseltilmiş veritabanında fonksiyon ve yetki testleri de geçmeli.
 run -d upgrade -c "delete from auth.users"
@@ -73,6 +115,11 @@ run -d upgrade -f "$HERE/reports_test.sql" >/dev/null 2>"$WORK/upgrade_reports.l
 }
 echo "tamam: rapor testleri yükseltilmiş veritabanında da geçti"
 run -d upgrade -f "$HERE/fitness_import_test.sql"
+# Yükseltilmiş veritabanında Faz 4B işlevleri de aynı davranır.
+run -d upgrade -f "$HERE/friends_test.sql" >/dev/null
+run -d upgrade -f "$HERE/ai_quota_test.sql" >/dev/null
+run -d upgrade -f "$HERE/goal_parity_test.sql" >/dev/null
+echo "tamam: Faz 4B testleri sürüm 2'den yükseltilmiş veritabanında da geçti"
 
 echo "== 4) sürüm 3 → güncel yükseltme =="
 if [ -z "$V3_SCHEMA" ]; then
@@ -90,8 +137,16 @@ else
   run -d upgrade3 -f "$HERE/upgrade_fixture_v3.sql"
   run -d upgrade3 -f "$SCHEMA"
   run -d upgrade3 -f "$SCHEMA"
+  # Yükseltme testi, fikstür satırına başka test dokunmadan ÖNCE çalışır.
+  run -d upgrade3 -v fixture_user=eeeeeeee-0000-0000-0000-000000000006 \
+    -f "$HERE/upgrade_faz4b_test.sql"
   run -d upgrade3 -v fixture_user=eeeeeeee-0000-0000-0000-000000000006 \
     -v fixture_calories=2300 -f "$HERE/profile_columns_test.sql"
+  # Yükseltilmiş veritabanında Faz 4B işlevleri de aynı davranır.
+  run -d upgrade3 -f "$HERE/friends_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/ai_quota_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/goal_parity_test.sql" >/dev/null
+  echo "tamam: Faz 4B testleri sürüm 3'ten yükseltilmiş veritabanında da geçti"
   echo "tamam: sürüm 3 yükseltmesi"
 fi
 

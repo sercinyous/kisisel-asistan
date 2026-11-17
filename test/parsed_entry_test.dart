@@ -79,11 +79,33 @@ void main() {
     test('enum eşleşmesi büyük/küçük harfe duyarsızdır (ASCII)', () {
       final task = ParsedTask.fromJson(const {
         'title': 'x',
-        'category': 'pusholder',
+        'category': 'finans',
         'priority': 'HIGH',
       })!;
-      expect(task.category, 'Pusholder');
+      expect(task.category, 'Finans');
       expect(task.priority, 'high');
+    });
+
+    test('eski "Pusholder" kategorisi (geçiş uyumu) "İş"e eşlenir', () {
+      for (final legacy in ['Pusholder', 'pusholder', 'PUSHOLDER']) {
+        expect(
+          ParsedTask.fromJson({'title': 'x', 'category': legacy})!.category,
+          'İş',
+          reason: legacy,
+        );
+        expect(
+          ParsedNote.fromJson({'title': 'x', 'category': legacy})!.category,
+          'İş',
+          reason: legacy,
+        );
+      }
+      expect(
+        ParsedTask.fromJson(const {'title': 'x', 'category': 'iş'})!.category,
+        'İş',
+      );
+      expect(ParsedTask.categories, ['İş', 'Ekip', 'Finans', 'Kişisel']);
+      expect(ParsedNote.categories,
+          ['Toplantı', 'Fikir', 'İş', 'Ekip', 'Finans', 'Kişisel']);
     });
 
     test('Türkçe küçük harfli enum: "kişisel" ve "toplantı"', () {
@@ -207,7 +229,7 @@ void main() {
         'description': 'Vardiya planı',
         'category': 'Ekip',
         'priority': 'high',
-        'assignee': 'Duhan',
+        'assignee': 'Ayşe',
         'due_at': '2026-11-17T15:00:00+03:00',
         'remind_at': '2026-11-17T14:30:00+03:00',
       })!
@@ -225,7 +247,7 @@ void main() {
       });
       expect(json['due_at'], '2026-11-17T12:00:00.000Z');
       expect(json['remind_at'], '2026-11-17T11:30:00.000Z');
-      expect(json['assignee'], 'Duhan');
+      expect(json['assignee'], 'Ayşe');
     });
 
     test('toJson: boş tarihler null gider', () {
@@ -514,7 +536,7 @@ void main() {
     test('aylık iş: tüm alanlar', () {
       final r = parse(const {
         'title': '  Maaş ödemeleri ',
-        'scope': 'Pusholder',
+        'scope': 'İş',
         'category': 'finans',
         'frequency': 'monthly',
         'days_of_week': [1, 2, 3, 4, 5, 6, 7],
@@ -522,7 +544,7 @@ void main() {
         'time_of_day': '10:00',
       });
       expect(r.title, 'Maaş ödemeleri');
-      expect(r.scope, 'Pusholder');
+      expect(r.scope, 'İş');
       expect(r.category, 'finans');
       expect(r.frequency, RoutineFrequency.monthly);
       expect(r.isMonthly, isTrue);
@@ -707,11 +729,16 @@ void main() {
     test('scope ve category Türkçe harf farkına duyarsız eşleşir', () {
       final r = parse(const {
         'title': 'x',
-        'scope': 'PUSHOLDER',
+        'scope': 'İŞ',
         'category': 'FİNANS',
       });
-      expect(r.scope, 'Pusholder');
+      expect(r.scope, 'İş');
       expect(r.category, 'finans');
+      // Eski değer ('Pusholder') geçiş uyumu için 'İş'e eşlenir.
+      for (final legacy in ['Pusholder', 'PUSHOLDER']) {
+        expect(parse({'title': 'x', 'scope': legacy}).scope, 'İş',
+            reason: legacy);
+      }
       expect(parse(const {'title': 'x', 'scope': 'KİŞİSEL'}).scope, 'Kişisel');
       expect(parse(const {'title': 'x', 'scope': 'kisisel'}).scope, 'Kişisel');
       expect(parse(const {'title': 'x', 'category': 'Operasyon'}).category,
@@ -721,7 +748,7 @@ void main() {
     test('toJson: quick_add_entries routines sütunları', () {
       final weekly = parse(const {
         'title': 'Ekip toplantısı',
-        'scope': 'Pusholder',
+        'scope': 'İş',
         'category': 'operasyon',
         'frequency': 'weekly',
         'days_of_week': [1],
@@ -729,7 +756,7 @@ void main() {
       }).toJson();
       expect(weekly, {
         'title': 'Ekip toplantısı',
-        'scope': 'Pusholder',
+        'scope': 'İş',
         'category': 'operasyon',
         'frequency': 'weekly',
         'days_of_week': [1],

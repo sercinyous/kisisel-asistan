@@ -238,7 +238,7 @@ void main() {
     /// Model çıktısı → ParsedTask → `quick_add_entries` satırı (notify = true).
     TaskItem aiRow(Object? remindAt) {
       final json = ParsedTask.fromJson({
-        'title': 'Duhan ile vardiya planı',
+        'title': 'Ayşe ile vardiya planı',
         'category': 'Ekip',
         'priority': 'medium',
         'due_at': due.toUtc().toIso8601String(),

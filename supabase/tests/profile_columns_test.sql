@@ -11,6 +11,10 @@
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
 
+-- Kayıt kapısı (signup_invite_gate) bu testin fikstür kullanıcılarını
+-- engellemesin; kapının kendisi signup_gate_test.sql'de sınanır.
+alter table auth.users disable trigger signup_invite_gate;
+
 insert into auth.users (id, email) values
   ('c1c1c1c1-0000-0000-0000-000000000001', 'profil-a@test'),
   ('c2c2c2c2-0000-0000-0000-000000000002', 'profil-b@test')

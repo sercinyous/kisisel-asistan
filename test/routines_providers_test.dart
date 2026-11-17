@@ -738,7 +738,7 @@ void main() {
           category: 'Ekip',
           priority: 'high',
           status: 'todo',
-          assignee: 'Duhan',
+          assignee: 'Ayşe',
           remindAt: DateTime(2099, 1, 5, 14, 30),
           dueAt: DateTime(2099, 1, 5, 15),
         ),
@@ -768,7 +768,7 @@ void main() {
       final reminder = notifications.lastReminders.single;
       expect(reminder.taskId, 't1');
       expect(reminder.when, DateTime(2099, 1, 5, 14, 30));
-      expect(reminder.body, 'Ekip · Duhan');
+      expect(reminder.body, 'Ekip · Ayşe');
     });
 
     test('izin verilmezse hiçbir şey okunmaz ve planlanmaz', () async {

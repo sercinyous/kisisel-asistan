@@ -32,7 +32,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    auth = FakeGoogleAuthClient(email: 'sercan.ornek@gmail.com');
+    auth = FakeGoogleAuthClient(email: 'ayse.ornek@gmail.com');
     store = FakeHealthRepository();
   });
 
@@ -144,7 +144,7 @@ void main() {
     expect(auth.connectCalls, 1);
     expect(container.read(googleConnectionProvider).status,
         GoogleLinkStatus.connected);
-    expect(inGoogleRow('sercan.ornek@gmail.com'), findsOneWidget);
+    expect(inGoogleRow('ayse.ornek@gmail.com'), findsOneWidget);
     expect(
       inGoogleRow('Kaynak olarak seçilince'),
       findsOneWidget,
@@ -168,12 +168,12 @@ void main() {
       tester,
       source: HealthSourceKind.googleHealth,
       prefs: GoogleLinkPrefs(
-        email: 'sercan.ornek@gmail.com',
+        email: 'ayse.ornek@gmail.com',
         lastSyncAt: DateTime.now().subtract(const Duration(hours: 3)),
       ),
     );
 
-    expect(inGoogleRow('sercan.ornek@gmail.com'), findsOneWidget);
+    expect(inGoogleRow('ayse.ornek@gmail.com'), findsOneWidget);
     expect(inGoogleRow('Son eşitleme: Bugün'), findsOneWidget);
     expect(picker(tester).selected, {HealthSourceKind.googleHealth});
     expect(find.text('Kaynak olarak seçili değil'), findsOneWidget,
@@ -223,11 +223,11 @@ void main() {
     await pumpSettings(
       tester,
       source: HealthSourceKind.googleHealth,
-      prefs: const GoogleLinkPrefs(email: 'sercan.ornek@gmail.com'),
+      prefs: const GoogleLinkPrefs(email: 'ayse.ornek@gmail.com'),
     );
 
     expect(inGoogleRow('Google oturumunun süresi doldu'), findsOneWidget);
-    expect(inGoogleRow('sercan.ornek@gmail.com'), findsOneWidget);
+    expect(inGoogleRow('ayse.ornek@gmail.com'), findsOneWidget);
     final reconnect = find.byKey(const Key('settings-google-connect'));
     expect(
       find.descendant(
@@ -250,7 +250,7 @@ void main() {
     auth.signedIn = true;
     final container = await pumpSettings(
       tester,
-      prefs: const GoogleLinkPrefs(email: 'sercan.ornek@gmail.com'),
+      prefs: const GoogleLinkPrefs(email: 'ayse.ornek@gmail.com'),
     );
     expect(picker(tester).selected, {HealthSourceKind.appleHealth});
 

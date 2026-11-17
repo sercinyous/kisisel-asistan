@@ -20,10 +20,10 @@ import '../helpers/test_fonts.dart';
 ParsedEntry sampleEntry() => ParsedEntry.fromJson(const {
       'tasks': [
         {
-          'title': 'Duhan ile vardiya planı',
+          'title': 'Ayşe ile vardiya planı',
           'category': 'Ekip',
           'priority': 'high',
-          'assignee': 'Duhan',
+          'assignee': 'Ayşe',
           'due_at': '2099-01-05T15:00:00+03:00',
           'remind_at': '2099-01-05T14:45:00+03:00',
         },
@@ -88,7 +88,7 @@ ParsedEntry workEntry({bool otherDomain = false, String? summary}) =>
     ParsedEntry.fromJson({
       'tasks': [
         {
-          'title': 'Duhan ile vardiya planı',
+          'title': 'Ayşe ile vardiya planı',
           'category': 'Ekip',
           'priority': 'medium',
           'due_at': '2099-01-05T15:00:00+03:00',
@@ -97,7 +97,7 @@ ParsedEntry workEntry({bool otherDomain = false, String? summary}) =>
       'routines': [
         {
           'title': 'Maaş ödemeleri',
-          'scope': 'Pusholder',
+          'scope': 'İş',
           'category': 'finans',
           'frequency': 'monthly',
           'day_of_month': 15,
@@ -105,7 +105,7 @@ ParsedEntry workEntry({bool otherDomain = false, String? summary}) =>
         },
         {
           'title': 'Ekip toplantısı',
-          'scope': 'Pusholder',
+          'scope': 'İş',
           'category': 'operasyon',
           'frequency': 'weekly',
           'days_of_week': [1],
@@ -233,13 +233,13 @@ void main() {
   testWidgets('ayrıştır -> önizleme -> kalem çıkar -> kaydet, sayı ile kapanır',
       (tester) async {
     final host = await openModal(tester);
-    await typeAndParse(tester, 'Öğlen tavuk yedim, yarın Duhan ile toplantı');
+    await typeAndParse(tester, 'Öğlen tavuk yedim, yarın Ayşe ile toplantı');
 
-    expect(gemini.inputs.single, 'Öğlen tavuk yedim, yarın Duhan ile toplantı');
+    expect(gemini.inputs.single, 'Öğlen tavuk yedim, yarın Ayşe ile toplantı');
     expect(find.text('Bunları anladım'), findsOneWidget);
     expect(find.text('Tavuk göğsü · 200 gr'), findsOneWidget);
     expect(find.text('Beslenme · Öğle'), findsOneWidget);
-    expect(find.text('Duhan ile vardiya planı'), findsOneWidget);
+    expect(find.text('Ayşe ile vardiya planı'), findsOneWidget);
     expect(find.text('Görev · Ekip · Yüksek öncelik'), findsOneWidget);
     expect(find.text('83.9 kg'), findsOneWidget);
     expect(find.text('3 kaydı kaydet'), findsOneWidget);
@@ -261,12 +261,12 @@ void main() {
 
     final saved = repository.saved.single;
     expect(saved.nutrition, isEmpty);
-    expect(saved.tasks.single.title, 'Duhan ile vardiya planı');
+    expect(saved.tasks.single.title, 'Ayşe ile vardiya planı');
     expect(saved.weights.single.weightKg, 83.9);
 
     final reminder = notifications.scheduled.single;
     expect(reminder.taskId, 'task-0');
-    expect(reminder.title, 'Duhan ile vardiya planı');
+    expect(reminder.title, 'Ayşe ile vardiya planı');
     expect(reminder.when.toUtc(), DateTime.utc(2099, 1, 5, 11, 45));
   });
 
@@ -276,7 +276,7 @@ void main() {
     gemini.handler = (_) async => ParsedEntry.fromJson(const {
           'tasks': [
             {
-              'title': 'Duhan ile vardiya planı',
+              'title': 'Ayşe ile vardiya planı',
               'category': 'Ekip',
               'priority': 'medium',
               'due_at': '2099-01-05T15:00:00+03:00',
@@ -285,7 +285,7 @@ void main() {
           ],
         });
     await openModal(tester);
-    await typeAndParse(tester, 'Duhan ile toplantı, süt al');
+    await typeAndParse(tester, 'Ayşe ile toplantı, süt al');
 
     // Bildirim terminden ayardaki süre kadar önce planlanır; önizleme de
     // bunu söyler. Tarihsiz görevde hatırlatma yoktur.
@@ -295,7 +295,7 @@ void main() {
     await tester.tap(find.text('2 kaydı kaydet'));
     await tester.pumpAndSettle();
     final reminder = notifications.scheduled.single;
-    expect(reminder.title, 'Duhan ile vardiya planı');
+    expect(reminder.title, 'Ayşe ile vardiya planı');
     expect(reminder.when.toUtc(), DateTime.utc(2099, 1, 5, 11, 30));
   });
 
@@ -510,10 +510,10 @@ void main() {
       await openModal(tester);
       await typeAndParse(tester, 'her ayın 15i maaş, her pazartesi toplantı');
 
-      expect(find.text('Aylık iş · Pusholder · Finans'), findsOneWidget);
+      expect(find.text('Aylık iş · İş · Finans'), findsOneWidget);
       expect(find.text('Maaş ödemeleri'), findsOneWidget);
       expect(find.text('Her ayın 15. günü · 10:00'), findsOneWidget);
-      expect(find.text('Tekrarlayan iş · Pusholder · Operasyon'), findsOneWidget);
+      expect(find.text('Tekrarlayan iş · İş · Operasyon'), findsOneWidget);
       expect(find.text('Ekip toplantısı'), findsOneWidget);
       expect(find.text('Her Pzt · 11:00'), findsOneWidget);
       expect(find.text('3 kaydı kaydet'), findsOneWidget);
@@ -536,7 +536,7 @@ void main() {
       expect(repository.saved.single.toJson()['routines'], [
         {
           'title': 'Ekip toplantısı',
-          'scope': 'Pusholder',
+          'scope': 'İş',
           'category': 'operasyon',
           'frequency': 'weekly',
           'days_of_week': [1],
@@ -552,12 +552,12 @@ void main() {
         'sağlık girişinde tümüyle iş metni: önizleme yok, uyarı ve geçiş düğmesi',
         (tester) async {
       harness.health.handler =
-          (_) async => otherDomainOnly('Yarın 15:00 Duhan ile toplantı');
+          (_) async => otherDomainOnly('Yarın 15:00 Ayşe ile toplantı');
       final host = await openModal(tester, mode: QuickAddMode.health);
-      await typeAndParse(tester, 'Yarın 15:00 Duhan ile toplantı var');
+      await typeAndParse(tester, 'Yarın 15:00 Ayşe ile toplantı var');
 
       expect(find.text('Bu bir iş kaydı gibi görünüyor.'), findsOneWidget);
-      expect(find.text('Yarın 15:00 Duhan ile toplantı'), findsOneWidget);
+      expect(find.text('Yarın 15:00 Ayşe ile toplantı'), findsOneWidget);
       expect(find.text('İş girişine geç'), findsOneWidget);
       expect(find.text('Bunları anladım'), findsNothing);
       expect(find.textContaining('Metinden kaydedilecek'), findsNothing,
@@ -569,7 +569,7 @@ void main() {
 
       expect(find.text('İş girişi'), findsOneWidget);
       expect(find.text('Sağlık & beslenme girişi'), findsNothing);
-      expect(fieldText(tester), 'Yarın 15:00 Duhan ile toplantı var',
+      expect(fieldText(tester), 'Yarın 15:00 Ayşe ile toplantı var',
           reason: 'metin diğer alana taşınmalı');
       expect(find.text('Bu bir iş kaydı gibi görünüyor.'), findsNothing);
       expect(harness.work.inputs, isEmpty,
@@ -578,7 +578,7 @@ void main() {
 
       await tester.tap(find.text('Ayrıştır'));
       await tester.pumpAndSettle();
-      expect(harness.work.inputs, ['Yarın 15:00 Duhan ile toplantı var']);
+      expect(harness.work.inputs, ['Yarın 15:00 Ayşe ile toplantı var']);
       expect(find.text('Bunları anladım'), findsOneWidget);
 
       await tester.tap(find.text('3 kaydı kaydet'));
@@ -637,16 +637,16 @@ void main() {
         (tester) async {
       harness.health.handler = (_) async => healthEntry(
             otherDomain: true,
-            summary: 'Yarın 15:00 Duhan ile toplantı',
+            summary: 'Yarın 15:00 Ayşe ile toplantı',
           );
       final host = await openModal(tester, mode: QuickAddMode.health);
-      await typeAndParse(tester, 'Öğlen tavuk yedim, yarın Duhan ile toplantı');
+      await typeAndParse(tester, 'Öğlen tavuk yedim, yarın Ayşe ile toplantı');
 
       expect(find.text('Bunları anladım'), findsOneWidget);
       expect(find.text('Tavuk göğsü · 200 gr'), findsOneWidget);
       expect(find.text('Metnin bir kısmı iş kaydı gibi görünüyor.'),
           findsOneWidget);
-      expect(find.text('Yarın 15:00 Duhan ile toplantı'), findsOneWidget);
+      expect(find.text('Yarın 15:00 Ayşe ile toplantı'), findsOneWidget);
       expect(find.text('Kaydet ve iş girişine geç'), findsOneWidget);
 
       // Uyarı önizleme kalemlerinin üstündedir.
@@ -673,7 +673,7 @@ void main() {
       harness.work.handler =
           (_) async => workEntry(otherDomain: true, summary: 'Öğlen tavuk');
       final host = await openModal(tester, mode: QuickAddMode.health);
-      const text = 'Öğlen tavuk yedim, yarın Duhan ile toplantı';
+      const text = 'Öğlen tavuk yedim, yarın Ayşe ile toplantı';
       await typeAndParse(tester, text);
 
       await tester.tap(find.text('Kaydet ve iş girişine geç'));
@@ -766,10 +766,10 @@ void main() {
     testWidgets('giriş + diğer alan uyarısı taşmaz', (tester) async {
       if (!realFonts) return markTestSkipped('Roboto bulunamadı');
       harness.health.handler = (_) async => otherDomainOnly(
-            'Yarın 15:00 Duhan ile vardiya planı görüşmesi ve aylık rapor',
+            'Yarın 15:00 Ayşe ile vardiya planı görüşmesi ve aylık rapor',
           );
       await openNarrow(tester, QuickAddMode.health);
-      await typeAndParse(tester, 'Yarın 15:00 Duhan ile toplantı');
+      await typeAndParse(tester, 'Yarın 15:00 Ayşe ile toplantı');
 
       expect(find.text('İş girişine geç'), findsOneWidget);
       expect(tester.takeException(), isNull);

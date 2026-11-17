@@ -44,8 +44,8 @@ void main() {
     test('varsayılanlar veritabanı varsayılanlarıyla aynı', () {
       const d = UserSettings.defaults();
       expect(d.toMap(), {
-        'start_weight_kg': 84.5,
-        'target_weight_kg': 78.0,
+        'start_weight_kg': 70.0,
+        'target_weight_kg': 70.0,
         'daily_calories': 2000,
         'daily_protein_g': 170,
         'daily_carbs_g': 180,
@@ -60,10 +60,12 @@ void main() {
         'quiet_hours_enabled': true,
         'quiet_start': '23:00',
         'quiet_end': '07:30',
-        'team_members': ['Duhan', 'İlhan', 'Mehmet', 'Sedat'],
+        'team_members': <String>[],
         'height_cm': null,
         'birth_year': null,
         'sex': null,
+        'display_name': null,
+        'work_description': null,
       });
     });
 
@@ -273,6 +275,124 @@ void main() {
       expect(next.heightCm, 180);
       expect(next.birthYear, 1990);
       expect(next.sex, 'male');
+    });
+  });
+
+  group('UserSettings ilk kurulum alanları (görünen ad, iş tanımı, onboarded_at)', () {
+    test('varsayılanda üçü de boş; isOnboarded false', () {
+      const d = UserSettings.defaults();
+      expect(d.displayName, isNull);
+      expect(d.workDescription, isNull);
+      expect(d.onboardedAt, isNull);
+      expect(d.isOnboarded, isFalse);
+    });
+
+    test('fromMap okur: metinler kırpılır, zaman yerel zamana çevrilir', () {
+      final s = UserSettings.fromMap(const {
+        'display_name': '  Ayşe  ',
+        'work_description': 'Mimarım, şantiyede çalışırım.',
+        'onboarded_at': '2026-11-17T09:30:00+00:00',
+      });
+      expect(s.displayName, 'Ayşe');
+      expect(s.workDescription, 'Mimarım, şantiyede çalışırım.');
+      expect(s.onboardedAt!.toUtc(), DateTime.utc(2026, 11, 17, 9, 30));
+      expect(s.onboardedAt!.isUtc, isFalse);
+      expect(s.isOnboarded, isTrue);
+    });
+
+    test('tanınmayan değerler güvenle null olur', () {
+      for (final bad in <Object?>[null, 5, true, '', '   ', <String>[]]) {
+        final s = UserSettings.fromMap({
+          'display_name': bad,
+          'work_description': bad,
+        });
+        expect(s.displayName, isNull, reason: '$bad');
+        expect(s.workDescription, isNull, reason: '$bad');
+      }
+      for (final bad in <Object?>[null, 0, true, '', 'dün', 'bozuk-tarih']) {
+        expect(UserSettings.fromMap({'onboarded_at': bad}).onboardedAt, isNull,
+            reason: '$bad');
+      }
+    });
+
+    test('sınırı aşan metin null olur (60 ve 500 karakter dahil geçerli)', () {
+      expect(
+        UserSettings.fromMap({'display_name': 'a' * 60}).displayName,
+        'a' * 60,
+      );
+      expect(UserSettings.fromMap({'display_name': 'a' * 61}).displayName, isNull);
+      expect(
+        UserSettings.fromMap({'work_description': 'b' * 500}).workDescription,
+        'b' * 500,
+      );
+      expect(
+        UserSettings.fromMap({'work_description': 'b' * 501}).workDescription,
+        isNull,
+      );
+      // Sınır karakter (kod noktası) sayar: emoji tek karakterdir.
+      expect(
+        UserSettings.fromMap({'display_name': '😀' * 60}).displayName,
+        '😀' * 60,
+      );
+    });
+
+    test('toMap: metinler yazılır; boş olan null yazılır', () {
+      final map = const UserSettings.defaults()
+          .copyWith(displayName: 'Ayşe', workDescription: 'Mimar')
+          .toMap();
+      expect(map['display_name'], 'Ayşe');
+      expect(map['work_description'], 'Mimar');
+      final empty = const UserSettings.defaults().toMap();
+      expect(empty.containsKey('display_name'), isTrue);
+      expect(empty['display_name'], isNull);
+      expect(empty['work_description'], isNull);
+    });
+
+    test('toMap: onboarded_at yalnızca doluysa ve UTC ISO olarak yazılır', () {
+      expect(
+        const UserSettings.defaults().toMap().containsKey('onboarded_at'),
+        isFalse,
+      );
+      final at = DateTime.utc(2026, 11, 17, 9, 30);
+      final map = const UserSettings.defaults().copyWith(onboardedAt: at).toMap();
+      expect(map['onboarded_at'], '2026-11-17T09:30:00.000Z');
+    });
+
+    test('toMap → fromMap gidiş-dönüş aynı anı ve metinleri korur', () {
+      final at = DateTime.utc(2026, 11, 17, 9, 30);
+      final original = const UserSettings.defaults().copyWith(
+        displayName: 'Ayşe',
+        workDescription: 'Mimar',
+        onboardedAt: at,
+      );
+      final back = UserSettings.fromMap(original.toMap());
+      expect(back.displayName, 'Ayşe');
+      expect(back.workDescription, 'Mimar');
+      expect(back.onboardedAt!.toUtc(), at);
+      expect(back.toMap(), original.toMap());
+    });
+
+    test('copyWith yeni alanları değiştirir; clear bayrakları siler', () {
+      final at = DateTime.utc(2026, 11, 17);
+      final full = const UserSettings.defaults().copyWith(
+        displayName: 'Ayşe',
+        workDescription: 'Mimar',
+        onboardedAt: at,
+      );
+      // İlgisiz bir alan yeni alanları silmez.
+      final other = full.copyWith(dailySteps: 12000);
+      expect(other.displayName, 'Ayşe');
+      expect(other.workDescription, 'Mimar');
+      expect(other.onboardedAt, at);
+
+      final cleared = full.copyWith(
+        clearDisplayName: true,
+        clearWorkDescription: true,
+      );
+      expect(cleared.displayName, isNull);
+      expect(cleared.workDescription, isNull);
+      // Kurulum anı clear bayrağıyla değil, yalnızca yeni değerle değişir.
+      expect(cleared.onboardedAt, at);
     });
   });
 }

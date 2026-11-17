@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/supabase_providers.dart';
-import '../../shell/presentation/home_shell.dart';
+import '../../onboarding/presentation/onboarding_gate.dart';
 import 'sign_in_screen.dart';
 
-/// Oturum varsa ana kabuğu, yoksa giriş ekranını gösterir.
+/// Oturum varsa ilk kurulum kapısını (bitmişse ana kabuk), yoksa giriş ekranını
+/// gösterir.
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
@@ -19,8 +20,9 @@ class AuthGate extends ConsumerWidget {
       error: (_, __) =>
           ref.read(supabaseClientProvider).auth.currentSession == null
               ? const SignInScreen()
-              : const HomeShell(),
-      data: (value) => value == null ? const SignInScreen() : const HomeShell(),
+              : const OnboardingGate(),
+      data: (value) =>
+          value == null ? const SignInScreen() : const OnboardingGate(),
     );
   }
 }

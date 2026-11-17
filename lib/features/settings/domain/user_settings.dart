@@ -66,11 +66,14 @@ class UserSettings {
     this.heightCm,
     this.birthYear,
     this.sex,
+    this.displayName,
+    this.workDescription,
+    this.onboardedAt,
   });
 
   const UserSettings.defaults()
-      : startWeightKg = 84.5,
-        targetWeightKg = 78,
+      : startWeightKg = 70,
+        targetWeightKg = 70,
         dailyCalories = 2000,
         dailyProteinG = 170,
         dailyCarbsG = 180,
@@ -85,16 +88,23 @@ class UserSettings {
         quietHoursEnabled = true,
         quietStart = const TimeOfDayValue(23, 0),
         quietEnd = const TimeOfDayValue(7, 30),
-        teamMembers = const ['Duhan', 'İlhan', 'Mehmet', 'Sedat'],
+        teamMembers = const [],
         heightCm = null,
         birthYear = null,
-        sex = null;
+        sex = null,
+        displayName = null,
+        workDescription = null,
+        onboardedAt = null;
 
   /// Profil alanlarının sınırları; supabase/schema.sql'deki check'lerle aynıdır.
   static const int heightCmMin = 100;
   static const int heightCmMax = 250;
   static const int birthYearMin = 1900;
   static const int birthYearMax = 2100;
+
+  /// `display_name` ve `work_description` en çok bu kadar karakter (schema.sql).
+  static const int displayNameMax = 60;
+  static const int workDescriptionMax = 500;
 
   /// `sex` sütununun kabul ettiği değerler. `null` = henüz cevaplanmadı.
   static const List<String> sexValues = ['female', 'male', 'unspecified'];
@@ -129,6 +139,19 @@ class UserSettings {
 
   /// 'female' | 'male' | 'unspecified' | null.
   final String? sex;
+
+  /// Arkadaşların seni göreceği ad; boşsa (`null`) maskelenmiş e-posta görünür.
+  final String? displayName;
+
+  /// "Ne iş yapıyorsun" cevabı; yalnızca AI komutuna girer, kimseyle
+  /// paylaşılmaz. Boşsa `null`.
+  final String? workDescription;
+
+  /// İlk kurulumun (kılavuz ve sorular) bittiği an; `null` = henüz bitmedi.
+  final DateTime? onboardedAt;
+
+  /// İlk kurulum tamamlandı mı?
+  bool get isOnboarded => onboardedAt != null;
 
   /// Boy, doğum yılı ve cinsiyetin üçü de dolu.
   bool get profileComplete =>
@@ -171,8 +194,25 @@ class UserSettings {
       heightCm: _profileInt(map['height_cm'], heightCmMin, heightCmMax),
       birthYear: _profileInt(map['birth_year'], birthYearMin, birthYearMax),
       sex: _profileSex(map['sex']),
+      displayName: _text(map['display_name'], displayNameMax),
+      workDescription: _text(map['work_description'], workDescriptionMax),
+      onboardedAt: _timestamp(map['onboarded_at']),
     );
   }
+
+  /// Boşluğu kırpılmış metin; metin değilse, boşsa ya da [max] karakteri
+  /// aşıyorsa `null` (tanınmayan değer güvenle "yok" sayılır).
+  static String? _text(Object? value, int max) {
+    if (value is! String) return null;
+    final trimmed = value.trim();
+    if (trimmed.isEmpty || trimmed.runes.length > max) return null;
+    return trimmed;
+  }
+
+  /// ISO 8601 metni (Postgres `timestamptz`) yerel zamana çevrilir; tanınmayan
+  /// değer `null` olur.
+  static DateTime? _timestamp(Object? value) =>
+      value is String ? DateTime.tryParse(value)?.toLocal() : null;
 
   /// Tam sayı ve [min]..[max] aralığındaysa değer; aksi hâlde `null`.
   static int? _profileInt(Object? value, int min, int max) {
@@ -209,6 +249,13 @@ class UserSettings {
         'height_cm': heightCm,
         'birth_year': birthYear,
         'sex': sex,
+        // Boş metin null yazılır (kullanıcı temizleyebilsin).
+        'display_name': displayName,
+        'work_description': workDescription,
+        // Yalnızca doluysa yazılır: eski bir kopyanın kaydı, tamamlanmış ilk
+        // kurulumu geri alıp kullanıcıyı kılavuza döndürmesin.
+        if (onboardedAt != null)
+          'onboarded_at': onboardedAt!.toUtc().toIso8601String(),
       };
 
   UserSettings copyWith({
@@ -232,9 +279,14 @@ class UserSettings {
     int? heightCm,
     int? birthYear,
     String? sex,
+    String? displayName,
+    String? workDescription,
+    DateTime? onboardedAt,
     bool clearHeightCm = false,
     bool clearBirthYear = false,
     bool clearSex = false,
+    bool clearDisplayName = false,
+    bool clearWorkDescription = false,
   }) =>
       UserSettings(
         startWeightKg: startWeightKg ?? this.startWeightKg,
@@ -257,5 +309,11 @@ class UserSettings {
         heightCm: clearHeightCm ? null : (heightCm ?? this.heightCm),
         birthYear: clearBirthYear ? null : (birthYear ?? this.birthYear),
         sex: clearSex ? null : (sex ?? this.sex),
+        displayName:
+            clearDisplayName ? null : (displayName ?? this.displayName),
+        workDescription: clearWorkDescription
+            ? null
+            : (workDescription ?? this.workDescription),
+        onboardedAt: onboardedAt ?? this.onboardedAt,
       );
 }

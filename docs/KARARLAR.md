@@ -6,6 +6,10 @@ alınınca bir satır eklenir. Şema için tek kaynak `supabase/schema.sql`, mim
 ## Ürün
 - **Ritim** (Kişisel Asistan): tek kullanıcılı iOS uygulaması. Pusholder operasyonu (editörler Duhan, İlhan,
   Mehmet, Sedat; vardiya ve görevler) ile kişisel sağlık (84,5 → 78 kg hedefi, antrenman, makrolar) bir arada.
+- Faz 4B: 'Pusholder' ve sahibe özel her şey ürün kodundan kalktı. Görev/not kategorisi ve rutin kapsamı herkes için
+  'İş'; eski 'Pusholder' değeri yalnızca okunurken (`AppTargets.normalizeWork`, AI yanıtı çözümü) 'İş'e eşlenir,
+  asla yazılmaz. Ekip isteğe bağlıdır, varsayılanı boştur; kilo hedefi varsayılanı 70/70'tir. AI komutu kullanıcının
+  `work_description` alanını (tek satır, en çok 300 karakter, yalnızca bağlam) kullanır. Demo verisi nötrdür.
 - App Store Connect adı "Ritim: Rutin, İş ve Sağlık"; bundle id `com.sercinyous.kisiselasistan`;
   SKU `kisiselasistan-ios`.
 - Aylık sabitler (ör. ayın 15'i maaş ödemesi) bitiş gününden 3 gün önce görünür, gün geçince "gecikti" olur,
@@ -27,6 +31,12 @@ alınınca bir satır eklenir. Şema için tek kaynak `supabase/schema.sql`, mim
 - Model `gemini-3.8-flash`, `thinkingLevel: low`, `temperature` verilmez, `responseSchema` kullanılır.
   Model kalkarsa uygulama yeniden yazılmaz: `GEMINI_MODEL` dart-define ile değişir.
 - Hata 404 = model bulunamadı. Hata 402 = ön ödemeli bakiye ya da fatura bitti (AI Studio > Billing).
+- Faz 4B: AI çağrıları sunucudaki Edge Function `ai-proxy`'den geçer (`GEMINI_API_KEY` yalnızca fonksiyon secret'ında;
+  modeli `GEMINI_MODEL` secret'ı seçer; günlük kota `AI_DAILY_LIMIT`, varsayılan 100/kişi, `ai_usage` kind `ai`).
+  Uygulamada `GEMINI_API_KEY` dart-define boşsa proxy modu, doluysa doğrudan çağrı (geçiş). Proxy 429 = günlük kota
+  (yeniden denenmez); Gemini'nin kendi 429/5xx'i 503, 401/403/404'ü 502 olarak iletilir; 402 aynen. Yeniden
+  denemeler kotadan düşer. "Raporu yeniden oluştur" günde 10 (`ai_usage` kind `report_regen`); rapor zamanlayıcısı
+  yalnızca `onboarded_at` dolu kullanıcılar için üretir.
 
 ## Dağıtım
 - Codemagic: `ios-testflight` (main'e push) ve `ios-adhoc` (elle). `ios/` CI'da `flutter create` ile üretilir,
@@ -101,10 +111,46 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4a-saglik-detay-design.md` (Net
   eski günlerin bazısında sağlık ya da öğün verisi bilerek yoktur (boş gün durumları görünsün); son üç hafta
   Raporlar demosuyla tutarlı kalsın diye eksiksizdir.
 
+## Faz 4B: ilk kurulum, kılavuz ve şablonlar
+Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (Netleştirmeler bölümü geçerli).
+- **Kapı**: giriş sonrası `user_settings.onboarded_at` boşsa `OnboardingGate` kılavuz ve soruları gösterir, doluysa ana kabuğu.
+  Kapı kullanıcı kimliğiyle anahtarlıdır (hesap değişince önceki kullanıcının değeri sızmaz) ve ayar satırı yeniden
+  okunurken ana kabuğu sökmez. Ayarlar okunamazsa "Tekrar dene" gösterilir; mevcut hesaplar zorlanmaz (migration `now()` yazar).
+- **Adımlar**: 5 kartlık tanıtım (atlanabilir) → sorular → önerilen hedefler → bildirim izni + sessiz saatler → başlangıç
+  rutinleri → sağlık kaynağı (Apple Health izni; Google Health sonra Ayarlar'dan). Zorunlu: görünen ad, boy, doğum yılı,
+  cinsiyet, kilo, amaç; hedef kilo boşsa mevcut kilo, iş tanımı isteğe bağlı. Doğum yılı üst sınırı bu yıl − 10.
+- **Öneri formülü** (`GoalSuggestion`, tıbbi tavsiye değil): kalori = 4A bazalı × 1,4 + (ver −500 / koru 0 / al +300);
+  protein 1,8 g/kg; yağ kalorinin %27'si, karbonhidrat kalan; adım 8000; uyku 450 dk. Açık hedefi 1200 kcal altına
+  inmez ve 18 yaş altına açık uygulanmaz (4A reşit olmayana açık hedefi koymaz). Hedefler düzenlenebilir; cevaplar
+  değişmedikçe düzenleme korunur, hesabı etkileyen cevap değişince yeniden önerilir.
+- **Yazım**: tartı kaydı (kilo cevabı) → seçilen rutinler (kişisel kapsam) → EN SON tek `user_settings` kaydı
+  (`onboarded_at = now()`). Ayar yazılana kadar kurulum bitmiş sayılmaz; hatada yeniden deneme önceki adımları
+  tekrarlamaz. Başlangıç rutinleri varsayılan seçili değildir; hiçbiri seçilmezse boş başlanır.
+- `UserSettings.toMap` `onboarded_at`'i yalnızca doluysa yazar (eski bir kopya kurulumu geri almasın); görünen ad ve iş
+  tanımı boşsa null yazılır. Ayarlar > Profil'de ikisi de düzenlenir; ayar satırı yoksa istemci yalnızca `user_id` açar
+  (varsayılanları veritabanı verir).
+- **Kılavuzu yeniden göster** (Ayarlar): yalnızca 5 tanıtım kartı; hiçbir şey yazmaz.
+- **Şablonlar** (`lib/core/templates/`): görev, rutin, öğün, antrenman sabit Türkçe listeleri; yeni kayıt formlarında
+  "Şablondan başla" çipleri (düzenlemede yok). Seçince form dolar, her alan düzenlenir. Öğün şablonlarının kalori ve
+  makroları yaygın porsiyonlar için YAKLAŞIKTIR (formda belirtilir); paketli besin listesinin doğrulanmış satırlarının
+  yerini tutmaz.
+
+### Faz 4B: çok kullanıcı, arkadaşlar, ai-proxy
+- **Kayıt**: "Allow new users to sign up" AÇIK; `auth.users` üzerindeki `signup_invite_gate` tetikleyicisi davetsiz e-postayı reddeder ("Bu e-posta için davet yok"). İsteğe bağlı Before User Created kancası `public.hook_before_user_created` (okunur 403). Sahip elle hesap açacaksa tetikleyiciyi geçici kapatır, işi bitince açar.
+- **Davet eşleşmesi** yalnızca doğrulanmış e-posta (`email_confirmed_at`) ya da hedef kullanıcı ile; Supabase'te "Confirm email" açık önerilir (kapalıysa davet edilen adresle kayıt olan daveti görür; sızıntı açılan anahtar kadar).
+- **Arkadaşlık**: istek e-postayla, her durumda "İstek gönderildi"; en çok 20 bekleyen istek; kabulde sıralı çift `friendships`. Paylaşım `friend_sharing` anahtarları (adım/uyku/kalori), hepsi varsayılan kapalı. Arkadaş yalnızca hedef tutan gün sayısını görür (`friend_goal_summary`, Pzt–Paz, her zaman 3 satır, paylaşılmıyorsa `shared=false`); ham veri asla. İstemci yazımı yalnızca kendi `friend_sharing` satırı; geri kalanı RPC.
+- **ai-proxy**: Gemini çağrıları Edge Function'dan geçer; anahtar yalnızca secret'ta (`GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_DAILY_LIMIT` varsayılan 100). Günlük kota `consume_ai_quota` (atomik, kullanıcı saat dilimine göre); "Raporu yeniden oluştur" günde 10. Hatalar Türkçe: 401/429/402/404. `GEMINI_API_KEY` dart-define boşsa istemci proxy kullanır.
+- **Nötr 'İş'**: 'Pusholder' herkes için 'İş' olur; eski değer yalnızca okunurken eşlenir, şema tetikleyicisi yazımı çevirir. Yeni satır varsayılanları nötr (70 kg, 2000 kcal, 120 g protein, 8000 adım, 450 dk uyku); ekip varsayılan boş. `work_description` AI komutuna veri olarak eklenir.
+- **Onboarding**: bkz. yukarıdaki Faz 4B bölümü; mevcut hesaplar migration ile `onboarded_at = now()` alır. Raporlar yalnızca `onboarded_at` dolu kullanıcılara üretilir.
+- **Google giriş**: bkz. Güvenlik kuralları; Gmail test kullanıcıları Google Cloud'da elle eklenir.
+- **Besin listesi**: `foods_tr.json` 198 satır, USDA SR Legacy 2018-04'ten, hepsi `tek kaynak`. TürKomp bu ortamdan erişilemedi (bağlantı kurulamadı), hiçbir satırda TürKomp kodu yok; çapraz doğrulama yapılmadı. Atwater'ı geçemeyen 12 satır çıkarıldı.
+- **Dağıtım sırası**: yeni yapı TestFlight'a düşünce SQL çalıştırılır (eski yapı 'İş' satırlarını kapsam filtresinde göremeyebilir; kabul edildi).
+
 ## Güvenlik kuralları
 - `service_role` ya da secret anahtar uygulamaya, repoya, sohbete girmez. Yalnızca anon/publishable anahtar.
 - `.p8`, `.p12`, parola ve anahtar değerleri sohbete yapıştırılmaz; yalnızca Codemagic'e girilir.
 - Gerçek Google client id repoya gömülmez; yalnızca Codemagic'te `GOOGLE_IOS_CLIENT_ID`.
+- Google ile giriş (Faz 4B): `google_sign_in` → kimlik belirteci → `signInWithIdToken`; Web istemci kimliği yalnızca Codemagic'te `GOOGLE_WEB_CLIENT_ID` (boşsa Google düğmesi gizli). Tek `GoogleSignIn.instance.initialize` çağrısı Google Health ile paylaşılır; uygulamadan çıkış Google yuvasına dokunmaz; Health yalnızca Ayarlar'dan bağlanınca bağlı sayılır.
 - Supabase MCP salt-okunur ve tek projeye kilitli (`.mcp.json`); yazan araçlar `.claude/settings.json` ile
   engelli. Yalnızca şema, politika, advisor ve log sorgulanır; kullanıcı tablolarında SELECT çalıştırılmaz.
   Salt-okunur kip prompt injection ile veri sızmasını engellemez, bu yüzden bu kural elle uygulanır.
@@ -112,6 +158,7 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4a-saglik-detay-design.md` (Net
 ## Süreç
 - Hız kuralı: dosya başına analyze/test yok, iş bitince tek seferlik kontrol.
 - Son kapsamlı inceleme yapı kurulduktan sonra yapılır.
-- Bekleyenler: Gemini faturası, otomatik rapor dağıtımı, özel uygulama ikonu, Google Health PR'ı, besin listesinin
-  (`assets/data/foods_tr.json`) USDA FDC ve TürKomp'tan doğrulanarak doldurulması, Faz 4A sayılarının gerçek
-  cihazda Fitbit/Sağlık uygulamasıyla karşılaştırılması.
+- Bekleyenler: Gemini faturası, `ai-proxy` ve `generate-reports` dağıtımı, özel uygulama ikonu, Google Health PR'ı,
+  besin listesinin TürKomp ile çapraz doğrulanması (erişim gelince), Faz 4A sayılarının gerçek cihazda
+  karşılaştırılması, `flutter analyze`/`flutter test` ilk tam koşusu, gerçek Google girişinin iki hesapla denenmesi,
+  arkadaş akışının iki hesapla uçtan uca denenmesi.

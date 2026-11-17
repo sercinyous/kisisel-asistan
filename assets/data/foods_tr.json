@@ -1,1 +1,3721 @@
-[]
+[
+ {
+  "id": "ekmek-beyaz",
+  "name": "Beyaz ekmek",
+  "aliases": [
+   "ekmek",
+   "francala",
+   "somun"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 266.0,
+  "protein100": 8.85,
+  "carbs100": 49.42,
+  "fat100": 3.33,
+  "portions": [
+   {
+    "name": "1 dilim",
+    "grams": 29
+   }
+  ],
+  "source": "USDA FDC 174924",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ekmek-tam-bugday",
+  "name": "Tam buğday ekmeği",
+  "aliases": [
+   "kepekli ekmek",
+   "tam tahıllı ekmek"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 252.0,
+  "protein100": 12.45,
+  "carbs100": 42.71,
+  "fat100": 3.5,
+  "portions": [
+   {
+    "name": "1 dilim",
+    "grams": 32
+   }
+  ],
+  "source": "USDA FDC 172688",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ekmek-cavdar",
+  "name": "Çavdar ekmeği",
+  "aliases": [
+   "siyah ekmek"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 259.0,
+  "protein100": 8.5,
+  "carbs100": 48.3,
+  "fat100": 3.3,
+  "portions": [],
+  "source": "USDA FDC 172684",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ekmek-pide-beyaz",
+  "name": "Pita ekmeği",
+  "aliases": [
+   "pide",
+   "lavaş benzeri"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 275.0,
+  "protein100": 9.1,
+  "carbs100": 55.7,
+  "fat100": 1.2,
+  "portions": [],
+  "source": "USDA FDC 174915",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ekmek-cok-tahilli",
+  "name": "Çok tahıllı ekmek",
+  "aliases": [
+   "çok tahıllı"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 265.0,
+  "protein100": 13.36,
+  "carbs100": 43.34,
+  "fat100": 4.23,
+  "portions": [],
+  "source": "USDA FDC 168013",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ekmek-hamburger",
+  "name": "Hamburger ekmeği",
+  "aliases": [
+   "sandviç ekmeği",
+   "küçük ekmek"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 279.0,
+  "protein100": 9.77,
+  "carbs100": 50.12,
+  "fat100": 3.91,
+  "portions": [],
+  "source": "USDA FDC 172796",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "pirinc-pilav",
+  "name": "Pirinç pilavı (haşlanmış)",
+  "aliases": [
+   "pilav",
+   "pirinç"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 130.0,
+  "protein100": 2.69,
+  "carbs100": 28.17,
+  "fat100": 0.28,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 158
+   }
+  ],
+  "source": "USDA FDC 168878",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "pirinc-ham",
+  "name": "Pirinç (çiğ, uzun taneli)",
+  "aliases": [
+   "çiğ pirinç"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 365.0,
+  "protein100": 7.13,
+  "carbs100": 79.95,
+  "fat100": 0.66,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 185
+   }
+  ],
+  "source": "USDA FDC 169756",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "pirinc-baldo-ham",
+  "name": "Pirinç (çiğ, kısa taneli)",
+  "aliases": [
+   "baldo pirinç",
+   "yuvarlak pirinç"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 358.0,
+  "protein100": 6.5,
+  "carbs100": 79.15,
+  "fat100": 0.52,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 200
+   }
+  ],
+  "source": "USDA FDC 168931",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "pirinc-esmer-pismis",
+  "name": "Esmer pirinç (pişmiş)",
+  "aliases": [
+   "kahverengi pirinç"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 123.0,
+  "protein100": 2.74,
+  "carbs100": 25.58,
+  "fat100": 0.97,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 202
+   }
+  ],
+  "source": "USDA FDC 169704",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bulgur-pismis",
+  "name": "Bulgur (pişmiş)",
+  "aliases": [
+   "bulgur pilavı"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 83.0,
+  "protein100": 3.08,
+  "carbs100": 18.58,
+  "fat100": 0.24,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 182
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 8.4
+   }
+  ],
+  "source": "USDA FDC 170287",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bulgur-ham",
+  "name": "Bulgur (kuru)",
+  "aliases": [
+   "çiğ bulgur"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 342.0,
+  "protein100": 12.29,
+  "carbs100": 75.87,
+  "fat100": 1.33,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 140
+   }
+  ],
+  "source": "USDA FDC 170688",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "makarna-pismis",
+  "name": "Makarna (pişmiş)",
+  "aliases": [
+   "spagetti"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 158.0,
+  "protein100": 5.8,
+  "carbs100": 30.86,
+  "fat100": 0.93,
+  "portions": [],
+  "source": "USDA FDC 169737",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "makarna-kuru",
+  "name": "Makarna (kuru)",
+  "aliases": [
+   "çiğ makarna"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 371.0,
+  "protein100": 13.04,
+  "carbs100": 74.67,
+  "fat100": 1.51,
+  "portions": [],
+  "source": "USDA FDC 169736",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "makarna-tam-bugday",
+  "name": "Tam buğday makarna (pişmiş)",
+  "aliases": [
+   "kepekli makarna"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 149.0,
+  "protein100": 5.99,
+  "carbs100": 30.07,
+  "fat100": 1.71,
+  "portions": [],
+  "source": "USDA FDC 168910",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "eriste-yumurtali",
+  "name": "Yumurtalı erişte (kuru)",
+  "aliases": [
+   "erişte"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 384.0,
+  "protein100": 14.16,
+  "carbs100": 71.27,
+  "fat100": 4.44,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 38
+   }
+  ],
+  "source": "USDA FDC 169731",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kuskus-kuru",
+  "name": "Kuskus (kuru)",
+  "aliases": [
+   "kus kus",
+   "couscous"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 376.0,
+  "protein100": 12.76,
+  "carbs100": 77.43,
+  "fat100": 0.64,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 173
+   }
+  ],
+  "source": "USDA FDC 169699",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "arpa-sehriye",
+  "name": "Arpa (inci, çiğ)",
+  "aliases": [
+   "arpa",
+   "inci arpa"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 352.0,
+  "protein100": 9.91,
+  "carbs100": 77.72,
+  "fat100": 1.16,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 200
+   }
+  ],
+  "source": "USDA FDC 170284",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yulaf-ezmesi",
+  "name": "Yulaf ezmesi (kuru)",
+  "aliases": [
+   "yulaf",
+   "oat"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 379.0,
+  "protein100": 13.15,
+  "carbs100": 67.7,
+  "fat100": 6.52,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 81
+   }
+  ],
+  "source": "USDA FDC 173904",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yulaf-pismis",
+  "name": "Yulaf lapası (suyla pişmiş)",
+  "aliases": [
+   "yulaf lapası"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 71.0,
+  "protein100": 2.54,
+  "carbs100": 12.0,
+  "fat100": 1.52,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 234
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 14.6
+   }
+  ],
+  "source": "USDA FDC 173905",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "un-beyaz",
+  "name": "Buğday unu (beyaz)",
+  "aliases": [
+   "un"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 364.0,
+  "protein100": 10.33,
+  "carbs100": 76.31,
+  "fat100": 0.98,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 125
+   }
+  ],
+  "source": "USDA FDC 168936",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "un-tam-bugday",
+  "name": "Tam buğday unu",
+  "aliases": [
+   "kepekli un"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 340.0,
+  "protein100": 13.21,
+  "carbs100": 71.97,
+  "fat100": 2.5,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 120
+   }
+  ],
+  "source": "USDA FDC 168893",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "misir-unu",
+  "name": "Mısır unu (sarı)",
+  "aliases": [
+   "mısır irmiği",
+   "mısır"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 362.0,
+  "protein100": 8.12,
+  "carbs100": 76.89,
+  "fat100": 3.59,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 122
+   }
+  ],
+  "source": "USDA FDC 169697",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "irmik",
+  "name": "İrmik",
+  "aliases": [
+   "irmik helvası"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 360.0,
+  "protein100": 12.68,
+  "carbs100": 72.83,
+  "fat100": 1.05,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 167
+   }
+  ],
+  "source": "USDA FDC 168933",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "nisasta",
+  "name": "Mısır nişastası",
+  "aliases": [
+   "nişasta"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 381.0,
+  "protein100": 0.26,
+  "carbs100": 91.27,
+  "fat100": 0.05,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 128
+   }
+  ],
+  "source": "USDA FDC 169698",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "karabuday-pismis",
+  "name": "Karabuğday (pişmiş)",
+  "aliases": [
+   "karabuğday"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 92.0,
+  "protein100": 3.38,
+  "carbs100": 19.94,
+  "fat100": 0.62,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 168
+   }
+  ],
+  "source": "USDA FDC 170686",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kinoa-pismis",
+  "name": "Kinoa (pişmiş)",
+  "aliases": [
+   "quinoa"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 120.0,
+  "protein100": 4.4,
+  "carbs100": 21.3,
+  "fat100": 1.92,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 185
+   }
+  ],
+  "source": "USDA FDC 168917",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dari-pismis",
+  "name": "Darı (pişmiş)",
+  "aliases": [
+   "dari"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 119.0,
+  "protein100": 3.51,
+  "carbs100": 23.67,
+  "fat100": 1.0,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 174
+   }
+  ],
+  "source": "USDA FDC 168871",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kraker-tuzlu",
+  "name": "Tuzlu kraker",
+  "aliases": [
+   "kraker",
+   "bisküvi tuzlu"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 418.0,
+  "protein100": 9.46,
+  "carbs100": 74.05,
+  "fat100": 8.64,
+  "portions": [],
+  "source": "USDA FDC 172746",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "patlamis-misir",
+  "name": "Patlamış mısır (havada)",
+  "aliases": [
+   "popcorn",
+   "patlak mısır"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 387.0,
+  "protein100": 12.94,
+  "carbs100": 77.78,
+  "fat100": 4.54,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 8
+   }
+  ],
+  "source": "USDA FDC 167959",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yumurta-cig",
+  "name": "Yumurta (çiğ, bütün)",
+  "aliases": [
+   "yumurta"
+  ],
+  "category": "et-balık",
+  "kcal100": 143.0,
+  "protein100": 12.56,
+  "carbs100": 0.72,
+  "fat100": 9.51,
+  "portions": [
+   {
+    "name": "1 büyük boy",
+    "grams": 50
+   },
+   {
+    "name": "1 orta boy",
+    "grams": 44
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 38
+   }
+  ],
+  "source": "USDA FDC 171287",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yumurta-haslama",
+  "name": "Yumurta (haşlanmış)",
+  "aliases": [
+   "haşlanmış yumurta",
+   "rafadan"
+  ],
+  "category": "et-balık",
+  "kcal100": 155.0,
+  "protein100": 12.58,
+  "carbs100": 1.12,
+  "fat100": 10.61,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 8.5
+   },
+   {
+    "name": "1 büyük boy",
+    "grams": 50
+   }
+  ],
+  "source": "USDA FDC 173424",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yumurta-omlet",
+  "name": "Omlet",
+  "aliases": [
+   "omlet"
+  ],
+  "category": "et-balık",
+  "kcal100": 154.0,
+  "protein100": 10.57,
+  "carbs100": 0.64,
+  "fat100": 11.66,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 15
+   },
+   {
+    "name": "1 büyük boy",
+    "grams": 61
+   }
+  ],
+  "source": "USDA FDC 172185",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yumurta-aki",
+  "name": "Yumurta akı (çiğ)",
+  "aliases": [
+   "yumurta beyazı"
+  ],
+  "category": "et-balık",
+  "kcal100": 52.0,
+  "protein100": 10.9,
+  "carbs100": 0.73,
+  "fat100": 0.17,
+  "portions": [
+   {
+    "name": "1 büyük boy",
+    "grams": 33
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 243
+   }
+  ],
+  "source": "USDA FDC 172183",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yumurta-sarisi",
+  "name": "Yumurta sarısı (çiğ)",
+  "aliases": [
+   "yumurta sarı"
+  ],
+  "category": "et-balık",
+  "kcal100": 322.0,
+  "protein100": 15.86,
+  "carbs100": 3.59,
+  "fat100": 26.54,
+  "portions": [
+   {
+    "name": "1 büyük boy",
+    "grams": 17
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 243
+   }
+  ],
+  "source": "USDA FDC 172184",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sut-tam-yagli",
+  "name": "Süt (tam yağlı)",
+  "aliases": [
+   "inek sütü",
+   "süt"
+  ],
+  "category": "et-balık",
+  "kcal100": 61.0,
+  "protein100": 3.15,
+  "carbs100": 4.8,
+  "fat100": 3.25,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 244
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 15
+   }
+  ],
+  "source": "USDA FDC 171265",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sut-yarim-yagli",
+  "name": "Süt (yarım yağlı, %2)",
+  "aliases": [
+   "az yağlı süt"
+  ],
+  "category": "et-balık",
+  "kcal100": 50.0,
+  "protein100": 3.3,
+  "carbs100": 4.8,
+  "fat100": 1.98,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 244
+   }
+  ],
+  "source": "USDA FDC 171267",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sut-yagsiz",
+  "name": "Süt (yağsız)",
+  "aliases": [
+   "yağsız süt",
+   "sıfır yağlı süt"
+  ],
+  "category": "et-balık",
+  "kcal100": 34.0,
+  "protein100": 3.37,
+  "carbs100": 4.96,
+  "fat100": 0.08,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 245
+   }
+  ],
+  "source": "USDA FDC 171269",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sut-keci",
+  "name": "Keçi sütü",
+  "aliases": [
+   "keçi"
+  ],
+  "category": "et-balık",
+  "kcal100": 69.0,
+  "protein100": 3.56,
+  "carbs100": 4.45,
+  "fat100": 4.14,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 244
+   }
+  ],
+  "source": "USDA FDC 171278",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sut-koyun",
+  "name": "Koyun sütü",
+  "aliases": [
+   "koyun"
+  ],
+  "category": "et-balık",
+  "kcal100": 108.0,
+  "protein100": 5.98,
+  "carbs100": 5.36,
+  "fat100": 7.0,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 245
+   }
+  ],
+  "source": "USDA FDC 170882",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yogurt-tam-yagli",
+  "name": "Yoğurt (tam yağlı)",
+  "aliases": [
+   "yoğurt",
+   "süzme olmayan yoğurt"
+  ],
+  "category": "et-balık",
+  "kcal100": 61.0,
+  "protein100": 3.47,
+  "carbs100": 4.66,
+  "fat100": 3.25,
+  "portions": [],
+  "source": "USDA FDC 171284",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yogurt-az-yagli",
+  "name": "Yoğurt (az yağlı)",
+  "aliases": [
+   "light yoğurt"
+  ],
+  "category": "et-balık",
+  "kcal100": 63.0,
+  "protein100": 5.25,
+  "carbs100": 7.04,
+  "fat100": 1.55,
+  "portions": [],
+  "source": "USDA FDC 170886",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yogurt-yagsiz",
+  "name": "Yoğurt (yağsız)",
+  "aliases": [
+   "yağsız yoğurt"
+  ],
+  "category": "et-balık",
+  "kcal100": 56.0,
+  "protein100": 5.73,
+  "carbs100": 7.68,
+  "fat100": 0.18,
+  "portions": [],
+  "source": "USDA FDC 170887",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yogurt-suzme",
+  "name": "Süzme yoğurt (Yunan tipi, tam yağlı)",
+  "aliases": [
+   "süzme yoğurt",
+   "greek yoğurt"
+  ],
+  "category": "et-balık",
+  "kcal100": 97.0,
+  "protein100": 9.0,
+  "carbs100": 3.98,
+  "fat100": 5.0,
+  "portions": [],
+  "source": "USDA FDC 171304",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kefir-az-yagli",
+  "name": "Kefir (az yağlı)",
+  "aliases": [
+   "kefir"
+  ],
+  "category": "et-balık",
+  "kcal100": 43.0,
+  "protein100": 3.79,
+  "carbs100": 4.77,
+  "fat100": 1.02,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 243
+   }
+  ],
+  "source": "USDA FDC 170904",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-beyaz",
+  "name": "Beyaz peynir (feta)",
+  "aliases": [
+   "beyaz peynir",
+   "feta",
+   "salamura peynir"
+  ],
+  "category": "et-balık",
+  "kcal100": 265.0,
+  "protein100": 14.21,
+  "carbs100": 3.88,
+  "fat100": 21.49,
+  "portions": [],
+  "source": "USDA FDC 173420",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-mozzarella",
+  "name": "Mozzarella peyniri",
+  "aliases": [
+   "mozzarella"
+  ],
+  "category": "et-balık",
+  "kcal100": 299.0,
+  "protein100": 22.17,
+  "carbs100": 2.4,
+  "fat100": 22.14,
+  "portions": [],
+  "source": "USDA FDC 170845",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-cedar",
+  "name": "Çedar peyniri (cheddar)",
+  "aliases": [
+   "cheddar"
+  ],
+  "category": "et-balık",
+  "kcal100": 403.0,
+  "protein100": 22.87,
+  "carbs100": 3.37,
+  "fat100": 33.31,
+  "portions": [],
+  "source": "USDA FDC 173414",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-parmesan",
+  "name": "Parmesan peyniri",
+  "aliases": [
+   "parmesan",
+   "parmigiano"
+  ],
+  "category": "et-balık",
+  "kcal100": 392.0,
+  "protein100": 35.75,
+  "carbs100": 3.22,
+  "fat100": 25.0,
+  "portions": [],
+  "source": "USDA FDC 170848",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-cottage",
+  "name": "Cottage peyniri (kremalı)",
+  "aliases": [
+   "cottage",
+   "süzme peynir"
+  ],
+  "category": "et-balık",
+  "kcal100": 98.0,
+  "protein100": 11.12,
+  "carbs100": 3.38,
+  "fat100": 4.3,
+  "portions": [],
+  "source": "USDA FDC 172179",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-krem",
+  "name": "Krem peynir",
+  "aliases": [
+   "cream cheese",
+   "sürülebilir peynir"
+  ],
+  "category": "et-balık",
+  "kcal100": 350.0,
+  "protein100": 6.15,
+  "carbs100": 5.52,
+  "fat100": 34.44,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 14.5
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 232
+   }
+  ],
+  "source": "USDA FDC 173418",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-gouda",
+  "name": "Gouda peyniri",
+  "aliases": [
+   "gouda"
+  ],
+  "category": "et-balık",
+  "kcal100": 356.0,
+  "protein100": 24.94,
+  "carbs100": 2.22,
+  "fat100": 27.44,
+  "portions": [],
+  "source": "USDA FDC 171241",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "peynir-brie",
+  "name": "Brie peyniri",
+  "aliases": [
+   "brie"
+  ],
+  "category": "et-balık",
+  "kcal100": 334.0,
+  "protein100": 20.75,
+  "carbs100": 0.45,
+  "fat100": 27.68,
+  "portions": [],
+  "source": "USDA FDC 172177",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "krema-sivi",
+  "name": "Krema (sıvı, yüksek yağlı)",
+  "aliases": [
+   "krema",
+   "krema şanti"
+  ],
+  "category": "et-balık",
+  "kcal100": 340.0,
+  "protein100": 2.84,
+  "carbs100": 2.84,
+  "fat100": 36.08,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 15
+   }
+  ],
+  "source": "USDA FDC 170859",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "krema-eksi",
+  "name": "Ekşi krema",
+  "aliases": [
+   "ekşi krema",
+   "sour cream"
+  ],
+  "category": "et-balık",
+  "kcal100": 198.0,
+  "protein100": 2.44,
+  "carbs100": 4.63,
+  "fat100": 19.35,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 12
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 230
+   }
+  ],
+  "source": "USDA FDC 171257",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tereyagi",
+  "name": "Tereyağı (tuzlu)",
+  "aliases": [
+   "tereyağ",
+   "yağ"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 717.0,
+  "protein100": 0.85,
+  "carbs100": 0.06,
+  "fat100": 81.11,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 14.2
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 227
+   }
+  ],
+  "source": "USDA FDC 173410",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "margarin",
+  "name": "Margarin benzeri sürülebilir yağ (%60)",
+  "aliases": [
+   "margarin"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 533.0,
+  "protein100": 0.17,
+  "carbs100": 0.86,
+  "fat100": 59.81,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 14
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 229
+   }
+  ],
+  "source": "USDA FDC 171038",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "zeytinyagi",
+  "name": "Zeytinyağı",
+  "aliases": [
+   "sızma zeytinyağı",
+   "zeytin yağı"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 884.0,
+  "protein100": 0.0,
+  "carbs100": 0.0,
+  "fat100": 100.0,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 216
+   },
+   {
+    "name": "1 çay kaşığı",
+    "grams": 4.5
+   }
+  ],
+  "source": "USDA FDC 171413",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "aycicek-yagi",
+  "name": "Ayçiçek yağı",
+  "aliases": [
+   "ayçiçeği yağı",
+   "sıvı yağ"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 884.0,
+  "protein100": 0.0,
+  "carbs100": 0.0,
+  "fat100": 100.0,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 13.6
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 218
+   },
+   {
+    "name": "1 çay kaşığı",
+    "grams": 4.5
+   }
+  ],
+  "source": "USDA FDC 171025",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "misir-yagi",
+  "name": "Mısır yağı",
+  "aliases": [
+   "mısırözü yağı"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 900.0,
+  "protein100": 0.0,
+  "carbs100": 0.0,
+  "fat100": 100.0,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 13.6
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 218
+   },
+   {
+    "name": "1 çay kaşığı",
+    "grams": 4.5
+   }
+  ],
+  "source": "USDA FDC 171029",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "zeytin-siyah",
+  "name": "Siyah zeytin",
+  "aliases": [
+   "zeytin",
+   "kuru zeytin"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 116.0,
+  "protein100": 0.84,
+  "carbs100": 6.04,
+  "fat100": 10.9,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 8.4
+   },
+   {
+    "name": "1 büyük boy",
+    "grams": 4.4
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 3.2
+   }
+  ],
+  "source": "USDA FDC 169094",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "zeytin-yesil",
+  "name": "Yeşil zeytin",
+  "aliases": [
+   "salamura zeytin"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 145.0,
+  "protein100": 1.03,
+  "carbs100": 3.84,
+  "fat100": 15.32,
+  "portions": [],
+  "source": "USDA FDC 169096",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ceviz",
+  "name": "Ceviz (İngiliz)",
+  "aliases": [
+   "ceviz içi"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 654.0,
+  "protein100": 15.23,
+  "carbs100": 13.71,
+  "fat100": 65.21,
+  "portions": [],
+  "source": "USDA FDC 170187",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "findik",
+  "name": "Fındık",
+  "aliases": [
+   "fındık içi"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 628.0,
+  "protein100": 14.95,
+  "carbs100": 16.7,
+  "fat100": 60.75,
+  "portions": [],
+  "source": "USDA FDC 170581",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "badem-cig",
+  "name": "Badem (çiğ)",
+  "aliases": [
+   "badem"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 579.0,
+  "protein100": 21.15,
+  "carbs100": 21.55,
+  "fat100": 49.93,
+  "portions": [],
+  "source": "USDA FDC 170567",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "antep-fistigi",
+  "name": "Antep fıstığı (çiğ)",
+  "aliases": [
+   "fıstık",
+   "antep fıstık"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 560.0,
+  "protein100": 20.16,
+  "carbs100": 27.17,
+  "fat100": 45.32,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 123
+   }
+  ],
+  "source": "USDA FDC 170184",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kaju",
+  "name": "Kaju (çiğ)",
+  "aliases": [
+   "kaju fıstığı"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 553.0,
+  "protein100": 18.22,
+  "carbs100": 30.19,
+  "fat100": 43.85,
+  "portions": [],
+  "source": "USDA FDC 170162",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yer-fistigi",
+  "name": "Yer fıstığı (çiğ)",
+  "aliases": [
+   "fıstık",
+   "yerfıstığı"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 567.0,
+  "protein100": 25.8,
+  "carbs100": 16.13,
+  "fat100": 49.24,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 146
+   }
+  ],
+  "source": "USDA FDC 172430",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "fistik-ezmesi",
+  "name": "Fıstık ezmesi",
+  "aliases": [
+   "yer fıstığı ezmesi",
+   "peanut butter"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 588.0,
+  "protein100": 21.93,
+  "carbs100": 23.98,
+  "fat100": 49.54,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 258
+   }
+  ],
+  "source": "USDA FDC 174294",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "susam",
+  "name": "Susam",
+  "aliases": [
+   "susam tohumu"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 573.0,
+  "protein100": 17.73,
+  "carbs100": 23.45,
+  "fat100": 49.67,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 144
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 9
+   }
+  ],
+  "source": "USDA FDC 170150",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tahin",
+  "name": "Tahin",
+  "aliases": [
+   "susam ezmesi"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 595.0,
+  "protein100": 17.0,
+  "carbs100": 21.19,
+  "fat100": 53.76,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 15
+   }
+  ],
+  "source": "USDA FDC 170189",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "aycicegi-cekirdegi",
+  "name": "Ayçiçeği çekirdeği (iç)",
+  "aliases": [
+   "çekirdek",
+   "ay çekirdeği"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 584.0,
+  "protein100": 20.78,
+  "carbs100": 20.0,
+  "fat100": 51.46,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 140
+   }
+  ],
+  "source": "USDA FDC 170562",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kabak-cekirdegi",
+  "name": "Kabak çekirdeği (iç)",
+  "aliases": [
+   "kabak çekirdeği"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 559.0,
+  "protein100": 30.23,
+  "carbs100": 10.71,
+  "fat100": 49.05,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 129
+   }
+  ],
+  "source": "USDA FDC 170556",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kestane",
+  "name": "Kestane (çiğ, kabuksuz)",
+  "aliases": [
+   "kestane"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 196.0,
+  "protein100": 1.63,
+  "carbs100": 44.17,
+  "fat100": 1.25,
+  "portions": [],
+  "source": "USDA FDC 170575",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hindistan-cevizi",
+  "name": "Hindistan cevizi (kurutulmuş, tatlandırılmış)",
+  "aliases": [
+   "kokos",
+   "hindistancevizi"
+  ],
+  "category": "kuruyemiş-yağ",
+  "kcal100": 501.0,
+  "protein100": 2.88,
+  "carbs100": 47.67,
+  "fat100": 35.49,
+  "portions": [],
+  "source": "USDA FDC 168586",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tavuk-gogus-pismis",
+  "name": "Tavuk göğsü (pişmiş, derisiz)",
+  "aliases": [
+   "haşlanmış tavuk",
+   "ızgara tavuk"
+  ],
+  "category": "et-balık",
+  "kcal100": 165.0,
+  "protein100": 31.02,
+  "carbs100": 0.0,
+  "fat100": 3.57,
+  "portions": [],
+  "source": "USDA FDC 171477",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tavuk-but-cig",
+  "name": "Tavuk but (çiğ, derisiz)",
+  "aliases": [
+   "tavuk but",
+   "piliç but"
+  ],
+  "category": "et-balık",
+  "kcal100": 121.0,
+  "protein100": 19.66,
+  "carbs100": 0.0,
+  "fat100": 4.12,
+  "portions": [],
+  "source": "USDA FDC 173627",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tavuk-but-pismis",
+  "name": "Tavuk but (pişmiş, derisiz)",
+  "aliases": [
+   "fırın tavuk but"
+  ],
+  "category": "et-balık",
+  "kcal100": 179.0,
+  "protein100": 24.76,
+  "carbs100": 0.0,
+  "fat100": 8.15,
+  "portions": [],
+  "source": "USDA FDC 172388",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tavuk-baget-pismis",
+  "name": "Tavuk baget (pişmiş, derisiz)",
+  "aliases": [
+   "baget",
+   "tavuk baget"
+  ],
+  "category": "et-balık",
+  "kcal100": 155.0,
+  "protein100": 24.24,
+  "carbs100": 0.0,
+  "fat100": 5.7,
+  "portions": [],
+  "source": "USDA FDC 172376",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tavuk-karaciger",
+  "name": "Tavuk ciğeri (pişmiş)",
+  "aliases": [
+   "tavuk ciğer"
+  ],
+  "category": "et-balık",
+  "kcal100": 167.0,
+  "protein100": 24.46,
+  "carbs100": 0.87,
+  "fat100": 6.51,
+  "portions": [],
+  "source": "USDA FDC 171061",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hindi-gogus-cig",
+  "name": "Hindi göğsü (çiğ)",
+  "aliases": [
+   "hindi"
+  ],
+  "category": "et-balık",
+  "kcal100": 114.0,
+  "protein100": 23.66,
+  "carbs100": 0.14,
+  "fat100": 1.48,
+  "portions": [],
+  "source": "USDA FDC 171098",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hindi-gogus-pismis",
+  "name": "Hindi göğsü (pişmiş)",
+  "aliases": [],
+  "category": "et-balık",
+  "kcal100": 147.0,
+  "protein100": 30.13,
+  "carbs100": 0.0,
+  "fat100": 2.08,
+  "portions": [],
+  "source": "USDA FDC 171496",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hindi-kiyma-cig",
+  "name": "Hindi kıyma (çiğ)",
+  "aliases": [
+   "hindi kıyması"
+  ],
+  "category": "et-balık",
+  "kcal100": 148.0,
+  "protein100": 19.66,
+  "carbs100": 0.0,
+  "fat100": 7.66,
+  "portions": [],
+  "source": "USDA FDC 171505",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dana-kiyma-cig-20",
+  "name": "Dana kıyma (çiğ, %20 yağlı)",
+  "aliases": [
+   "kıyma",
+   "sığır kıyma"
+  ],
+  "category": "et-balık",
+  "kcal100": 254.0,
+  "protein100": 17.17,
+  "carbs100": 0.0,
+  "fat100": 20.0,
+  "portions": [],
+  "source": "USDA FDC 174036",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dana-kiyma-cig-15",
+  "name": "Dana kıyma (çiğ, %15 yağlı)",
+  "aliases": [
+   "yağsız kıyma"
+  ],
+  "category": "et-balık",
+  "kcal100": 215.0,
+  "protein100": 18.59,
+  "carbs100": 0.0,
+  "fat100": 15.0,
+  "portions": [],
+  "source": "USDA FDC 171796",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dana-kiyma-cig-5",
+  "name": "Dana kıyma (çiğ, %5 yağlı)",
+  "aliases": [
+   "az yağlı kıyma"
+  ],
+  "category": "et-balık",
+  "kcal100": 137.0,
+  "protein100": 21.41,
+  "carbs100": 0.0,
+  "fat100": 5.0,
+  "portions": [],
+  "source": "USDA FDC 171790",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dana-kiyma-pismis",
+  "name": "Dana kıyma (pişmiş köfte, %20 yağlı)",
+  "aliases": [
+   "köfte",
+   "pişmiş kıyma"
+  ],
+  "category": "et-balık",
+  "kcal100": 246.0,
+  "protein100": 24.04,
+  "carbs100": 0.0,
+  "fat100": 15.94,
+  "portions": [],
+  "source": "USDA FDC 171798",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dana-karaciger",
+  "name": "Dana ciğeri (çiğ)",
+  "aliases": [
+   "ciğer"
+  ],
+  "category": "et-balık",
+  "kcal100": 135.0,
+  "protein100": 20.36,
+  "carbs100": 3.89,
+  "fat100": 3.63,
+  "portions": [],
+  "source": "USDA FDC 169451",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dana-karaciger-pismis",
+  "name": "Dana ciğeri (tavada)",
+  "aliases": [
+   "ciğer tava"
+  ],
+  "category": "et-balık",
+  "kcal100": 175.0,
+  "protein100": 26.52,
+  "carbs100": 5.16,
+  "fat100": 4.68,
+  "portions": [
+   {
+    "name": "1 dilim",
+    "grams": 81
+   }
+  ],
+  "source": "USDA FDC 168627",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kuzu-kiyma-cig",
+  "name": "Kuzu kıyma (çiğ)",
+  "aliases": [
+   "kuzu kıyması"
+  ],
+  "category": "et-balık",
+  "kcal100": 282.0,
+  "protein100": 16.56,
+  "carbs100": 0.0,
+  "fat100": 23.41,
+  "portions": [],
+  "source": "USDA FDC 174370",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ton-baligi-yagli",
+  "name": "Ton balığı (yağlı konserve, süzülmüş)",
+  "aliases": [
+   "ton balığı",
+   "konserve ton"
+  ],
+  "category": "et-balık",
+  "kcal100": 198.0,
+  "protein100": 29.13,
+  "carbs100": 0.0,
+  "fat100": 8.21,
+  "portions": [],
+  "source": "USDA FDC 173708",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ton-baligi-sulu",
+  "name": "Ton balığı (sulu konserve, süzülmüş)",
+  "aliases": [
+   "ton balık sulu"
+  ],
+  "category": "et-balık",
+  "kcal100": 86.0,
+  "protein100": 19.44,
+  "carbs100": 0.0,
+  "fat100": 0.96,
+  "portions": [],
+  "source": "USDA FDC 173709",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "somon-cig",
+  "name": "Somon (çiğ, çiftlik)",
+  "aliases": [
+   "somon"
+  ],
+  "category": "et-balık",
+  "kcal100": 208.0,
+  "protein100": 20.42,
+  "carbs100": 0.0,
+  "fat100": 13.42,
+  "portions": [],
+  "source": "USDA FDC 175167",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "somon-pismis",
+  "name": "Somon (pişmiş)",
+  "aliases": [
+   "fırın somon",
+   "ızgara somon"
+  ],
+  "category": "et-balık",
+  "kcal100": 206.0,
+  "protein100": 22.1,
+  "carbs100": 0.0,
+  "fat100": 12.35,
+  "portions": [],
+  "source": "USDA FDC 175168",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sardalya-konserve",
+  "name": "Sardalya (yağlı konserve)",
+  "aliases": [
+   "sardalya"
+  ],
+  "category": "et-balık",
+  "kcal100": 208.0,
+  "protein100": 24.62,
+  "carbs100": 0.0,
+  "fat100": 11.45,
+  "portions": [],
+  "source": "USDA FDC 175139",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "uskumru-cig",
+  "name": "Uskumru (çiğ)",
+  "aliases": [
+   "uskumru"
+  ],
+  "category": "et-balık",
+  "kcal100": 205.0,
+  "protein100": 18.6,
+  "carbs100": 0.0,
+  "fat100": 13.89,
+  "portions": [],
+  "source": "USDA FDC 175119",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hamsi-cig",
+  "name": "Hamsi (çiğ)",
+  "aliases": [
+   "hamsi"
+  ],
+  "category": "et-balık",
+  "kcal100": 131.0,
+  "protein100": 20.35,
+  "carbs100": 0.0,
+  "fat100": 4.84,
+  "portions": [],
+  "source": "USDA FDC 174182",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hamsi-konserve",
+  "name": "Hamsi (yağlı konserve)",
+  "aliases": [
+   "tuzlu hamsi benzeri"
+  ],
+  "category": "et-balık",
+  "kcal100": 210.0,
+  "protein100": 28.89,
+  "carbs100": 0.0,
+  "fat100": 9.71,
+  "portions": [],
+  "source": "USDA FDC 174183",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "alabalik-cig",
+  "name": "Alabalık (çiğ, çiftlik)",
+  "aliases": [
+   "alabalık"
+  ],
+  "category": "et-balık",
+  "kcal100": 141.0,
+  "protein100": 19.94,
+  "carbs100": 0.0,
+  "fat100": 6.18,
+  "portions": [],
+  "source": "USDA FDC 173717",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "levrek-cig",
+  "name": "Levrek (çiğ)",
+  "aliases": [
+   "deniz levreği",
+   "levrek"
+  ],
+  "category": "et-balık",
+  "kcal100": 97.0,
+  "protein100": 18.43,
+  "carbs100": 0.0,
+  "fat100": 2.0,
+  "portions": [],
+  "source": "USDA FDC 175142",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "morina-cig",
+  "name": "Morina (çiğ)",
+  "aliases": [
+   "morina",
+   "bakalyaro"
+  ],
+  "category": "et-balık",
+  "kcal100": 82.0,
+  "protein100": 17.81,
+  "carbs100": 0.0,
+  "fat100": 0.67,
+  "portions": [],
+  "source": "USDA FDC 171955",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "karides-cig",
+  "name": "Karides (çiğ)",
+  "aliases": [
+   "karides"
+  ],
+  "category": "et-balık",
+  "kcal100": 71.0,
+  "protein100": 13.61,
+  "carbs100": 0.91,
+  "fat100": 1.01,
+  "portions": [
+   {
+    "name": "1 orta boy",
+    "grams": 6
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 5
+   }
+  ],
+  "source": "USDA FDC 174210",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "karides-pismis",
+  "name": "Karides (pişmiş)",
+  "aliases": [
+   "haşlanmış karides"
+  ],
+  "category": "et-balık",
+  "kcal100": 119.0,
+  "protein100": 22.78,
+  "carbs100": 1.52,
+  "fat100": 1.7,
+  "portions": [],
+  "source": "USDA FDC 171971",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "domates",
+  "name": "Domates",
+  "aliases": [
+   "domates çiğ"
+  ],
+  "category": "sebze",
+  "kcal100": 18.0,
+  "protein100": 0.88,
+  "carbs100": 3.89,
+  "fat100": 0.2,
+  "portions": [],
+  "source": "USDA FDC 170457",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "domates-sos",
+  "name": "Domates sosu (konserve)",
+  "aliases": [
+   "domates püresi"
+  ],
+  "category": "sebze",
+  "kcal100": 24.0,
+  "protein100": 1.2,
+  "carbs100": 5.31,
+  "fat100": 0.3,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 245
+   }
+  ],
+  "source": "USDA FDC 170054",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "salatalik",
+  "name": "Salatalık (kabuklu)",
+  "aliases": [
+   "hıyar"
+  ],
+  "category": "sebze",
+  "kcal100": 15.0,
+  "protein100": 0.65,
+  "carbs100": 3.63,
+  "fat100": 0.11,
+  "portions": [],
+  "source": "USDA FDC 168409",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "biber-yesil",
+  "name": "Yeşil biber (tatlı)",
+  "aliases": [
+   "biber",
+   "dolmalık biber",
+   "çarliston"
+  ],
+  "category": "sebze",
+  "kcal100": 20.0,
+  "protein100": 0.86,
+  "carbs100": 4.64,
+  "fat100": 0.17,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 9.3
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 74
+   }
+  ],
+  "source": "USDA FDC 170427",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "biber-kirmizi",
+  "name": "Kırmızı biber (tatlı)",
+  "aliases": [
+   "kırmızı dolmalık"
+  ],
+  "category": "sebze",
+  "kcal100": 26.0,
+  "protein100": 0.99,
+  "carbs100": 6.03,
+  "fat100": 0.3,
+  "portions": [
+   {
+    "name": "1 küçük boy",
+    "grams": 74
+   }
+  ],
+  "source": "USDA FDC 170108",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "biber-aci",
+  "name": "Acı biber (kırmızı, çiğ)",
+  "aliases": [
+   "acı biber"
+  ],
+  "category": "sebze",
+  "kcal100": 40.0,
+  "protein100": 1.87,
+  "carbs100": 8.81,
+  "fat100": 0.44,
+  "portions": [],
+  "source": "USDA FDC 170106",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "patates",
+  "name": "Patates (çiğ, kabuklu)",
+  "aliases": [
+   "patates"
+  ],
+  "category": "sebze",
+  "kcal100": 77.0,
+  "protein100": 2.05,
+  "carbs100": 17.49,
+  "fat100": 0.09,
+  "portions": [],
+  "source": "USDA FDC 170026",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "patates-haslama",
+  "name": "Patates (haşlanmış, kabuksuz)",
+  "aliases": [
+   "haşlanmış patates"
+  ],
+  "category": "sebze",
+  "kcal100": 86.0,
+  "protein100": 1.71,
+  "carbs100": 20.01,
+  "fat100": 0.1,
+  "portions": [],
+  "source": "USDA FDC 170440",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sogan",
+  "name": "Soğan (kuru)",
+  "aliases": [
+   "kuru soğan"
+  ],
+  "category": "sebze",
+  "kcal100": 40.0,
+  "protein100": 1.1,
+  "carbs100": 9.34,
+  "fat100": 0.1,
+  "portions": [
+   {
+    "name": "1 büyük boy",
+    "grams": 150
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 70
+   }
+  ],
+  "source": "USDA FDC 170000",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yesil-sogan",
+  "name": "Yeşil soğan (taze)",
+  "aliases": [
+   "taze soğan"
+  ],
+  "category": "sebze",
+  "kcal100": 32.0,
+  "protein100": 1.83,
+  "carbs100": 7.34,
+  "fat100": 0.19,
+  "portions": [
+   {
+    "name": "1 büyük boy",
+    "grams": 25
+   }
+  ],
+  "source": "USDA FDC 170005",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "sarimsak",
+  "name": "Sarımsak",
+  "aliases": [
+   "sarmısak"
+  ],
+  "category": "sebze",
+  "kcal100": 149.0,
+  "protein100": 6.36,
+  "carbs100": 33.06,
+  "fat100": 0.5,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 136
+   },
+   {
+    "name": "1 çay kaşığı",
+    "grams": 2.8
+   }
+  ],
+  "source": "USDA FDC 169230",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "havuc",
+  "name": "Havuç",
+  "aliases": [
+   "havuç çiğ"
+  ],
+  "category": "sebze",
+  "kcal100": 41.0,
+  "protein100": 0.93,
+  "carbs100": 9.58,
+  "fat100": 0.24,
+  "portions": [
+   {
+    "name": "1 orta boy",
+    "grams": 61
+   },
+   {
+    "name": "1 dilim",
+    "grams": 3
+   }
+  ],
+  "source": "USDA FDC 170393",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "lahana-beyaz",
+  "name": "Beyaz lahana",
+  "aliases": [
+   "lahana"
+  ],
+  "category": "sebze",
+  "kcal100": 25.0,
+  "protein100": 1.28,
+  "carbs100": 5.8,
+  "fat100": 0.1,
+  "portions": [],
+  "source": "USDA FDC 169975",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "lahana-kirmizi",
+  "name": "Kırmızı lahana",
+  "aliases": [
+   "mor lahana"
+  ],
+  "category": "sebze",
+  "kcal100": 31.0,
+  "protein100": 1.43,
+  "carbs100": 7.37,
+  "fat100": 0.16,
+  "portions": [],
+  "source": "USDA FDC 169977",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "marul-romaine",
+  "name": "Marul (romaine)",
+  "aliases": [
+   "marul",
+   "göbek marul"
+  ],
+  "category": "sebze",
+  "kcal100": 17.0,
+  "protein100": 1.23,
+  "carbs100": 3.29,
+  "fat100": 0.3,
+  "portions": [],
+  "source": "USDA FDC 169247",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "marul-yesil-yaprak",
+  "name": "Marul (yeşil yaprak)",
+  "aliases": [
+   "kıvırcık marul"
+  ],
+  "category": "sebze",
+  "kcal100": 15.0,
+  "protein100": 1.36,
+  "carbs100": 2.87,
+  "fat100": 0.15,
+  "portions": [],
+  "source": "USDA FDC 169249",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ispanak",
+  "name": "Ispanak (çiğ)",
+  "aliases": [
+   "ıspanak"
+  ],
+  "category": "sebze",
+  "kcal100": 23.0,
+  "protein100": 2.86,
+  "carbs100": 3.63,
+  "fat100": 0.39,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 30
+   }
+  ],
+  "source": "USDA FDC 168462",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "patlican",
+  "name": "Patlıcan (çiğ)",
+  "aliases": [
+   "patlıcan"
+  ],
+  "category": "sebze",
+  "kcal100": 25.0,
+  "protein100": 0.98,
+  "carbs100": 5.88,
+  "fat100": 0.18,
+  "portions": [],
+  "source": "USDA FDC 169228",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kabak",
+  "name": "Kabak (sakız kabağı)",
+  "aliases": [
+   "kabak",
+   "zucchini",
+   "sakız kabağı"
+  ],
+  "category": "sebze",
+  "kcal100": 17.0,
+  "protein100": 1.21,
+  "carbs100": 3.11,
+  "fat100": 0.32,
+  "portions": [
+   {
+    "name": "1 büyük boy",
+    "grams": 323
+   },
+   {
+    "name": "1 orta boy",
+    "grams": 196
+   },
+   {
+    "name": "1 dilim",
+    "grams": 9.9
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 118
+   }
+  ],
+  "source": "USDA FDC 169291",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bal-kabagi",
+  "name": "Bal kabağı (çiğ)",
+  "aliases": [
+   "kabak tatlısı",
+   "balkabağı"
+  ],
+  "category": "sebze",
+  "kcal100": 26.0,
+  "protein100": 1.0,
+  "carbs100": 6.5,
+  "fat100": 0.1,
+  "portions": [],
+  "source": "USDA FDC 168448",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "karnabahar",
+  "name": "Karnabahar",
+  "aliases": [
+   "karnıbahar"
+  ],
+  "category": "sebze",
+  "kcal100": 25.0,
+  "protein100": 1.92,
+  "carbs100": 4.97,
+  "fat100": 0.28,
+  "portions": [],
+  "source": "USDA FDC 169986",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "brokoli",
+  "name": "Brokoli",
+  "aliases": [
+   "brokoli çiğ"
+  ],
+  "category": "sebze",
+  "kcal100": 34.0,
+  "protein100": 2.82,
+  "carbs100": 6.64,
+  "fat100": 0.37,
+  "portions": [],
+  "source": "USDA FDC 170379",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "pirasa",
+  "name": "Pırasa (çiğ)",
+  "aliases": [
+   "pırasa"
+  ],
+  "category": "sebze",
+  "kcal100": 61.0,
+  "protein100": 1.5,
+  "carbs100": 14.15,
+  "fat100": 0.3,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 89
+   },
+   {
+    "name": "1 dilim",
+    "grams": 6
+   }
+  ],
+  "source": "USDA FDC 169246",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "maydanoz",
+  "name": "Maydanoz",
+  "aliases": [
+   "maydonoz"
+  ],
+  "category": "sebze",
+  "kcal100": 36.0,
+  "protein100": 2.97,
+  "carbs100": 6.33,
+  "fat100": 0.79,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 3.8
+   }
+  ],
+  "source": "USDA FDC 170416",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "dere-otu",
+  "name": "Dereotu (taze)",
+  "aliases": [
+   "dill",
+   "dereotu"
+  ],
+  "category": "sebze",
+  "kcal100": 43.0,
+  "protein100": 3.46,
+  "carbs100": 7.02,
+  "fat100": 1.12,
+  "portions": [],
+  "source": "USDA FDC 172233",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "mantar",
+  "name": "Mantar (beyaz, çiğ)",
+  "aliases": [
+   "kültür mantarı"
+  ],
+  "category": "sebze",
+  "kcal100": 22.0,
+  "protein100": 3.09,
+  "carbs100": 3.26,
+  "fat100": 0.34,
+  "portions": [
+   {
+    "name": "1 büyük boy",
+    "grams": 23
+   },
+   {
+    "name": "1 orta boy",
+    "grams": 18
+   },
+   {
+    "name": "1 dilim",
+    "grams": 6
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 10
+   }
+  ],
+  "source": "USDA FDC 169251",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "turp",
+  "name": "Turp",
+  "aliases": [
+   "kırmızı turp"
+  ],
+  "category": "sebze",
+  "kcal100": 16.0,
+  "protein100": 0.68,
+  "carbs100": 3.4,
+  "fat100": 0.1,
+  "portions": [
+   {
+    "name": "1 dilim",
+    "grams": 1
+   },
+   {
+    "name": "1 küçük boy",
+    "grams": 2
+   }
+  ],
+  "source": "USDA FDC 169276",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kereviz",
+  "name": "Kereviz sapı (çiğ)",
+  "aliases": [
+   "kereviz"
+  ],
+  "category": "sebze",
+  "kcal100": 14.0,
+  "protein100": 0.69,
+  "carbs100": 2.97,
+  "fat100": 0.17,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 7.5
+   }
+  ],
+  "source": "USDA FDC 169988",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "pancar",
+  "name": "Pancar (çiğ)",
+  "aliases": [
+   "kırmızı pancar"
+  ],
+  "category": "sebze",
+  "kcal100": 43.0,
+  "protein100": 1.61,
+  "carbs100": 9.56,
+  "fat100": 0.17,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 136
+   }
+  ],
+  "source": "USDA FDC 169145",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bamya",
+  "name": "Bamya (çiğ)",
+  "aliases": [
+   "bamya"
+  ],
+  "category": "sebze",
+  "kcal100": 33.0,
+  "protein100": 1.93,
+  "carbs100": 7.45,
+  "fat100": 0.19,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 100
+   }
+  ],
+  "source": "USDA FDC 169260",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "enginar",
+  "name": "Enginar (çiğ)",
+  "aliases": [
+   "enginar"
+  ],
+  "category": "sebze",
+  "kcal100": 47.0,
+  "protein100": 3.27,
+  "carbs100": 10.51,
+  "fat100": 0.15,
+  "portions": [],
+  "source": "USDA FDC 169205",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kuskonmaz",
+  "name": "Kuşkonmaz (çiğ)",
+  "aliases": [
+   "kuşkonmaz"
+  ],
+  "category": "sebze",
+  "kcal100": 20.0,
+  "protein100": 2.2,
+  "carbs100": 3.88,
+  "fat100": 0.12,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 134
+   }
+  ],
+  "source": "USDA FDC 168389",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tatli-patates",
+  "name": "Tatlı patates (çiğ)",
+  "aliases": [
+   "tatlı patates"
+  ],
+  "category": "sebze",
+  "kcal100": 86.0,
+  "protein100": 1.57,
+  "carbs100": 20.12,
+  "fat100": 0.05,
+  "portions": [],
+  "source": "USDA FDC 168482",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bezelye-cig",
+  "name": "Bezelye (taze, çiğ)",
+  "aliases": [
+   "bezelye"
+  ],
+  "category": "sebze",
+  "kcal100": 81.0,
+  "protein100": 5.42,
+  "carbs100": 14.45,
+  "fat100": 0.4,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 145
+   }
+  ],
+  "source": "USDA FDC 170419",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bezelye-pismis",
+  "name": "Bezelye (haşlanmış)",
+  "aliases": [
+   "haşlanmış bezelye"
+  ],
+  "category": "sebze",
+  "kcal100": 84.0,
+  "protein100": 5.36,
+  "carbs100": 15.63,
+  "fat100": 0.22,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 160
+   }
+  ],
+  "source": "USDA FDC 170420",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "taze-fasulye",
+  "name": "Taze fasulye (çiğ)",
+  "aliases": [
+   "yeşil fasulye",
+   "taze fasulye"
+  ],
+  "category": "sebze",
+  "kcal100": 31.0,
+  "protein100": 1.83,
+  "carbs100": 6.97,
+  "fat100": 0.22,
+  "portions": [],
+  "source": "USDA FDC 169961",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "elma",
+  "name": "Elma (kabuklu)",
+  "aliases": [
+   "elma"
+  ],
+  "category": "meyve",
+  "kcal100": 52.0,
+  "protein100": 0.26,
+  "carbs100": 13.81,
+  "fat100": 0.17,
+  "portions": [],
+  "source": "USDA FDC 171688",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "muz",
+  "name": "Muz",
+  "aliases": [
+   "muz"
+  ],
+  "category": "meyve",
+  "kcal100": 89.0,
+  "protein100": 1.09,
+  "carbs100": 22.84,
+  "fat100": 0.33,
+  "portions": [],
+  "source": "USDA FDC 173944",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "portakal",
+  "name": "Portakal",
+  "aliases": [
+   "portakal"
+  ],
+  "category": "meyve",
+  "kcal100": 47.0,
+  "protein100": 0.94,
+  "carbs100": 11.75,
+  "fat100": 0.12,
+  "portions": [],
+  "source": "USDA FDC 169097",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "mandalina",
+  "name": "Mandalina",
+  "aliases": [
+   "mandalina"
+  ],
+  "category": "meyve",
+  "kcal100": 53.0,
+  "protein100": 0.81,
+  "carbs100": 13.34,
+  "fat100": 0.31,
+  "portions": [],
+  "source": "USDA FDC 169105",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "greyfurt",
+  "name": "Greyfurt (pembe/kırmızı)",
+  "aliases": [
+   "greyfurt",
+   "altıntop"
+  ],
+  "category": "meyve",
+  "kcal100": 42.0,
+  "protein100": 0.77,
+  "carbs100": 10.66,
+  "fat100": 0.14,
+  "portions": [],
+  "source": "USDA FDC 174673",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "limon-suyu",
+  "name": "Limon suyu",
+  "aliases": [
+   "limon suyu"
+  ],
+  "category": "meyve",
+  "kcal100": 22.0,
+  "protein100": 0.35,
+  "carbs100": 6.9,
+  "fat100": 0.24,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 244
+   }
+  ],
+  "source": "USDA FDC 167747",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "uzum",
+  "name": "Üzüm",
+  "aliases": [
+   "üzüm",
+   "sultaniye"
+  ],
+  "category": "meyve",
+  "kcal100": 69.0,
+  "protein100": 0.72,
+  "carbs100": 18.1,
+  "fat100": 0.16,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 151
+   }
+  ],
+  "source": "USDA FDC 174683",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "cilek",
+  "name": "Çilek",
+  "aliases": [
+   "çilek"
+  ],
+  "category": "meyve",
+  "kcal100": 32.0,
+  "protein100": 0.67,
+  "carbs100": 7.68,
+  "fat100": 0.3,
+  "portions": [],
+  "source": "USDA FDC 167762",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "seftali",
+  "name": "Şeftali",
+  "aliases": [
+   "şeftali"
+  ],
+  "category": "meyve",
+  "kcal100": 39.0,
+  "protein100": 0.91,
+  "carbs100": 9.54,
+  "fat100": 0.25,
+  "portions": [],
+  "source": "USDA FDC 169928",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kayisi",
+  "name": "Kayısı (taze)",
+  "aliases": [
+   "kayısı"
+  ],
+  "category": "meyve",
+  "kcal100": 48.0,
+  "protein100": 1.4,
+  "carbs100": 11.12,
+  "fat100": 0.39,
+  "portions": [],
+  "source": "USDA FDC 171697",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kiraz",
+  "name": "Kiraz (tatlı)",
+  "aliases": [
+   "kiraz"
+  ],
+  "category": "meyve",
+  "kcal100": 63.0,
+  "protein100": 1.06,
+  "carbs100": 16.01,
+  "fat100": 0.2,
+  "portions": [],
+  "source": "USDA FDC 171719",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "armut",
+  "name": "Armut (Bartlett)",
+  "aliases": [
+   "armut"
+  ],
+  "category": "meyve",
+  "kcal100": 63.0,
+  "protein100": 0.39,
+  "carbs100": 15.01,
+  "fat100": 0.16,
+  "portions": [
+   {
+    "name": "1 küçük boy",
+    "grams": 152
+   },
+   {
+    "name": "1 orta boy",
+    "grams": 177
+   },
+   {
+    "name": "1 büyük boy",
+    "grams": 227
+   }
+  ],
+  "source": "USDA FDC 167776",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "nar",
+  "name": "Nar",
+  "aliases": [
+   "nar"
+  ],
+  "category": "meyve",
+  "kcal100": 83.0,
+  "protein100": 1.67,
+  "carbs100": 18.7,
+  "fat100": 1.17,
+  "portions": [],
+  "source": "USDA FDC 169134",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "karpuz",
+  "name": "Karpuz",
+  "aliases": [
+   "karpuz"
+  ],
+  "category": "meyve",
+  "kcal100": 30.0,
+  "protein100": 0.61,
+  "carbs100": 7.55,
+  "fat100": 0.15,
+  "portions": [],
+  "source": "USDA FDC 167765",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kavun",
+  "name": "Kavun (kantalup)",
+  "aliases": [
+   "kavun"
+  ],
+  "category": "meyve",
+  "kcal100": 34.0,
+  "protein100": 0.84,
+  "carbs100": 8.16,
+  "fat100": 0.19,
+  "portions": [],
+  "source": "USDA FDC 169092",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "incir-taze",
+  "name": "İncir (taze)",
+  "aliases": [
+   "incir"
+  ],
+  "category": "meyve",
+  "kcal100": 74.0,
+  "protein100": 0.75,
+  "carbs100": 19.18,
+  "fat100": 0.3,
+  "portions": [],
+  "source": "USDA FDC 173021",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "incir-kuru",
+  "name": "İncir (kuru)",
+  "aliases": [
+   "kuru incir"
+  ],
+  "category": "meyve",
+  "kcal100": 249.0,
+  "protein100": 3.3,
+  "carbs100": 63.87,
+  "fat100": 0.93,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 149
+   }
+  ],
+  "source": "USDA FDC 174665",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hurma-medjool",
+  "name": "Hurma (Medjool)",
+  "aliases": [
+   "medjool"
+  ],
+  "category": "meyve",
+  "kcal100": 277.0,
+  "protein100": 1.81,
+  "carbs100": 74.97,
+  "fat100": 0.15,
+  "portions": [],
+  "source": "USDA FDC 168191",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hurma-deglet",
+  "name": "Hurma (Deglet Noor)",
+  "aliases": [
+   "deglet"
+  ],
+  "category": "meyve",
+  "kcal100": 282.0,
+  "protein100": 2.45,
+  "carbs100": 75.03,
+  "fat100": 0.39,
+  "portions": [],
+  "source": "USDA FDC 171726",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kuru-uzum",
+  "name": "Kuru üzüm (koyu)",
+  "aliases": [
+   "kuru üzüm"
+  ],
+  "category": "meyve",
+  "kcal100": 299.0,
+  "protein100": 3.3,
+  "carbs100": 79.32,
+  "fat100": 0.25,
+  "portions": [],
+  "source": "USDA FDC 168165",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kuru-kayisi",
+  "name": "Kuru kayısı",
+  "aliases": [
+   "kayısı kurusu"
+  ],
+  "category": "meyve",
+  "kcal100": 241.0,
+  "protein100": 3.39,
+  "carbs100": 62.64,
+  "fat100": 0.51,
+  "portions": [],
+  "source": "USDA FDC 173941",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kivi",
+  "name": "Kivi",
+  "aliases": [
+   "kivi"
+  ],
+  "category": "meyve",
+  "kcal100": 61.0,
+  "protein100": 1.14,
+  "carbs100": 14.66,
+  "fat100": 0.52,
+  "portions": [],
+  "source": "USDA FDC 168153",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "erik",
+  "name": "Erik",
+  "aliases": [
+   "erik"
+  ],
+  "category": "meyve",
+  "kcal100": 46.0,
+  "protein100": 0.7,
+  "carbs100": 11.42,
+  "fat100": 0.28,
+  "portions": [],
+  "source": "USDA FDC 169949",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "avokado",
+  "name": "Avokado",
+  "aliases": [
+   "avokado"
+  ],
+  "category": "meyve",
+  "kcal100": 160.0,
+  "protein100": 2.0,
+  "carbs100": 8.53,
+  "fat100": 14.66,
+  "portions": [],
+  "source": "USDA FDC 171705",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ananas",
+  "name": "Ananas",
+  "aliases": [
+   "ananas"
+  ],
+  "category": "meyve",
+  "kcal100": 50.0,
+  "protein100": 0.54,
+  "carbs100": 13.12,
+  "fat100": 0.12,
+  "portions": [],
+  "source": "USDA FDC 169124",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ahududu",
+  "name": "Ahududu",
+  "aliases": [
+   "frambuaz"
+  ],
+  "category": "meyve",
+  "kcal100": 52.0,
+  "protein100": 1.2,
+  "carbs100": 11.94,
+  "fat100": 0.65,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 123
+   }
+  ],
+  "source": "USDA FDC 167755",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bogurtlen",
+  "name": "Böğürtlen",
+  "aliases": [
+   "böğürtlen"
+  ],
+  "category": "meyve",
+  "kcal100": 43.0,
+  "protein100": 1.39,
+  "carbs100": 9.61,
+  "fat100": 0.49,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 144
+   }
+  ],
+  "source": "USDA FDC 173946",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "yaban-mersini",
+  "name": "Yaban mersini",
+  "aliases": [
+   "yabanmersini",
+   "blueberry"
+  ],
+  "category": "meyve",
+  "kcal100": 57.0,
+  "protein100": 0.74,
+  "carbs100": 14.49,
+  "fat100": 0.33,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 148
+   }
+  ],
+  "source": "USDA FDC 171711",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ayva",
+  "name": "Ayva",
+  "aliases": [
+   "ayva"
+  ],
+  "category": "meyve",
+  "kcal100": 57.0,
+  "protein100": 0.4,
+  "carbs100": 15.3,
+  "fat100": 0.1,
+  "portions": [],
+  "source": "USDA FDC 168163",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kavun-bal",
+  "name": "Bal kavunu",
+  "aliases": [
+   "honeydew",
+   "bal kavunu"
+  ],
+  "category": "meyve",
+  "kcal100": 36.0,
+  "protein100": 0.54,
+  "carbs100": 9.09,
+  "fat100": 0.14,
+  "portions": [],
+  "source": "USDA FDC 169911",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "mercimek-kirmizi-cig",
+  "name": "Kırmızı mercimek (çiğ)",
+  "aliases": [
+   "kırmızı mercimek"
+  ],
+  "category": "baklagil",
+  "kcal100": 358.0,
+  "protein100": 23.91,
+  "carbs100": 63.1,
+  "fat100": 2.17,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 192
+   }
+  ],
+  "source": "USDA FDC 174284",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "mercimek-pismis",
+  "name": "Mercimek (haşlanmış)",
+  "aliases": [
+   "haşlanmış mercimek"
+  ],
+  "category": "baklagil",
+  "kcal100": 116.0,
+  "protein100": 9.02,
+  "carbs100": 20.13,
+  "fat100": 0.38,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 198
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 12.3
+   }
+  ],
+  "source": "USDA FDC 172421",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "mercimek-cig",
+  "name": "Mercimek (çiğ)",
+  "aliases": [
+   "kuru mercimek"
+  ],
+  "category": "baklagil",
+  "kcal100": 352.0,
+  "protein100": 24.63,
+  "carbs100": 63.35,
+  "fat100": 1.06,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 192
+   }
+  ],
+  "source": "USDA FDC 172420",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "nohut-cig",
+  "name": "Nohut (çiğ)",
+  "aliases": [
+   "nohut kuru"
+  ],
+  "category": "baklagil",
+  "kcal100": 378.0,
+  "protein100": 20.47,
+  "carbs100": 62.95,
+  "fat100": 6.04,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 200
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 12.5
+   }
+  ],
+  "source": "USDA FDC 173756",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "nohut-pismis",
+  "name": "Nohut (haşlanmış)",
+  "aliases": [
+   "haşlanmış nohut"
+  ],
+  "category": "baklagil",
+  "kcal100": 164.0,
+  "protein100": 8.86,
+  "carbs100": 27.42,
+  "fat100": 2.59,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 164
+   }
+  ],
+  "source": "USDA FDC 173757",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "nohut-konserve",
+  "name": "Nohut (konserve, süzülmüş)",
+  "aliases": [
+   "konserve nohut"
+  ],
+  "category": "baklagil",
+  "kcal100": 139.0,
+  "protein100": 7.05,
+  "carbs100": 22.53,
+  "fat100": 2.77,
+  "portions": [],
+  "source": "USDA FDC 173800",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "fasulye-kuru-pismis",
+  "name": "Kuru fasulye (beyaz, haşlanmış)",
+  "aliases": [
+   "kuru fasulye",
+   "beyaz fasulye"
+  ],
+  "category": "baklagil",
+  "kcal100": 139.0,
+  "protein100": 9.73,
+  "carbs100": 25.09,
+  "fat100": 0.35,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 179
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 11.2
+   }
+  ],
+  "source": "USDA FDC 175203",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "barbunya-pismis",
+  "name": "Barbunya / kırmızı fasulye (haşlanmış)",
+  "aliases": [
+   "barbunya",
+   "kırmızı fasulye"
+  ],
+  "category": "baklagil",
+  "kcal100": 127.0,
+  "protein100": 8.67,
+  "carbs100": 22.8,
+  "fat100": 0.5,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 177
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 11
+   }
+  ],
+  "source": "USDA FDC 175194",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "pinto-fasulye-pismis",
+  "name": "Pinto fasulye (haşlanmış)",
+  "aliases": [
+   "pinto",
+   "alubya"
+  ],
+  "category": "baklagil",
+  "kcal100": 143.0,
+  "protein100": 9.01,
+  "carbs100": 26.22,
+  "fat100": 0.65,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 171
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 10.6
+   }
+  ],
+  "source": "USDA FDC 175200",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kara-fasulye-pismis",
+  "name": "Kara fasulye (haşlanmış)",
+  "aliases": [
+   "siyah fasulye"
+  ],
+  "category": "baklagil",
+  "kcal100": 132.0,
+  "protein100": 8.86,
+  "carbs100": 23.71,
+  "fat100": 0.54,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 172
+   }
+  ],
+  "source": "USDA FDC 173735",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bakla-pismis",
+  "name": "Bakla (haşlanmış)",
+  "aliases": [
+   "bakla",
+   "kuru bakla"
+  ],
+  "category": "baklagil",
+  "kcal100": 110.0,
+  "protein100": 7.6,
+  "carbs100": 19.65,
+  "fat100": 0.4,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 170
+   }
+  ],
+  "source": "USDA FDC 173753",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "humus",
+  "name": "Humus (hazır)",
+  "aliases": [
+   "humus",
+   "hummus"
+  ],
+  "category": "baklagil",
+  "kcal100": 237.0,
+  "protein100": 7.78,
+  "carbs100": 15.0,
+  "fat100": 17.82,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 15
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 246
+   }
+  ],
+  "source": "USDA FDC 174289",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "soya-tofu",
+  "name": "Tofu (sert)",
+  "aliases": [
+   "tofu"
+  ],
+  "category": "baklagil",
+  "kcal100": 144.0,
+  "protein100": 17.27,
+  "carbs100": 2.78,
+  "fat100": 8.72,
+  "portions": [],
+  "source": "USDA FDC 172475",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "bal",
+  "name": "Bal",
+  "aliases": [
+   "petek balı",
+   "çiçek balı"
+  ],
+  "category": "diğer",
+  "kcal100": 304.0,
+  "protein100": 0.3,
+  "carbs100": 82.4,
+  "fat100": 0.0,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 339
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 21
+   }
+  ],
+  "source": "USDA FDC 169640",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "seker",
+  "name": "Toz şeker",
+  "aliases": [
+   "şeker",
+   "çay şekeri",
+   "kesme şeker"
+  ],
+  "category": "diğer",
+  "kcal100": 387.0,
+  "protein100": 0.0,
+  "carbs100": 99.98,
+  "fat100": 0.0,
+  "portions": [
+   {
+    "name": "1 çay kaşığı",
+    "grams": 4.2
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 200
+   }
+  ],
+  "source": "USDA FDC 169655",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "seker-pudra",
+  "name": "Pudra şekeri",
+  "aliases": [
+   "pudra şeker"
+  ],
+  "category": "diğer",
+  "kcal100": 389.0,
+  "protein100": 0.0,
+  "carbs100": 99.77,
+  "fat100": 0.0,
+  "portions": [
+   {
+    "name": "1 çay kaşığı",
+    "grams": 2.5
+   }
+  ],
+  "source": "USDA FDC 169656",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "seker-esmer",
+  "name": "Esmer şeker",
+  "aliases": [
+   "kahverengi şeker"
+  ],
+  "category": "diğer",
+  "kcal100": 380.0,
+  "protein100": 0.12,
+  "carbs100": 98.09,
+  "fat100": 0.0,
+  "portions": [],
+  "source": "USDA FDC 168833",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "recel",
+  "name": "Reçel",
+  "aliases": [
+   "marmelat",
+   "reçel"
+  ],
+  "category": "diğer",
+  "kcal100": 278.0,
+  "protein100": 0.37,
+  "carbs100": 68.86,
+  "fat100": 0.07,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 20
+   }
+  ],
+  "source": "USDA FDC 169641",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "akcaagac-surubu",
+  "name": "Akçaağaç şurubu",
+  "aliases": [
+   "akçaağaç",
+   "maple"
+  ],
+  "category": "diğer",
+  "kcal100": 260.0,
+  "protein100": 0.04,
+  "carbs100": 67.04,
+  "fat100": 0.06,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 20
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 315
+   }
+  ],
+  "source": "USDA FDC 169661",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "cikolata-sutlu",
+  "name": "Sütlü çikolata",
+  "aliases": [
+   "çikolata"
+  ],
+  "category": "diğer",
+  "kcal100": 535.0,
+  "protein100": 7.65,
+  "carbs100": 59.4,
+  "fat100": 29.66,
+  "portions": [],
+  "source": "USDA FDC 167587",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "cikolata-bitter",
+  "name": "Bitter çikolata (%70-85 kakao)",
+  "aliases": [
+   "bitter",
+   "acı çikolata"
+  ],
+  "category": "diğer",
+  "kcal100": 598.0,
+  "protein100": 7.79,
+  "carbs100": 45.9,
+  "fat100": 42.63,
+  "portions": [],
+  "source": "USDA FDC 170273",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "ketcap",
+  "name": "Ketçap",
+  "aliases": [
+   "ketçap",
+   "domates ketçap"
+  ],
+  "category": "diğer",
+  "kcal100": 101.0,
+  "protein100": 1.04,
+  "carbs100": 27.4,
+  "fat100": 0.1,
+  "portions": [
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 17
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 240
+   }
+  ],
+  "source": "USDA FDC 168556",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "hardal",
+  "name": "Hardal (sarı)",
+  "aliases": [
+   "hardal"
+  ],
+  "category": "diğer",
+  "kcal100": 60.0,
+  "protein100": 3.74,
+  "carbs100": 5.83,
+  "fat100": 3.34,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 249
+   }
+  ],
+  "source": "USDA FDC 172234",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "tuz",
+  "name": "Tuz (sofra)",
+  "aliases": [
+   "tuz"
+  ],
+  "category": "diğer",
+  "kcal100": 0.0,
+  "protein100": 0.0,
+  "carbs100": 0.0,
+  "fat100": 0.0,
+  "portions": [
+   {
+    "name": "1 çay kaşığı",
+    "grams": 6
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 18
+   },
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 292
+   }
+  ],
+  "source": "USDA FDC 173468",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "cay-sade",
+  "name": "Çay (demli, şekersiz)",
+  "aliases": [
+   "çay",
+   "siyah çay"
+  ],
+  "category": "içecek",
+  "kcal100": 1.0,
+  "protein100": 0.0,
+  "carbs100": 0.3,
+  "fat100": 0.0,
+  "portions": [],
+  "source": "USDA FDC 173227",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kahve-demleme",
+  "name": "Kahve (demleme, şekersiz)",
+  "aliases": [
+   "kahve",
+   "filtre kahve"
+  ],
+  "category": "içecek",
+  "kcal100": 1.0,
+  "protein100": 0.12,
+  "carbs100": 0.0,
+  "fat100": 0.02,
+  "portions": [],
+  "source": "USDA FDC 171890",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "portakal-suyu",
+  "name": "Portakal suyu (taze sıkılmış)",
+  "aliases": [
+   "portakal suyu"
+  ],
+  "category": "içecek",
+  "kcal100": 45.0,
+  "protein100": 0.7,
+  "carbs100": 10.4,
+  "fat100": 0.2,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 248
+   }
+  ],
+  "source": "USDA FDC 169098",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "elma-suyu",
+  "name": "Elma suyu (şekersiz)",
+  "aliases": [
+   "elma suyu"
+  ],
+  "category": "içecek",
+  "kcal100": 46.0,
+  "protein100": 0.1,
+  "carbs100": 11.3,
+  "fat100": 0.13,
+  "portions": [
+   {
+    "name": "1 kupa (240 ml)",
+    "grams": 248
+   }
+  ],
+  "source": "USDA FDC 167771",
+  "verification": "tek kaynak"
+ },
+ {
+  "id": "kola-diyet",
+  "name": "Kola (diyet, şekersiz)",
+  "aliases": [
+   "diyet kola"
+  ],
+  "category": "içecek",
+  "kcal100": 1.0,
+  "protein100": 0.12,
+  "carbs100": 0.12,
+  "fat100": 0.0,
+  "portions": [],
+  "source": "USDA FDC 174850",
+  "verification": "tek kaynak"
+ }
+]

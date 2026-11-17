@@ -3,12 +3,15 @@
 -- Supabase Dashboard > SQL Editor içinde TEK SEFERDE çalıştırılabilir.
 -- Tekrar çalıştırılabilir (idempotent): mevcut veriyi silmez.
 --
--- Güvenlik modeli: Tek kullanıcı da olsa anon key uygulamanın içinde
--- taşındığı için tüm tablolarda RLS açık ve satırlar auth.uid() ile
--- sahibine kilitli. Uygulamaya Supabase Auth (e-posta + şifre) ile girilir.
+-- Güvenlik modeli: anon key uygulamanın içinde taşındığı için tüm tablolarda
+-- RLS açık ve satırlar auth.uid() ile sahibine kilitli. Uygulamaya Supabase
+-- Auth (Google ya da e-posta + şifre) ile girilir. Kullanıcılar birbirinin ham
+-- tablolarını okuyamaz; arkadaşlar yalnızca security definer işlevlerinden,
+-- kişinin açtığı anahtar kadar hedef özeti görür (Faz 4B bölümü).
 --
--- Seed: Başlangıç verisi, kullanıcı oluştuğu anda (auth.users trigger'ı)
--- ve bu script çalıştığında zaten var olan kullanıcılar için yüklenir.
+-- Yeni hesap: auth.users trigger'ı yalnızca user_settings satırı açar (nötr
+-- başlangıç; rutin/görev/not yüklenmez). Hesap açmak için en az bir
+-- kullanıcıdan bekleyen arkadaş isteği almış e-posta gerekir (kayıt kapısı).
 --
 -- Sürüm 2 (Faz 2): routines.frequency / day_of_month / scope, 'finans'
 -- kategorisi, user_settings tablosu, quick_add_entries içinde routines[].
@@ -21,6 +24,12 @@
 -- içe aktarılan antrenmanın yeniden eşitlemede kopyalanmasını önler.
 -- Sürüm 5 (Faz 4A): user_settings.height_cm / birth_year / sex profil
 -- sütunları (enerji dengesi için; cevaplanmamışsa null).
+-- Sürüm 6 (Faz 4B): çok kullanıcılı. user_settings.display_name /
+-- work_description / onboarded_at, nötr varsayılanlar, 'Pusholder' → 'İş'
+-- (eski uygulama sürümü için geçiş tetikleyicisi), friend_requests /
+-- friendships / friend_sharing / ai_usage + arkadaş işlevleri, kayıt kapısı,
+-- consume_ai_quota. Rapor zamanlayıcısı yalnızca onboarded_at dolu kullanıcılar
+-- için çalışır: Edge Function (service_role) user_settings'ten okur.
 -- Eski bir sürümle kurulmuş veritabanında çalıştırıldığında yerinde yükseltir.
 -- =====================================================================
 
@@ -46,14 +55,14 @@ $$;
 --    frequency = 'monthly': day_of_month kullanılır; ayın o günü yoksa
 --                           ayın son günü geçerlidir (31 → Şubat'ta 28/29).
 --                           days_of_week bu durumda yok sayılır.
---    scope: iş (Pusholder) / kişisel ayrımı.
+--    scope: iş / kişisel ayrımı.
 -- ---------------------------------------------------------------------
 create table if not exists public.routines (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   title         text not null check (char_length(title) between 1 and 200),
   scope         text not null default 'Kişisel'
-                check (scope in ('Pusholder', 'Kişisel')),
+                check (scope in ('İş', 'Kişisel')),
   category      text not null default 'operasyon'
                 check (category in ('operasyon', 'spor', 'beslenme', 'kisisel', 'finans')),
   frequency     text not null default 'weekly'
@@ -99,14 +108,14 @@ begin
   ) then
     alter table public.routines
       add column scope text not null default 'Kişisel'
-        check (scope in ('Pusholder', 'Kişisel'));
+        check (scope in ('İş', 'Kişisel'));
 
-    update public.routines set scope = 'Pusholder' where category = 'operasyon';
+    update public.routines set scope = 'İş' where category = 'operasyon';
 
     -- Sürüm 2 seed'indeki iki aylık örnek, verisi olan kullanıcılara da eklenir.
     insert into public.routines
       (user_id, title, scope, category, frequency, day_of_month, time_of_day, sort_order)
-    select u.user_id, v.title, 'Pusholder', v.category, 'monthly', v.day_of_month,
+    select u.user_id, v.title, 'İş', v.category, 'monthly', v.day_of_month,
            '10:00', v.sort_order
     from (select distinct user_id from public.routines) as u
     cross join (values
@@ -146,7 +155,7 @@ create table if not exists public.tasks (
   title         text not null check (char_length(title) between 1 and 300),
   description   text,
   category      text not null default 'Kişisel'
-                check (category in ('Pusholder', 'Ekip', 'Finans', 'Kişisel')),
+                check (category in ('İş', 'Ekip', 'Finans', 'Kişisel')),
   priority      text not null default 'medium'
                 check (priority in ('low', 'medium', 'high')),
   status        text not null default 'todo'
@@ -189,7 +198,7 @@ create table if not exists public.notes (
   title         text not null check (char_length(title) between 1 and 200),
   content       text not null default '',
   category      text not null default 'Kişisel'
-                check (category in ('Toplantı', 'Fikir', 'Pusholder', 'Ekip', 'Finans', 'Kişisel')),
+                check (category in ('Toplantı', 'Fikir', 'İş', 'Ekip', 'Finans', 'Kişisel')),
   is_pinned     boolean not null default false,
   source        text not null default 'manual' check (source in ('manual', 'ai')),
   created_at    timestamptz not null default now(),
@@ -341,19 +350,21 @@ create table if not exists public.daily_reports (
 create table if not exists public.user_settings (
   user_id                uuid primary key default auth.uid()
                          references auth.users (id) on delete cascade,
-  start_weight_kg        numeric(5,2) not null default 84.5
+  -- Varsayılanlar nötr/genel değerlerdir (Faz 4B); ilk kurulum gerçek
+  -- değerleri yazar. Mevcut satırlar değişmez.
+  start_weight_kg        numeric(5,2) not null default 70
                          check (start_weight_kg between 30 and 250),
-  target_weight_kg       numeric(5,2) not null default 78
+  target_weight_kg       numeric(5,2) not null default 70
                          check (target_weight_kg between 30 and 250),
   daily_calories         integer not null default 2000
                          check (daily_calories between 800 and 6000),
-  daily_protein_g        integer not null default 170
+  daily_protein_g        integer not null default 120
                          check (daily_protein_g between 0 and 500),
-  daily_carbs_g          integer not null default 180
+  daily_carbs_g          integer not null default 220
                          check (daily_carbs_g between 0 and 800),
   daily_fat_g            integer not null default 65
                          check (daily_fat_g between 0 and 400),
-  daily_steps            integer not null default 10000
+  daily_steps            integer not null default 8000
                          check (daily_steps between 1000 and 60000),
   sleep_minutes          integer not null default 450
                          check (sleep_minutes between 180 and 900),
@@ -367,7 +378,7 @@ create table if not exists public.user_settings (
   quiet_hours_enabled    boolean not null default true,
   quiet_start            time not null default '23:00',
   quiet_end              time not null default '07:30',
-  team_members           text[] not null default '{Duhan,İlhan,Mehmet,Sedat}',
+  team_members           text[] not null default '{}',
   -- Rapor günü ve haftası bu saat dilimine göre kesilir (IANA adı).
   timezone               text not null default 'Europe/Istanbul',
   -- Profil (Faz 4A, enerji dengesi). Cevaplanmamışsa null; sex 'unspecified'
@@ -375,6 +386,11 @@ create table if not exists public.user_settings (
   height_cm              smallint check (height_cm between 100 and 250),
   birth_year             smallint check (birth_year between 1900 and 2100),
   sex                    text check (sex in ('female', 'male', 'unspecified')),
+  -- Faz 4B: görünen ad (arkadaşlara), iş tanımı (yalnızca AI komutuna),
+  -- ilk kurulumun bittiği an (null = kılavuz ve sorular gösterilir).
+  display_name           text check (char_length(display_name) <= 60),
+  work_description       text check (char_length(work_description) <= 500),
+  onboarded_at           timestamptz,
   updated_at             timestamptz not null default now()
 );
 
@@ -389,6 +405,88 @@ alter table public.user_settings
   add column if not exists height_cm smallint check (height_cm between 100 and 250),
   add column if not exists birth_year smallint check (birth_year between 1900 and 2100),
   add column if not exists sex text check (sex in ('female', 'male', 'unspecified'));
+
+-- Sürüm 5 → 6 yükseltmesi (Faz 4B). onboarded_at'in yokluğu "bu veritabanı
+-- henüz Faz 4B'yi görmedi" demektir. Mevcut hesaplar kılavuza ZORLANMAZ:
+-- yalnızca sütun eklenirken, bir kez, hepsine o an yazılır (ayar satırı hiç
+-- açılmamış eski hesaplara da bir satır açılır). updated_at tetikleyicisi bu
+-- toplu yazıda çalışmaz; sonraki çalıştırmalarda yeni hesaplara dokunulmaz.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'user_settings'
+      and column_name = 'onboarded_at'
+  ) then
+    alter table public.user_settings add column onboarded_at timestamptz;
+    alter table public.user_settings disable trigger user;
+    update public.user_settings set onboarded_at = now();
+    alter table public.user_settings enable trigger user;
+    insert into public.user_settings (user_id, onboarded_at)
+    select u.id, now() from auth.users u
+    on conflict (user_id) do nothing;
+  end if;
+end;
+$$;
+
+alter table public.user_settings
+  add column if not exists display_name text check (char_length(display_name) <= 60),
+  add column if not exists work_description text check (char_length(work_description) <= 500);
+
+-- Nötr varsayılanlar: yalnızca YENİ satırlar etkilenir, mevcut satırlar durur.
+alter table public.user_settings
+  alter column start_weight_kg set default 70,
+  alter column target_weight_kg set default 70,
+  alter column daily_protein_g set default 120,
+  alter column daily_carbs_g set default 220,
+  alter column daily_steps set default 8000,
+  alter column team_members set default '{}';
+
+-- ---------------------------------------------------------------------
+-- 'Pusholder' → 'İş' (Faz 4B: sahibe özel ad ürün kodundan kalkar).
+--   * tasks.category, notes.category, routines.scope kısıtları yeniden kurulur;
+--   * mevcut satırlar taşınır (updated_at değişmesin diye tetikleyiciler
+--     toplu yazıda kapatılır; kısıt önce kalktığı için sıra güvenlidir);
+--   * eski TestFlight yapısı 'Pusholder' yazarsa BEFORE tetikleyicisi 'İş'e
+--     çevirir (aşağıda, tetikleyici bölümünde).
+-- ---------------------------------------------------------------------
+do $$
+declare
+  v record;
+  c record;
+begin
+  for v in
+    select * from (values ('tasks', 'category'), ('notes', 'category'), ('routines', 'scope'))
+      as x(tbl, col)
+  loop
+    for c in
+      select conname from pg_constraint
+      where conrelid = format('public.%I', v.tbl)::regclass
+        and contype = 'c'
+        and pg_get_constraintdef(oid) ~ ('\m' || v.col || '\M')
+    loop
+      execute format('alter table public.%I drop constraint %I', v.tbl, c.conname);
+    end loop;
+  end loop;
+
+  alter table public.tasks disable trigger user;
+  alter table public.notes disable trigger user;
+  alter table public.routines disable trigger user;
+  update public.tasks set category = 'İş' where category = 'Pusholder';
+  update public.notes set category = 'İş' where category = 'Pusholder';
+  update public.routines set scope = 'İş' where scope = 'Pusholder';
+  alter table public.tasks enable trigger user;
+  alter table public.notes enable trigger user;
+  alter table public.routines enable trigger user;
+
+  alter table public.tasks add constraint tasks_category_check
+    check (category in ('İş', 'Ekip', 'Finans', 'Kişisel'));
+  alter table public.notes add constraint notes_category_check
+    check (category in ('Toplantı', 'Fikir', 'İş', 'Ekip', 'Finans', 'Kişisel'));
+  alter table public.routines add constraint routines_scope_check
+    check (scope in ('İş', 'Kişisel'));
+end;
+$$;
 
 -- ---------------------------------------------------------------------
 -- İndeksler
@@ -438,6 +536,42 @@ create trigger notes_set_updated_at before update on public.notes
 drop trigger if exists user_settings_set_updated_at on public.user_settings;
 create trigger user_settings_set_updated_at before update on public.user_settings
   for each row execute function public.set_updated_at();
+
+-- Eski TestFlight yapısı kategori/kapsam olarak 'Pusholder' göndermeye devam
+-- eder; kısıttan ÖNCE çalışan BEFORE tetikleyicisi bunu 'İş'e çevirir. Yeni
+-- yapı zaten 'İş' yazar. (Geçiş uyumu: eski yapılar kalmayınca kaldırılabilir.)
+create or replace function public.normalize_legacy_pusholder()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if tg_table_name = 'routines' then
+    if new.scope = 'Pusholder' then
+      new.scope := 'İş';
+    end if;
+  elsif new.category = 'Pusholder' then
+    new.category := 'İş';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.normalize_legacy_pusholder() from public, anon, authenticated;
+
+drop trigger if exists tasks_legacy_pusholder on public.tasks;
+create trigger tasks_legacy_pusholder
+  before insert or update of category on public.tasks
+  for each row execute function public.normalize_legacy_pusholder();
+
+drop trigger if exists notes_legacy_pusholder on public.notes;
+create trigger notes_legacy_pusholder
+  before insert or update of category on public.notes
+  for each row execute function public.normalize_legacy_pusholder();
+
+drop trigger if exists routines_legacy_pusholder on public.routines;
+create trigger routines_legacy_pusholder
+  before insert or update of scope on public.routines
+  for each row execute function public.normalize_legacy_pusholder();
 
 -- ---------------------------------------------------------------------
 -- Rutinin sıklığı değişince tamamlanma kayıtları sıfırlanır.
@@ -717,8 +851,8 @@ begin
   -- Ayar satırı yoksa tablo varsayılanları geçerlidir.
   v_tz    := coalesce(nullif(btrim(v_tz), ''), 'Europe/Istanbul');
   v_cal   := coalesce(v_cal, 2000);
-  v_pro   := coalesce(v_pro, 170);
-  v_steps := coalesce(v_steps, 10000);
+  v_pro   := coalesce(v_pro, 120);
+  v_steps := coalesce(v_steps, 8000);
   v_sleep := coalesce(v_sleep, 450);
 
   -- Bozuk bir saat dilimi adı raporu düşürmesin.
@@ -1074,9 +1208,11 @@ grant execute on function public.save_weekly_report(uuid, date, jsonb, text, tex
   to service_role;
 
 -- ---------------------------------------------------------------------
--- SEED — başlangıç verisi (kullanıcı başına bir kez)
--- Gün ataması varsayımdır, uygulamadan/SQL'den değiştirilebilir:
---   Ağırlık: Pzt, Sal, Per, Cum · Kickboks: Çar · Koşu: Cmt · Halı saha: Paz
+-- SEED — yeni hesap (Faz 4B: nötr)
+-- Yalnızca user_settings satırı açılır. Rutinler, görevler, notlar ve ilk
+-- tartı yüklenmez: başlangıç rutinlerini kullanıcı ilk kurulumda seçer,
+-- "kilo" cevabı ayrıca tartı kaydı olarak yazılır. Bu işlev hiçbir mevcut
+-- veriye dokunmaz (sahibin eski seed verisi olduğu gibi durur).
 -- ---------------------------------------------------------------------
 create or replace function public.seed_personal_assistant(p_user uuid)
 returns void
@@ -1084,66 +1220,15 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_today timestamp := date_trunc('day', now() at time zone 'Europe/Istanbul');
 begin
-  -- Ayarlar satırı, verisi olan (sürüm 1'den gelen) kullanıcılar için de açılır.
   insert into user_settings (user_id) values (p_user)
   on conflict (user_id) do nothing;
-
-  if exists (select 1 from routines where user_id = p_user)
-     or exists (select 1 from tasks where user_id = p_user)
-     or exists (select 1 from notes where user_id = p_user)
-     or exists (select 1 from fitness_logs where user_id = p_user) then
-    return; -- zaten yüklenmiş ya da kullanıcının verisi var
-  end if;
-
-  insert into routines (user_id, title, scope, category, time_of_day, days_of_week, sort_order) values
-    (p_user, 'Sabah push performans kontrolü (CTR, teslim oranı)', 'Pusholder', 'operasyon', '09:00', '{1,2,3,4,5,6,7}', 10),
-    (p_user, 'Editör vardiya kontrolü (Duhan, İlhan, Mehmet, Sedat)', 'Pusholder', 'operasyon', '09:30', '{1,2,3,4,5,6,7}', 20),
-    (p_user, 'Öğlen gündem ve push takvimi kontrolü', 'Pusholder', 'operasyon', '13:00', '{1,2,3,4,5,6,7}', 30),
-    (p_user, 'Akşam operasyon kapanış kontrolü', 'Pusholder', 'operasyon', '22:00', '{1,2,3,4,5,6,7}', 40),
-    (p_user, 'Haftalık ekip toplantısı ve vardiya planı', 'Pusholder', 'operasyon', '11:00', '{1}', 50),
-    (p_user, 'Sabah tartı ve kilo kaydı', 'Kişisel', 'beslenme', '08:00', '{1,2,3,4,5,6,7}', 60),
-    (p_user, 'Günlük makro kontrolü (protein hedefi)', 'Kişisel', 'beslenme', '21:30', '{1,2,3,4,5,6,7}', 70),
-    (p_user, 'Ağırlık antrenmanı', 'Kişisel', 'spor', '19:00', '{1,2,4,5}', 80),
-    (p_user, 'Kickboks', 'Kişisel', 'spor', '19:30', '{3}', 90),
-    (p_user, 'Koşu', 'Kişisel', 'spor', '10:00', '{6}', 100),
-    (p_user, 'Halı saha', 'Kişisel', 'spor', '20:00', '{7}', 110);
-
-  insert into routines (user_id, title, scope, category, frequency, day_of_month, time_of_day, sort_order) values
-    (p_user, 'Maaş ödemeleri', 'Pusholder', 'finans', 'monthly', 15, '10:00', 120),
-    (p_user, 'Aylık push performans raporu', 'Pusholder', 'operasyon', 'monthly', 1, '10:00', 130);
-
-  insert into tasks (user_id, title, description, category, priority, assignee, due_at, remind_at) values
-    (p_user, 'Haftalık vardiya çizelgesini yayınla', 'Duhan, İlhan, Mehmet ve Sedat için gelecek haftanın vardiyaları.',
-       'Ekip', 'high', null,
-       (v_today + interval '1 day 15 hours') at time zone 'Europe/Istanbul',
-       (v_today + interval '1 day 14 hours 30 minutes') at time zone 'Europe/Istanbul'),
-    (p_user, 'Push bildirim performans raporunu hazırla', 'Son 7 günün gönderim, teslim ve tıklama oranları.',
-       'Pusholder', 'high', null,
-       (v_today + interval '2 days 12 hours') at time zone 'Europe/Istanbul',
-       (v_today + interval '2 days 10 hours') at time zone 'Europe/Istanbul'),
-    (p_user, 'Aylık gelir-gider tablosunu güncelle', null,
-       'Finans', 'medium', null,
-       (v_today + interval '5 days 18 hours') at time zone 'Europe/Istanbul', null),
-    (p_user, 'Haftalık öğün hazırlığı alışverişi', 'Tavuk göğsü, yumurta, yulaf, çavdar ekmeği, yoğurt.',
-       'Kişisel', 'low', null,
-       (v_today + interval '3 days 17 hours') at time zone 'Europe/Istanbul', null);
-
-  insert into notes (user_id, title, content, category, is_pinned) values
-    (p_user, 'Form hedefi', '84.5 kg → 78 kg. Kas kütlesini koru: yüksek protein, haftada 4 ağırlık + kickboks + koşu + halı saha.', 'Kişisel', true),
-    (p_user, 'Toplantı şablonu', 'Gündem · Kararlar · Sorumlu · Termin', 'Toplantı', false),
-    (p_user, 'Fikir: son dakika push şablonları', 'Sık kullanılan başlık kalıpları için hazır şablon seti.', 'Fikir', false);
-
-  insert into fitness_logs (user_id, log_type, weight_kg, logged_at, source)
-  values (p_user, 'weight', 84.5, now(), 'manual');
 end;
 $$;
 
 revoke all on function public.seed_personal_assistant(uuid) from public, anon, authenticated;
 
--- Yeni kullanıcı oluştuğunda seed'i çalıştır (hata kaydı engellemez)
+-- Yeni kullanıcı oluştuğunda ayar satırını aç (hata kaydı engellemez)
 create or replace function public.handle_new_user_seed()
 returns trigger
 language plpgsql
@@ -1167,7 +1252,7 @@ create trigger on_auth_user_created_seed
   after insert on auth.users
   for each row execute function public.handle_new_user_seed();
 
--- Script çalıştığında zaten var olan kullanıcılar için seed
+-- Script çalıştığında zaten var olan kullanıcılar için ayar satırı
 do $$
 declare
   u record;
@@ -1177,3 +1262,800 @@ begin
   end loop;
 end;
 $$;
+
+-- =====================================================================
+-- FAZ 4B — çok kullanıcılı: arkadaşlar, kayıt kapısı, AI kotası
+--
+-- Güvenlik ilkeleri:
+--   * Kullanıcılar birbirinin ham tablolarını OKUYAMAZ. Arkadaşlık verisi
+--     yalnızca aşağıdaki security definer işlevlerinden akar; hepsi sabit
+--     search_path ile çalışır, anon çağıramaz ve gövdede auth.uid() denetler.
+--   * Bir e-postanın uygulamada hesabı olup olmadığı dışarıdan anlaşılamaz:
+--     send_friend_request her durumda aynı cevabı verir; friend_requests'te
+--     hedef kullanıcı sütunu istemciye açık değildir.
+--   * Yardımcı işlevler hiçbir istemci rolüne açık değildir.
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- 8) friend_requests / friendships / friend_sharing / ai_usage
+-- ---------------------------------------------------------------------
+-- Arkadaş isteği. target_email küçük harf; target_user hedefin DOĞRULANMIŞ
+-- hesabı varsa dolar (yoksa boş: hesap sonradan açılınca doğrulanmış e-posta
+-- eşleşmesiyle görünür). Bekleyen istek (gönderen, hedef e-posta) başına tekil.
+create table if not exists public.friend_requests (
+  id            uuid primary key default gen_random_uuid(),
+  from_user     uuid not null references auth.users (id) on delete cascade,
+  target_email  text not null
+                check (target_email = lower(btrim(target_email))
+                       and char_length(target_email) between 3 and 254),
+  target_user   uuid references auth.users (id) on delete set null,
+  status        text not null default 'pending'
+                check (status in ('pending', 'accepted', 'declined')),
+  created_at    timestamptz not null default now(),
+  responded_at  timestamptz,
+  constraint friend_requests_not_self check (target_user is distinct from from_user)
+);
+
+create unique index if not exists friend_requests_pending_uidx
+  on public.friend_requests (from_user, target_email) where status = 'pending';
+create index if not exists friend_requests_pending_email_idx
+  on public.friend_requests (target_email) where status = 'pending';
+create index if not exists friend_requests_from_user_idx
+  on public.friend_requests (from_user);
+create index if not exists friend_requests_target_user_idx
+  on public.friend_requests (target_user) where target_user is not null;
+
+-- Arkadaşlık: sıralı çift (user_a < user_b), çift başına tek satır.
+create table if not exists public.friendships (
+  user_a      uuid not null references auth.users (id) on delete cascade,
+  user_b      uuid not null references auth.users (id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (user_a, user_b),
+  constraint friendships_ordered check (user_a < user_b)
+);
+create index if not exists friendships_user_b_idx on public.friendships (user_b);
+
+-- Kişinin arkadaşlarına açtığı üç anahtar (hepsi varsayılan kapalı).
+create table if not exists public.friend_sharing (
+  user_id         uuid primary key default auth.uid()
+                  references auth.users (id) on delete cascade,
+  share_steps     boolean not null default false,
+  share_sleep     boolean not null default false,
+  share_calories  boolean not null default false,
+  updated_at      timestamptz not null default now()
+);
+
+drop trigger if exists friend_sharing_set_updated_at on public.friend_sharing;
+create trigger friend_sharing_set_updated_at before update on public.friend_sharing
+  for each row execute function public.set_updated_at();
+
+-- Günlük AI kullanımı (kişi + tür + gün). Satırları yalnızca consume_ai_quota
+-- (service_role) yazar; kullanıcı kendi sayacını okuyabilir.
+create table if not exists public.ai_usage (
+  user_id  uuid not null references auth.users (id) on delete cascade,
+  kind     text not null check (char_length(kind) between 1 and 40),
+  day      date not null,
+  count    integer not null default 0 check (count >= 0),
+  primary key (user_id, kind, day)
+);
+
+-- RLS: her tabloda açık. İstemci erişimi aşağıdaki en dar yetkilerle sınırlı.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['friend_requests', 'friendships', 'friend_sharing', 'ai_usage']
+  loop
+    execute format('alter table public.%I enable row level security', t);
+  end loop;
+end;
+$$;
+
+drop policy if exists friend_requests_sender_select on public.friend_requests;
+create policy friend_requests_sender_select on public.friend_requests
+  for select to authenticated
+  using ((select auth.uid()) = from_user);
+
+drop policy if exists friendships_member_select on public.friendships;
+create policy friendships_member_select on public.friendships
+  for select to authenticated
+  using ((select auth.uid()) in (user_a, user_b));
+
+drop policy if exists friend_sharing_owner_all on public.friend_sharing;
+create policy friend_sharing_owner_all on public.friend_sharing
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists ai_usage_owner_select on public.ai_usage;
+create policy ai_usage_owner_select on public.ai_usage
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+-- Yetkiler. friend_requests'te target_user sütunu (hesap var mı sinyali) ve
+-- tüm yazma yolları istemciye kapalıdır: istek yalnızca işlevlerle açılır.
+revoke all on table
+  public.friend_requests, public.friendships, public.friend_sharing, public.ai_usage
+  from anon, authenticated;
+grant select (id, from_user, target_email, status, created_at, responded_at)
+  on table public.friend_requests to authenticated;
+grant select on table public.friendships to authenticated;
+grant select, insert, update, delete on table public.friend_sharing to authenticated;
+grant select on table public.ai_usage to authenticated;
+
+-- ---------------------------------------------------------------------
+-- Yardımcı işlevler (hiçbir istemci rolüne açık değil; security definer
+-- işlevlerin içinden sahibinin yetkisiyle çağrılır)
+-- ---------------------------------------------------------------------
+-- Kısmen maskelenmiş e-posta: sercan@gmail.com → s***@gmail.com
+create or replace function public.friend_mask_email(p_email text)
+returns text
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  select case
+    when p_email is null or position('@' in p_email) < 2 then 'Kullanıcı'
+    else left(p_email, 1) || '***' || substr(p_email, position('@' in p_email))
+  end;
+$$;
+
+-- Hesabın DOĞRULANMIŞ e-postası (küçük harf); doğrulanmamışsa null.
+create or replace function public.verified_email_of(p_uid uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select lower(btrim(u.email))
+  from auth.users u
+  where u.id = p_uid and u.email is not null and u.email_confirmed_at is not null;
+$$;
+
+-- Arkadaşa gösterilen ad: görünen ad, boşsa maskelenmiş e-posta.
+create or replace function public.friend_display_name(p_uid uuid)
+returns text
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(nullif(btrim(s.display_name), ''), public.friend_mask_email(u.email))
+  from auth.users u
+  left join public.user_settings s on s.user_id = u.id
+  where u.id = p_uid;
+$$;
+
+-- Geçerli IANA saat dilimi adı; boş ya da bozuksa Europe/Istanbul.
+create or replace function public.safe_timezone(p_tz text)
+returns text
+language plpgsql
+stable
+set search_path = public, pg_temp
+as $$
+declare
+  v text := coalesce(nullif(btrim(p_tz), ''), 'Europe/Istanbul');
+begin
+  perform now() at time zone v;
+  return v;
+exception when others then
+  return 'Europe/Istanbul';
+end;
+$$;
+
+-- Günlük hedef tutturma kuralları. Eşikler lib/features/health/domain/
+-- goal_rules.dart (GoalRules) ile AYNIDIR; supabase/tests/goal_vectors.json
+-- ortak vektörleriyle hem SQL'de hem Dart'ta sınanır (eşlik testi). Tam sayı
+-- aritmetiği: kalori onda birlere yuvarlanır, sonra tam sayı karşılaştırılır.
+-- Hedefi sıfır/negatif olan kural hiçbir zaman tutmaz.
+create or replace function public.goal_steps_hit(p_steps bigint, p_target integer)
+returns boolean
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  -- adım: hedefin en az %100'ü
+  select coalesce(p_target > 0 and p_steps * 100 >= p_target::bigint * 100, false);
+$$;
+
+create or replace function public.goal_sleep_hit(p_minutes bigint, p_target integer)
+returns boolean
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  -- uyku: hedefin en az %90'ı
+  select coalesce(p_target > 0 and p_minutes * 100 >= p_target::bigint * 90, false);
+$$;
+
+create or replace function public.goal_calories_hit(p_kcal numeric, p_target integer)
+returns boolean
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  -- kalori: hedefin %85–%110'u (uçlar dahil); onda bir kalori tam sayıya çevrilir
+  select coalesce(
+    p_target > 0
+    and round(p_kcal * 10) * 10 >= p_target::numeric * 85
+    and round(p_kcal * 10) * 10 <= p_target::numeric * 110,
+    false);
+$$;
+
+revoke all on function public.friend_mask_email(text) from public, anon, authenticated;
+revoke all on function public.verified_email_of(uuid) from public, anon, authenticated;
+revoke all on function public.friend_display_name(uuid) from public, anon, authenticated;
+revoke all on function public.safe_timezone(text) from public, anon, authenticated;
+revoke all on function public.goal_steps_hit(bigint, integer) from public, anon, authenticated;
+revoke all on function public.goal_sleep_hit(bigint, integer) from public, anon, authenticated;
+revoke all on function public.goal_calories_hit(numeric, integer) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Arkadaş işlevleri (security definer, yalnızca authenticated)
+-- ---------------------------------------------------------------------
+-- Arkadaş isteği gönder. HER DURUMDA aynı cevap: kendine, zaten arkadaşa,
+-- tekrar ya da hesabı olmayan e-postaya fark yok (e-posta sorgulanamaz).
+-- Kullanıcı başına en çok 20 bekleyen istek: sınır yalnızca çağıranın kendi
+-- durumuna bağlıdır, bu yüzden hedef hakkında bilgi sızdırmaz.
+create or replace function public.send_friend_request(target_email text)
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  c_ok         constant text := 'İstek gönderildi';
+  v_uid        uuid := auth.uid();
+  v_email      text := lower(btrim(send_friend_request.target_email));
+  v_my_email   text;
+  v_my_verified text;
+  v_target     uuid;
+  v_pending    integer;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_email is null or char_length(v_email) > 254
+     or v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
+    raise exception 'Geçerli bir e-posta adresi gir' using errcode = '22023';
+  end if;
+
+  -- Aynı kullanıcının eşzamanlı istekleri sınırı aşmasın.
+  perform pg_advisory_xact_lock(hashtextextended('friend_requests:' || v_uid::text, 0));
+
+  select count(*) into v_pending
+  from public.friend_requests r
+  where r.from_user = v_uid and r.status = 'pending';
+  if v_pending >= 20 then
+    raise exception 'En fazla 20 bekleyen isteğin olabilir. Birini iptal et.'
+      using errcode = '54000';
+  end if;
+
+  select lower(btrim(u.email)) into v_my_email from auth.users u where u.id = v_uid;
+  if v_email = v_my_email then
+    return c_ok;
+  end if;
+
+  v_my_verified := public.verified_email_of(v_uid);
+  select u.id into v_target
+  from auth.users u
+  where lower(btrim(u.email)) = v_email and u.email_confirmed_at is not null
+  order by u.created_at
+  limit 1;
+
+  if v_target is not null then
+    if v_target = v_uid
+       or exists (
+         select 1 from public.friendships f
+         where f.user_a = least(v_uid, v_target) and f.user_b = greatest(v_uid, v_target)
+       )
+       -- Karşı taraf zaten bana istek göndermiş: onunki gelen kutumda.
+       or exists (
+         select 1 from public.friend_requests r
+         where r.from_user = v_target and r.status = 'pending'
+           and (r.target_user = v_uid or r.target_email = v_my_verified)
+       ) then
+      return c_ok;
+    end if;
+  end if;
+
+  begin
+    insert into public.friend_requests (from_user, target_email, target_user)
+    values (v_uid, v_email, v_target);
+  exception when unique_violation then
+    null; -- aynı hedefe bekleyen istek zaten var
+  end;
+  return c_ok;
+end;
+$$;
+
+-- Bana gelen bekleyen istekler: hedef kullanıcı ben isem ya da doğrulanmış
+-- e-postam hedef e-posta ise (hesabı sonradan açılan kişi de görür).
+create or replace function public.my_incoming_requests()
+returns table (id uuid, from_name text, created_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid   uuid := auth.uid();
+  v_email text;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  v_email := public.verified_email_of(v_uid);
+  return query
+  select r.id, public.friend_display_name(r.from_user), r.created_at
+  from public.friend_requests r
+  where r.status = 'pending'
+    and r.from_user <> v_uid
+    and (r.target_user = v_uid or r.target_email = v_email)
+  order by r.created_at desc, r.id;
+end;
+$$;
+
+-- Benim gönderdiğim bekleyen istekler.
+create or replace function public.my_outgoing_requests()
+returns table (id uuid, target_email text, created_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  return query
+  select r.id, r.target_email, r.created_at
+  from public.friend_requests r
+  where r.from_user = v_uid and r.status = 'pending'
+  order by r.created_at desc, r.id;
+end;
+$$;
+
+-- Gönderdiğim bekleyen isteği iptal eder (yoksa sessizce hiçbir şey yapmaz).
+create or replace function public.cancel_friend_request(request_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  delete from public.friend_requests r
+  where r.id = cancel_friend_request.request_id
+    and r.from_user = v_uid and r.status = 'pending';
+end;
+$$;
+
+-- Bana gelen isteği kabul eder ya da reddeder. Başkasına ait ya da bitmiş
+-- istek "bulunamadı" verir (varlığı sızmaz).
+create or replace function public.respond_friend_request(request_id uuid, accept boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid   uuid := auth.uid();
+  v_email text;
+  v_from  uuid;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if respond_friend_request.request_id is null or respond_friend_request.accept is null then
+    raise exception 'Geçersiz istek' using errcode = '22023';
+  end if;
+  v_email := public.verified_email_of(v_uid);
+
+  select r.from_user into v_from
+  from public.friend_requests r
+  where r.id = respond_friend_request.request_id
+    and r.status = 'pending'
+    and r.from_user <> v_uid
+    and (r.target_user = v_uid or r.target_email = v_email)
+  for update;
+  if not found then
+    raise exception 'İstek bulunamadı' using errcode = 'P0002';
+  end if;
+
+  if respond_friend_request.accept then
+    insert into public.friendships (user_a, user_b)
+    values (least(v_uid, v_from), greatest(v_uid, v_from))
+    on conflict do nothing;
+
+    update public.friend_requests r
+       set status = 'accepted', target_user = v_uid, responded_at = now()
+     where r.id = respond_friend_request.request_id;
+
+    -- Karşı yönde (benden ona) bekleyen istek artık gereksiz.
+    delete from public.friend_requests r
+    where r.from_user = v_uid and r.status = 'pending'
+      and (r.target_user = v_from
+           or r.target_email = (select lower(btrim(u.email)) from auth.users u where u.id = v_from));
+  else
+    update public.friend_requests r
+       set status = 'declined', responded_at = now()
+     where r.id = respond_friend_request.request_id;
+  end if;
+end;
+$$;
+
+-- Arkadaşlarım. share_* arkadaşın bana AÇTIĞI anahtarlardır (kapalıysa
+-- arayüz "paylaşmıyor" der). display_name boşsa maskelenmiş e-posta.
+create or replace function public.my_friends()
+returns table (
+  friend_id       uuid,
+  display_name    text,
+  share_steps     boolean,
+  share_sleep     boolean,
+  share_calories  boolean
+)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  return query
+  with f as (
+    select case when fs.user_a = v_uid then fs.user_b else fs.user_a end as fid
+    from public.friendships fs
+    where fs.user_a = v_uid or fs.user_b = v_uid
+  ),
+  named as (
+    select f.fid, public.friend_display_name(f.fid) as name from f
+  )
+  select n.fid, n.name,
+         coalesce(sh.share_steps, false),
+         coalesce(sh.share_sleep, false),
+         coalesce(sh.share_calories, false)
+  from named n
+  left join public.friend_sharing sh on sh.user_id = n.fid
+  order by lower(n.name), n.fid;
+end;
+$$;
+
+-- Arkadaşın bu haftaki hedef günleri (Pazartesi–Pazar, ARKADAŞIN saat
+-- diliminde). Yalnızca arkadaşlıkta VE ilgili anahtar açıkken sayı döner;
+-- aksi halde shared = false ve 0/0 (tarih ya da başka alan yok). Kurallar
+-- Dart TrendStats ile aynı: verisiz gün paydada yok; bitmemiş bugün yalnızca
+-- hedef tutturulduysa sayılır; gelecek günler girmez.
+create or replace function public.friend_goal_summary(friend uuid, week_start date)
+returns table (metric text, shared boolean, goal_days integer, data_days integer)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid        uuid := auth.uid();
+  v_friend     uuid := friend_goal_summary.friend;
+  v_week       date := friend_goal_summary.week_start;
+  v_is_friend  boolean := false;
+  v_sh_steps   boolean := false;
+  v_sh_sleep   boolean := false;
+  v_sh_cal     boolean := false;
+  v_tz         text;
+  v_t_steps    integer;
+  v_t_sleep    integer;
+  v_t_cal      integer;
+  v_today      date;
+  v_t0         timestamptz;
+  v_t1         timestamptz;
+  v_s_goal     integer := 0;
+  v_s_data     integer := 0;
+  v_l_goal     integer := 0;
+  v_l_data     integer := 0;
+  v_c_goal     integer := 0;
+  v_c_data     integer := 0;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_week is null or extract(isodow from v_week) <> 1 then
+    raise exception 'week_start Pazartesi olmalı: %', v_week using errcode = '22023';
+  end if;
+
+  if v_friend is not null and v_friend <> v_uid then
+    v_is_friend := exists (
+      select 1 from public.friendships f
+      where f.user_a = least(v_uid, v_friend) and f.user_b = greatest(v_uid, v_friend)
+    );
+  end if;
+
+  if v_is_friend then
+    select coalesce(sh.share_steps, false), coalesce(sh.share_sleep, false),
+           coalesce(sh.share_calories, false)
+      into v_sh_steps, v_sh_sleep, v_sh_cal
+    from public.friend_sharing sh
+    where sh.user_id = v_friend;
+    v_sh_steps := coalesce(v_sh_steps, false);
+    v_sh_sleep := coalesce(v_sh_sleep, false);
+    v_sh_cal   := coalesce(v_sh_cal, false);
+  end if;
+
+  if v_sh_steps or v_sh_sleep or v_sh_cal then
+    select s.timezone, s.daily_steps, s.sleep_minutes, s.daily_calories
+      into v_tz, v_t_steps, v_t_sleep, v_t_cal
+    from public.user_settings s
+    where s.user_id = v_friend;
+    v_tz      := public.safe_timezone(v_tz);
+    v_t_steps := coalesce(v_t_steps, 8000);
+    v_t_sleep := coalesce(v_t_sleep, 450);
+    v_t_cal   := coalesce(v_t_cal, 2000);
+    v_today   := (now() at time zone v_tz)::date;
+    v_t0      := v_week::timestamp at time zone v_tz;
+    v_t1      := (v_week + 7)::timestamp at time zone v_tz;
+  end if;
+
+  if v_sh_steps then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_s_goal, v_s_data
+    from (
+      select d.day,
+             coalesce(h.steps, 0) > 0 as has_data,
+             public.goal_steps_hit(coalesce(h.steps, 0), v_t_steps) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join public.daily_health_metrics h
+        on h.user_id = v_friend and h.metric_date = d.day
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  if v_sh_sleep then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_l_goal, v_l_data
+    from (
+      select d.day,
+             coalesce(h.sleep_minutes, 0) > 0 as has_data,
+             public.goal_sleep_hit(coalesce(h.sleep_minutes, 0), v_t_sleep) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join public.daily_health_metrics h
+        on h.user_id = v_friend and h.metric_date = d.day
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  if v_sh_cal then
+    select (count(*) filter (where x.has_data and x.hit))::integer,
+           (count(*) filter (where x.has_data and (x.day < v_today or x.hit)))::integer
+      into v_c_goal, v_c_data
+    from (
+      select d.day,
+             n.kcal is not null as has_data,
+             public.goal_calories_hit(n.kcal, v_t_cal) as hit
+      from (select g::date as day
+            from generate_series(v_week::timestamp, (v_week + 6)::timestamp, interval '1 day') g) d
+      left join (
+        select (nl.eaten_at at time zone v_tz)::date as day, sum(nl.calories) as kcal
+        from public.nutrition_logs nl
+        where nl.user_id = v_friend and nl.eaten_at >= v_t0 and nl.eaten_at < v_t1
+        group by 1
+      ) n on n.day = d.day
+      where d.day <= v_today
+    ) x;
+  end if;
+
+  return query values
+    ('steps'::text,    v_sh_steps, v_s_goal, v_s_data),
+    ('sleep'::text,    v_sh_sleep, v_l_goal, v_l_data),
+    ('calories'::text, v_sh_cal,   v_c_goal, v_c_data);
+end;
+$$;
+
+-- Arkadaşlıktan çık (iki yön de biter; aralarındaki bekleyen istekler silinir).
+-- Arkadaş değilsek sessizce hiçbir şey yapmaz.
+create or replace function public.leave_friendship(friend uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid    uuid := auth.uid();
+  v_friend uuid := leave_friendship.friend;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_friend is null then
+    return;
+  end if;
+  delete from public.friendships f
+  where f.user_a = least(v_uid, v_friend) and f.user_b = greatest(v_uid, v_friend);
+  delete from public.friend_requests r
+  where r.status = 'pending'
+    and ((r.from_user = v_uid and r.target_user = v_friend)
+      or (r.from_user = v_friend and r.target_user = v_uid));
+end;
+$$;
+
+revoke all on function public.send_friend_request(text) from public, anon;
+revoke all on function public.my_incoming_requests() from public, anon;
+revoke all on function public.my_outgoing_requests() from public, anon;
+revoke all on function public.cancel_friend_request(uuid) from public, anon;
+revoke all on function public.respond_friend_request(uuid, boolean) from public, anon;
+revoke all on function public.my_friends() from public, anon;
+revoke all on function public.friend_goal_summary(uuid, date) from public, anon;
+revoke all on function public.leave_friendship(uuid) from public, anon;
+grant execute on function public.send_friend_request(text) to authenticated;
+grant execute on function public.my_incoming_requests() to authenticated;
+grant execute on function public.my_outgoing_requests() to authenticated;
+grant execute on function public.cancel_friend_request(uuid) to authenticated;
+grant execute on function public.respond_friend_request(uuid, boolean) to authenticated;
+grant execute on function public.my_friends() to authenticated;
+grant execute on function public.friend_goal_summary(uuid, date) to authenticated;
+grant execute on function public.leave_friendship(uuid) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- Kayıt kapısı. Yalnızca en az bir kullanıcıdan BEKLEYEN arkadaş isteği
+-- almış e-posta hesap açabilir; diğerleri "Bu e-posta için davet yok"
+-- hatası alır. Mevcut hesaplar etkilenmez (yalnızca insert). Davet hem
+-- arkadaşlık hem kayıt izni olur; ayrı izin listesi tutulmaz.
+--
+-- Not: GoTrue bir tetikleyici hatasını genel "Database error saving new
+-- user" olarak gösterebilir. Daha okunur bir 403 mesajı için aşağıdaki
+-- hook_before_user_created işlevi Dashboard > Authentication > Hooks >
+-- "Before User Created" olarak seçilebilir (isteğe bağlı; tetikleyici her
+-- durumda ikinci kapı olarak kalır).
+-- Geçici olarak kapatmak (ör. Dashboard'dan elle hesap açmak) için:
+--   alter table auth.users disable trigger signup_invite_gate;
+-- ve işin sonunda:
+--   alter table auth.users enable trigger signup_invite_gate;
+-- ---------------------------------------------------------------------
+create or replace function public.has_pending_invite(p_email text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from public.friend_requests r
+    where r.status = 'pending' and r.target_email = lower(btrim(p_email))
+  );
+$$;
+
+create or replace function public.enforce_signup_invite()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if not public.has_pending_invite(new.email) then
+    raise exception 'Bu e-posta için davet yok' using errcode = 'P0001';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.hook_before_user_created(event jsonb)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if public.has_pending_invite(event #>> '{user,email}') then
+    return '{}'::jsonb;
+  end if;
+  return jsonb_build_object('error', jsonb_build_object(
+    'message', 'Bu e-posta için davet yok', 'http_code', 403));
+end;
+$$;
+
+revoke all on function public.has_pending_invite(text) from public, anon, authenticated;
+revoke all on function public.enforce_signup_invite() from public, anon, authenticated;
+revoke all on function public.hook_before_user_created(jsonb) from public, anon, authenticated;
+
+-- Supabase'te hook'u çalıştıran rol; yerel sınama kümesinde yoktur.
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'supabase_auth_admin') then
+    grant usage on schema public to supabase_auth_admin;
+    grant execute on function public.hook_before_user_created(jsonb) to supabase_auth_admin;
+  end if;
+end;
+$$;
+
+drop trigger if exists signup_invite_gate on auth.users;
+create trigger signup_invite_gate
+  before insert on auth.users
+  for each row execute function public.enforce_signup_invite();
+
+-- ---------------------------------------------------------------------
+-- AI kotası (yalnızca service_role)
+-- ---------------------------------------------------------------------
+-- Kota içindeyse sayacı ATOMİK artırıp true döner, aşıldıysa false (sayaç
+-- artmaz). Gün, kullanıcının saat dilimindeki gündür. p_kind örnekleri:
+-- 'ai' (Gemini çağrıları), 'report_regen' (raporu yeniden oluştur; günde 10).
+create or replace function public.consume_ai_quota(p_user uuid, p_kind text, p_limit integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_tz    text;
+  v_day   date;
+  v_count integer;
+begin
+  if p_user is null or p_kind is null or char_length(p_kind) not between 1 and 40 then
+    raise exception 'Geçersiz kota isteği' using errcode = '22023';
+  end if;
+  if p_limit is null or p_limit <= 0 then
+    return false;
+  end if;
+
+  select s.timezone into v_tz from public.user_settings s where s.user_id = p_user;
+  v_day := (now() at time zone public.safe_timezone(v_tz))::date;
+
+  insert into public.ai_usage as u (user_id, kind, day, count)
+  values (p_user, p_kind, v_day, 1)
+  on conflict (user_id, kind, day)
+  do update set count = u.count + 1 where u.count < p_limit
+  returning u.count into v_count;
+
+  return v_count is not null;
+end;
+$$;
+
+revoke all on function public.consume_ai_quota(uuid, text, integer)
+  from public, anon, authenticated;
+grant execute on function public.consume_ai_quota(uuid, text, integer) to service_role;
+
+-- Gemini geçici hata verdiğinde (5xx/zaman aşımı) düşülen birimi geri verir.
+-- Sayaç 0'ın altına inmez; yalnızca service_role çağırır.
+create or replace function public.refund_ai_quota(p_user uuid, p_kind text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_tz  text;
+  v_day date;
+begin
+  if p_user is null or p_kind is null or char_length(p_kind) not between 1 and 40 then
+    raise exception 'Geçersiz kota isteği' using errcode = '22023';
+  end if;
+  select s.timezone into v_tz from public.user_settings s where s.user_id = p_user;
+  v_day := (now() at time zone public.safe_timezone(v_tz))::date;
+  update public.ai_usage u set count = u.count - 1
+   where u.user_id = p_user and u.kind = p_kind and u.day = v_day and u.count > 0;
+end;
+$$;
+
+revoke all on function public.refund_ai_quota(uuid, text) from public, anon, authenticated;
+grant execute on function public.refund_ai_quota(uuid, text) to service_role;

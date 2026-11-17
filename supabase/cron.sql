@@ -14,6 +14,11 @@
 -- Zamanlar UTC'dir (pg_cron UTC çalışır):
 --   45 20 * * *  → her gün 23:45 İstanbul: o günün günlük raporu
 --   0 4 * * 1    → her Pazartesi 07:00 İstanbul: biten haftanın raporu
+--   30 3 * * 0   → her Pazar: 60 günden eski günlük AI kota sayaçları silinir
+--
+-- Raporlar yalnızca ilk kurulumunu bitirmiş (user_settings.onboarded_at dolu)
+-- kullanıcılar için üretilir; bunu Edge Function generate-reports uygular
+-- (kurulumu bitirmemiş hesaplar için boşuna AI maliyeti oluşmaz).
 -- =====================================================================
 
 create extension if not exists pg_cron;
@@ -33,7 +38,8 @@ $$;
 -- Aynı adlı eski işler kaldırılır (idempotent kurulum).
 select cron.unschedule(jobid)
 from cron.job
-where jobname in ('kisisel-asistan-gunluk-rapor', 'kisisel-asistan-haftalik-rapor');
+where jobname in ('kisisel-asistan-gunluk-rapor', 'kisisel-asistan-haftalik-rapor',
+                  'kisisel-asistan-kota-temizlik');
 
 -- Adres ve gizli anahtar her çalışmada Vault'tan okunur; iş tanımında
 -- (cron.job.command) gizli değer saklanmaz.
@@ -70,6 +76,16 @@ select cron.schedule(
     body := jsonb_build_object('kind', 'weekly'),
     timeout_milliseconds := 120000
   );
+  $job$
+);
+
+-- Günlük AI kota sayaçları (ai_usage) birikmesin: yalnızca geçmiş günler silinir,
+-- bugünün sayacına dokunulmaz.
+select cron.schedule(
+  'kisisel-asistan-kota-temizlik',
+  '30 3 * * 0',
+  $job$
+  delete from public.ai_usage where day < current_date - 60;
   $job$
 );
 

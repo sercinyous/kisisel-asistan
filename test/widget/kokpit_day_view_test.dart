@@ -48,8 +48,8 @@ void main() {
   setUp(() {
     harness = KokpitHarness()..mockPlatformChannel();
     harness.routines.routines = [
-      daily('r1', 'Sabah push performans kontrolü', time: '09:00:00'),
-      daily('r2', 'Editör vardiya kontrolü'),
+      daily('r1', 'Sabah görev kontrolü', time: '09:00:00'),
+      daily('r2', 'Gelen kutusu kontrolü'),
       monthly('m1', 'Maaş ödemeleri', today().day, hour: 10),
     ];
   });
@@ -64,7 +64,7 @@ void main() {
       expect(find.text('Bugünün rutinleri'), findsOneWidget);
       expect(find.text('0 / 2'), findsOneWidget,
           reason: 'aylık iş günlük sayaca girmez');
-      expect(find.text('Sabah push performans kontrolü'), findsOneWidget);
+      expect(find.text('Sabah görev kontrolü'), findsOneWidget);
 
       expect(find.text('Yaklaşan aylık işler'), findsOneWidget);
       expect(find.text('1 açık'), findsOneWidget);
@@ -108,11 +108,11 @@ void main() {
         return;
       }
       harness.routines.routines = [
-        monthly('m9', 'Aylık push performans raporu', day + 5),
+        monthly('m9', 'Aylık faaliyet raporu', day + 5),
       ];
       await harness.pump(tester);
       expect(find.text('Yaklaşan aylık işler'), findsNothing);
-      expect(find.text('Aylık push performans raporu'), findsNothing);
+      expect(find.text('Aylık faaliyet raporu'), findsNothing);
     });
 
     testWidgets('monthly_lead_days ayarı pencereyi genişletir', (tester) async {
@@ -124,10 +124,10 @@ void main() {
       harness.settings.settings =
           const UserSettings.defaults().copyWith(monthlyLeadDays: 7);
       harness.routines.routines = [
-        monthly('m9', 'Aylık push performans raporu', day + 5),
+        monthly('m9', 'Aylık faaliyet raporu', day + 5),
       ];
       await harness.pump(tester);
-      expect(find.text('Aylık push performans raporu'), findsOneWidget);
+      expect(find.text('Aylık faaliyet raporu'), findsOneWidget);
       expect(find.text('5 gün kaldı'), findsOneWidget);
     });
 
@@ -280,7 +280,7 @@ void main() {
           ...harness.routines.routines,
           monthly(
             'm2',
-            'Aylık push performans raporunun hazırlanması ve ekiple paylaşımı',
+            'Aylık faaliyet performans raporunun hazırlanması ve ekiple paylaşımı',
             day > 2 ? day - 2 : day,
             hour: 10,
           ),
@@ -295,10 +295,10 @@ void main() {
             id: 't1',
             title: 'Push bildirim performans raporunu hazırla ve ekip ile '
                 'paylaş, ardından haftalık toplantıda sun',
-            category: 'Pusholder',
+            category: 'İş',
             priority: 'high',
             status: 'todo',
-            assignee: 'Mehmet',
+            assignee: 'Elif',
             dueAt: DateTime(2099, 1, 6, 12),
           ),
         ];
@@ -307,7 +307,7 @@ void main() {
 
         await harness.tapRow(
           tester,
-          'Aylık push performans raporunun hazırlanması ve ekiple paylaşımı',
+          'Aylık faaliyet performans raporunun hazırlanması ve ekiple paylaşımı',
         );
         expect(await harness.scrollThrough(tester), isEmpty);
       });

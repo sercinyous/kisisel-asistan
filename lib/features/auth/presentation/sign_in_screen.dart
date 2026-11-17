@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../../core/services/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import 'sign_in_controller.dart';
 
-/// Tek kullanıcılı giriş. Hesap Supabase Dashboard > Authentication
-/// bölümünden bir kez oluşturulur; uygulamada kayıt ekranı yoktur.
+/// Giriş ekranı: "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
+/// Google yapılandırılmamışsa (ya da tarayıcı demosunda) yalnızca e-posta
+/// formu görünür. Yeni hesap yalnızca davet alan e-postalara açılır.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -18,8 +18,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  bool _busy = false;
-  String? _error;
+  bool _emailOpen = false;
 
   @override
   void dispose() {
@@ -29,101 +28,172 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   Future<void> _submit() async {
-    if (_busy || !(_formKey.currentState?.validate() ?? false)) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await ref.read(supabaseClientProvider).auth.signInWithPassword(
-            email: _email.text.trim(),
-            password: _password.text,
-          );
-    } on AuthException catch (e) {
-      if (mounted) setState(() => _error = 'Giriş başarısız: ${e.message}');
-    } catch (_) {
-      if (mounted) {
-        setState(() => _error = 'Bağlantı kurulamadı. Tekrar deneyin.');
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    if (ref.read(signInControllerProvider).isBusy ||
+        !(_formKey.currentState?.validate() ?? false)) {
+      return;
     }
+    await ref
+        .read(signInControllerProvider.notifier)
+        .signInWithPassword(email: _email.text, password: _password.text);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final state = ref.watch(signInControllerProvider);
+    final googleAvailable = ref.watch(googleLoginAvailableProvider);
+    final busy = state.isBusy;
+    final showForm = !googleAvailable || _emailOpen;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.page),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: AutofillGroup(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Icon(Icons.dashboard_rounded,
-                          size: 44, color: AppColors.accent),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Ritim',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Devam etmek için giriş yap.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium
-                            ?.copyWith(color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 32),
-                      TextFormField(
-                        controller: _email,
-                        enabled: !_busy,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        autocorrect: false,
-                        autofillHints: const [AutofillHints.username],
-                        decoration: const InputDecoration(hintText: 'E-posta'),
-                        validator: (value) =>
-                            value == null || !value.contains('@')
-                                ? 'Geçerli bir e-posta gir.'
-                                : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _password,
-                        enabled: !_busy,
-                        obscureText: true,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.password],
-                        decoration: const InputDecoration(hintText: 'Şifre'),
-                        onFieldSubmitted: (_) => _submit(),
-                        validator: (value) => value == null || value.isEmpty
-                            ? 'Şifreni gir.'
-                            : null,
-                      ),
-                      if (_error != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          _error!,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: AppColors.danger),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      FilledButton(
-                        onPressed: _busy ? null : _submit,
-                        child: Text(_busy ? 'Giriş yapılıyor…' : 'Giriş yap'),
-                      ),
-                    ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Icon(Icons.dashboard_rounded,
+                      size: 44, color: AppColors.accent),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'Ritim',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineMedium,
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Devam etmek için giriş yap.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  if (googleAvailable) ...[
+                    FilledButton.icon(
+                      key: const Key('sign-in-google'),
+                      onPressed: busy
+                          ? null
+                          : () => ref
+                              .read(signInControllerProvider.notifier)
+                              .signInWithGoogle(),
+                      icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
+                      label: Text(
+                        state.busy == SignInMethod.google
+                            ? 'Google ile giriş yapılıyor…'
+                            : 'Google ile devam et',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (!_emailOpen)
+                      OutlinedButton(
+                        key: const Key('sign-in-email-toggle'),
+                        onPressed:
+                            busy ? null : () => setState(() => _emailOpen = true),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: BorderSide(color: AppColors.border),
+                        ),
+                        child: const Text('E-posta ile giriş'),
+                      ),
+                  ],
+                  if (showForm) ...[
+                    if (googleAvailable) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'veya e-posta ile',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    Form(
+                      key: _formKey,
+                      child: AutofillGroup(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextFormField(
+                              controller: _email,
+                              enabled: !busy,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              autocorrect: false,
+                              autofillHints: const [AutofillHints.username],
+                              decoration:
+                                  const InputDecoration(hintText: 'E-posta'),
+                              validator: (value) =>
+                                  value == null || !value.contains('@')
+                                      ? 'Geçerli bir e-posta gir.'
+                                      : null,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            TextFormField(
+                              controller: _password,
+                              enabled: !busy,
+                              obscureText: true,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.password],
+                              decoration:
+                                  const InputDecoration(hintText: 'Şifre'),
+                              onFieldSubmitted: (_) => _submit(),
+                              validator: (value) =>
+                                  value == null || value.isEmpty
+                                      ? 'Şifreni gir.'
+                                      : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (state.error != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      state.error!,
+                      key: const Key('sign-in-error'),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.danger),
+                    ),
+                  ],
+                  if (showForm) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    googleAvailable
+                        ? OutlinedButton(
+                            key: const Key('sign-in-submit'),
+                            onPressed: busy ? null : _submit,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: BorderSide(color: AppColors.border),
+                            ),
+                            child: Text(
+                              state.busy == SignInMethod.password
+                                  ? 'Giriş yapılıyor…'
+                                  : 'Giriş yap',
+                            ),
+                          )
+                        : FilledButton(
+                            key: const Key('sign-in-submit'),
+                            onPressed: busy ? null : _submit,
+                            child: Text(
+                              state.busy == SignInMethod.password
+                                  ? 'Giriş yapılıyor…'
+                                  : 'Giriş yap',
+                            ),
+                          ),
+                  ],
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'Hesabın yoksa Ritim kullanan bir arkadaşının seni '
+                    'davet etmesi gerekir.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: AppColors.textMuted),
+                  ),
+                ],
               ),
             ),
           ),
