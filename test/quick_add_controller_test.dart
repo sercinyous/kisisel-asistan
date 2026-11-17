@@ -5,6 +5,8 @@ import 'package:kisisel_asistan/features/ai_quick_add/data/gemini_parser_service
 import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/domain/quick_add_mode.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/presentation/ai_quick_add_controller.dart';
+import 'package:kisisel_asistan/features/health/domain/health_models.dart';
+import 'package:kisisel_asistan/features/health/presentation/energy_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/routines/presentation/routines_providers.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
@@ -229,6 +231,17 @@ void main() {
     late _RefreshCounter nutrition;
     late _RefreshCounter month;
     late _RefreshCounter sync;
+    late _RefreshCounter energy;
+
+    // Enerji dengesi profil ister; profil dolu olsun ki sağlayıcı gerçek
+    // bir EnergyDay üretsin (bayat önbellek görünür olsun).
+    setUp(() {
+      harness.settings.settings = const UserSettings.defaults().copyWith(
+        heightCm: 180,
+        birthYear: 1996,
+        sex: 'male',
+      );
+    });
 
     /// Tazelenen sağlayıcıların adları (ilk yüklemeye göre).
     Future<Set<String>> refreshedAfter(Future<void> Function() action) async {
@@ -244,6 +257,11 @@ void main() {
           monthOverviewProvider(DateTime(now.year, now.month)),
         );
       sync = _RefreshCounter()..track(container, notificationSyncProvider);
+      energy = _RefreshCounter()
+        ..track(
+          container,
+          energyDayProvider(DateTime(now.year, now.month, now.day)),
+        );
       await pumpEventQueue();
 
       final counters = {
@@ -253,6 +271,7 @@ void main() {
         'todayNutrition': nutrition,
         'monthOverview': month,
         'notificationSync': sync,
+        'energyDay': energy,
       };
       for (final MapEntry(:key, :value) in counters.entries) {
         expect(value.count, 1, reason: '$key ilk yükleme');
@@ -326,7 +345,7 @@ void main() {
           'notes': [_note],
         }),
       );
-      expect(refreshed, isEmpty);
+      expect(refreshed, isEmpty, reason: 'energyDay de tazelenmez');
       expect(stateOf(QuickAddMode.work).savedCount, 1);
     });
 
@@ -336,18 +355,71 @@ void main() {
           'nutrition': [_meal],
         }),
       );
-      expect(refreshed, {'todayNutrition', 'monthOverview'});
+      expect(refreshed, {'todayNutrition', 'monthOverview', 'energyDay'});
     });
 
-    test('antrenman ve kilo: yalnızca ay özeti tazelenir', () async {
+    test('antrenman ve kilo: ay özeti ve enerji dengesi tazelenir', () async {
       final refreshed = await refreshedAfter(
         () => parseAndSave(QuickAddMode.health, {
           'workouts': [_workout],
           'weights': [_weight],
         }),
       );
-      expect(refreshed, {'monthOverview'});
+      expect(refreshed, {'monthOverview', 'energyDay'});
       expect(stateOf(QuickAddMode.health).savedCount, 2);
+    });
+
+    test('yalnızca antrenman: enerji dengesi (aktif kalori) tazelenir',
+        () async {
+      final refreshed = await refreshedAfter(
+        () => parseAndSave(QuickAddMode.health, {
+          'workouts': [_workout],
+        }),
+      );
+      expect(refreshed, contains('energyDay'));
+    });
+
+    test('yalnızca kilo: enerji dengesi (bazal) tazelenir', () async {
+      final refreshed = await refreshedAfter(
+        () => parseAndSave(QuickAddMode.health, {
+          'weights': [_weight],
+        }),
+      );
+      expect(refreshed, contains('energyDay'));
+    });
+
+    test('AI ile öğün kaydedilince Enerji kartı "öğün yok"tan çıkar', () async {
+      final now = DateTime.now();
+      final day = DateTime(now.year, now.month, now.day);
+      container.listen(energyDayProvider(day), (_, __) {});
+      expect(
+        (await container.read(energyDayProvider(day).future))!.verdict,
+        EnergyVerdict.noMeals,
+      );
+
+      respond(QuickAddMode.health, {
+        'nutrition': [_meal],
+      });
+      final controller = controllerFor(QuickAddMode.health);
+      await controller.parse('metin');
+      // Gerçek RPC satırı yazar; sahte depoda aynı etkiyi doğrudan veririz.
+      await harness.healthData.createNutritionLog(
+        NutritionLog(
+          id: '',
+          foodName: 'Tavuk göğsü',
+          eatenAt: now,
+          mealType: 'lunch',
+          calories: 2500,
+          proteinG: 62,
+        ),
+      );
+      expect(await controller.save(), isTrue);
+      await pumpEventQueue();
+
+      expect(
+        (await container.read(energyDayProvider(day).future))!.verdict,
+        isNot(EnergyVerdict.noMeals),
+      );
     });
 
     test('kayıt hatasında hiçbir şey tazelenmez, önizleme kalır', () async {

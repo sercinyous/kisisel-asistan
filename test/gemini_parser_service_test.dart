@@ -487,6 +487,8 @@ void main() {
     final cases = <int, String>{
       400: 'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
       401: 'Gemini API anahtarı geçersiz ya da yetkisiz.',
+      402: 'Gemini bakiyesi ya da faturalandırma tükendi (402). '
+          'AI Studio > Billing bölümünden kredi ekleyin.',
       403: 'Gemini API anahtarı geçersiz ya da yetkisiz.',
       404: 'Gemini modeli bulunamadı: gemini-3.8-flash',
     };

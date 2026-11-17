@@ -4,12 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_targets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/item_actions.dart';
 import '../data/notes_repository.dart';
 import '../domain/note_item.dart';
 import 'note_form_sheet.dart';
 import 'operations_providers.dart';
 import 'operations_screen.dart';
 import 'operations_widgets.dart';
+
+const String _deleteTitle = 'Not silinsin mi?';
+
+String _deleteMessage(NoteItem note) =>
+    '"${note.title}" kalıcı olarak silinecek.';
 
 class NotesView extends ConsumerWidget {
   const NotesView({super.key});
@@ -42,22 +48,32 @@ class NotesView extends ConsumerWidget {
     }
   }
 
-  Future<void> _delete(BuildContext context, NoteItem note) async {
+  /// Notu siler; başarılıysa `true`. [confirm] doğruysa önce onay sorulur
+  /// (üç nokta menüsü); uzun basış ve kaydırma onayı kendisi sorar.
+  Future<bool> _delete(
+    BuildContext context,
+    NoteItem note, {
+    bool confirm = false,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
-    final confirmed = await confirmDelete(
-      context,
-      title: 'Not silinsin mi?',
-      message: '"${note.title}" kalıcı olarak silinecek.',
-    );
-    if (!confirmed) return;
+    if (confirm) {
+      final confirmed = await confirmDelete(
+        context,
+        title: _deleteTitle,
+        message: _deleteMessage(note),
+      );
+      if (!confirmed) return false;
+    }
     try {
       await container.read(notesRepositoryProvider).delete(note.id);
       container.invalidate(opsNotesProvider);
-      messenger.showSnackBar(const SnackBar(content: Text('Not silindi.')));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text('Not silinemedi.')));
+      return false;
     }
+    messenger.showSnackBar(const SnackBar(content: Text('Not silindi.')));
+    return true;
   }
 
   @override
@@ -116,11 +132,21 @@ class NotesView extends ConsumerWidget {
               return [
                 for (final (index, note) in visible.indexed) ...[
                   if (index > 0) const SizedBox(height: AppSpacing.grid),
-                  _NoteCard(
-                    note: note,
+                  ItemRowActions(
+                    key: ValueKey('ops-note-${note.id}'),
+                    itemKey: ValueKey('swipe-note-${note.id}'),
+                    title: note.title,
+                    confirmTitle: _deleteTitle,
+                    confirmMessage: _deleteMessage(note),
+                    borderRadius: BorderRadius.circular(AppRadii.card),
                     onEdit: () => _openForm(context, note),
-                    onTogglePin: () => _togglePin(context, note),
                     onDelete: () => _delete(context, note),
+                    child: _NoteCard(
+                      note: note,
+                      onEdit: () => _openForm(context, note),
+                      onTogglePin: () => _togglePin(context, note),
+                      onDelete: () => _delete(context, note, confirm: true),
+                    ),
                   ),
                 ],
               ];

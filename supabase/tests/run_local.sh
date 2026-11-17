@@ -2,11 +2,16 @@
 # schema.sql'i yerel bir PostgreSQL 16 kümesinde sınar (Supabase gerekmez):
 #   1) temiz kurulum, iki kez (idempotent mi?)
 #   2) rapor fonksiyonları + yetkiler (reports_test.sql), Google antrenman
-#      içe aktarımı (fitness_import_test.sql)
+#      içe aktarımı (fitness_import_test.sql), profil sütunları
+#      (profile_columns_test.sql)
 #   3) sürüm 2 şemasıyla kurulmuş, verisi olan veritabanını yükseltme
+#   4) sürüm 3 şemasıyla kurulmuş, verisi olan veritabanını yükseltme
 # Kullanım (postgres işletim sistemi kullanıcısıyla):
-#   PG_BIN=/usr/lib/postgresql/16/bin bash supabase/tests/run_local.sh [v2_schema.sql]
-# İkinci adım için eski şema verilmezse `git show a220efc:supabase/schema.sql` denenir.
+#   PG_BIN=/usr/lib/postgresql/16/bin bash supabase/tests/run_local.sh [v2_schema.sql [v3_schema.sql]]
+# Şema verilmezse `git show a220efc:supabase/schema.sql` (sürüm 2) ve
+# `git show e0cee16:supabase/schema.sql` (sürüm 3) denenir. 3 numaralı (sürüm 2)
+# adım şema bulunamazsa hata verir; 4 numaralı (sürüm 3) adım bulunamazsa uyarı
+# yazıp atlanır (betik git deposu olmayan bir kopyadan da çalıştırılabilsin).
 set -euo pipefail
 
 PG_BIN="${PG_BIN:-/usr/lib/postgresql/16/bin}"
@@ -15,6 +20,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 SCHEMA="$HERE/../schema.sql"
 WORK="$(mktemp -d /tmp/kasist-pg.XXXXXX)"
 OLD_SCHEMA="${1:-}"
+V3_SCHEMA="${2:-}"
 
 cleanup() {
   "$PG_BIN/pg_ctl" -D "$WORK/data" -m immediate stop >/dev/null 2>&1 || true
@@ -37,6 +43,9 @@ run -d fresh -f "$SCHEMA"
 run -d fresh -f "$SCHEMA"
 echo "tamam"
 
+echo "== 1b) profil sütunları (user_settings: boy, doğum yılı, cinsiyet) =="
+run -d fresh -f "$HERE/profile_columns_test.sql"
+
 echo "== 2) rapor fonksiyonları ve yetkiler =="
 run -d fresh -f "$HERE/reports_test.sql"
 echo "== 2b) Google antrenman içe aktarımı (fitness_logs) =="
@@ -54,6 +63,8 @@ run -d upgrade -f "$HERE/upgrade_fixture.sql"
 run -d upgrade -f "$SCHEMA"
 run -d upgrade -f "$SCHEMA"
 run -d upgrade -f "$HERE/upgrade_test.sql"
+run -d upgrade -v fixture_user=eeeeeeee-0000-0000-0000-000000000005 \
+  -v fixture_calories=2400 -f "$HERE/profile_columns_test.sql"
 # Yükseltilmiş veritabanında fonksiyon ve yetki testleri de geçmeli.
 run -d upgrade -c "delete from auth.users"
 run -d upgrade -f "$HERE/reports_test.sql" >/dev/null 2>"$WORK/upgrade_reports.log" || {
@@ -62,5 +73,26 @@ run -d upgrade -f "$HERE/reports_test.sql" >/dev/null 2>"$WORK/upgrade_reports.l
 }
 echo "tamam: rapor testleri yükseltilmiş veritabanında da geçti"
 run -d upgrade -f "$HERE/fitness_import_test.sql"
+
+echo "== 4) sürüm 3 → güncel yükseltme =="
+if [ -z "$V3_SCHEMA" ]; then
+  V3_SCHEMA="$WORK/schema_v3.sql"
+  git -C "$HERE" show e0cee16:supabase/schema.sql > "$V3_SCHEMA" 2>/dev/null \
+    || { rm -f "$V3_SCHEMA"; V3_SCHEMA=""; }
+fi
+if [ -z "$V3_SCHEMA" ]; then
+  echo "UYARI: sürüm 3 şeması bulunamadı, 4. adım ATLANDI" \
+       "(2. argüman olarak schema_v3.sql verin)" >&2
+else
+  run -d postgres -c "create database upgrade3"
+  run -d upgrade3 -f "$HERE/auth_stub.sql"
+  run -d upgrade3 -f "$V3_SCHEMA"
+  run -d upgrade3 -f "$HERE/upgrade_fixture_v3.sql"
+  run -d upgrade3 -f "$SCHEMA"
+  run -d upgrade3 -f "$SCHEMA"
+  run -d upgrade3 -v fixture_user=eeeeeeee-0000-0000-0000-000000000006 \
+    -v fixture_calories=2300 -f "$HERE/profile_columns_test.sql"
+  echo "tamam: sürüm 3 yükseltmesi"
+fi
 
 echo "TÜM ŞEMA TESTLERİ GEÇTİ"

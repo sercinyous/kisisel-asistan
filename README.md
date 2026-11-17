@@ -15,13 +15,22 @@ Alt bar beş slotludur; beşi de gerçek ekrandır:
 - **Operasyon**: görevler (isteğe bağlı hatırlatma), sabitler (günlük/haftalık/aylık rutinler), notlar.
 - **+ (AI giriş)**: serbest metni Gemini ile ayrıştırır (görev, öğün, antrenman, kilo, not, rutin),
   önizletir ve tek transaction'da kaydeder.
-- **Sağlık**: kilo grafiği (30/90 gün, hedef çizgisi, ölçüm ekleme/silme), haftalık antrenman planı ve
-  7 günlük adım, bugünün öğünleri ve antrenman günlüğü (ekle/düzenle/sil), sağlık verisi kaynağının durumu.
+- **Sağlık**: kilo grafiği (30/90 gün, hedef çizgisi, ölçüm ekleme/silme), haftalık antrenman planı,
+  adım / uyku / kalori kartları (dokununca **Trend** ekranı: hafta/ay, hedef tutturma, çubuk grafik),
+  **Enerji dengesi** kartı (alınan, yakılan, net ve günlük yorum), bugünün öğünleri (paketli listeden
+  **besin arama** ve gram/porsiyon hesabı) ve antrenman günlüğü (ekle/düzenle/sil), sağlık verisi
+  kaynağının durumu. Ayrıntılar: "Trendler ve enerji dengesi".
 - **Raporlar**: sunucuda otomatik üretilen **haftalık** ve **günlük** raporlar; iş/form yüzdeleri,
   günlük tamamlama grafiği, ortalamalar, AI değerlendirmesi, geçmiş listesi ve "Raporu yeniden oluştur".
-- **Ayarlar** (Kokpit'ten): hedefler, bildirim tercihleri, sessiz saatler, ekip, bağlantılar (sağlık verisi
-  kaynağı: Apple Health | Google Health, Google hesabı).
+- **Ayarlar** (Kokpit'ten): hedefler, profil (boy, doğum yılı, cinsiyet; Enerji dengesi bunları kullanır),
+  bildirim tercihleri, sessiz saatler, ekip, bağlantılar (sağlık verisi kaynağı: Apple Health |
+  Google Health, Google hesabı).
   Ekranı açmak bildirim izni istemez; izin yalnızca "İzin iste" ile ya da bildirimler eşitlenirken sorulur.
+
+**Düzenle / sil her yerde**: görev, rutin, not, öğün ve antrenman satırlarında (Kokpit gün ve ay
+görünümü dahil) uzun basış menüsü (Düzenle / Sil) ve sola kaydırarak silme; silmeden önce onay sorulur,
+"Vazgeç" satırı geri getirir. Operasyon listelerindeki üç nokta menüsü de durur. Rutin silinince
+tamamlama geçmişi de gider.
 
 **Görünüm**: koyu (saf OLED siyah, varsayılan) ve açık (beyaz) tema. Ayarlar > Görünüm'den Sistem / Açık /
 Koyu seçilir; seçim hemen uygulanır, cihazda saklanır (Supabase'e yazılmaz) ve "Sistem" iPhone'un açık/koyu
@@ -47,13 +56,15 @@ kisisel_asistan/
 ├── tool/
 │   ├── configure_ios.sh                # ios/ klasörünü otomatik yapılandırır (Google girişi dahil)
 │   └── test/                           # configure_ios.sh testi (PlistBuddy taklidiyle, macOS gerekmez)
+├── assets/data/foods_tr.json           # paketli besin listesi (100 g değerleri; bkz. "Besin listesi")
 ├── preview/                            # onaylanan ekran taslakları (HTML)
 ├── test/
 │   └── screenshots/                    # örnek veriyle ekran görüntüsü üretimi (out/*.png)
 └── lib/
     ├── main.dart                       # başlatma: Supabase, bildirim, tarih
     ├── main_demo.dart                  # tarayıcı demosu (bellekte örnek veri, sunucu yok)
-    ├── demo/                           # demo_backend.dart (sahte depolar), demo_data.dart
+    ├── demo/                           # demo_backend.dart (sahte depolar), demo_data.dart (60 günlük
+    │                                   # örnek veri, profil), demo_foods.dart (örnek besin listesi)
     ├── app.dart                        # MaterialApp + yapılandırma hata ekranı
     ├── core/
     │   ├── config/
@@ -62,7 +73,8 @@ kisisel_asistan/
     │   ├── theme/                      # app_theme.dart (koyu + açık palet, AppColors),
     │   │                               # theme_mode.dart (tercih), app_theme_scope.dart (kök)
     │   ├── utils/date_utils.dart
-    │   ├── widgets/                    # bento.dart, app_bottom_bar.dart
+    │   ├── widgets/                    # bento.dart, app_bottom_bar.dart, item_actions.dart
+    │   │                               # (uzun basış menüsü + sola kaydırarak silme)
     │   └── services/
     │       ├── supabase_providers.dart # client + oturum akışı
     │       ├── health_service.dart     # HealthKit: adım, uyku, aktif kalori + kaynak sözleşmesi
@@ -97,11 +109,18 @@ kisisel_asistan/
         │   └── presentation/           # operations_screen.dart
         ├── health/                     # Sağlık sekmesi
         │   ├── domain/health_models.dart   # ölçüm, kilo, öğün (NutritionLog), antrenman (WorkoutLog)
+        │   ├── domain/goal_rules.dart      # hedef tutturma eşikleri (tek yer)
+        │   ├── domain/trend_stats.dart     # hafta/ay özeti: tutan gün, yüzde, ortalama, seri (saf Dart)
+        │   ├── domain/energy_balance.dart  # bazal, net, yorum bantları, telafi (saf Dart)
+        │   ├── domain/food_item.dart       # besin satırı, porsiyon, gram hesabı
         │   ├── data/health_repository.dart
+        │   ├── data/food_catalog.dart      # paketli listeyi okur, Türkçe duyarsız arama
         │   ├── data/google_health_source.dart  # Google Health kaynağı (okuma + antrenman aktarımı)
         │   └── presentation/           # health_providers.dart, health_source_providers.dart,
         │                               # health_screen.dart, weight_card.dart,
         │                               # activity_cards.dart, meals_section.dart, workouts_section.dart,
+        │                               # trend_providers.dart, trend_screen.dart, trend_chart.dart,
+        │                               # energy_providers.dart, energy_card.dart, energy_detail_screen.dart,
         │                               # *_form_sheet.dart, healthkit_card.dart
         └── reports/                    # Raporlar sekmesi (günlük ve haftalık)
             ├── domain/report_models.dart
@@ -111,6 +130,89 @@ kisisel_asistan/
 ```
 
 Faz 2'de her özellik aynı kalıbı izler: `domain/` (modeller) → `data/` (repository) → `presentation/` (provider + ekran).
+
+## Trendler ve enerji dengesi
+
+Sağlık sekmesindeki **Adım**, **Uyku** ve **Kalori** kartları ile Kilo kartının altındaki **Enerji dengesi**
+kartı bu iki özelliğe açılır. Hepsi cihazda, mevcut tablolardan (`daily_health_metrics`, `nutrition_logs`,
+`fitness_logs`) hesaplanır; yeni sunucu tablosu ya da rapor yoktur. **Sayılar tahminidir ve tıbbi tavsiye
+değildir**; yağ yakımının ölçümü değildir.
+
+### Trend: hedef tutturma
+
+Trend ekranı Hafta (Pazartesi–Pazar) ve Ay (takvim ayı) arasında geçer, önceki/sonraki dönem oklarıyla
+gezilir; gelecek günler çubukta boştur ve hesaba girmez. Eşikler tek yerdedir
+(`lib/features/health/domain/goal_rules.dart`, `GoalRules`):
+
+| Metrik | Gün "tuttu" sayılır | Veri |
+| --- | --- | --- |
+| Adım | adım ≥ günlük adım hedefinin %100'ü | `daily_health_metrics.steps` |
+| Uyku | uyku ≥ uyku hedefinin %90'ı (bileklik ve saatler uykuyu eksik ölçer) | `daily_health_metrics.sleep_minutes` |
+| Kalori | hedefin %85–%110'u (uçlar dahil) | o günün öğün toplamı |
+| Protein (Kalori sekmesinde ikincil satır) | protein ≥ hedefin %90'ı | o günün öğün toplamı |
+
+- Kalori ve protein kuralı Raporlar sekmesiyle aynıdır. **Adım ve uyku için Raporlar'da tutturma kuralı
+  yoktur**; bu iki kural Trend'e özgüdür.
+- **Verisi olmayan gün paydaya girmez** ve "veri yok" diye ayrı gösterilir (adım/uyku değeri 0 ya da o gün öğün
+  kaydı yok). Kimseyi veri girmediği için "hedefi tutturamadı" saymaz. Bu yüzden Raporlar'daki oranlarla bire bir
+  aynı olmaz: Raporlar'ın `form.rate` paydası, verisiz günler dahil geçen gün sayısını içerir; Trend'in
+  yüzdesi yalnızca verisi olan günler üzerindendir. Ekran "5/6 gün hedefte" gibi yazar ve verisiz günleri
+  "N gün veri yok, hesaba girmedi" notuyla belirtir.
+- **Bugün "devam ediyor"**: hedefi zaten tutturduysa tutan gün sayılır; tutturmadıysa paydaya ve ortalamaya
+  girmez. Verisiz ve devam eden gün seriyi bozmaz; veri olup hedefi tutturmayan gün bozar. "Mevcut seri"
+  yalnızca geçerli dönemde gösterilir; geçmiş dönemde dönem içindeki "en uzun seri" görünür.
+- Hiç veri yoksa ekran "Bu dönemde veri yok" der (yüzde ve ortalama gösterilmez).
+
+### Besin listesi
+
+Öğün formunda "Besin ara" paketli `assets/data/foods_tr.json` listesinde arar (Türkçe karakter, büyük/küçük
+harf ve takma ad duyarsız: "SUT" → Süt, "İnek" → süt). Seçilen besin için gram (varsayılan 100; virgül kabul
+edilir) ya da porsiyon çipi girilir; kcal ve makrolar forma dolar ve elle değiştirilebilir. `quantity_text`
+"2 adet · 100 g" biçimindedir, kayıt `source = 'manual'` kalır. Elle giriş her zaman çalışır; gram boş, 0 ya da
+negatifse hesap uygulanmaz.
+
+Liste satırı alanları: `id`, `name`, `aliases`, `category`, `kcal100`, `protein100`, `carbs100`, `fat100`,
+`portions`, `source` (`USDA FDC <kimlik> | TürKomp <kod>`), `verification` (`iki kaynak` | `tek kaynak`).
+Her satır USDA FoodData Central ve Türkiye Gıda Kompozisyon Veri Tabanı (TürKomp) ile çapraz doğrulanır;
+doğrulanamayan satır eklenmez. `test/foods_data_test.dart` biçimi, kaynak izini ve Atwater tutarlılığını
+(`kcal ≈ 4·protein + 4·karbonhidrat + 9·yağ`, tolerans max(%15, 10 kcal)) denetler.
+**Durum: liste henüz doldurulmadı** (`[]`): bu ortamdan her iki kaynağa ağ erişimi yoktu ve değer uydurulmaz.
+Liste boşken arama "Listede yok. Ad ve değerleri aşağıdan elle gir." der; liste doldurulana kadar
+`test/foods_data_test.dart` içindeki "en az 60 satır" testi bilerek kırmızıdır. Tarayıcı demosu liste boşsa
+küçük bir örnek liste kullanır (`lib/demo/demo_foods.dart`, `verification: 'demo'`).
+
+### Enerji dengesi
+
+Profil gerekir: **Ayarlar > Profil**'de boy (100–250 cm), doğum yılı ve cinsiyet (Kadın / Erkek /
+Belirtmek istemiyorum). Eksikse kart "Dengeyi hesaplamak için boy, yaş ve cinsiyet gerekli" der ve Ayarlar'a
+götürür.
+
+- **Bazal** (Mifflin-St Jeor): `10·kg + 6,25·cm − 5·yaş + k`; erkek +5, kadın −161, belirtmeyen −78. Kilo,
+  o güne kadarki son tartıdır; yoksa Ayarlar'daki başlangıç kilosu. Bugün için bazal, günün geçen oranıyla
+  ölçeklenir ve kartta "Şu ana kadar" yazar (saat eşiği yoktur; gece yarısını geçince bugün/dün yeniden
+  hesaplanır).
+- **Yakılan** = bazal + aktif kalori (Apple Health ya da Google Health). Antrenman kalorisi aktif kalorinin
+  içindedir; o gün sağlık satırı yoksa ya da aktif kalori 0 ise antrenman kayıtlarının kalorisi yedek olur
+  (çift sayım yok) ve kart "aktif kalori verisi yok, tahmin bazala dayanıyor" der.
+- **Alınan** = o günün öğün toplamı. **O gün hiç öğün yoksa yorum üretilmez**: "Henüz öğün girilmedi", grafikte
+  boşluk, toplamlara girmez.
+- **Net** = alınan − yakılan. Yorum bantları (`EnergyBands`, `lib/features/health/domain/energy_balance.dart`):
+
+  | Net (kcal) | Yorum |
+  | --- | --- |
+  | ≤ −1000 | "Çok yüksek kalori açığı: yeterince yediğinden emin ol" (övgü yok) |
+  | −1000 … −150 | "Bugün yağ yaktın" |
+  | −150 … +150 | "Bugün yerinde saydın, yağ almadın" |
+  | +150 … +500 | "Bugün biraz kaçırdın, telafi edebilirsin" + telafi: yaklaşık yürüyüş dakikası (3,5 MET, kiloya göre) ya da yarın o kadar az |
+  | ≥ +500 | "Bugün fazla geçti; bir günle bozulmaz, yarın toparla" |
+
+  Bant uçları: −1000 çok yüksek açık, −150 "yağ yaktın", +150 "biraz kaçırdın", +500 "fazla geçti".
+- **18 yaşından küçük** kullanıcıya yorum ve açık hedefi gösterilmez, yalnızca sayılar.
+- **Hafta/ay özeti**: yalnızca yorum üretilebilen (öğünü olan) günlerin net toplamı, "N gün üzerinden"; 7 güne
+  ölçeklenmez. **Tahmini yağ değişimi** = Σnet ÷ 7700 kcal/kg, aynı N gün içindir.
+- Sınırlar: bazal formül bir tahmindir; aktif kalori cihaza ve kaynağa göre değişir ve uygulama kapalıyken veri
+  gelmez; makro ve kalori girişleri kullanıcı/Gemini tahminidir. Bu yüzden sayıları gerçek cihazda Fitbit /
+  Sağlık uygulamasıyla karşılaştır.
 
 ## Kurulum
 
@@ -314,8 +416,10 @@ uygulamasıyla karşılaştır.
 
 ## Tarayıcı demosu ve ekran görüntüleri
 
-Sunucu olmadan, örnek veriyle (bugünün öğünleri, antrenmanlar, 90 günlük kilo serisi, 3 haftalık ve
-7 günlük rapor) çalışan demo. Google Health seçeneği sahte bir hesapla çalışır (giriş penceresi açılmaz,
+Sunucu olmadan, örnek veriyle (bugünün öğünleri, antrenmanlar, 90 günlük kilo serisi, 60 günlük adım /
+uyku / kalori geçmişi, dolu profil, 3 haftalık ve 7 günlük rapor) çalışan demo. Trend ekranı, Enerji dengesi
+ve besin arama bu veriyle çalışır; son üç haftadan eski günlerin bazısında sağlık verisi ya da öğün yoktur
+(boş günler görünsün diye). Google Health seçeneği sahte bir hesapla çalışır (giriş penceresi açılmaz,
 Google'a veri isteği gitmez; yalnızca `google_sign_in_web` eklentisi sayfa açılırken Google'ın giriş betiğini
 yükler, kullanılmaz). Depoda `web/` klasörü tutulmaz; deneme için ayrı bir kopyada üretilir:
 
@@ -426,6 +530,9 @@ aynı yapılandırma ve kimlik adımları onun üzerinde çalışır.
   `routines.days_of_week` sütunundan değiştir.
 - **Hedefler** (kilo, kalori, makro, adım, uyku), bildirim tercihleri ve ekip `user_settings` tablosundadır
   (varsayılan: 2000 kcal, 170 g protein); uygulama `settingsOrDefaultProvider` üzerinden okur.
+- **Profil** (`user_settings.height_cm`, `birth_year`, `sex`) Enerji dengesi içindir; boş olabilir
+  (`sex`: `female` | `male` | `unspecified`). `schema.sql` bu sütunları `add column if not exists` ile
+  ekler; **bu sürümü kurmadan önce şemayı yeniden çalıştır**.
 - **Tekrarlayan işler** `routines` tablosundadır: günlük/haftalık (`frequency = 'weekly'`, `days_of_week`) ya da
   aylık (`frequency = 'monthly'`, `day_of_month`; 31 → kısa ayda ayın son günü). Aylık iş, gününden
   `monthly_lead_days` gün önce Gün ekranına düşer, günü geçince gecikmiş görünür, ay bitince kapanır.

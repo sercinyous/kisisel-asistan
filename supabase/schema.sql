@@ -19,6 +19,8 @@
 -- Sürüm 4 (Google Health): fitness_logs.source 'google' değerini kabul eder,
 -- fitness_logs.external_id + (user_id, source, external_id) tekil dizini
 -- içe aktarılan antrenmanın yeniden eşitlemede kopyalanmasını önler.
+-- Sürüm 5 (Faz 4A): user_settings.height_cm / birth_year / sex profil
+-- sütunları (enerji dengesi için; cevaplanmamışsa null).
 -- Eski bir sürümle kurulmuş veritabanında çalıştırıldığında yerinde yükseltir.
 -- =====================================================================
 
@@ -368,12 +370,25 @@ create table if not exists public.user_settings (
   team_members           text[] not null default '{Duhan,İlhan,Mehmet,Sedat}',
   -- Rapor günü ve haftası bu saat dilimine göre kesilir (IANA adı).
   timezone               text not null default 'Europe/Istanbul',
+  -- Profil (Faz 4A, enerji dengesi). Cevaplanmamışsa null; sex 'unspecified'
+  -- "belirtmek istemiyorum" demektir, null ise henüz cevaplanmadığını.
+  height_cm              smallint check (height_cm between 100 and 250),
+  birth_year             smallint check (birth_year between 1900 and 2100),
+  sex                    text check (sex in ('female', 'male', 'unspecified')),
   updated_at             timestamptz not null default now()
 );
 
 -- Sürüm 2 → 3 yükseltmesi.
 alter table public.user_settings
   add column if not exists timezone text not null default 'Europe/Istanbul';
+
+-- Sürüm 4 → 5 yükseltmesi (profil sütunları). Satır düzeyi RLS politikası ve
+-- tablo düzeyi yetkiler yeni sütunları kendiliğinden kapsar. Sütun zaten
+-- varsa ifade atlanır, yani betik tekrar çalışınca check'ler çoğalmaz.
+alter table public.user_settings
+  add column if not exists height_cm smallint check (height_cm between 100 and 250),
+  add column if not exists birth_year smallint check (birth_year between 1900 and 2100),
+  add column if not exists sex text check (sex in ('female', 'male', 'unspecified'));
 
 -- ---------------------------------------------------------------------
 -- İndeksler

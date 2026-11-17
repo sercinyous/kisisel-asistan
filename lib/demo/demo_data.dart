@@ -9,7 +9,16 @@ import '../features/operations/domain/note_item.dart';
 import '../features/operations/domain/task_item.dart';
 import '../features/reports/domain/report_models.dart';
 import '../features/routines/domain/routine.dart';
+import '../features/settings/domain/user_settings.dart';
 import 'demo_backend.dart';
+
+/// Demodaki sağlık ve öğün geçmişinin uzunluğu (gün; bugün dahil).
+const int demoHistoryDays = 60;
+
+/// Demo kullanıcısının profili (Ayarlar > Profil, Enerji dengesi).
+const int demoHeightCm = 180;
+const int demoBirthYear = 1990;
+const String demoSex = 'male';
 
 /// Tarayıcı demosunun bellekteki örnek verisi.
 class DemoData {
@@ -87,10 +96,14 @@ class DemoData {
 
     final thisWeek = AppDates.weekStart(today);
     final health = FakeHealthRepository(
-      // Son 40 gün: Ay özeti ve 7 günlük adım grafiği ay başında da dolu olsun.
+      // Son 60 gün: Trend ekranı (hafta/ay, geçen ay), Enerji dengesi ve Ay
+      // özeti ay başında da dolu olsun. Üç haftadan eski günlerin bazısında
+      // sağlık verisi yoktur ("veri yok" günleri trendde boş görünür); raporların
+      // kapsadığı son üç hafta eksiksizdir.
       metrics: [
-        for (var back = 39; back >= 0; back--)
-          _demoMetric(AppDates.addDays(today, -back)),
+        for (var back = demoHistoryDays - 1; back >= 0; back--)
+          if (!_demoHealthGap(back, AppDates.addDays(today, -back)))
+            _demoMetric(AppDates.addDays(today, -back)),
       ],
       // 90 günde 86.2 → 83.6 kg; üç günde bir ölçüm, küçük dalgalanmayla.
       weights: [
@@ -111,10 +124,13 @@ class DemoData {
           loggedAt: today.add(const Duration(hours: 8)),
         ),
       ],
-      // Geçmiş günler toplam olarak; bugünün öğünleri kalem kalem.
+      // Geçmiş günler toplam olarak; bugünün öğünleri kalem kalem. Üç haftadan
+      // eski günlerin bazısında öğün girilmemiştir (enerji dengesi "henüz öğün
+      // girilmedi" der, kalori trendi o günü paydaya katmaz).
       nutrition: [
-        for (var back = 39; back >= 1; back--)
-          _demoNutrition(AppDates.addDays(today, -back)),
+        for (var back = demoHistoryDays - 1; back >= 1; back--)
+          if (!_demoMealGap(back, AppDates.addDays(today, -back)))
+            _demoNutrition(AppDates.addDays(today, -back)),
       ],
       nutritionLogs: [
         NutritionLog(
@@ -235,7 +251,15 @@ class DemoData {
       health: health,
       // Kokpit'in beslenme özeti Sağlık sekmesindeki öğün kayıtlarından gelir.
       kokpit: FakeKokpitRepository(health: health),
-      settings: FakeSettingsRepository(),
+      // Profil dolu: Enerji dengesi kartı sayıları gösterir (boş profilde
+      // "boy, yaş ve cinsiyet gerekli" der). Hedefler varsayılandır.
+      settings: FakeSettingsRepository(
+        settings: const UserSettings.defaults().copyWith(
+          heightCm: demoHeightCm,
+          birthYear: demoBirthYear,
+          sex: demoSex,
+        ),
+      ),
       reports: FakeReportsRepository(
         // Bu hafta (kısmi) + önceki iki hafta.
         weekly: [
@@ -309,11 +333,27 @@ FakeGoogleHealthSource demoGoogleHealthSource(
 
 int _seed(DateTime day) => day.month * 31 + day.day;
 
+/// Raporların kapsadığı en eski gün bugünden 20 gün öncedir (üç hafta); bundan
+/// eski günlerde veri boşlukları olabilir, yakın günler her zaman doludur.
+const int _demoGapFromDaysBack = 21;
+
+/// [back] gün öncesi (bugün 0) için sağlık satırı yok mu? Her yedi eski
+/// günden biri.
+bool _demoHealthGap(int back, DateTime day) =>
+    back >= _demoGapFromDaysBack && _seed(day) % 7 == 3;
+
+/// [back] gün öncesi için öğün kaydı yok mu? Her altı eski günden biri;
+/// sağlık boşluklarıyla örtüşmez ki "öğün var, aktif kalori verisi yok" günü
+/// de görünsün.
+bool _demoMealGap(int back, DateTime day) =>
+    back >= _demoGapFromDaysBack && _seed(day) % 6 == 2;
+
 DailyHealthMetric _demoMetric(DateTime day) {
   final d = _seed(day);
   return DailyHealthMetric(
     day: day,
-    steps: 6200 + (d * 517) % 4800,
+    // 7000–11799: hedef (10000) günlerin yaklaşık yarısında tutar.
+    steps: 7000 + (d * 517) % 4800,
     activeKcal: 320 + (d * 37) % 260,
     sleepMinutes: 390 + (d * 23) % 90,
   );
@@ -321,9 +361,12 @@ DailyHealthMetric _demoMetric(DateTime day) {
 
 DailyNutritionTotal _demoNutrition(DateTime day) {
   final d = _seed(day);
+  // Her dokuzuncu gün "kaçmış" gündür (+450 kcal): kalori trendinde hedefi
+  // aşan, enerji dengesinde fazla geçen gün de görünsün.
+  final slip = d % 9 == 0 ? 450.0 : 0.0;
   return DailyNutritionTotal(
     day: day,
-    calories: 1850.0 + (d * 61) % 320,
+    calories: 1850.0 + (d * 61) % 320 + slip,
     proteinG: 146.0 + (d * 7) % 34,
     carbsG: 170,
     fatG: 60,

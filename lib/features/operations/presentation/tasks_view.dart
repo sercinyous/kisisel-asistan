@@ -5,27 +5,96 @@ import '../../../core/config/app_targets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/item_actions.dart';
 import '../domain/task_item.dart';
 import 'operations_providers.dart';
 import 'operations_screen.dart';
 import 'operations_widgets.dart';
 import 'task_form_sheet.dart';
 
+/// Görev formunu açar (yeni ya da düzenleme) ve sonucu bildirir. Operasyon
+/// listesi ile Kokpit satırlarının ortak yoludur; kayıt sonrası sağlayıcıları
+/// ve bildirim planını form kendisi tazeler.
+Future<void> openTaskForm(BuildContext context, [TaskItem? task]) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final saved = await TaskFormSheet.show(context, task: task);
+  if (!saved) return;
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(task == null ? 'Görev eklendi.' : 'Görev güncellendi.'),
+      ),
+    );
+}
+
+const String taskDeleteTitle = 'Görev silinsin mi?';
+
+String taskDeleteMessage(TaskItem task) =>
+    '"${task.title}" kalıcı olarak silinecek.';
+
+/// Görevi siler; başarılıysa `true`. Bildirim planı ve Kokpit/Ay listeleri
+/// `OpsTasksNotifier.delete` içinde tazelenir. [confirm] doğruysa önce onay
+/// sorulur (üç nokta menüsü); uzun basış ve kaydırma onayı kendisi sorar.
+Future<bool> deleteTask(
+  BuildContext context,
+  TaskItem task, {
+  bool confirm = false,
+}) async {
+  // Onay ve yazma sürerken ekran kapanabilir; await sonrası context kullanılmaz.
+  final messenger = ScaffoldMessenger.of(context);
+  final container = ProviderScope.containerOf(context, listen: false);
+  if (confirm) {
+    final confirmed = await confirmDelete(
+      context,
+      title: taskDeleteTitle,
+      message: taskDeleteMessage(task),
+    );
+    if (!confirmed) return false;
+  }
+  try {
+    await container.read(opsTasksProvider.notifier).delete(task);
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Görev silinemedi.')),
+    );
+    return false;
+  }
+  messenger.showSnackBar(const SnackBar(content: Text('Görev silindi.')));
+  return true;
+}
+
+/// Görev satırına uzun basış menüsü (Düzenle / Sil) ve sola kaydırarak silme
+/// ekler; Operasyon listesi ve Kokpit ortak kullanır.
+class TaskRowActions extends StatelessWidget {
+  const TaskRowActions({
+    super.key,
+    required this.task,
+    required this.child,
+    this.borderRadius,
+  });
+
+  final TaskItem task;
+  final Widget child;
+  final BorderRadius? borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return ItemRowActions(
+      itemKey: ValueKey('swipe-task-${task.id}'),
+      title: task.title,
+      confirmTitle: taskDeleteTitle,
+      confirmMessage: taskDeleteMessage(task),
+      borderRadius: borderRadius,
+      onEdit: () => openTaskForm(context, task),
+      onDelete: () => deleteTask(context, task),
+      child: child,
+    );
+  }
+}
+
 class TasksView extends ConsumerWidget {
   const TasksView({super.key});
-
-  Future<void> _openForm(BuildContext context, [TaskItem? task]) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final saved = await TaskFormSheet.show(context, task: task);
-    if (!saved) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(task == null ? 'Görev eklendi.' : 'Görev güncellendi.'),
-        ),
-      );
-  }
 
   Future<void> _toggle(
     BuildContext context,
@@ -68,29 +137,6 @@ class TasksView extends ConsumerWidget {
     });
   }
 
-  Future<void> _delete(
-    BuildContext context,
-    WidgetRef ref,
-    TaskItem task,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final notifier = ref.read(opsTasksProvider.notifier);
-    final confirmed = await confirmDelete(
-      context,
-      title: 'Görev silinsin mi?',
-      message: '"${task.title}" kalıcı olarak silinecek.',
-    );
-    if (!confirmed) return;
-    try {
-      await notifier.delete(task);
-      messenger.showSnackBar(const SnackBar(content: Text('Görev silindi.')));
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Görev silinemedi.')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(taskCategoryFilterProvider);
@@ -102,7 +148,7 @@ class TasksView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: opsListPadding,
         children: [
-          OpsSectionHeader(title: 'Görevler', onAdd: () => _openForm(context)),
+          OpsSectionHeader(title: 'Görevler', onAdd: () => openTaskForm(context)),
           OpsFilterChips<String?>(
             options: [
               (null, 'Tümü'),
@@ -144,11 +190,18 @@ class TasksView extends ConsumerWidget {
                     children: [
                       for (final (index, task) in visible.indexed) ...[
                         if (index > 0) const Divider(indent: 52),
-                        _TaskRow(
+                        TaskRowActions(
+                          // Durum konuma değil kayda bağlı kalsın: liste
+                          // kayınca satır yanlış kaydın eylemini taşımaz.
+                          key: ValueKey('ops-task-${task.id}'),
                           task: task,
-                          onToggle: () => _toggle(context, ref, task),
-                          onEdit: () => _openForm(context, task),
-                          onDelete: () => _delete(context, ref, task),
+                          child: _TaskRow(
+                            task: task,
+                            onToggle: () => _toggle(context, ref, task),
+                            onEdit: () => openTaskForm(context, task),
+                            onDelete: () =>
+                                deleteTask(context, task, confirm: true),
+                          ),
                         ),
                       ],
                     ],

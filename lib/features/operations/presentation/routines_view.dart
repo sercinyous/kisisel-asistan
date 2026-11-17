@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/item_actions.dart';
 import '../../routines/data/routines_repository.dart';
 import '../../routines/domain/routine.dart';
 import 'operations_providers.dart';
@@ -38,58 +39,108 @@ String routineScheduleLabel(Routine r) {
   return time == null ? days : '$days · $time';
 }
 
-class RoutinesView extends ConsumerWidget {
-  const RoutinesView({super.key});
-
-  Future<void> _openForm(
-    BuildContext context,
-    WidgetRef ref, [
-    Routine? routine,
-  ]) async {
-    final messenger = ScaffoldMessenger.of(context);
+/// Sabit formunu açar (yeni ya da düzenleme) ve sonucu bildirir. Operasyon
+/// listesi ile Kokpit satırlarının ortak yoludur; kayıt sonrası sağlayıcıları
+/// ve bildirim planını form kendisi tazeler.
+Future<void> openRoutineForm(BuildContext context, [Routine? routine]) async {
+  final messenger = ScaffoldMessenger.of(context);
+  var nextOrder = 0;
+  if (routine == null) {
     // Yeni kayıt listenin sonuna gelsin.
-    final all = ref.read(opsRoutinesProvider).valueOrNull ?? const <Routine>[];
-    final nextOrder = all.fold<int>(
+    final container = ProviderScope.containerOf(context, listen: false);
+    final all =
+        container.read(opsRoutinesProvider).valueOrNull ?? const <Routine>[];
+    nextOrder = all.fold<int>(
           0,
           (max, r) => r.sortOrder > max ? r.sortOrder : max,
         ) +
         10;
-    final saved = await RoutineFormSheet.show(
-      context,
-      routine: routine,
-      nextSortOrder: nextOrder,
-    );
-    if (!saved) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content:
-              Text(routine == null ? 'Sabit eklendi.' : 'Sabit güncellendi.'),
-        ),
-      );
   }
+  final saved = await RoutineFormSheet.show(
+    context,
+    routine: routine,
+    nextSortOrder: nextOrder,
+  );
+  if (!saved) return;
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content:
+            Text(routine == null ? 'Sabit eklendi.' : 'Sabit güncellendi.'),
+      ),
+    );
+}
 
-  Future<void> _delete(BuildContext context, Routine routine) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final container = ProviderScope.containerOf(context, listen: false);
+const String routineDeleteTitle = 'Sabit silinsin mi?';
+
+String routineDeleteMessage(Routine routine) =>
+    '"${routine.title}" ve tamamlanma geçmişi kalıcı olarak silinecek.';
+
+/// Sabiti (ve tamamlanma geçmişini) siler; başarılıysa `true`. Gün/Ay
+/// ekranları, haftalık antrenman planı ve bildirim planı tazelenir. [confirm]
+/// doğruysa önce onay sorulur (üç nokta menüsü); uzun basış ve kaydırma onayı
+/// kendisi sorar.
+Future<bool> deleteRoutine(
+  BuildContext context,
+  Routine routine, {
+  bool confirm = false,
+}) async {
+  // Onay ve yazma sürerken ekran kapanabilir; await sonrası context kullanılmaz.
+  final messenger = ScaffoldMessenger.of(context);
+  final container = ProviderScope.containerOf(context, listen: false);
+  if (confirm) {
     final confirmed = await confirmDelete(
       context,
-      title: 'Sabit silinsin mi?',
-      message: '"${routine.title}" ve tamamlanma geçmişi kalıcı olarak '
-          'silinecek.',
+      title: routineDeleteTitle,
+      message: routineDeleteMessage(routine),
     );
-    if (!confirmed) return;
-    try {
-      await container.read(routinesRepositoryProvider).delete(routine.id);
-      notifyRoutineChange(container.invalidate);
-      messenger.showSnackBar(const SnackBar(content: Text('Sabit silindi.')));
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Sabit silinemedi.')),
-      );
-    }
+    if (!confirmed) return false;
   }
+  try {
+    await container.read(routinesRepositoryProvider).delete(routine.id);
+    notifyRoutineChange(container.invalidate);
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Sabit silinemedi.')),
+    );
+    return false;
+  }
+  messenger.showSnackBar(const SnackBar(content: Text('Sabit silindi.')));
+  return true;
+}
+
+/// Sabit satırına uzun basış menüsü (Düzenle / Sil) ve sola kaydırarak silme
+/// ekler; Operasyon listesi ve Kokpit (rutin, aylık iş, ay günü) ortak kullanır.
+class RoutineRowActions extends StatelessWidget {
+  const RoutineRowActions({
+    super.key,
+    required this.routine,
+    required this.child,
+    this.borderRadius,
+  });
+
+  final Routine routine;
+  final Widget child;
+  final BorderRadius? borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return ItemRowActions(
+      itemKey: ValueKey('swipe-routine-${routine.id}'),
+      title: routine.title,
+      confirmTitle: routineDeleteTitle,
+      confirmMessage: routineDeleteMessage(routine),
+      borderRadius: borderRadius,
+      onEdit: () => openRoutineForm(context, routine),
+      onDelete: () => deleteRoutine(context, routine),
+      child: child,
+    );
+  }
+}
+
+class RoutinesView extends ConsumerWidget {
+  const RoutinesView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -114,10 +165,15 @@ class RoutinesView extends ConsumerWidget {
               const SizedBox(height: 4),
               for (final (index, routine) in items.indexed) ...[
                 if (index > 0) const Divider(indent: AppSpacing.cardPadding),
-                _RoutineRow(
+                RoutineRowActions(
+                  key: ValueKey('ops-routine-${routine.id}'),
                   routine: routine,
-                  onEdit: () => _openForm(context, ref, routine),
-                  onDelete: () => _delete(context, routine),
+                  child: _RoutineRow(
+                    routine: routine,
+                    onEdit: () => openRoutineForm(context, routine),
+                    onDelete: () =>
+                        deleteRoutine(context, routine, confirm: true),
+                  ),
                 ),
               ],
             ],
@@ -139,7 +195,7 @@ class RoutinesView extends ConsumerWidget {
         children: [
           OpsSectionHeader(
             title: 'Sabitler',
-            onAdd: () => _openForm(context, ref),
+            onAdd: () => openRoutineForm(context),
           ),
           OpsFilterChips<String?>(
             options: [

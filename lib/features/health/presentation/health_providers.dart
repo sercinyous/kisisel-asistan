@@ -7,6 +7,7 @@ import '../../routines/data/routines_repository.dart';
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../data/health_repository.dart';
+import 'energy_providers.dart';
 import 'health_source_providers.dart';
 
 export '../data/health_repository.dart';
@@ -170,8 +171,9 @@ int? averageSteps(Iterable<DailyHealthMetric> days) {
 
 /// Sağlık kaydı (öğün, antrenman, kilo) yazıldıktan sonra bu verileri
 /// gösteren tüm sağlayıcıları tazeler: Sağlık sekmesi, Kokpit'in beslenme
-/// özeti ve Ay özeti. await sonrası `WidgetRef` kullanılamayacağı için
-/// kapsayıcı alır (`ProviderScope.containerOf(context, listen: false)`).
+/// özeti, Ay özeti ve Enerji dengesi. await sonrası `WidgetRef`
+/// kullanılamayacağı için kapsayıcı alır
+/// (`ProviderScope.containerOf(context, listen: false)`).
 /// Bu sağlayıcılar pencerelerini "bugün"e göre açtığı için uygulama öne
 /// geldiğinde de çağrılır (gün değişmiş olabilir).
 void invalidateHealthData(ProviderContainer container) {
@@ -182,6 +184,9 @@ void invalidateHealthData(ProviderContainer container) {
     ..invalidate(weekWorkoutPlanProvider)
     ..invalidate(todayNutritionProvider)
     ..invalidate(monthOverviewProvider);
+  // Enerji dengesi öğün, antrenman, kilo ve günlük sağlık özetinden hesaplanır;
+  // "bugün" ve bazal oranı da saate bağlıdır.
+  invalidateEnergyData(container);
 }
 
 /// Seçili kaynağın (HealthKit ya da Google Health) son
@@ -223,6 +228,8 @@ Future<void> backfillHealthKit(ProviderContainer container) async {
     container
       ..invalidate(weekStepsProvider)
       ..invalidate(monthOverviewProvider);
+    // Yedeklenen aktif kalori ve antrenmanlar enerji dengesine girer.
+    invalidateEnergyData(container);
     if (workoutsImported) {
       container
         ..invalidate(recentWorkoutsProvider)

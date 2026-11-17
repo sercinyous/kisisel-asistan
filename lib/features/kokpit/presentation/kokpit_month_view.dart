@@ -8,6 +8,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../operations/domain/task_item.dart';
+import '../../operations/presentation/routines_view.dart'
+    show RoutineRowActions;
+import '../../operations/presentation/tasks_view.dart' show TaskRowActions;
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_providers.dart';
@@ -511,22 +514,30 @@ class _SelectedDayPanel extends StatelessWidget {
             )
           else if (marks != null) ...[
             for (final occurrence in marks.monthly)
-              _DayLine(
-                color: AppColors.warning,
-                title: occurrence.routine.title,
-                struck: occurrence.completed,
-                trailing: KokpitStatusChip(status: occurrence.status),
+              RoutineRowActions(
+                key: ValueKey('kokpit-day-routine-${occurrence.routine.id}'),
+                routine: occurrence.routine,
+                child: _DayLine(
+                  color: AppColors.warning,
+                  title: occurrence.routine.title,
+                  struck: occurrence.completed,
+                  trailing: KokpitStatusChip(status: occurrence.status),
+                ),
               ),
             for (final task in marks.tasks)
-              _DayLine(
-                color: AppColors.ops,
-                title: task.title,
-                struck: task.isDone,
-                trailing: Text(
-                  AppDates.hourMinute(task.scheduledAt!),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+              TaskRowActions(
+                key: ValueKey('kokpit-day-task-${task.id}'),
+                task: task,
+                child: _DayLine(
+                  color: AppColors.ops,
+                  title: task.title,
+                  struck: task.isDone,
+                  trailing: Text(
+                    AppDates.hourMinute(task.scheduledAt!),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ),
@@ -616,10 +627,13 @@ class _MonthlySection extends StatelessWidget {
               children: [
                 for (final (index, occurrence) in monthly.indexed) ...[
                   if (index > 0) const Divider(indent: 56, endIndent: 16),
-                  _MonthlyTile(
+                  RoutineRowActions(
                     key: ValueKey(occurrence.completionKey),
-                    occurrence: occurrence,
-                    onTap: readOnly ? null : () => onToggle(occurrence),
+                    routine: occurrence.routine,
+                    child: _MonthlyTile(
+                      occurrence: occurrence,
+                      onTap: readOnly ? null : () => onToggle(occurrence),
+                    ),
                   ),
                 ],
               ],
@@ -631,7 +645,7 @@ class _MonthlySection extends StatelessWidget {
 }
 
 class _MonthlyTile extends StatelessWidget {
-  const _MonthlyTile({super.key, required this.occurrence, this.onTap});
+  const _MonthlyTile({required this.occurrence, this.onTap});
 
   final RoutineOccurrence occurrence;
 
@@ -734,12 +748,15 @@ class _MonthTasksSection extends StatelessWidget {
               children: [
                 for (final (index, task) in tasks.indexed) ...[
                   if (index > 0) const Divider(indent: 16, endIndent: 16),
-                  _MonthTaskTile(
+                  TaskRowActions(
                     key: ValueKey('kokpit-month-task-${task.id}'),
                     task: task,
-                    onComplete: readOnly || task.isDone
-                        ? null
-                        : () => completeKokpitTask(context, task),
+                    child: _MonthTaskTile(
+                      task: task,
+                      onComplete: readOnly || task.isDone
+                          ? null
+                          : () => completeKokpitTask(context, task),
+                    ),
                   ),
                 ],
               ],
@@ -751,7 +768,7 @@ class _MonthTasksSection extends StatelessWidget {
 }
 
 class _MonthTaskTile extends StatelessWidget {
-  const _MonthTaskTile({super.key, required this.task, this.onComplete});
+  const _MonthTaskTile({required this.task, this.onComplete});
 
   final TaskItem task;
 

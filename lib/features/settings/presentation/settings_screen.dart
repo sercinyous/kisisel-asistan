@@ -82,6 +82,12 @@ abstract final class SettingsLimits {
   static const int fatMin = 0, fatMax = 400;
   static const int stepsMin = 1000, stepsMax = 60000;
   static const int sleepMin = 180, sleepMax = 900;
+  static const int heightMin = UserSettings.heightCmMin;
+  static const int heightMax = UserSettings.heightCmMax;
+  static const int birthYearMin = UserSettings.birthYearMin;
+
+  /// Doğum yılı üst sınırı: bu yıl − 10 (en küçük kabul edilen yaş).
+  static const int birthYearMinAge = 10;
   static const int leadDaysMin = 0, leadDaysMax = 14;
   static const int eventMinutesMin = 0, eventMinutesMax = 1440;
   static const int teamMax = 12;
@@ -108,6 +114,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   final _fat = TextEditingController();
   final _steps = TextEditingController();
   final _sleep = TextEditingController();
+  final _height = TextEditingController();
+  final _birthYear = TextEditingController();
   final _leadDays = TextEditingController();
   final _eventMinutes = TextEditingController();
   final _teamInput = TextEditingController();
@@ -118,6 +126,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
   late UserSettings _saved;
   late List<String> _savedTexts;
 
+  /// 'female' | 'male' | 'unspecified' | null (cevaplanmadı).
+  String? _sex;
   late bool _notificationsEnabled;
   late bool _routineNotifications;
   late bool _quietHoursEnabled;
@@ -142,6 +152,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       _fat,
       _steps,
       _sleep,
+      _height,
+      _birthYear,
       _leadDays,
       _eventMinutes,
     ];
@@ -181,6 +193,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     _fat.text = '${s.dailyFatG}';
     _steps.text = '${s.dailySteps}';
     _sleep.text = '${s.sleepMinutes}';
+    _height.text = s.heightCm?.toString() ?? '';
+    _birthYear.text = s.birthYear?.toString() ?? '';
+    _sex = s.sex;
     _leadDays.text = '${s.monthlyLeadDays}';
     _eventMinutes.text = '${s.eventRemindMinutes}';
     _savedTexts = [for (final c in _numberFields) c.text];
@@ -197,7 +212,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     for (final (i, c) in _numberFields.indexed) {
       if (c.text.trim() != _savedTexts[i]) return true;
     }
-    return _notificationsEnabled != _saved.notificationsEnabled ||
+    return _sex != _saved.sex ||
+        _notificationsEnabled != _saved.notificationsEnabled ||
         _routineNotifications != _saved.routineNotifications ||
         _quietHoursEnabled != _saved.quietHoursEnabled ||
         _monthlyRemindTime != _saved.monthlyRemindTime ||
@@ -236,6 +252,10 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
         dailyFatG: int.parse(_fat.text.trim()),
         dailySteps: int.parse(_steps.text.trim()),
         sleepMinutes: int.parse(_sleep.text.trim()),
+        // Boş alan null yazılır; böylece kullanıcı profilini temizleyebilir.
+        heightCm: int.tryParse(_height.text.trim()),
+        birthYear: int.tryParse(_birthYear.text.trim()),
+        sex: _sex,
         notificationsEnabled: _notificationsEnabled,
         routineNotifications: _routineNotifications,
         monthlyLeadDays: int.parse(_leadDays.text.trim()),
@@ -247,6 +267,31 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
         teamMembers: List.unmodifiable(_team),
       );
 
+  int get _birthYearMax => DateTime.now().year - SettingsLimits.birthYearMinAge;
+
+  String? _validateHeight(String? text) => _validateNumber(
+        text,
+        min: SettingsLimits.heightMin,
+        max: SettingsLimits.heightMax,
+        optional: true,
+      );
+
+  String? _validateBirthYear(String? text) => _validateNumber(
+        text,
+        min: SettingsLimits.birthYearMin,
+        max: _birthYearMax,
+        optional: true,
+      );
+
+  /// Boy ya da doğum yılı geçersizse kullanıcıya gösterilecek cümle.
+  String? _profileProblem() {
+    final height = _validateHeight(_height.text);
+    if (height != null) return 'Boy $height.';
+    final year = _validateBirthYear(_birthYear.text);
+    if (year != null) return 'Doğum yılı $year.';
+    return null;
+  }
+
   Future<void> _save() async {
     if (_saving) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -256,6 +301,17 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           const SnackBar(content: Text('Kırmızı işaretli alanları düzelt.')),
+        );
+      return;
+    }
+    // Tembel liste ekran dışındaki alanı bellekten atar ve Form onu
+    // doğrulayamaz; profil alanları bu yüzden ayrıca denetlenir.
+    final profileError = _profileProblem();
+    if (profileError != null) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Profil kaydedilemedi. $profileError')),
         );
       return;
     }
@@ -454,6 +510,8 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
                   const SizedBox(height: AppSpacing.grid),
                   _goalsCard(),
                   const SizedBox(height: AppSpacing.grid),
+                  _profileCard(),
+                  const SizedBox(height: AppSpacing.grid),
                   _notificationsCard(),
                   const SizedBox(height: AppSpacing.grid),
                   _teamCard(),
@@ -559,6 +617,71 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
             max: SettingsLimits.sleepMax,
             helper: _sleepHelper(),
           ),
+        ),
+      ],
+    );
+  }
+
+  static const List<(String, String)> _sexOptions = [
+    ('female', 'Kadın'),
+    ('male', 'Erkek'),
+    ('unspecified', 'Belirtmek istemiyorum'),
+  ];
+
+  Widget _profileCard() {
+    final theme = Theme.of(context);
+    final incomplete = _height.text.trim().isEmpty ||
+        _birthYear.text.trim().isEmpty ||
+        _sex == null;
+    return _Section(
+      icon: Icons.badge_rounded,
+      title: 'Profil',
+      color: AppColors.fitness,
+      children: [
+        _FieldRow(
+          left: _NumberField(
+            fieldKey: const Key('settings-height'),
+            controller: _height,
+            label: 'Boy (cm)',
+            min: SettingsLimits.heightMin,
+            max: SettingsLimits.heightMax,
+            optional: true,
+          ),
+          right: _NumberField(
+            fieldKey: const Key('settings-birth-year'),
+            controller: _birthYear,
+            label: 'Doğum yılı',
+            min: SettingsLimits.birthYearMin,
+            max: _birthYearMax,
+            optional: true,
+          ),
+        ),
+        Text(
+          'Cinsiyet',
+          style: theme.textTheme.labelMedium
+              ?.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final (value, label) in _sexOptions)
+              ChoiceChip(
+                key: Key('settings-sex-$value'),
+                label: Text(label),
+                showCheckmark: false,
+                selected: _sex == value,
+                // Seçili çipe yeniden dokunmak seçimi kaldırır (alan boş kalır).
+                onSelected: (on) => setState(() => _sex = on ? value : null),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        _Hint(
+          incomplete
+              ? 'Enerji dengesi için boy, doğum yılı ve cinsiyet gerekli.'
+              : 'Yalnızca enerji dengesi tahmininde kullanılır.',
         ),
       ],
     );
@@ -896,6 +1019,29 @@ class _FieldRow extends StatelessWidget {
   }
 }
 
+String _showNumber(num v) =>
+    v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+/// Sayı alanı denetimi; hata yoksa `null`. [optional] ise boş metin geçerlidir.
+String? _validateNumber(
+  String? text, {
+  required num min,
+  required num max,
+  bool decimal = false,
+  bool optional = false,
+}) {
+  final raw = (text ?? '').trim();
+  final range = '${_showNumber(min)}–${_showNumber(max)} arası olmalı';
+  if (raw.isEmpty) return optional ? null : range;
+  final num? value = decimal
+      ? double.tryParse(raw.replaceAll(',', '.'))
+      : int.tryParse(raw);
+  if (value == null || value.isNaN || value < min || value > max) {
+    return range;
+  }
+  return null;
+}
+
 class _NumberField extends StatelessWidget {
   const _NumberField({
     required this.fieldKey,
@@ -904,6 +1050,7 @@ class _NumberField extends StatelessWidget {
     required this.min,
     required this.max,
     this.decimal = false,
+    this.optional = false,
     this.helper,
   });
 
@@ -913,23 +1060,10 @@ class _NumberField extends StatelessWidget {
   final num min;
   final num max;
   final bool decimal;
+
+  /// Boş bırakılabilir (profil alanları); dolu ise yine aralık denetlenir.
+  final bool optional;
   final String? helper;
-
-  static String _show(num v) =>
-      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
-
-  String? _validate(String? text) {
-    final raw = (text ?? '').trim();
-    final range = '${_show(min)}–${_show(max)} arası olmalı';
-    if (raw.isEmpty) return range;
-    final num? value = decimal
-        ? double.tryParse(raw.replaceAll(',', '.'))
-        : int.tryParse(raw);
-    if (value == null || value.isNaN || value < min || value > max) {
-      return range;
-    }
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -944,7 +1078,13 @@ class _NumberField extends StatelessWidget {
         LengthLimitingTextInputFormatter(decimal ? 6 : 5),
       ],
       autovalidateMode: AutovalidateMode.onUserInteraction,
-      validator: _validate,
+      validator: (text) => _validateNumber(
+        text,
+        min: min,
+        max: max,
+        decimal: decimal,
+        optional: optional,
+      ),
       decoration: InputDecoration(
         labelText: label,
         helperText: helper,

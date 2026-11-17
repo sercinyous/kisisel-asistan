@@ -1,13 +1,17 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
+import 'package:kisisel_asistan/core/widgets/bento.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_screen.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_widgets.dart';
+import 'package:kisisel_asistan/features/health/presentation/trend_providers.dart';
+import 'package:kisisel_asistan/features/health/presentation/trend_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
@@ -186,6 +190,8 @@ void main() {
     expect(find.text('Kahvaltı'), findsOneWidget);
     expect(find.text('Yulaf ezmesi'), findsOneWidget);
     expect(find.text('Kickboks'), findsOneWidget);
+    expect(find.text('Uyku'), findsOneWidget);
+    expect(find.text('Kalori'), findsOneWidget);
     expect(find.text('HealthKit'), findsOneWidget);
     expect(find.text('son eşitleme 15:34'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -205,6 +211,98 @@ void main() {
     expect(find.textContaining('/ 7 bu hafta', findRichText: true), findsOneWidget);
     // 12000, 11100, ... 6600 ortalaması.
     expect(bigValue(tester, 'steps-average'), '9.300');
+    // Yedi gün de 430 dk uyku: 7 sa 10 dk.
+    expect(bigValue(tester, 'sleep-average'), '7 sa 10 dk');
+    // Yalnızca bugünün öğünü var (300 + 120); öğünsüz günler ortalamayı çekmez.
+    expect(bigValue(tester, 'calories-average'), '420');
+  });
+
+  testWidgets('Adım, Uyku ve Kalori kartlarına dokununca ilgili trend açılır',
+      (tester) async {
+    await pumpScreen(tester);
+
+    for (final (label, metric) in [
+      ('Adım', TrendMetric.steps),
+      ('Uyku', TrendMetric.sleep),
+      ('Kalori', TrendMetric.calories),
+    ]) {
+      await tapVisible(tester, find.text(label));
+      expect(find.byType(TrendScreen), findsOneWidget, reason: label);
+      expect(
+        tester
+            .widget<SegmentedButton<TrendMetric>>(
+              find.byKey(const Key('trend-metric')),
+            )
+            .selected,
+        {metric},
+        reason: label,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(TrendScreen), findsNothing);
+
+      // Grafik alanı da kartın parçasıdır: dokunuşu yutmamalı (fl_chart kendi
+      // dokunma tanıyıcısını ekler; kapatılmazsa Trend açılmaz).
+      final chart = find.descendant(
+        of: find.ancestor(of: find.text(label), matching: find.byType(BentoCard)),
+        matching: find.byType(BarChart),
+      );
+      expect(chart, findsOneWidget, reason: '$label grafiği');
+      await tapVisible(tester, chart);
+      expect(find.byType(TrendScreen), findsOneWidget, reason: '$label grafik');
+      expect(
+        tester
+            .widget<SegmentedButton<TrendMetric>>(
+              find.byKey(const Key('trend-metric')),
+            )
+            .selected,
+        {metric},
+        reason: '$label grafik',
+      );
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(TrendScreen), findsNothing);
+    }
+  });
+
+  testWidgets(
+      'büyük metinde ortalama değeri tek satır ölçülür: kartlarda ölü boşluk yok',
+      (tester) async {
+    // "7 sa 22 dk ort." ve "1.824 kcal ort." yarım genişlikte sığmaz; değer
+    // küçülür, ama içsel yükseklik iki satır ölçerse satır bir satır uzar.
+    health.metrics = [
+      for (var i = 0; i < 7; i++)
+        DailyHealthMetric(
+          day: AppDates.addDays(today, -i),
+          steps: 9300,
+          sleepMinutes: 442,
+          activeKcal: 400,
+        ),
+    ];
+    health.nutritionLogs = [
+      NutritionLog(
+        id: 'big',
+        mealType: 'lunch',
+        foodName: 'Büyük öğün',
+        calories: 1824,
+        proteinG: 100,
+        eatenAt: today.add(const Duration(minutes: 5)),
+      ),
+    ];
+    await pumpScreen(tester, textScale: 1.3);
+
+    expect(bigValue(tester, 'sleep-average'), '7 sa 22 dk');
+    expect(bigValue(tester, 'calories-average'), '1.824');
+    for (final label in ['Adım', 'Uyku', 'Kalori']) {
+      final card = find.ancestor(
+        of: find.text(label),
+        matching: find.byType(BentoCard),
+      );
+      // Tek satırlı değerle ~186; iki satır ölçümüyle ~227 çıkıyordu.
+      expect(tester.getSize(card).height, lessThan(196), reason: label);
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('veri yokken her bölüm boş durumunu gösterir', (tester) async {
@@ -222,6 +320,8 @@ void main() {
     );
     expect(find.text('Planlı antrenman yok.'), findsOneWidget);
     expect(find.text('Son 7 günde adım verisi yok.'), findsOneWidget);
+    expect(find.text('Son 7 günde uyku verisi yok.'), findsOneWidget);
+    expect(find.text('Son 7 günde öğün kaydı yok.'), findsOneWidget);
     expect(find.text('Henüz kayıt yok'), findsNWidgets(3));
     expect(find.text('Son 30 günde antrenman kaydı yok.'), findsOneWidget);
     expect(find.textContaining('yalnızca iPhone'), findsOneWidget);
@@ -237,6 +337,8 @@ void main() {
     expect(find.text('Kilo ölçümleri yüklenemedi.'), findsOneWidget);
     expect(find.text('Antrenman planı yüklenemedi.'), findsOneWidget);
     expect(find.text('Adım verisi yüklenemedi.'), findsOneWidget);
+    expect(find.text('Uyku verisi yüklenemedi.'), findsOneWidget);
+    expect(find.text('Kalori verisi yüklenemedi.'), findsOneWidget);
     expect(find.text('Öğünler yüklenemedi.'), findsOneWidget);
     expect(find.text('Antrenmanlar yüklenemedi.'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -317,6 +419,8 @@ void main() {
     final summary = container.read(todayNutritionProvider).requireValue;
     expect(summary.calories, 670);
     expect(summary.entryCount, 3);
+    // Kalori kartı da yeni toplamı gösterir (420 + 250).
+    expect(bigValue(tester, 'calories-average'), '670');
   });
 
   testWidgets('öğün düzenlemek aynı kaydı günceller ve Kokpit özetini tazeler',
@@ -359,6 +463,7 @@ void main() {
     expect(health.deletedIds, ['n1']);
     expect(find.text('Yulaf ezmesi'), findsNothing);
     expect(container.read(todayNutritionProvider).requireValue.calories, 120);
+    expect(bigValue(tester, 'calories-average'), '120');
   });
 
   testWidgets('öğün formu boş adı ve sınır dışı değerleri reddeder',
