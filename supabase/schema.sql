@@ -2276,3 +2276,465 @@ begin
 end;
 $$;
 -- END routine_owner_fk
+
+-- BEGIN health_source_column
+-- Günlük sağlık özetinin hangi kaynaktan (Apple Health / Google Health)
+-- geldiği. Boş: sütun eklenmeden önce yazılmış (HealthKit dönemi) satır.
+-- İstemci grafik ve enerji hesabını seçili kaynağa göre okur; kaynak
+-- değişince eski kaynağın sayıları yeni kaynağınmış gibi gösterilmez.
+alter table public.daily_health_metrics
+  add column if not exists source text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.daily_health_metrics'::regclass
+      and conname = 'daily_health_metrics_source_check'
+  ) then
+    alter table public.daily_health_metrics
+      add constraint daily_health_metrics_source_check
+      check (source is null or source in ('appleHealth', 'googleHealth'));
+  end if;
+end;
+$$;
+-- END health_source_column
+
+-- =====================================================================
+-- BEGIN report_dirty (geç gelen veriyle rapor yenileme) — idempotent
+--   * Rapora giren veri (sağlık özeti, öğün, görev, rutin işareti, antrenman
+--     ve tartı) değişince o günün daily_reports ve o haftanın weekly_reports
+--     satırı dirty işaretlenir. Tetikleyici ucuzdur: yalnızca var olan rapor
+--     satırını günceller; AI çağrısı yapmaz.
+--   * generate-reports {kind:"refresh"} (pg_cron, saatlik) claim_dirty_reports
+--     ile işaretli raporları toplu alır, sayıları refresh_report_metrics ile
+--     yeniden hesaplar. AI yorumu yalnızca sayılar, yorumun dayandığı
+--     sayılardan (ai_basis) farklıysa ve 'report_refresh' kotası izin verirse
+--     yeniden üretilir.
+-- =====================================================================
+alter table public.daily_reports  add column if not exists dirty boolean not null default false;
+alter table public.daily_reports  add column if not exists dirty_at timestamptz;
+alter table public.daily_reports  add column if not exists ai_basis jsonb;
+alter table public.weekly_reports add column if not exists dirty boolean not null default false;
+alter table public.weekly_reports add column if not exists dirty_at timestamptz;
+alter table public.weekly_reports add column if not exists ai_basis jsonb;
+
+comment on column public.daily_reports.ai_basis is
+  'ai_summary''nin üretildiği sayılar; yeni sayılar bundan farklıysa yorum yenilenir.';
+
+-- Mevcut başarılı yorumlar kendi sayılarına dayanır (ilk geçişte boşuna AI çağrılmasın).
+update public.daily_reports set ai_basis = metrics
+where ai_basis is null and ai_status = 'ok';
+update public.weekly_reports set ai_basis = metrics
+where ai_basis is null and ai_status = 'ok';
+
+create index if not exists daily_reports_dirty_idx
+  on public.daily_reports (dirty_at) where dirty;
+create index if not exists weekly_reports_dirty_idx
+  on public.weekly_reports (dirty_at) where dirty;
+
+-- Yeni yorum yazılınca (ok ve metin değişti) dayanağı da kaydedilir.
+create or replace function public.report_set_ai_basis()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if new.ai_status = 'ok' and new.ai_summary is not null
+     and (tg_op = 'INSERT' or new.ai_summary is distinct from old.ai_summary) then
+    new.ai_basis := new.metrics;
+  elsif new.ai_summary is null then
+    new.ai_basis := null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists daily_reports_ai_basis on public.daily_reports;
+create trigger daily_reports_ai_basis
+  before insert or update of ai_summary, ai_status, metrics on public.daily_reports
+  for each row execute function public.report_set_ai_basis();
+drop trigger if exists weekly_reports_ai_basis on public.weekly_reports;
+create trigger weekly_reports_ai_basis
+  before insert or update of ai_summary, ai_status, metrics on public.weekly_reports
+  for each row execute function public.report_set_ai_basis();
+
+-- [p_from, p_to] günlerini ve bu günleri içeren haftaları dirty işaretler.
+-- Yalnızca var olan rapor satırlarına dokunur.
+create or replace function public.mark_reports_dirty(p_user uuid, p_from date, p_to date)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if p_user is null or p_from is null or p_to is null then
+    return;
+  end if;
+  update daily_reports
+     set dirty = true, dirty_at = now()
+   where user_id = p_user and report_date between p_from and p_to;
+  update weekly_reports
+     set dirty = true, dirty_at = now()
+   where user_id = p_user
+     and week_start between date_trunc('week', p_from)::date and date_trunc('week', p_to)::date;
+end;
+$$;
+
+-- Bir anın kullanıcının saat dilimindeki günü (report_period_metrics ile aynı kural).
+create or replace function public.report_local_day(p_user uuid, p_ts timestamptz)
+returns date
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_tz text;
+begin
+  if p_ts is null then
+    return null;
+  end if;
+  select coalesce(nullif(btrim(s.timezone), ''), 'Europe/Istanbul') into v_tz
+  from user_settings s where s.user_id = p_user;
+  begin
+    return (p_ts at time zone coalesce(v_tz, 'Europe/Istanbul'))::date;
+  exception when others then
+    return (p_ts at time zone 'Europe/Istanbul')::date;
+  end;
+end;
+$$;
+
+create or replace function public.report_dirty_trigger()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  r record;
+  v_day date;
+  v_to date;
+  v_cols text[];
+begin
+  if tg_op = 'UPDATE' then
+    -- Rapora girmeyen sütun değişikliği raporu kirletmez.
+    v_cols := case tg_table_name
+      when 'daily_health_metrics' then array['user_id', 'metric_date', 'steps', 'active_kcal', 'sleep_minutes']
+      when 'tasks'               then array['user_id', 'due_at', 'status']
+      when 'nutrition_logs'      then array['user_id', 'eaten_at', 'calories', 'protein_g', 'carbs_g', 'fat_g']
+      when 'fitness_logs'        then array['user_id', 'logged_at', 'log_type', 'weight_kg']
+      when 'routine_completions' then array['user_id', 'completed_on', 'routine_id']
+    end;
+    if v_cols is not null and
+       (select jsonb_object_agg(k, to_jsonb(old) -> k) from unnest(v_cols) k)
+         = (select jsonb_object_agg(k, to_jsonb(new) -> k) from unnest(v_cols) k) then
+      return null;
+    end if;
+  end if;
+
+  for r in
+    select x from (values (case when tg_op <> 'INSERT' then to_jsonb(old) end),
+                          (case when tg_op <> 'DELETE' then to_jsonb(new) end)) v(x)
+    where x is not null
+  loop
+    v_day := case tg_table_name
+      when 'daily_health_metrics' then (r.x ->> 'metric_date')::date
+      when 'routine_completions'  then (r.x ->> 'completed_on')::date
+      when 'tasks'          then public.report_local_day((r.x ->> 'user_id')::uuid, (r.x ->> 'due_at')::timestamptz)
+      when 'nutrition_logs' then public.report_local_day((r.x ->> 'user_id')::uuid, (r.x ->> 'eaten_at')::timestamptz)
+      when 'fitness_logs'   then public.report_local_day((r.x ->> 'user_id')::uuid, (r.x ->> 'logged_at')::timestamptz)
+    end;
+    continue when v_day is null;
+    v_to := v_day;
+    if tg_table_name = 'routine_completions' and extract(day from v_day) = 1 then
+      -- Aylık rutinin dönem anahtarı ayın 1'idir: tüm ay etkilenebilir.
+      v_to := (date_trunc('month', v_day) + interval '1 month - 1 day')::date;
+    elsif tg_table_name = 'fitness_logs' and r.x ->> 'log_type' = 'weight' then
+      -- Tartı, sonraki haftanın başlangıç kilosunu da belirler.
+      v_to := v_day + 7;
+    end if;
+    perform public.mark_reports_dirty((r.x ->> 'user_id')::uuid, v_day, v_to);
+  end loop;
+  return null;
+end;
+$$;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['daily_health_metrics', 'nutrition_logs', 'tasks',
+                           'routine_completions', 'fitness_logs']
+  loop
+    execute format('drop trigger if exists %I on public.%I', t || '_report_dirty', t);
+    execute format(
+      'create trigger %I after insert or update or delete on public.%I '
+      'for each row execute function public.report_dirty_trigger()',
+      t || '_report_dirty', t);
+  end loop;
+end;
+$$;
+
+-- Toplu yenileme için işaretli raporları alır ve işaretini kaldırır. Hesap
+-- sırasında veri yine değişirse tetikleyici yeniden işaretler (kayıp olmaz).
+-- p_settle: art arda gelen yedeklemeler bitsin diye beklenen süre.
+create or replace function public.claim_dirty_reports(
+  p_limit integer default 40,
+  p_settle interval default interval '10 minutes'
+)
+returns table (kind text, user_id uuid, report_date date)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  return query
+  with picked as (
+    select 'daily'::text as k, d.id, d.dirty_at
+    from daily_reports d
+    join user_settings s on s.user_id = d.user_id and s.onboarded_at is not null
+    where d.dirty and d.dirty_at <= now() - p_settle
+    union all
+    select 'weekly'::text, w.id, w.dirty_at
+    from weekly_reports w
+    join user_settings s on s.user_id = w.user_id and s.onboarded_at is not null
+    where w.dirty and w.dirty_at <= now() - p_settle
+    order by 3
+    limit greatest(p_limit, 0)
+  ),
+  ud as (
+    update daily_reports d set dirty = false
+    from picked p where p.k = 'daily' and d.id = p.id
+    returning d.user_id, d.report_date
+  ),
+  uw as (
+    update weekly_reports w set dirty = false
+    from picked p where p.k = 'weekly' and w.id = p.id
+    returning w.user_id, w.week_start
+  )
+  select 'daily'::text, ud.user_id, ud.report_date from ud
+  union all
+  select 'weekly'::text, uw.user_id, uw.week_start from uw;
+end;
+$$;
+
+-- Sayıları yeniden hesaplar. Yorumun dayandığı sayılarla aynıysa (jsonb
+-- eşitliği; 1800 = 1800.0) metrics yazılır ve changed=false döner: AI gerekmez.
+create or replace function public.refresh_report_metrics(p_kind text, p_user uuid, p_date date)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_metrics jsonb;
+  v_basis   jsonb;
+  v_found   boolean;
+begin
+  if p_kind = 'daily' then
+    select ai_basis, true into v_basis, v_found
+    from daily_reports where user_id = p_user and report_date = p_date;
+    v_metrics := public.report_daily_metrics(p_user, p_date);
+  elsif p_kind = 'weekly' then
+    select ai_basis, true into v_basis, v_found
+    from weekly_reports where user_id = p_user and week_start = p_date;
+    v_metrics := public.report_weekly_metrics(p_user, p_date);
+  else
+    raise exception 'p_kind daily ya da weekly olmalı: %', p_kind using errcode = '22023';
+  end if;
+
+  if v_found and v_basis is not null and v_basis = v_metrics then
+    if p_kind = 'daily' then
+      update daily_reports set metrics = v_metrics
+      where user_id = p_user and report_date = p_date;
+    else
+      update weekly_reports set metrics = v_metrics
+      where user_id = p_user and week_start = p_date;
+    end if;
+    return jsonb_build_object('metrics', v_metrics, 'changed', false);
+  end if;
+  return jsonb_build_object('metrics', v_metrics, 'changed', true);
+end;
+$$;
+
+-- Yenilenen raporu yazar. p_summary doluysa yeni yorumla kaydeder; boşsa
+-- (kota doldu ya da AI başarısız) sayıları günceller, eski yorumu korur ve
+-- raporu sonraki geçişte yeniden denensin diye dirty bırakır.
+create or replace function public.save_refreshed_report(
+  p_kind text, p_user uuid, p_date date, p_metrics jsonb, p_summary text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_summary text;
+  v_status  text;
+begin
+  if p_kind = 'daily' then
+    if p_summary is not null then
+      perform public.save_daily_report(p_user, p_date, p_metrics, p_summary, 'ok');
+    else
+      update daily_reports
+         set metrics = coalesce(p_metrics, '{}'::jsonb), dirty = true, dirty_at = now()
+       where user_id = p_user and report_date = p_date;
+    end if;
+  elsif p_kind = 'weekly' then
+    if p_summary is not null then
+      perform public.save_weekly_report(p_user, p_date, p_metrics, p_summary, 'ok');
+    else
+      select ai_summary, ai_status into v_summary, v_status
+      from weekly_reports where user_id = p_user and week_start = p_date;
+      if found then
+        -- Aynı yorum metni ai_basis'i değiştirmez (report_set_ai_basis).
+        perform public.save_weekly_report(p_user, p_date, p_metrics, v_summary, v_status);
+        update weekly_reports set dirty = true, dirty_at = now()
+        where user_id = p_user and week_start = p_date;
+      end if;
+    end if;
+  else
+    raise exception 'p_kind daily ya da weekly olmalı: %', p_kind using errcode = '22023';
+  end if;
+end;
+$$;
+
+revoke all on function public.mark_reports_dirty(uuid, date, date) from public, anon, authenticated;
+revoke all on function public.report_local_day(uuid, timestamptz) from public, anon, authenticated;
+revoke all on function public.report_dirty_trigger() from public, anon, authenticated;
+revoke all on function public.report_set_ai_basis() from public, anon, authenticated;
+revoke all on function public.claim_dirty_reports(integer, interval) from public, anon, authenticated;
+revoke all on function public.refresh_report_metrics(text, uuid, date) from public, anon, authenticated;
+revoke all on function public.save_refreshed_report(text, uuid, date, jsonb, text)
+  from public, anon, authenticated;
+grant execute on function public.claim_dirty_reports(integer, interval) to service_role;
+grant execute on function public.refresh_report_metrics(text, uuid, date) to service_role;
+grant execute on function public.save_refreshed_report(text, uuid, date, jsonb, text) to service_role;
+-- END report_dirty
+
+-- =====================================================================
+-- BEGIN complete_onboarding — idempotent
+--   İlk kurulumu (tartı, başlangıç rutinleri, user_settings + onboarded_at)
+--   TEK transaction'da yazar. İstemci işlem anahtarını (op_key) başarıya dek
+--   cihazda saklar; aynı anahtarla tekrar çağrı (yanıt kaybolmuş ya da
+--   uygulama yeniden açılmış olsa da) hiçbir şey yazmaz, ilk çağrının
+--   sonucunu döndürür. security invoker: tüm yazmalar çağıranın RLS'ine tabidir.
+--   onboarding_ops: kullanıcı başına son tamamlanan anahtar ve sonucu.
+-- =====================================================================
+create table if not exists public.onboarding_ops (
+  user_id      uuid primary key default auth.uid()
+               references auth.users (id) on delete cascade,
+  op_key       uuid,
+  result       jsonb,
+  completed_at timestamptz
+);
+
+alter table public.onboarding_ops enable row level security;
+drop policy if exists onboarding_ops_owner_all on public.onboarding_ops;
+create policy onboarding_ops_owner_all on public.onboarding_ops
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+revoke all on table public.onboarding_ops from anon, authenticated;
+grant select, insert, update on table public.onboarding_ops to authenticated;
+
+create or replace function public.complete_onboarding(payload jsonb, op_key uuid)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_uid      uuid := auth.uid();
+  v_prev     uuid;
+  v_result   jsonb;
+  v_settings jsonb := coalesce(payload -> 'settings', '{}'::jsonb);
+  v_row      public.user_settings;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if complete_onboarding.op_key is null then
+    raise exception 'op_key gerekli' using errcode = '22004';
+  end if;
+  if jsonb_typeof(v_settings) <> 'object' then
+    raise exception 'settings nesne olmalı' using errcode = '22023';
+  end if;
+
+  -- Kullanıcının işlem satırı kilitlenir: aynı anahtarla eşzamanlı ikinci
+  -- çağrı ilki bitene dek bekler, sonra kayıtlı sonucu görür.
+  insert into onboarding_ops (user_id) values (v_uid)
+  on conflict (user_id) do nothing;
+  select o.op_key, o.result into v_prev, v_result
+  from onboarding_ops o
+  where o.user_id = v_uid
+  for update;
+
+  if v_prev is not distinct from complete_onboarding.op_key then
+    return v_result;
+  end if;
+
+  if jsonb_typeof(payload -> 'weight_kg') = 'number' then
+    insert into fitness_logs (user_id, log_type, weight_kg, source)
+    values (v_uid, 'weight', (payload ->> 'weight_kg')::numeric, 'manual');
+  end if;
+
+  insert into routines (user_id, title, scope, category, frequency, days_of_week,
+                        day_of_month, time_of_day, notify, is_active, sort_order)
+  select v_uid, x.title, coalesce(x.scope, 'Kişisel'), coalesce(x.category, 'kisisel'),
+         coalesce(x.frequency, 'weekly'),
+         case when coalesce(x.frequency, 'weekly') = 'monthly'
+                   or x.days_of_week is null or cardinality(x.days_of_week) = 0
+              then '{1,2,3,4,5,6,7}'::smallint[]
+              else x.days_of_week end,
+         case when x.frequency = 'monthly' then x.day_of_month end,
+         x.time_of_day, coalesce(x.notify, true), coalesce(x.is_active, true),
+         coalesce(x.sort_order, 0)
+  from jsonb_to_recordset(coalesce(payload -> 'routines', '[]'::jsonb))
+    as x(title text, scope text, category text, frequency text,
+         days_of_week smallint[], day_of_month smallint, time_of_day time,
+         notify boolean, is_active boolean, sort_order integer);
+
+  insert into user_settings (user_id) values (v_uid)
+  on conflict (user_id) do nothing;
+
+  -- Gövdede olmayan alan mevcut değerini korur (jsonb_populate_record tabanı
+  -- satırın kendisidir); açık null yazılır. user_id ve timezone değişmez.
+  update user_settings s
+     set (start_weight_kg, target_weight_kg, daily_calories, daily_protein_g,
+          daily_carbs_g, daily_fat_g, daily_steps, sleep_minutes,
+          notifications_enabled, routine_notifications, monthly_lead_days,
+          monthly_remind_time, event_remind_minutes, quiet_hours_enabled,
+          quiet_start, quiet_end, team_members, height_cm, birth_year, sex,
+          display_name, work_description, task_categories, onboarded_at)
+       = (select r.start_weight_kg, r.target_weight_kg, r.daily_calories,
+                 r.daily_protein_g, r.daily_carbs_g, r.daily_fat_g, r.daily_steps,
+                 r.sleep_minutes, r.notifications_enabled, r.routine_notifications,
+                 r.monthly_lead_days, r.monthly_remind_time, r.event_remind_minutes,
+                 r.quiet_hours_enabled, r.quiet_start, r.quiet_end,
+                 coalesce(r.team_members, '{}'), r.height_cm, r.birth_year, r.sex,
+                 r.display_name, r.work_description, r.task_categories,
+                 coalesce(r.onboarded_at, now())
+          from jsonb_populate_record(s, v_settings) r)
+   where s.user_id = v_uid
+  returning s.* into v_row;
+
+  if v_row.user_id is null then
+    raise exception 'Ayar satırı yazılamadı' using errcode = '42501';
+  end if;
+
+  v_result := jsonb_build_object('settings', to_jsonb(v_row));
+  update onboarding_ops
+     set op_key = complete_onboarding.op_key,
+         result = v_result,
+         completed_at = now()
+   where user_id = v_uid;
+  return v_result;
+end;
+$$;
+
+revoke all on function public.complete_onboarding(jsonb, uuid) from public, anon;
+grant execute on function public.complete_onboarding(jsonb, uuid) to authenticated;
+-- END complete_onboarding

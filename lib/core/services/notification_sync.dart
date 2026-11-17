@@ -7,6 +7,7 @@ import '../../features/settings/domain/user_settings.dart';
 import '../../features/settings/presentation/settings_providers.dart';
 import 'notification_plan.dart';
 import 'notification_service.dart';
+import 'supabase_providers.dart';
 
 export 'notification_plan.dart';
 
@@ -16,11 +17,18 @@ final notificationPermissionProvider = FutureProvider<bool>(
   (ref) => ref.watch(notificationServiceProvider).hasPermission(),
 );
 
-/// Eşitleme turlarının eklenti çağrılarını tek sıraya dizer.
-final _syncQueueProvider = Provider<_SyncQueue>((ref) => _SyncQueue());
+/// Eşitleme turlarının eklenti çağrılarını tek sıraya dizer ve oturum
+/// bitince süren turları geçersiz kılar.
+final notificationSyncQueueProvider =
+    Provider<NotificationSyncQueue>((ref) => NotificationSyncQueue());
 
-class _SyncQueue {
+class NotificationSyncQueue {
   Future<void> _tail = Future<void>.value();
+  int _generation = 0;
+
+  /// Oturum her bittiğinde artar. Bir tur başladığı nesli saklar; nesil
+  /// değiştiyse (çıkış ya da hesap değişimi) eklentiye hiç dokunmaz.
+  int get generation => _generation;
 
   /// [apply]'ı önceki turun eklenti çağrıları bittikten sonra çalıştırır;
   /// tur o ana dek bayatladıysa ([isCurrent] `false`) hiç çalıştırmaz.
@@ -32,7 +40,32 @@ class _SyncQueue {
     _tail = result.then<void>((_) {}, onError: (Object _) {});
     return result;
   }
+
+  /// Oturum bitti: veri sorgulamadan süren turları geçersiz kılar ve bekleyen
+  /// tüm bildirimleri aynı sıradan siler (önce kuyruğa girmiş eski tur bile
+  /// bu silmeden sonra yeniden planlayamaz). Tekrar çağrılması zararsızdır.
+  Future<void> endSession(NotificationService notifications) {
+    _generation++;
+    return run(
+      () => true,
+      () => notifications.resync(routines: const [], reminders: const []),
+    );
+  }
 }
+
+/// Oturum kapanınca ya da kullanıcı değişince bekleyen bildirimleri siler.
+/// Kök kapı (AuthGate) dinler; ana kabuk kapandıktan sonra da çalışır.
+final notificationSessionGuardProvider = Provider<void>((ref) {
+  final queue = ref.watch(notificationSyncQueueProvider);
+  final notifications = ref.watch(notificationServiceProvider);
+  ref.listen<String?>(
+    authSessionProvider.select((s) => s.valueOrNull?.user.id),
+    (previous, next) {
+      if (previous == null || previous == next) return;
+      queue.endSession(notifications).catchError((Object _) {});
+    },
+  );
+});
 
 /// Bekleyen bildirimleri ayarlar ve veritabanıyla eşitler.
 /// Oturum (kullanıcı) başına bir kez çalışır; ayar, görev ya da aylık iş
@@ -41,12 +74,16 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
   final notifications = ref.watch(notificationServiceProvider);
   final routinesRepository = ref.watch(routinesRepositoryProvider);
   final tasksRepository = ref.watch(tasksRepositoryProvider);
-  final queue = ref.watch(_syncQueueProvider);
+  final queue = ref.watch(notificationSyncQueueProvider);
 
   // Riverpod, sağlayıcı tazelenince süren turu durdurmaz. Bayatlayan tur
   // eklentiye dokunmaz; yoksa yenisinden sonra bitip eski veriyi geri planlar.
-  var current = true;
-  ref.onDispose(() => current = false);
+  // Oturum biterse ([NotificationSyncQueue.endSession]) nesil değişir ve tur
+  // yine eklentiye dokunmaz.
+  var alive = true;
+  ref.onDispose(() => alive = false);
+  final generation = queue.generation;
+  bool current() => alive && queue.generation == generation;
 
   UserSettings settings;
   try {
@@ -59,7 +96,7 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
   if (!settings.notificationsEnabled) {
     // Kapalıyken bekleyenlerin tamamı silinir; izin de sorulmaz.
     await queue.run(
-      () => current,
+      current,
       () => notifications.resync(routines: const [], reminders: const []),
     );
     return;
@@ -88,7 +125,7 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
     tasks: tasks,
   );
 
-  await queue.run(() => current, () async {
+  await queue.run(current, () async {
     await notifications.resync(
       routines: routineSchedulesOf(plan, routines),
       reminders: [

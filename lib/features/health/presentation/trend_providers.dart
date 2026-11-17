@@ -125,7 +125,11 @@ final _metricsWindowProvider =
     FutureProvider.family<List<DailyHealthMetric>, _Window>(
   (ref, window) => ref
       .watch(healthRepositoryProvider)
-      .fetchDailyMetrics(window.from, window.to),
+      .fetchDailyMetrics(
+        window.from,
+        window.to,
+        source: ref.watch(healthSourceProvider),
+      ),
 );
 
 final _nutritionWindowProvider =

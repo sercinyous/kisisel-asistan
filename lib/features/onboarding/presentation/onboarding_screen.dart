@@ -11,9 +11,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../health/domain/energy_balance.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../operations/presentation/operations_providers.dart';
-import '../../routines/data/routines_repository.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../settings/presentation/settings_providers.dart';
+import '../data/onboarding_op_key_store.dart';
+import '../data/onboarding_repository.dart';
 import '../data/onboarding_writer.dart';
 import '../domain/goal_suggestion.dart';
 import '../domain/onboarding_answers.dart';
@@ -89,7 +90,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   bool _saving = false;
   String? _error;
-  OnboardingWriter? _writer;
 
   late final List<TextEditingController> _tracked = [
     _name,
@@ -351,19 +351,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       _saving = true;
       _error = null;
     });
-    final writer = _writer ??= OnboardingWriter(
-      addWeight: (kg) => container.read(healthRepositoryProvider).addWeight(kg),
-      createRoutine: (routine) =>
-          container.read(routinesRepositoryProvider).create(routine),
-      saveSettings: (settings) async {
-        // Yeni tartı ve rutinler ana kabuk açılmadan önce görünsün.
-        invalidateHealthData(container);
-        notifyRoutineChange(container.invalidate);
-        return container.read(userSettingsProvider.notifier).save(settings);
-      },
+    final writer = OnboardingWriter(
+      repository: container.read(onboardingRepositoryProvider),
+      keys: container.read(onboardingOpKeyStoreProvider),
     );
     try {
-      await writer.complete(result);
+      final saved = await writer.complete(result);
+      // Yeni tartı ve rutinler ana kabuk açılmadan önce görünsün; sunucunun
+      // döndürdüğü ayar satırı (onboarded_at dolu) kapıyı açar.
+      invalidateHealthData(container);
+      notifyRoutineChange(container.invalidate);
+      container.read(userSettingsProvider.notifier).adopt(saved);
     } catch (_) {
       if (!mounted) return;
       setState(() {

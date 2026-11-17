@@ -5,7 +5,8 @@
 export type ReportKind = "daily" | "weekly";
 
 export type ParsedRequest =
-  | { ok: true; kind: ReportKind; date: string | null }
+  | { ok: true; kind: ReportKind; date: string | null; previous: boolean }
+  | { ok: true; kind: "refresh"; date: null; previous: false }
   | { ok: false; error: string };
 
 export type ResolvedTarget =
@@ -38,24 +39,39 @@ function isRealDate(value: string): boolean {
     date.getUTCDate() === day;
 }
 
-/** İstek gövdesini doğrular: `{ kind: "daily"|"weekly", date?: "YYYY-MM-DD" }`. */
+/**
+ * İstek gövdesini doğrular:
+ * `{ kind: "daily"|"weekly", date?: "YYYY-MM-DD", previous?: true }` ya da
+ * `{ kind: "refresh" }` (dirty işaretli raporları yenile; yalnızca zamanlayıcı).
+ * `previous: true` (yalnızca günlük, tarihsiz): kullanıcının dünü, yani biten gün.
+ */
 export function parseRequest(body: unknown): ParsedRequest {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return { ok: false, error: 'kind "daily" ya da "weekly" olmalı.' };
   }
   const record = body as Record<string, unknown>;
   const kind = record.kind;
+  if (kind === "refresh") {
+    return { ok: true, kind, date: null, previous: false };
+  }
   if (kind !== "daily" && kind !== "weekly") {
     return { ok: false, error: 'kind "daily" ya da "weekly" olmalı.' };
   }
+  const previous = record.previous;
+  if (previous !== undefined && previous !== null && typeof previous !== "boolean") {
+    return { ok: false, error: "previous true ya da false olmalı." };
+  }
   const date = record.date;
+  if (previous === true && (kind !== "daily" || (date !== undefined && date !== null))) {
+    return { ok: false, error: "previous yalnızca tarihsiz günlük raporda kullanılır." };
+  }
   if (date === undefined || date === null) {
-    return { ok: true, kind, date: null };
+    return { ok: true, kind, date: null, previous: previous === true };
   }
   if (typeof date !== "string" || !isRealDate(date)) {
     return { ok: false, error: "date YYYY-MM-DD biçiminde geçerli bir gün olmalı." };
   }
-  return { ok: true, kind, date };
+  return { ok: true, kind, date, previous: false };
 }
 
 function formatYmd(date: Date): string {
@@ -107,7 +123,8 @@ export function lastFinishedWeekStart(today: string): string {
 
 /**
  * Raporun hedef gününü (günlük) ya da hafta başını (haftalık) belirler.
- * Tarih verilmezse: günlük = kullanıcının bugünü, haftalık = biten son hafta.
+ * Tarih verilmezse: günlük = kullanıcının bugünü ([previous] ise dünü, yani
+ * tamamen bitmiş gün), haftalık = biten son hafta.
  * Gelecek reddedilir; içinde bulunulan hafta üretilebilir (kısmi rapor).
  */
 export function resolveTarget(
@@ -115,10 +132,11 @@ export function resolveTarget(
   date: string | null,
   timeZone: string,
   now: Date,
+  previous = false,
 ): ResolvedTarget {
   const today = todayInTimeZone(now, timeZone);
   const target = kind === "daily"
-    ? (date ?? today)
+    ? (date ?? (previous ? addDays(today, -1) : today))
     : (date === null ? lastFinishedWeekStart(today) : weekStartOf(date));
   // "YYYY-MM-DD" sözlük sırası takvim sırasıyla aynıdır.
   if (target > today) {

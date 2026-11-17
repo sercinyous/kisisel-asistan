@@ -14,7 +14,7 @@ function geminiOk(text = "Güzel bir gün.") {
 }
 
 function setup(overrides = {}) {
-  const calls = { metrics: [], save: [], fetch: [], log: [], quota: [] };
+  const calls = { metrics: [], save: [], fetch: [], log: [], quota: [], claim: [], refresh: [], saveRefreshed: [] };
   const store = {
     userIdFromJwt: async (token) => (token === "gecerli-jwt" ? "user-1" : null),
     listUsers: async () => [
@@ -32,6 +32,17 @@ function setup(overrides = {}) {
     },
     save: async (kind, userId, date, metrics, summary, status) => {
       calls.save.push({ kind, userId, date, metrics, summary, status });
+    },
+    claimDirty: async (limit) => {
+      calls.claim.push(limit);
+      return [];
+    },
+    refreshMetrics: async (kind, userId, date) => {
+      calls.refresh.push({ kind, userId, date });
+      return { metrics: METRICS, changed: true };
+    },
+    saveRefreshed: async (kind, userId, date, metrics, summary) => {
+      calls.saveRefreshed.push({ kind, userId, date, metrics, summary });
     },
     ...overrides.store,
   };
@@ -347,4 +358,119 @@ test("kullanıcı yoksa 200 ve users 0", async () => {
   assert.deepEqual(await response.json(), {
     ok: true, kind: "daily", date: null, users: 0, failed: 0, ai_failed: 0,
   });
+});
+
+// ---------------------------------------------------------------------
+// Gün sonrası finalizasyon ve geç veriyle yenileme (dirty)
+// ---------------------------------------------------------------------
+const CRON = { "x-cron-secret": "cron-gizli" };
+const DIRTY = [
+  { kind: "daily", userId: "user-1", date: "2026-11-15" },
+  { kind: "weekly", userId: "user-2", date: "2026-11-09" },
+];
+
+test("cron: previous ile günlük rapor biten gün (kullanıcının dünü) için", async () => {
+  // 21:15 UTC = 00:15 İstanbul (17 Kasım) → 16 Kasım raporu.
+  const { handler, calls } = setup({ deps: { now: () => new Date("2026-11-16T21:15:00Z") } });
+  const response = await handler(post({ kind: "daily", previous: true }, CRON));
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.save.map((c) => c.date), ["2026-11-16", "2026-11-16"]);
+  assert.equal(calls.quota.length, 0);
+});
+
+test("refresh: yalnızca zamanlayıcı; JWT 403, işaretli rapor alınmaz", async () => {
+  const { handler, calls } = setup();
+  const response = await handler(post({ kind: "refresh" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 403);
+  assert.equal(calls.claim.length, 0);
+  assert.equal(calls.quota.length, 0);
+});
+
+test("refresh: sayılar değişmediyse AI çağrılmaz, kota düşülmez", async () => {
+  const { handler, calls } = setup({
+    store: {
+      claimDirty: async () => DIRTY,
+      refreshMetrics: async () => ({ metrics: METRICS, changed: false }),
+    },
+  });
+  const response = await handler(post({ kind: "refresh" }, CRON));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.reports, 2);
+  assert.equal(body.unchanged, 2);
+  assert.equal(body.ai, 0);
+  assert.equal(calls.fetch.length, 0);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.saveRefreshed.length, 0);
+});
+
+test("refresh: sayılar değiştiyse 'report_refresh' kotasıyla yeni yorum yazılır", async () => {
+  const { handler, calls } = setup({ store: { claimDirty: async (limit) => {
+    assert.equal(limit, 40);
+    return DIRTY;
+  } } });
+  const response = await handler(post({ kind: "refresh" }, CRON));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.ai, 2);
+  assert.equal(calls.fetch.length, 2);
+  assert.deepEqual(calls.quota.map((q) => [q.userId, q.kind, q.limit]), [
+    ["user-1", "report_refresh", 6],
+    ["user-2", "report_refresh", 6],
+  ]);
+  assert.deepEqual(
+    calls.saveRefreshed.map((c) => [c.kind, c.date, c.summary]).sort(),
+    [["daily", "2026-11-15", "Güzel bir gün."], ["weekly", "2026-11-09", "Güzel bir gün."]],
+  );
+  // Normal kayıt yolu (save) ve rapor-yeniden-üret kotası kullanılmaz.
+  assert.equal(calls.save.length, 0);
+});
+
+test("refresh: kota dolunca AI çağrılmaz; sayılar yorumsuz (null) kaydedilir ve ertelenir", async () => {
+  const { handler, calls } = setup({
+    store: { claimDirty: async () => DIRTY, consumeQuota: async () => false },
+    deps: { refreshDailyLimit: 2 },
+  });
+  const body = await (await handler(post({ kind: "refresh" }, CRON))).json();
+  assert.equal(body.deferred, 2);
+  assert.equal(calls.fetch.length, 0);
+  assert.deepEqual(calls.saveRefreshed.map((c) => c.summary), [null, null]);
+});
+
+test("refresh: Gemini başarısızsa eski yorum korunur (summary null), ertelenir", async () => {
+  const { handler, calls } = setup({
+    store: { claimDirty: async () => [DIRTY[0]] },
+    fetch: async () => new Response("hata", { status: 503 }),
+  });
+  const body = await (await handler(post({ kind: "refresh" }, CRON))).json();
+  assert.equal(body.deferred, 1);
+  assert.deepEqual(calls.saveRefreshed.map((c) => c.summary), [null]);
+});
+
+test("refresh: bir raporun hatası diğerini durdurmaz; işaretli yoksa 200", async () => {
+  const { handler, calls } = setup({
+    store: {
+      claimDirty: async () => DIRTY,
+      refreshMetrics: async (kind) => {
+        if (kind === "daily") throw new Error("db");
+        return { metrics: METRICS, changed: true };
+      },
+    },
+  });
+  const response = await handler(post({ kind: "refresh" }, CRON));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.failed, 1);
+  assert.equal(body.ai, 1);
+  assert.equal(calls.saveRefreshed.length, 1);
+
+  const empty = setup();
+  const r2 = await empty.handler(post({ kind: "refresh" }, CRON));
+  assert.equal(r2.status, 200);
+  assert.equal((await r2.json()).reports, 0);
+});
+
+test("refresh: işaretli raporlar alınamazsa 500", async () => {
+  const { handler } = setup({ store: { claimDirty: async () => { throw new Error("db"); } } });
+  assert.equal((await handler(post({ kind: "refresh" }, CRON))).status, 500);
 });

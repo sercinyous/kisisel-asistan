@@ -22,6 +22,10 @@ class UserSettingsNotifier extends AsyncNotifier<UserSettings> {
     return saved;
   }
 
+  /// Başka bir sunucu çağrısının (ör. `complete_onboarding`) döndürdüğü
+  /// satırı yeniden okumadan yayınlar.
+  void adopt(UserSettings saved) => state = AsyncData(saved);
+
   /// Yalnızca görev kategorilerini yazar; diğer alanlar sunucudaki son
   /// değerden alınır.
   Future<UserSettings> saveTaskCategories(List<TaskCategory> categories) async {

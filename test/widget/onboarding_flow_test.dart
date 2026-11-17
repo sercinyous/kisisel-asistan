@@ -6,6 +6,8 @@ import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/supabase_providers.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
+import 'package:kisisel_asistan/features/onboarding/data/onboarding_op_key_store.dart';
+import 'package:kisisel_asistan/features/onboarding/data/onboarding_repository.dart';
 import 'package:kisisel_asistan/features/onboarding/presentation/onboarding_gate.dart';
 import 'package:kisisel_asistan/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
@@ -22,6 +24,15 @@ class _Harness {
   final notifications = FakeNotificationService();
   final healthService =
       FakeHealthService(const HealthSnapshot(status: HealthStatus.ok));
+  late final onboarding = FakeOnboardingRepository(
+    settings: settings,
+    routines: routines,
+    health: health,
+  );
+  final keys = OnboardingOpKeyStore(
+    scope: 'test',
+    open: () async => throw StateError('depo yok'),
+  );
 
   List<Override> get overrides => [
         settingsRepositoryProvider.overrideWithValue(settings),
@@ -30,6 +41,8 @@ class _Harness {
         notificationServiceProvider.overrideWithValue(notifications),
         healthServiceProvider.overrideWithValue(healthService),
         authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
+        onboardingRepositoryProvider.overrideWithValue(onboarding),
+        onboardingOpKeyStoreProvider.overrideWithValue(keys),
       ];
 }
 
@@ -347,7 +360,8 @@ void main() {
       expect(h.settings.saved.single.isOnboarded, isTrue);
     });
 
-    testWidgets('kayıt hatasında kapı açılmaz; yeniden denemede tartı çiftlenmez',
+    testWidgets('kayıt hatasında kapı açılmaz ve hiçbir şey yazılmaz; yeniden '
+        'denemede aynı işlem anahtarı kullanılır, tartı çiftlenmez',
         (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
@@ -361,11 +375,13 @@ void main() {
       expect(find.text('ana kabuk'), findsNothing);
       expect(find.byKey(const Key('onboarding-error')), findsOneWidget);
       expect(h.settings.saved, isEmpty);
-      expect(h.health.weights, hasLength(1));
+      expect(h.health.weights, isEmpty, reason: 'tek transaction geri alındı');
 
       h.settings.saveError = null;
       await tap(tester, 'onboarding-next');
       expect(find.text('ana kabuk'), findsOneWidget);
+      expect(h.onboarding.calls, hasLength(2));
+      expect(h.onboarding.calls.toSet(), hasLength(1));
       expect(h.health.weights, hasLength(1), reason: 'çift tartı olmamalı');
       expect(h.settings.saved, hasLength(1));
     });

@@ -32,8 +32,11 @@ abstract interface class GoogleIdentityClient {
 
 /// `google_sign_in` 7.x ile gerçek istemci. Eklentiyi kendisi başlatmaz;
 /// Google Health ile paylaşılan [GoogleSignInHost] başlatır (tek `initialize`
-/// çağrısı, `clientId` + `serverClientId`). Çıkışta eklentiye dokunulmaz: Google
-/// Health bağlantısı uygulamadan çıkışla kopmaz.
+/// çağrısı, `clientId` + `serverClientId`). Çıkışta eklentiye dokunulmaz;
+/// Google Health bağlantısı ise uygulama kullanıcısına aittir
+/// (`GoogleConnectionController`): başka kullanıcı girince okunmaz, yeni
+/// kullanıcı açıkça bağlanana kadar erişim anahtarı verilmez ve anahtarın
+/// hesabı kayıtlı bağlantının hesabıyla eşleşmezse kullanılmaz.
 class GoogleSignInIdentityClient implements GoogleIdentityClient {
   GoogleSignInIdentityClient(this._host);
 

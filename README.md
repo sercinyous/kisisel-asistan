@@ -279,7 +279,8 @@ Günlük ve haftalık raporlar sunucuda, uygulama kapalıyken de üretilir:
 
 ```
 pg_cron ──HTTP──▶ Edge Function generate-reports ──▶ Gemini
-  her gün 23:45 İstanbul          → o günün günlük raporu   (daily_reports)
+  her gün 00:15 İstanbul          → biten günün günlük raporu (daily_reports)
+  her saat :20                    → geç veriyle kirlenen raporları yeniler
   her Pazartesi 07:00 İstanbul    → biten haftanın raporu   (weekly_reports)
 Uygulama "Raporu yeniden oluştur" ──▶ aynı fonksiyon (kullanıcı oturumuyla)
 ```

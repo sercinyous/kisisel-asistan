@@ -1,39 +1,24 @@
-import '../../routines/domain/routine.dart';
 import '../../settings/domain/user_settings.dart';
 import '../domain/onboarding_result.dart';
+import 'onboarding_op_key_store.dart';
+import 'onboarding_repository.dart';
 
-/// İlk kurulum sonucunu yazar: önce tartı kaydı, sonra seçilen rutinler,
-/// EN SON tek `user_settings` kaydı (`onboarded_at` dolu). Ayar satırı yazılana
-/// kadar kullanıcı kurulumu bitirmiş sayılmaz; önceki adımlar bir kez
-/// başarılı olduktan sonra yeniden denemede tekrarlanmaz (çift tartı ya da
-/// çift rutin olmasın).
+/// İlk kurulum sonucunu tek sunucu çağrısıyla yazar (tartı, rutinler ve
+/// `onboarded_at` dolu ayar satırı aynı transaction'da). İşlem anahtarı
+/// başarıya dek cihazda saklanır: yarıda kalan deneme, uygulama yeniden
+/// açılsa ya da sunucu yazıp yanıt kaybolsa bile çift kayıt üretmez.
 class OnboardingWriter {
-  OnboardingWriter({
-    required this.addWeight,
-    required this.createRoutine,
-    required this.saveSettings,
-  });
+  OnboardingWriter({required this.repository, required this.keys});
 
-  final Future<void> Function(double weightKg) addWeight;
-  final Future<void> Function(Routine routine) createRoutine;
-  final Future<UserSettings> Function(UserSettings settings) saveSettings;
-
-  bool _weightSaved = false;
-  final Set<String> _savedRoutineTitles = {};
+  final OnboardingRepository repository;
+  final OnboardingOpKeyStore keys;
 
   /// Sonucu yazar ve kaydedilen ayar satırını döndürür. Hata çağırana iletilir;
-  /// aynı [result] ile yeniden çağrılınca kalan adımlardan sürer.
+  /// yeniden çağrı aynı anahtarı kullanır.
   Future<UserSettings> complete(OnboardingResult result) async {
-    if (!_weightSaved) {
-      await addWeight(result.weightKg);
-      _weightSaved = true;
-    }
-    for (final routine in result.routines) {
-      // Başlık şablon içinde tekildir; yeniden denemede kaydedilen atlanır.
-      if (_savedRoutineTitles.contains(routine.title)) continue;
-      await createRoutine(routine);
-      _savedRoutineTitles.add(routine.title);
-    }
-    return saveSettings(result.settings);
+    final opKey = await keys.obtain();
+    final saved = await repository.complete(onboardingPayload(result), opKey);
+    await keys.clear();
+    return saved;
   }
 }

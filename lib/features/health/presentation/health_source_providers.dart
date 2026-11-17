@@ -6,19 +6,40 @@ import '../../../core/services/google_auth.dart';
 import '../../../core/services/google_health_api.dart';
 import '../../../core/services/health_service.dart';
 import '../../../core/services/health_source.dart';
+import '../../../core/services/supabase_providers.dart';
 import '../data/google_health_source.dart';
+import '../data/health_repository.dart';
 
 export '../../../core/services/google_auth.dart'
     show GoogleAuthException, GoogleAuthErrorKind, googleHealthScopes;
 export '../../../core/services/health_source.dart';
 
-/// Google bağlantısının cihazda saklanan izleri (Supabase'e yazılmaz).
+/// Sağlık okuma/yazmalarının sahibi olan Supabase kullanıcısı. Oturum akışı
+/// henüz ilk değerini vermediyse istemcideki mevcut kullanıcı; Supabase
+/// başlatılmamışsa (testler) `null`.
+final healthOwnerIdProvider = Provider<String?>((ref) {
+  try {
+    final session = ref.watch(authSessionProvider);
+    if (session.hasValue) return session.value?.user.id;
+    return ref.watch(supabaseClientProvider).auth.currentUser?.id;
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Google bağlantısının cihazda saklanan izleri (Supabase'e yazılmaz). Her
+/// uygulama kullanıcısı için ayrı saklanır ([ownerId]); başka kullanıcının
+/// bağlantısı okunmaz.
 class GoogleLinkPrefs {
   const GoogleLinkPrefs({
+    this.ownerId,
     this.email,
     this.lastSyncAt,
     this.exerciseWatermark,
   });
+
+  /// Bağlantının sahibi olan Supabase kullanıcısı.
+  final String? ownerId;
 
   /// Son bağlanan hesap; doluysa oturum yenilenemediğinde "yeniden bağlan"
   /// gösterilir, boşsa "bağlan".
@@ -31,8 +52,10 @@ class GoogleLinkPrefs {
   final DateTime? exerciseWatermark;
 }
 
-/// [GoogleLinkPrefs]'i `shared_preferences` ile saklar. Her okuma/yazma
-/// zaman aşımlı ve hata yutulur (bozuk depo uygulamayı durdurmaz).
+/// [GoogleLinkPrefs]'i `shared_preferences` ile, Supabase kullanıcı kimliğine
+/// göre ayrı anahtarlarda (`<anahtar>:<kullanıcı>`) saklar. Her okuma/yazma
+/// zaman aşımlı ve hata yutulur (bozuk depo uygulamayı durdurmaz). Kullanıcısız
+/// (`userId == null`) anahtar yalnızca testlerin ve oturumsuz durumun yeridir.
 class GoogleLinkStore {
   const GoogleLinkStore({this.open = SharedPreferences.getInstance});
 
@@ -43,32 +66,39 @@ class GoogleLinkStore {
 
   final Future<SharedPreferences> Function() open;
 
-  Future<GoogleLinkPrefs> load() async {
+  /// [userId] kullanıcısına ait anahtar.
+  static String keyFor(String key, String? userId) =>
+      userId == null ? key : '$key:$userId';
+
+  Future<GoogleLinkPrefs> load({String? userId}) async {
     try {
       final prefs = await open().timeout(timeout);
-      final email = prefs.getString(emailKey);
+      final email = prefs.getString(keyFor(emailKey, userId));
       return GoogleLinkPrefs(
+        ownerId: userId,
         email: email == null || email.isEmpty ? null : email,
-        lastSyncAt: _time(prefs.getString(lastSyncKey)),
-        exerciseWatermark: _time(prefs.getString(watermarkKey)),
+        lastSyncAt: _time(prefs.getString(keyFor(lastSyncKey, userId))),
+        exerciseWatermark:
+            _time(prefs.getString(keyFor(watermarkKey, userId))),
       );
     } catch (_) {
-      return const GoogleLinkPrefs();
+      return GoogleLinkPrefs(ownerId: userId);
     }
   }
 
-  Future<void> saveEmail(String? email) => _write(emailKey, email);
+  Future<void> saveEmail(String? email, {String? userId}) =>
+      _write(keyFor(emailKey, userId), email);
 
-  Future<void> saveLastSync(DateTime? at) =>
-      _write(lastSyncKey, at?.toUtc().toIso8601String());
+  Future<void> saveLastSync(DateTime? at, {String? userId}) =>
+      _write(keyFor(lastSyncKey, userId), at?.toUtc().toIso8601String());
 
-  Future<void> saveExerciseWatermark(DateTime? at) =>
-      _write(watermarkKey, at?.toUtc().toIso8601String());
+  Future<void> saveExerciseWatermark(DateTime? at, {String? userId}) =>
+      _write(keyFor(watermarkKey, userId), at?.toUtc().toIso8601String());
 
-  Future<void> clear() async {
-    await saveEmail(null);
-    await saveLastSync(null);
-    await saveExerciseWatermark(null);
+  Future<void> clear({String? userId}) async {
+    await saveEmail(null, userId: userId);
+    await saveLastSync(null, userId: userId);
+    await saveExerciseWatermark(null, userId: userId);
   }
 
   Future<void> _write(String key, String? value) async {
@@ -132,23 +162,59 @@ class GoogleLinkState {
       status == GoogleLinkStatus.reconnect;
 }
 
+/// Uygulama kullanıcısı değişince bağlantının yeniden kurulması gerektiğini
+/// anlatan metin.
+const String googleOwnerChangedMessage =
+    'Google Health bağlantısı başka bir kullanıcıya ait. Bu hesap için '
+    'Google\'a yeniden bağlan.';
+
 /// Google hesabı bağlantısı: giriş, sessiz yeniden yetkilendirme, durum ve
 /// cihazdaki izler. Google Health kaynağı erişim anahtarını buradan alır ve
 /// okuma sonucunu buraya bildirir ([GoogleHealthLink]).
+///
+/// Bağlantı Supabase kullanıcısına aittir: izler kullanıcıya göre saklanır,
+/// kullanıcı değişince okuma durur ve yeni kullanıcı açıkça bağlanana kadar
+/// erişim anahtarı verilmez (Google eklentisinin oturumu önceki kullanıcının
+/// hesabı olabilir). Alınan anahtarın hesabı kayıtlı bağlantının hesabıyla
+/// aynı değilse de anahtar verilmez.
 class GoogleConnectionController extends Notifier<GoogleLinkState>
     implements GoogleHealthLink {
   DateTime? _watermark;
+  String? _ownerId;
+  bool _ownerChanged = false;
+  int _generation = 0;
 
   GoogleAuthClient get _auth => ref.read(googleAuthClientProvider);
   GoogleLinkStore get _store => ref.read(googleLinkStoreProvider);
 
+  /// Bağlantının her değişiminde (kullanıcı, bağlan, kes) artar; süren bir
+  /// eşitleme kendi başladığı nesille yazmaya devam edip etmeyeceğini buna
+  /// bakarak anlar.
+  int get generation => _generation;
+
+  /// Bağlantının sahibi olan Supabase kullanıcısı.
+  String? get ownerId => _ownerId;
+
   @override
   GoogleLinkState build() {
+    _generation++;
+    final owner = ref.watch(healthOwnerIdProvider);
     final prefs = ref.watch(initialGoogleLinkProvider);
-    _watermark = prefs.exerciseWatermark;
+    _ownerId = owner;
+    _ownerChanged = false;
+    _watermark = null;
     if (!ref.watch(googleConfiguredProvider)) {
       return const GoogleLinkState(status: GoogleLinkStatus.notConfigured);
     }
+    if (prefs.ownerId != owner) {
+      // Açılıştaki izler başka kullanıcıya ait: okunmaz. Bu kullanıcının
+      // kendi kaydı varsa da eklentideki Google oturumu ona ait olmayabilir;
+      // açıkça yeniden bağlanması istenir.
+      _ownerChanged = true;
+      _loadOwnerLink(owner, _generation);
+      return const GoogleLinkState(status: GoogleLinkStatus.disconnected);
+    }
+    _watermark = prefs.exerciseWatermark;
     // İlk okuma oturumu doğrulayana kadar kayıtlı hesap bağlı sayılır.
     return GoogleLinkState(
       status: prefs.email == null
@@ -156,6 +222,17 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
           : GoogleLinkStatus.connected,
       email: prefs.email,
       lastSyncAt: prefs.lastSyncAt,
+    );
+  }
+
+  Future<void> _loadOwnerLink(String? owner, int generation) async {
+    if (owner == null) return;
+    final prefs = await _store.load(userId: owner);
+    if (generation != _generation || prefs.email == null) return;
+    state = GoogleLinkState(
+      status: GoogleLinkStatus.reconnect,
+      email: prefs.email,
+      message: googleOwnerChangedMessage,
     );
   }
 
@@ -170,9 +247,18 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
     if (!isConfigured) {
       throw const GoogleHealthException(GoogleHealthErrorKind.notConfigured);
     }
+    if (_ownerChanged) {
+      throw state.email == null
+          ? const GoogleHealthException(GoogleHealthErrorKind.notConnected)
+          : const GoogleHealthException(
+              GoogleHealthErrorKind.reconnect,
+              message: googleOwnerChangedMessage,
+            );
+    }
+    final generation = _generation;
+    final GoogleToken token;
     try {
-      final token = await _auth.silentToken(googleHealthScopes);
-      return token.accessToken;
+      token = await _auth.silentToken(googleHealthScopes);
     } on GoogleAuthException catch (error) {
       throw switch (error.kind) {
         GoogleAuthErrorKind.noSession => state.email == null
@@ -200,7 +286,31 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
           ),
       };
     }
+    // Anahtar beklenirken kullanıcı ya da bağlantı değiştiyse kullanılmaz.
+    if (generation != _generation || _ownerChanged) {
+      throw const GoogleHealthException(
+        GoogleHealthErrorKind.reconnect,
+        message: googleOwnerChangedMessage,
+      );
+    }
+    final linked = state.email;
+    // Health yalnızca bu kullanıcı Ayarlar'dan bağlandıysa okunur; eklentinin
+    // sessizce bulduğu hesap (ör. Google ile giriş) bağlantı sayılmaz.
+    if (linked == null) {
+      throw const GoogleHealthException(GoogleHealthErrorKind.notConnected);
+    }
+    if (!_sameEmail(token.account.email, linked)) {
+      throw const GoogleHealthException(
+        GoogleHealthErrorKind.reconnect,
+        message: 'Google oturumu bağlı hesaptan farklı. Google\'a yeniden '
+            'bağlan.',
+      );
+    }
+    return token.accessToken;
   }
+
+  static bool _sameEmail(String a, String b) =>
+      a.trim().toLowerCase() == b.trim().toLowerCase();
 
   /// Google giriş penceresini açar ve okuma izinlerini ister. Yalnızca
   /// kullanıcı dokunuşuyla çağrılır. Başarısızlıkta durum eski haline döner
@@ -211,6 +321,8 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
       throw const GoogleAuthException(GoogleAuthErrorKind.configuration);
     }
     if (before.status == GoogleLinkStatus.connecting) return;
+    final owner = _ownerId;
+    final generation = ++_generation;
     state = GoogleLinkState(
       status: GoogleLinkStatus.connecting,
       email: before.email,
@@ -218,43 +330,56 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
     );
     try {
       final account = await _auth.connect(googleHealthScopes);
-      final sameAccount = account.email == before.email;
+      // Pencere açıkken uygulama kullanıcısı değiştiyse bağlantı kurulmaz.
+      if (generation != _generation || owner != _ownerId) {
+        throw const GoogleAuthException(GoogleAuthErrorKind.canceled);
+      }
+      final sameAccount = before.email != null &&
+          _sameEmail(account.email, before.email!) &&
+          !_ownerChanged;
+      _ownerChanged = false;
       state = GoogleLinkState(
         status: GoogleLinkStatus.connected,
         email: account.email,
         lastSyncAt: sameAccount ? before.lastSyncAt : null,
       );
-      await _store.saveEmail(account.email);
+      await _store.saveEmail(account.email, userId: owner);
       if (!sameAccount) {
         // Başka hesap: önceki hesabın eşitleme izleri geçersizdir.
         _watermark = null;
-        await _store.saveLastSync(null);
-        await _store.saveExerciseWatermark(null);
+        await _store.saveLastSync(null, userId: owner);
+        await _store.saveExerciseWatermark(null, userId: owner);
       }
     } on GoogleAuthException catch (error) {
-      state = error.kind == GoogleAuthErrorKind.scopesMissing
-          ? GoogleLinkState(
-              status: GoogleLinkStatus.reconnect,
-              email: before.email,
-              lastSyncAt: before.lastSyncAt,
-              message: error.message,
-            )
-          : before;
+      if (generation == _generation) {
+        state = error.kind == GoogleAuthErrorKind.scopesMissing
+            ? GoogleLinkState(
+                status: GoogleLinkStatus.reconnect,
+                email: before.email,
+                lastSyncAt: before.lastSyncAt,
+                message: error.message,
+              )
+            : before;
+      }
       rethrow;
     } catch (_) {
-      state = before;
+      if (generation == _generation) state = before;
       throw const GoogleAuthException(GoogleAuthErrorKind.unknown);
     }
   }
 
-  /// İzni geri alır, oturumu kapatır ve cihazdaki izleri siler. Daha önce
-  /// yazılan günlük değerler ve içe aktarılan antrenmanlar silinmez.
+  /// İzni geri alır, oturumu kapatır ve bu kullanıcının cihazdaki izlerini
+  /// siler. Daha önce yazılan günlük değerler ve içe aktarılan antrenmanlar
+  /// silinmez.
   Future<void> disconnect() async {
     if (!isConfigured) return;
+    final owner = _ownerId;
     await _auth.disconnect();
+    _generation++;
     _watermark = null;
+    _ownerChanged = false;
     state = const GoogleLinkState(status: GoogleLinkStatus.disconnected);
-    await _store.clear();
+    await _store.clear(userId: owner);
   }
 
   @override
@@ -284,22 +409,72 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
 
   @override
   void reportSynced(DateTime at) {
-    if (!state.isLinked) return;
+    if (!state.isLinked || _ownerChanged) return;
     state = GoogleLinkState(
       status: GoogleLinkStatus.connected,
       email: state.email,
       lastSyncAt: at,
     );
-    _store.saveLastSync(at).ignore();
+    _store.saveLastSync(at, userId: _ownerId).ignore();
   }
 
   @override
-  DateTime? get exerciseWatermark => _watermark;
+  DateTime? get exerciseWatermark => _ownerChanged ? null : _watermark;
 
   @override
   Future<void> saveExerciseWatermark(DateTime value) async {
+    if (_ownerChanged) return;
     _watermark = value;
-    await _store.saveExerciseWatermark(value);
+    await _store.saveExerciseWatermark(value, userId: _ownerId);
+  }
+}
+
+/// Bir sağlık eşitlemesinin başladığı an: sahibi olan kullanıcı, kaynak ve
+/// Google bağlantı nesli. Her `await` sonrasında [isValid] denetlenir;
+/// kullanıcı, kaynak ya da Google bağlantısı değiştiyse (ya da kapsayıcı
+/// kapandıysa) okunan değer yazılmaz. Yazmalar [ownerId] ile yapılır.
+class HealthWriteGuard {
+  HealthWriteGuard._(
+    this._read,
+    this.repository,
+    this.ownerId,
+    this.source,
+    this._googleGeneration,
+  );
+
+  /// Sahip yoksa (oturum kapalı) `null`.
+  static HealthWriteGuard? capture(
+    T Function<T>(ProviderListenable<T> provider) read,
+  ) {
+    final repository = read(healthRepositoryProvider);
+    final owner = repository.currentUserId;
+    if (owner == null) return null;
+    return HealthWriteGuard._(
+      read,
+      repository,
+      owner,
+      read(healthSourceProvider),
+      read(googleConnectionProvider.notifier).generation,
+    );
+  }
+
+  final T Function<T>(ProviderListenable<T> provider) _read;
+  final HealthRepository repository;
+  final String ownerId;
+  final HealthSourceKind source;
+  final int _googleGeneration;
+
+  bool get isValid {
+    try {
+      return repository.currentUserId == ownerId &&
+          identical(_read(healthRepositoryProvider), repository) &&
+          _read(healthSourceProvider) == source &&
+          _read(googleConnectionProvider.notifier).generation ==
+              _googleGeneration;
+    } catch (_) {
+      // Kapsayıcı ya da sağlayıcı kapanmış (çıkış, test sonu).
+      return false;
+    }
   }
 }
 
