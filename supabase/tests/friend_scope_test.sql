@@ -106,6 +106,43 @@ begin
   rep := public.report_period_metrics(old_u, today, today, false);
   perform tf.eq('rapor (Apple seçili, yalnız Google satırı): adım 0', rep -> 'health' -> 'steps', '0');
 
+  -- Hedef gün sayısı da seçili kaynağı okur: Apple verisi (9000 adım, hedef
+  -- 8000), Google seçili ve Google verisi yok → 0 gün.
+  update public.daily_health_metrics set steps = 9000, source = null
+    where user_id = old_u and metric_date = today;
+  update public.user_settings set daily_steps = 8000, health_source = 'appleHealth'
+    where user_id = old_u;
+  g := tf.run('authenticated', friend, format(
+    $q$select to_jsonb(goal_days) from public.friend_goal_summary(%L, %L) where metric = 'steps'$q$,
+    old_u, wk));
+  perform tf.eq('hedef günü (Apple seçili): 1', g, '1');
+  update public.user_settings set health_source = 'googleHealth' where user_id = old_u;
+  g := tf.run('authenticated', friend, format(
+    $q$select to_jsonb(goal_days) from public.friend_goal_summary(%L, %L) where metric = 'steps'$q$,
+    old_u, wk));
+  perform tf.eq('hedef günü (Google seçili, verisi yok): 0', g, '0');
+
+  -- Kaynak değişince mevcut raporlar dirty olur.
+  perform public.save_daily_report(old_u, today - 3,
+    public.report_daily_metrics(old_u, today - 3), 'eski', 'ok');
+  perform public.save_daily_report(old_u, today,
+    public.report_daily_metrics(old_u, today), 'bugün', 'ok');
+  perform public.save_weekly_report(old_u, wk, public.report_weekly_metrics(old_u, wk), 'hafta', 'ok');
+  update public.daily_reports set dirty = false where user_id = old_u;
+  update public.weekly_reports set dirty = false where user_id = old_u;
+  update public.user_settings set timezone = 'Europe/Istanbul' where user_id = old_u;
+  perform tf.ok('ilgisiz ayar değişimi raporları kirletmez',
+    not exists (select 1 from public.daily_reports where user_id = old_u and dirty));
+  update public.user_settings set health_source = 'appleHealth' where user_id = old_u;
+  perform tf.ok('kaynak değişince gün raporları dirty',
+    (select bool_and(dirty) and count(*) = 2 from public.daily_reports where user_id = old_u));
+  perform tf.ok('kaynak değişince hafta raporu dirty',
+    (select bool_and(dirty) from public.weekly_reports where user_id = old_u));
+  update public.daily_reports set dirty = false where user_id = old_u;
+  update public.user_settings set health_source = null where user_id = old_u;
+  perform tf.ok('null ↔ appleHealth aynı kaynak: dirty olmaz',
+    not exists (select 1 from public.daily_reports where user_id = old_u and dirty));
+
   -- Geçersiz kaynak reddedilir.
   begin
     update public.user_settings set health_source = 'fitbit' where user_id = old_u;

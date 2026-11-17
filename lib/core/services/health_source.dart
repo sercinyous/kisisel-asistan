@@ -245,14 +245,15 @@ class AppleHealthConsentController extends Notifier<Map<String, bool>> {
   }
 
   /// Yalnızca kullanıcı dokunuşuyla çağrılır.
+  /// Önce depoya yazılır (yazılamazsa onay bu oturumda yine geçerlidir).
   Future<void> grant(String userId) async {
-    state = {...state, userId: true};
     await _store.save(userId, granted: true);
+    state = {...state, userId: true};
   }
 
   Future<void> revoke(String userId) async {
-    state = {...state, userId: false};
     await _store.save(userId, granted: false);
+    state = {...state, userId: false};
   }
 }
 
