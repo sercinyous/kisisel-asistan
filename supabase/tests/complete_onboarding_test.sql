@@ -24,7 +24,7 @@ declare
     'weight_kg', 80.5,
     'routines', jsonb_build_array(
       jsonb_build_object('title', 'Yürüyüş yap', 'scope', 'Kişisel',
-        'category', 'saglik', 'frequency', 'daily',
+        'category', 'spor', 'frequency', 'weekly',
         'days_of_week', jsonb_build_array(1,2,3,4,5,6,7), 'time_of_day', '07:30',
         'notify', true, 'is_active', true, 'sort_order', 0),
       jsonb_build_object('title', 'Kirayı öde', 'scope', 'Kişisel',
@@ -133,3 +133,9 @@ begin
   end if;
 end;
 $$;
+
+-- Sonraki testler kullanıcı sayısına baktığı için test kullanıcıları silinir
+-- (ayar, tartı, rutin ve işlem satırları cascade ile gider).
+delete from auth.users
+where id in ('c0c0c0c0-0000-0000-0000-000000000001',
+             'c0c0c0c0-0000-0000-0000-000000000002');

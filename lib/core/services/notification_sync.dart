@@ -57,12 +57,14 @@ class NotificationSyncQueue {
 /// Kök kapı (AuthGate) dinler; ana kabuk kapandıktan sonra da çalışır.
 final notificationSessionGuardProvider = Provider<void>((ref) {
   final queue = ref.watch(notificationSyncQueueProvider);
-  final notifications = ref.watch(notificationServiceProvider);
   ref.listen<String?>(
     authSessionProvider.select((s) => s.valueOrNull?.user.id),
     (previous, next) {
       if (previous == null || previous == next) return;
-      queue.endSession(notifications).catchError((Object _) {});
+      // Servis yalnızca gerektiğinde okunur (kök kapı onsuz da kurulabilsin).
+      queue
+          .endSession(ref.read(notificationServiceProvider))
+          .catchError((Object _) {});
     },
   );
 });

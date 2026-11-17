@@ -328,8 +328,8 @@ void main() {
         const GoogleLinkPrefs(ownerId: 'account-A', email: 'a@gmail.com'),
         'account-B',
       );
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      container.read(googleConnectionProvider);
+      await pumpEventQueue();
       final state = container.read(googleConnectionProvider);
       expect(state.status, GoogleLinkStatus.reconnect);
       expect(state.email, 'b@gmail.com');
