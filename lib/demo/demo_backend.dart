@@ -583,6 +583,13 @@ class FakeTasksRepository implements TasksRepository {
     deletedIds.add(id);
     tasks = tasks.where((t) => t.id != id).toList();
   }
+  @override
+  Future<void> renameCategory(String from, String to) async {
+    if (writeError != null) throw writeError!;
+    tasks = [
+      for (final t in tasks) t.category == from ? t.copyWith(category: to) : t,
+    ];
+  }
 }
 
 /// Bellekte çalışan not deposu.
