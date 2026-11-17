@@ -21,8 +21,10 @@ import 'core/theme/theme_mode.dart';
 import 'core/utils/date_utils.dart';
 import 'demo/demo_backend.dart';
 import 'demo/demo_data.dart';
+import 'demo/demo_foods.dart';
 import 'features/ai_quick_add/data/gemini_parser_service.dart';
 import 'features/ai_quick_add/data/quick_add_repository.dart';
+import 'features/health/data/food_catalog.dart';
 import 'features/health/data/health_repository.dart';
 import 'features/health/presentation/health_source_providers.dart';
 import 'features/kokpit/data/kokpit_repository.dart';
@@ -101,6 +103,9 @@ Future<void> main() async {
         tasksRepositoryProvider.overrideWithValue(data.tasks),
         notesRepositoryProvider.overrideWithValue(data.notes),
         healthRepositoryProvider.overrideWithValue(data.health),
+        // Paketli liste boşsa demo örnek besinleriyle çalışır.
+        foodCatalogProvider
+            .overrideWith((ref) => loadDemoFoodCatalog(rootBundle)),
         kokpitRepositoryProvider.overrideWithValue(data.kokpit),
         reportsRepositoryProvider.overrideWithValue(data.reports),
         initialHealthSourceProvider.overrideWithValue(healthSource),

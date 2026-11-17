@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/item_actions.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import '../../operations/presentation/operations_widgets.dart';
 import 'health_format.dart';
@@ -17,6 +18,11 @@ IconData _workoutIcon(String workoutType) => switch (workoutType) {
       _ => Icons.bolt_rounded,
     };
 
+const String _deleteTitle = 'Antrenman silinsin mi?';
+
+String _deleteMessage(WorkoutLog workout) =>
+    '"${HealthFormat.workoutTitle(workout)}" günlükten kaldırılacak.';
+
 /// Antrenman günlüğü: son [recentWorkoutsDays] günün kayıtları, yeniden eskiye.
 class WorkoutsSection extends ConsumerStatefulWidget {
   const WorkoutsSection({super.key});
@@ -31,22 +37,27 @@ class _WorkoutsSectionState extends ConsumerState<WorkoutsSection> {
 
   bool _showAll = false;
 
-  Future<void> _delete(WorkoutLog workout) async {
+  /// Antrenmanı siler; başarılıysa `true`. [confirm] doğruysa önce onay
+  /// sorulur (üç nokta menüsü); uzun basış ve kaydırma onayı kendisi sorar.
+  Future<bool> _delete(WorkoutLog workout, {bool confirm = false}) async {
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
-    final confirmed = await confirmDelete(
-      context,
-      title: 'Antrenman silinsin mi?',
-      message: '"${HealthFormat.workoutTitle(workout)}" günlükten kaldırılacak.',
-    );
-    if (!confirmed) return;
+    if (confirm) {
+      final confirmed = await confirmDelete(
+        context,
+        title: _deleteTitle,
+        message: _deleteMessage(workout),
+      );
+      if (!confirmed) return false;
+    }
     try {
       await container.read(healthRepositoryProvider).deleteWorkout(workout.id);
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text(healthDeleteError)));
-      return;
+      return false;
     }
     invalidateHealthData(container);
+    return true;
   }
 
   @override
@@ -82,11 +93,21 @@ class _WorkoutsSectionState extends ConsumerState<WorkoutsSection> {
             return HealthListCard(
               children: [
                 for (final workout in visible)
-                  _WorkoutTile(
-                    workout: workout,
+                  ItemRowActions(
+                    key: ValueKey('workout-actions-${workout.id}'),
+                    itemKey: ValueKey('swipe-workout-${workout.id}'),
+                    title: HealthFormat.workoutTitle(workout),
+                    confirmTitle: _deleteTitle,
+                    confirmMessage: _deleteMessage(workout),
                     onEdit: () =>
                         WorkoutFormSheet.show(context, workout: workout),
                     onDelete: () => _delete(workout),
+                    child: _WorkoutTile(
+                      workout: workout,
+                      onEdit: () =>
+                          WorkoutFormSheet.show(context, workout: workout),
+                      onDelete: () => _delete(workout, confirm: true),
+                    ),
                   ),
                 if (items.length > _collapsedCount)
                   TextButton(

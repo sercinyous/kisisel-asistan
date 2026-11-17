@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/item_actions.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import '../../operations/presentation/operations_widgets.dart';
 import 'health_format.dart';
@@ -17,26 +18,40 @@ IconData _mealIcon(String mealType) => switch (mealType) {
       _ => Icons.cookie_outlined,
     };
 
+const String _deleteTitle = 'Kayıt silinsin mi?';
+
+String _deleteMessage(NutritionLog log) =>
+    '"${log.foodName}" bugünün öğünlerinden kaldırılacak.';
+
 /// Bugünün öğünleri, öğün bazında gruplanmış; kalem ekle / düzenle / sil.
 class MealsSection extends ConsumerWidget {
   const MealsSection({super.key});
 
-  Future<void> _delete(BuildContext context, NutritionLog log) async {
+  /// Kaydı siler; başarılıysa `true`. [confirm] doğruysa önce onay sorulur
+  /// (üç nokta menüsü); uzun basış ve kaydırma onayı kendisi sorar.
+  Future<bool> _delete(
+    BuildContext context,
+    NutritionLog log, {
+    bool confirm = false,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
-    final confirmed = await confirmDelete(
-      context,
-      title: 'Kayıt silinsin mi?',
-      message: '"${log.foodName}" bugünün öğünlerinden kaldırılacak.',
-    );
-    if (!confirmed) return;
+    if (confirm) {
+      final confirmed = await confirmDelete(
+        context,
+        title: _deleteTitle,
+        message: _deleteMessage(log),
+      );
+      if (!confirmed) return false;
+    }
     try {
       await container.read(healthRepositoryProvider).deleteNutritionLog(log.id);
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text(healthDeleteError)));
-      return;
+      return false;
     }
     invalidateHealthData(container);
+    return true;
   }
 
   @override
@@ -69,7 +84,8 @@ class MealsSection extends ConsumerWidget {
                   onAdd: () =>
                       MealFormSheet.show(context, mealType: group.mealType),
                   onEdit: (log) => MealFormSheet.show(context, log: log),
-                  onDelete: (log) => _delete(context, log),
+                  onDelete: (log) => _delete(context, log, confirm: true),
+                  onRemove: (log) => _delete(context, log),
                 ),
             ],
           ),
@@ -85,12 +101,18 @@ class _MealGroupTile extends StatelessWidget {
     required this.onAdd,
     required this.onEdit,
     required this.onDelete,
+    required this.onRemove,
   });
 
   final MealGroup group;
   final VoidCallback onAdd;
   final ValueChanged<NutritionLog> onEdit;
+
+  /// Üç nokta menüsü: önce onay sorar, sonra siler.
   final ValueChanged<NutritionLog> onDelete;
+
+  /// Uzun basış ve kaydırma: onayı satır bileşeni sorar; silindiyse `true`.
+  final Future<bool> Function(NutritionLog log) onRemove;
 
   String _logDetail(NutritionLog log) {
     final quantity = log.quantityText?.trim() ?? '';
@@ -121,14 +143,23 @@ class _MealGroupTile extends StatelessWidget {
           onTap: onAdd,
         ),
         for (final log in group.logs)
-          HealthListRow(
-            key: ValueKey('meal-${log.id}'),
+          ItemRowActions(
+            key: ValueKey('meal-actions-${log.id}'),
+            itemKey: ValueKey('swipe-meal-${log.id}'),
             title: log.foodName,
-            subtitle: _logDetail(log),
-            onTap: () => onEdit(log),
-            trailing: OpsItemMenu(
-              onEdit: () => onEdit(log),
-              onDelete: () => onDelete(log),
+            confirmTitle: _deleteTitle,
+            confirmMessage: _deleteMessage(log),
+            onEdit: () => onEdit(log),
+            onDelete: () => onRemove(log),
+            child: HealthListRow(
+              key: ValueKey('meal-${log.id}'),
+              title: log.foodName,
+              subtitle: _logDetail(log),
+              onTap: () => onEdit(log),
+              trailing: OpsItemMenu(
+                onEdit: () => onEdit(log),
+                onDelete: () => onDelete(log),
+              ),
             ),
           ),
       ],

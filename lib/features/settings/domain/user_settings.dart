@@ -63,6 +63,9 @@ class UserSettings {
     required this.quietStart,
     required this.quietEnd,
     required this.teamMembers,
+    this.heightCm,
+    this.birthYear,
+    this.sex,
   });
 
   const UserSettings.defaults()
@@ -82,7 +85,19 @@ class UserSettings {
         quietHoursEnabled = true,
         quietStart = const TimeOfDayValue(23, 0),
         quietEnd = const TimeOfDayValue(7, 30),
-        teamMembers = const ['Duhan', 'İlhan', 'Mehmet', 'Sedat'];
+        teamMembers = const ['Duhan', 'İlhan', 'Mehmet', 'Sedat'],
+        heightCm = null,
+        birthYear = null,
+        sex = null;
+
+  /// Profil alanlarının sınırları; supabase/schema.sql'deki check'lerle aynıdır.
+  static const int heightCmMin = 100;
+  static const int heightCmMax = 250;
+  static const int birthYearMin = 1900;
+  static const int birthYearMax = 2100;
+
+  /// `sex` sütununun kabul ettiği değerler. `null` = henüz cevaplanmadı.
+  static const List<String> sexValues = ['female', 'male', 'unspecified'];
 
   final double startWeightKg;
   final double targetWeightKg;
@@ -108,7 +123,19 @@ class UserSettings {
   final TimeOfDayValue quietEnd;
   final List<String> teamMembers;
 
-  /// Eksik ya da bozuk alanlar varsayılana düşer.
+  /// Profil (enerji dengesi için). Cevaplanmamışsa `null`.
+  final int? heightCm;
+  final int? birthYear;
+
+  /// 'female' | 'male' | 'unspecified' | null.
+  final String? sex;
+
+  /// Boy, doğum yılı ve cinsiyetin üçü de dolu.
+  bool get profileComplete =>
+      heightCm != null && birthYear != null && sex != null;
+
+  /// Eksik ya da bozuk alanlar varsayılana düşer; profil alanlarında varsayılan
+  /// `null`'dır ve aralık dışı değer de `null` olur.
   factory UserSettings.fromMap(Map<String, dynamic> map) {
     const d = UserSettings.defaults();
     final team = map['team_members'];
@@ -141,8 +168,23 @@ class UserSettings {
       teamMembers: team is List
           ? team.whereType<String>().toList(growable: false)
           : d.teamMembers,
+      heightCm: _profileInt(map['height_cm'], heightCmMin, heightCmMax),
+      birthYear: _profileInt(map['birth_year'], birthYearMin, birthYearMax),
+      sex: _profileSex(map['sex']),
     );
   }
+
+  /// Tam sayı ve [min]..[max] aralığındaysa değer; aksi hâlde `null`.
+  static int? _profileInt(Object? value, int min, int max) {
+    if (value is! num || !value.isFinite || value != value.truncate()) {
+      return null;
+    }
+    final n = value.toInt();
+    return n < min || n > max ? null : n;
+  }
+
+  static String? _profileSex(Object? value) =>
+      value is String && sexValues.contains(value) ? value : null;
 
   /// Yazılabilir sütunlar (user_id ve updated_at hariç).
   Map<String, dynamic> toMap() => {
@@ -163,6 +205,10 @@ class UserSettings {
         'quiet_start': quietStart.format(),
         'quiet_end': quietEnd.format(),
         'team_members': teamMembers,
+        // Boş profil açıkça null yazılır: kullanıcı alanı temizleyebilsin.
+        'height_cm': heightCm,
+        'birth_year': birthYear,
+        'sex': sex,
       };
 
   UserSettings copyWith({
@@ -183,6 +229,12 @@ class UserSettings {
     TimeOfDayValue? quietStart,
     TimeOfDayValue? quietEnd,
     List<String>? teamMembers,
+    int? heightCm,
+    int? birthYear,
+    String? sex,
+    bool clearHeightCm = false,
+    bool clearBirthYear = false,
+    bool clearSex = false,
   }) =>
       UserSettings(
         startWeightKg: startWeightKg ?? this.startWeightKg,
@@ -202,5 +254,8 @@ class UserSettings {
         quietStart: quietStart ?? this.quietStart,
         quietEnd: quietEnd ?? this.quietEnd,
         teamMembers: teamMembers ?? this.teamMembers,
+        heightCm: clearHeightCm ? null : (heightCm ?? this.heightCm),
+        birthYear: clearBirthYear ? null : (birthYear ?? this.birthYear),
+        sex: clearSex ? null : (sex ?? this.sex),
       );
 }

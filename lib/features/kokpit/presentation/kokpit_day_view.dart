@@ -10,6 +10,9 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../operations/domain/task_item.dart';
+import '../../operations/presentation/routines_view.dart'
+    show RoutineRowActions;
+import '../../operations/presentation/tasks_view.dart' show TaskRowActions;
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_providers.dart';
@@ -505,13 +508,18 @@ class _RoutinesSection extends ConsumerWidget {
                       for (final (index, occurrence)
                           in today.daily.indexed) ...[
                         if (index > 0) const Divider(indent: 56, endIndent: 16),
-                        _RoutineTile(
-                          occurrence: occurrence,
-                          onTap: () => _toggleOccurrence(
-                            context,
-                            ref,
-                            occurrence,
-                            errorMessage: 'Rutin güncellenemedi. Tekrar dene.',
+                        RoutineRowActions(
+                          key: ValueKey(occurrence.completionKey),
+                          routine: occurrence.routine,
+                          child: _RoutineTile(
+                            occurrence: occurrence,
+                            onTap: () => _toggleOccurrence(
+                              context,
+                              ref,
+                              occurrence,
+                              errorMessage:
+                                  'Rutin güncellenemedi. Tekrar dene.',
+                            ),
                           ),
                         ),
                       ],
@@ -609,17 +617,21 @@ class _MonthlyDueSection extends ConsumerWidget {
               children: [
                 for (final (index, occurrence) in monthly.indexed) ...[
                   if (index > 0) const Divider(indent: 56, endIndent: 16),
-                  _MonthlyDueTile(
+                  RoutineRowActions(
                     // Aynı rutin iki dönemle (bu ay gecikmiş + gelecek ay
-                    // yaklaşıyor) listede olabilir; kimlik dönemi de içerir.
+                    // yaklaşıyor) listede olabilir; liste kayınca durum
+                    // yanlış satıra geçmesin diye kimlik dönemi de içerir.
                     key: ValueKey(occurrence.completionKey),
-                    occurrence: occurrence,
-                    today: today,
-                    onTap: () => _toggleOccurrence(
-                      context,
-                      ref,
-                      occurrence,
-                      errorMessage: 'Aylık iş güncellenemedi. Tekrar dene.',
+                    routine: occurrence.routine,
+                    child: _MonthlyDueTile(
+                      occurrence: occurrence,
+                      today: today,
+                      onTap: () => _toggleOccurrence(
+                        context,
+                        ref,
+                        occurrence,
+                        errorMessage: 'Aylık iş güncellenemedi. Tekrar dene.',
+                      ),
                     ),
                   ),
                 ],
@@ -634,7 +646,6 @@ class _MonthlyDueSection extends ConsumerWidget {
 
 class _MonthlyDueTile extends StatelessWidget {
   const _MonthlyDueTile({
-    super.key,
     required this.occurrence,
     required this.today,
     required this.onTap,
@@ -741,9 +752,14 @@ class _RemindersSection extends ConsumerWidget {
                   children: [
                     for (final (index, task) in tasks.indexed) ...[
                       if (index > 0) const SizedBox(height: AppSpacing.grid),
-                      _ReminderTile(
+                      TaskRowActions(
+                        key: ValueKey('kokpit-reminder-${task.id}'),
                         task: task,
-                        onComplete: () => completeKokpitTask(context, task),
+                        borderRadius: BorderRadius.circular(AppRadii.card),
+                        child: _ReminderTile(
+                          task: task,
+                          onComplete: () => completeKokpitTask(context, task),
+                        ),
                       ),
                     ],
                   ],

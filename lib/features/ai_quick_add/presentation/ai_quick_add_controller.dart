@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
+import '../../health/presentation/energy_providers.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../operations/presentation/operations_providers.dart';
@@ -217,6 +218,13 @@ class QuickAddController
     // Ay görünümü aylık işleri, randevuları ve sağlık ortalamalarını içerir.
     if (wroteRoutines || wroteTasks || wroteHealth) {
       ref.invalidate(monthOverviewProvider);
+    }
+    // Enerji dengesi öğün, antrenman ve tartıyı doğrudan depodan okur; bu
+    // sağlayıcılara bağlı değildir, ayrıca tazelenmelidir.
+    if (wroteHealth) {
+      ref
+        ..invalidate(energyDayProvider)
+        ..invalidate(energyRangeProvider);
     }
     if (wroteRoutines || wroteTasks) ref.invalidate(notificationSyncProvider);
     // Operasyon sekmesinin kendi listeleri de bayatlamasın.

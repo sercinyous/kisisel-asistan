@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
 import '../../settings/presentation/settings_providers.dart';
 import 'activity_cards.dart';
+import 'energy_card.dart';
 import 'health_format.dart';
 import 'health_providers.dart';
 import 'healthkit_card.dart';
@@ -12,8 +13,9 @@ import 'meals_section.dart';
 import 'weight_card.dart';
 import 'workouts_section.dart';
 
-/// Sağlık sekmesi: kilo, haftalık antrenman ve adım, bugünün öğünleri,
-/// antrenman günlüğü ve HealthKit durumu.
+/// Sağlık sekmesi: kilo, enerji dengesi (dokununca hafta/ay detayı), haftalık
+/// antrenman, adım, uyku ve kalori (kartlara dokununca trend ekranı),
+/// bugünün öğünleri, antrenman günlüğü ve HealthKit durumu.
 class HealthScreen extends ConsumerWidget {
   const HealthScreen({super.key});
 
@@ -59,8 +61,11 @@ class HealthScreen extends ConsumerWidget {
               const BentoGrid(
                 children: [
                   BentoCell(child: WeightCard()),
+                  BentoCell(child: EnergyCard()),
                   BentoCell(span: 1, child: WorkoutWeekCard()),
                   BentoCell(span: 1, child: StepsWeekCard()),
+                  BentoCell(span: 1, child: SleepWeekCard()),
+                  BentoCell(span: 1, child: CaloriesWeekCard()),
                 ],
               ),
               const MealsSection(),

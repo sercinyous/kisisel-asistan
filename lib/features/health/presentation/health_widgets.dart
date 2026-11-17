@@ -300,6 +300,7 @@ class HealthBigValue extends StatelessWidget {
     required this.value,
     required this.unit,
     this.large = false,
+    this.singleLine = false,
   });
 
   final String value;
@@ -308,12 +309,19 @@ class HealthBigValue extends StatelessWidget {
   /// Tam genişlikteki kartlarda daha büyük yazılır.
   final bool large;
 
+  /// Tek satır: `FittedBox` içinde içsel yükseklik tek satır ölçülsün. Aksi
+  /// halde sarmalanan metin iki satır ölçülür, gerçek yerleşimde tek satır
+  /// çizilir ve Bento satırı bir satır fazla yükseklikte kalır.
+  final bool singleLine;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final base =
         large ? theme.textTheme.headlineLarge : theme.textTheme.headlineSmall;
     return Text.rich(
+      maxLines: singleLine ? 1 : null,
+      softWrap: !singleLine,
       TextSpan(
         text: value,
         style: base?.copyWith(
