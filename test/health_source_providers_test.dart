@@ -101,7 +101,8 @@ void main() {
   DailyHealthMetric rowOf(DateTime day) =>
       store.metrics.firstWhere((m) => m.day == day);
 
-  test('Apple Health seçiliyken Google hiç okunmaz (HealthKit aynen)', () async {
+  test('Apple Health seçiliyken Google hiç okunmaz (HealthKit aynen)',
+      () async {
     final container = make(source: HealthSourceKind.appleHealth);
 
     final snapshot = await container.read(healthTodayProvider.future);
@@ -136,7 +137,8 @@ void main() {
     expect(rowOf(yesterday).sleepMinutes, 470);
     expect(google!.importCalls, 1);
     final workouts = await container.read(recentWorkoutsProvider.future);
-    expect(workouts.single.source, 'google', reason: 'antrenman listesi tazelendi');
+    expect(workouts.single.source, 'google',
+        reason: 'antrenman listesi tazelendi');
 
     // Yeniden eşitleme kopya üretmez.
     await resyncHealthKit(container);
@@ -144,7 +146,8 @@ void main() {
     expect(container.read(googleConnectionProvider).lastSyncAt, isNotNull);
   });
 
-  test('kaynak değişince değerler toplanmaz, yeni kaynağınkiyle değişir', () async {
+  test('kaynak değişince değerler toplanmaz, yeni kaynağınkiyle değişir',
+      () async {
     final container = make(source: HealthSourceKind.appleHealth);
     await backfillHealthKit(container);
     expect(rowOf(yesterday).steps, 9000);
@@ -168,7 +171,8 @@ void main() {
     expect(rowOf(today).steps, 3000);
   });
 
-  test('Google oturumu dolmuşsa "yeniden bağlan", hiçbir şey yazılmaz', () async {
+  test('Google oturumu dolmuşsa "yeniden bağlan", hiçbir şey yazılmaz',
+      () async {
     auth.silentError = const GoogleAuthException(GoogleAuthErrorKind.expired);
     final container = make();
 
@@ -184,7 +188,8 @@ void main() {
     expect(link.email, 'ben@gmail.com');
   });
 
-  test('bağlı değilken bağlan: oturum açılır ve Google hemen eşitlenir', () async {
+  test('bağlı değilken bağlan: oturum açılır ve Google hemen eşitlenir',
+      () async {
     auth.signedIn = false;
     final container = make(prefs: const GoogleLinkPrefs());
 
@@ -203,7 +208,8 @@ void main() {
     expect(rowOf(yesterday).steps, 12000);
   });
 
-  test('bağlanırken vazgeçilirse hata metni yok, başka hata metni döner', () async {
+  test('bağlanırken vazgeçilirse hata metni yok, başka hata metni döner',
+      () async {
     auth.signedIn = false;
     final container = make(prefs: const GoogleLinkPrefs());
     auth.connectError = const GoogleAuthException(GoogleAuthErrorKind.canceled);
@@ -213,7 +219,8 @@ void main() {
     expect(await connectGoogleHealth(container), contains('yapılandırması'));
   });
 
-  test('bağlantıyı kesince Google seçili kartlar "bağlı değil" gösterir', () async {
+  test('bağlantıyı kesince Google seçili kartlar "bağlı değil" gösterir',
+      () async {
     final container = make();
     await backfillHealthKit(container);
     expect(rowOf(today).steps, 5200);

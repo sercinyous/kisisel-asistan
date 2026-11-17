@@ -185,8 +185,7 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
           const GoogleHealthException(GoogleHealthErrorKind.missingScope),
         GoogleAuthErrorKind.network =>
           const GoogleHealthException(GoogleHealthErrorKind.network),
-        GoogleAuthErrorKind.configuration =>
-          GoogleHealthException(
+        GoogleAuthErrorKind.configuration => GoogleHealthException(
             GoogleHealthErrorKind.configuration,
             message: error.message,
           ),

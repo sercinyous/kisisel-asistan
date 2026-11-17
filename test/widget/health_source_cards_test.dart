@@ -66,7 +66,8 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Apple seçiliyken etiket "HealthKit · saat" kalır', (tester) async {
+    testWidgets('Apple seçiliyken etiket "HealthKit · saat" kalır',
+        (tester) async {
       await harness.pump(tester);
       expect(find.text('HealthKit · 10:30'), findsOneWidget);
     });
@@ -140,7 +141,8 @@ void main() {
       await pumpCard(tester, googleOverrides());
       expect(find.text('Google Health'), findsOneWidget);
       expect(find.textContaining('son eşitleme '), findsOneWidget);
-      expect(find.textContaining('Google Health\'ten (Fitbit)'), findsOneWidget);
+      expect(
+          find.textContaining('Google Health\'ten (Fitbit)'), findsOneWidget);
       expect(find.text('Şimdi eşitle'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

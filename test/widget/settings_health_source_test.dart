@@ -132,7 +132,8 @@ void main() {
 
     expect(inGoogleRow('Bağlı değil'), findsOneWidget);
     final connect = find.byKey(const Key('settings-google-connect'));
-    expect(find.descendant(of: connect, matching: find.text('Google ile bağlan')),
+    expect(
+        find.descendant(of: connect, matching: find.text('Google ile bağlan')),
         findsOneWidget);
 
     await tester.ensureVisible(connect);
@@ -194,7 +195,8 @@ void main() {
     expect(find.text('Google bağlantısı kesilsin mi?'), findsOneWidget);
 
     // Vazgeç: hiçbir şey değişmez.
-    await tester.tap(find.byKey(const Key('settings-google-disconnect-cancel')));
+    await tester
+        .tap(find.byKey(const Key('settings-google-disconnect-cancel')));
     await tester.pumpAndSettle();
     expect(auth.disconnectCalls, 0);
 
@@ -202,7 +204,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(disconnect);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('settings-google-disconnect-confirm')));
+    await tester
+        .tap(find.byKey(const Key('settings-google-disconnect-confirm')));
     await tester.pumpAndSettle();
 
     expect(auth.disconnectCalls, 1);
@@ -227,7 +230,8 @@ void main() {
     expect(inGoogleRow('sercan.ornek@gmail.com'), findsOneWidget);
     final reconnect = find.byKey(const Key('settings-google-connect'));
     expect(
-      find.descendant(of: reconnect, matching: find.text('Google\'a yeniden bağlan')),
+      find.descendant(
+          of: reconnect, matching: find.text('Google\'a yeniden bağlan')),
       findsOneWidget,
     );
 

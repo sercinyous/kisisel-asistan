@@ -229,7 +229,8 @@ String workoutTypeForGoogle(String exerciseType) =>
 /// sınırlarına sıkıştırılır (süre 1–600 dk, mesafe ≤ 9999,99 km); sıfır ya
 /// da bilinmeyen değer boş bırakılır.
 ExternalWorkout externalWorkoutFromGoogle(GoogleExercise exercise) {
-  final duration = exercise.activeDuration ?? exercise.end.difference(exercise.start);
+  final duration =
+      exercise.activeDuration ?? exercise.end.difference(exercise.start);
   final minutes = (duration.inSeconds / 60).round();
   final km = exercise.distanceMeters == null
       ? null
@@ -253,9 +254,8 @@ ExternalWorkout externalWorkoutFromGoogle(GoogleExercise exercise) {
       durationMin: minutes < WorkoutLog.durationMinMin
           ? null
           : math.min(minutes, WorkoutLog.durationMinMax),
-      distanceKm: km == null || km <= 0
-          ? null
-          : math.min(km, WorkoutLog.distanceKmMax),
+      distanceKm:
+          km == null || km <= 0 ? null : math.min(km, WorkoutLog.distanceKmMax),
       caloriesBurned: kcal == null || kcal <= 0 ? null : kcal,
       notes: notes == null || notes.isEmpty ? null : notes,
       source: GoogleHealthSource.workoutSource,

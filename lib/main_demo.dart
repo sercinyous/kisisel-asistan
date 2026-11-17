@@ -67,7 +67,7 @@ Future<void> main() async {
   // Depo (localStorage) korumalı alanda hata verirse koyu temayla açılır.
   final themeMode = await loadInitialThemeMode();
   // Kaynak tercihi ve Google bağlantı izi de tarayıcıda saklanır; Google
-  // girişi sahtedir (pencere açılmaz, ağa çıkılmaz).
+  // girişi sahtedir (pencere açılmaz, Google'a veri isteği gitmez).
   final healthSource = await loadInitialHealthSource();
   final googleLink = await const GoogleLinkStore().load();
   final googleAuth = FakeGoogleAuthClient(

@@ -224,7 +224,7 @@ Notlar:
 
 ## Google Health ile bağlantı
 
-Fitbit Web API 2 Kasım 2026'da kapandı; Fitbit cihazının verisi artık **Google Health API**
+Fitbit Web API kapatıldı (2026); Fitbit cihazının verisi artık **Google Health API**
 (`https://health.googleapis.com/v4/`) üzerinden okunur. Uygulama Google ile giriş yapar ve bu API'den
 günlük adım, aktif kalori, gecelik uyku ve antrenmanları çeker. Apple Health (HealthKit) varsayılan kaynak
 olarak kalır; **aynı anda yalnızca bir kaynak** okunur (ikisi birden toplansa adım ve uyku çift sayılırdı).
@@ -291,9 +291,12 @@ Okunanlar (uygulama açılışında, öne gelişte ve elle yenilemede; HealthKit
 Yayın durumu **Testing** olan ve harici kullanıcıya açık projelerde Google, yenileme anahtarını
 (refresh token) **7 gün** geçerli verir. Süre dolunca uygulama sessizce yenileyemez ve kartlarda
 **"Google oturumunun süresi doldu. Google'a yeniden bağlan."** yazar; dokununca tek adımda yeniden
-bağlanırsın, veri kaybolmaz ve uygulamanın geri kalanı çalışmaya devam eder. Kalıcı çözüm projeyi
-"In production" durumuna almaktır; Google Health kapsamları hassas/kısıtlı sınıfta olduğundan bu
-Google doğrulaması gerektirir. Tek kişilik kullanımda haftada bir yeniden bağlanmak pratik yoldur.
+bağlanırsın, veri kaybolmaz ve uygulamanın geri kalanı çalışmaya devam eder. Sınırı kaldırmanın yolu
+projeyi "In production" durumuna almaktır (yeni verilen anahtarlar için; mevcut olanlar yenilenmeden
+bağlanılması gerekir). Google, Health API kapsamlarının tümünü kısıtlı (restricted) sayar ve 100'den fazla
+kullanıcı için güvenlik incelemesi (OAuth doğrulaması) ister; doğrulanmamış bir uygulamanın tek kişilik
+kullanımda nasıl davrandığı burada **denenmedi**. Bu yüzden tek kişilik kullanımda haftada bir yeniden
+bağlanmak güvenli ve pratik yoldur.
 
 **Sorun giderme**: "bu derlemede yapılandırılmamış" → `GOOGLE_IOS_CLIENT_ID` eksik ya da hatalı;
 "Google Health API … etkin değil" → 1.2. adım; "izin eksik" → yeniden bağlan ve iki kutuyu işaretle;
@@ -309,7 +312,8 @@ uygulamasıyla karşılaştır.
 
 Sunucu olmadan, örnek veriyle (bugünün öğünleri, antrenmanlar, 90 günlük kilo serisi, 3 haftalık ve
 7 günlük rapor) çalışan demo. Google Health seçeneği sahte bir hesapla çalışır (giriş penceresi açılmaz,
-ağa çıkılmaz). Depoda `web/` klasörü tutulmaz; deneme için ayrı bir kopyada üretilir:
+Google'a veri isteği gitmez; yalnızca `google_sign_in_web` eklentisi sayfa açılırken Google'ın giriş betiğini
+yükler, kullanılmaz). Depoda `web/` klasörü tutulmaz; deneme için ayrı bir kopyada üretilir:
 
 ```bash
 flutter create --platforms=web --project-name kisisel_asistan .

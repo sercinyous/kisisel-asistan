@@ -217,7 +217,8 @@ class GoogleHealthApi {
   })  : _client = client ?? http.Client(),
         baseUri = baseUri ?? defaultBaseUri;
 
-  static final Uri defaultBaseUri = Uri.parse('https://health.googleapis.com/v4/');
+  static final Uri defaultBaseUri =
+      Uri.parse('https://health.googleapis.com/v4/');
 
   /// `dailyRollUp` tek istekte en çok 90 günü kapsar.
   static const int maxRollUpDays = 90;
@@ -499,22 +500,23 @@ class GoogleHealthApi {
     final start = _time(interval['startTime']);
     final end = _time(interval['endTime']);
     if (start == null || end == null) return null;
-    final type = raw['exerciseType'] is String
-        ? raw['exerciseType'] as String
-        : 'OTHER';
+    final type =
+        raw['exerciseType'] is String ? raw['exerciseType'] as String : 'OTHER';
     final name = point['name'];
     final id = name is String && name.contains('/dataPoints/')
         ? name.substring(name.lastIndexOf('/') + 1)
         : '${rfc3339(start)}-$type';
     final summary = raw['metricsSummary'];
-    final distanceMm =
-        summary is Map ? _toNullableDouble(summary['distanceMillimeters']) : null;
+    final distanceMm = summary is Map
+        ? _toNullableDouble(summary['distanceMillimeters'])
+        : null;
     return GoogleExercise(
       id: id,
       exerciseType: type,
       start: start,
       end: end,
-      displayName: raw['displayName'] is String ? raw['displayName'] as String : null,
+      displayName:
+          raw['displayName'] is String ? raw['displayName'] as String : null,
       activeDuration: _duration(raw['activeDuration']),
       distanceMeters: distanceMm == null ? null : distanceMm / 1000,
       caloriesKcal:

@@ -23,8 +23,8 @@ class HealthSourcePicker extends ConsumerWidget {
       children: [
         Text(
           'Sağlık verisi kaynağı',
-          style: theme.textTheme.labelMedium
-              ?.copyWith(color: AppColors.textMuted),
+          style:
+              theme.textTheme.labelMedium?.copyWith(color: AppColors.textMuted),
         ),
         const SizedBox(height: 6),
         SegmentedButton<HealthSourceKind>(
@@ -66,8 +66,8 @@ class HealthSourcePicker extends ConsumerWidget {
                   'ikisi birlikte sayılmaz.'
               : 'Google Health için derlemeye GOOGLE_IOS_CLIENT_ID verilmeli '
                   '(README > Google Health ile bağlantı).',
-          style: theme.textTheme.bodySmall
-              ?.copyWith(color: AppColors.textMuted),
+          style:
+              theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
         ),
       ],
     );
@@ -198,7 +198,8 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
           link.status == GoogleLinkStatus.connecting)
         TextButton(
           key: const Key('settings-google-connect'),
-          onPressed: link.status == GoogleLinkStatus.connecting ? null : _connect,
+          onPressed:
+              link.status == GoogleLinkStatus.connecting ? null : _connect,
           child: const Text('Google ile bağlan'),
         ),
       if (link.status == GoogleLinkStatus.reconnect)
@@ -248,8 +249,8 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
                     status,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: statusColor),
+                    style:
+                        theme.textTheme.bodySmall?.copyWith(color: statusColor),
                   ),
                   if (detail != null)
                     Text(

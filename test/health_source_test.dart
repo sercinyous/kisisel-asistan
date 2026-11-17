@@ -20,8 +20,10 @@ void main() {
 
   group('HealthSourceKind', () {
     test('parse: bilinen adlar, yoksa Apple Health', () {
-      expect(HealthSourceKind.parse('appleHealth'), HealthSourceKind.appleHealth);
-      expect(HealthSourceKind.parse('googleHealth'), HealthSourceKind.googleHealth);
+      expect(
+          HealthSourceKind.parse('appleHealth'), HealthSourceKind.appleHealth);
+      expect(HealthSourceKind.parse('googleHealth'),
+          HealthSourceKind.googleHealth);
       expect(HealthSourceKind.parse(null), HealthSourceKind.appleHealth);
       expect(HealthSourceKind.parse('fitbit'), HealthSourceKind.appleHealth);
     });
@@ -47,7 +49,8 @@ void main() {
 
     test('bozuk kayıt ya da depo hatası Apple Health\'e düşer', () async {
       SharedPreferences.setMockInitialValues({HealthSourceStore.key: 7});
-      expect(await const HealthSourceStore().load(), HealthSourceKind.appleHealth);
+      expect(
+          await const HealthSourceStore().load(), HealthSourceKind.appleHealth);
 
       const broken = HealthSourceStore(open: _brokenStore);
       expect(await broken.load(), HealthSourceKind.appleHealth);
@@ -72,13 +75,15 @@ void main() {
 
     test('seçim hemen uygulanır ve cihaza yazılır', () async {
       final container = make();
-      expect(container.read(healthSourceProvider), HealthSourceKind.appleHealth);
+      expect(
+          container.read(healthSourceProvider), HealthSourceKind.appleHealth);
 
       await container
           .read(healthSourceProvider.notifier)
           .select(HealthSourceKind.googleHealth);
 
-      expect(container.read(healthSourceProvider), HealthSourceKind.googleHealth);
+      expect(
+          container.read(healthSourceProvider), HealthSourceKind.googleHealth);
       expect(
         await const HealthSourceStore().load(),
         HealthSourceKind.googleHealth,
@@ -87,14 +92,17 @@ void main() {
 
     test('istemci kimliği yoksa Google seçilemez, kayıtlı Google Apple olur',
         () async {
-      final container = make(initial: HealthSourceKind.googleHealth, clientId: '');
+      final container =
+          make(initial: HealthSourceKind.googleHealth, clientId: '');
       expect(container.read(googleConfiguredProvider), isFalse);
-      expect(container.read(healthSourceProvider), HealthSourceKind.appleHealth);
+      expect(
+          container.read(healthSourceProvider), HealthSourceKind.appleHealth);
 
       await container
           .read(healthSourceProvider.notifier)
           .select(HealthSourceKind.googleHealth);
-      expect(container.read(healthSourceProvider), HealthSourceKind.appleHealth);
+      expect(
+          container.read(healthSourceProvider), HealthSourceKind.appleHealth);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(HealthSourceStore.key), isNull);
     });
@@ -191,14 +199,17 @@ void main() {
     test('vazgeçilirse durum değişmez; izin eksikse yeniden bağlan', () async {
       final container = make();
       final controller = container.read(googleConnectionProvider.notifier);
-      auth.connectError = const GoogleAuthException(GoogleAuthErrorKind.canceled);
-      await expectLater(controller.connect(), throwsA(isA<GoogleAuthException>()));
+      auth.connectError =
+          const GoogleAuthException(GoogleAuthErrorKind.canceled);
+      await expectLater(
+          controller.connect(), throwsA(isA<GoogleAuthException>()));
       expect(container.read(googleConnectionProvider).status,
           GoogleLinkStatus.disconnected);
 
       auth.connectError =
           const GoogleAuthException(GoogleAuthErrorKind.scopesMissing);
-      await expectLater(controller.connect(), throwsA(isA<GoogleAuthException>()));
+      await expectLater(
+          controller.connect(), throwsA(isA<GoogleAuthException>()));
       final state = container.read(googleConnectionProvider);
       expect(state.status, GoogleLinkStatus.reconnect);
       expect(state.message, contains('izin'));
@@ -206,7 +217,8 @@ void main() {
 
     test('kayıtlı hesabın oturumu yoksa ya da süresi dolduysa yeniden bağlan',
         () async {
-      final container = make(prefs: const GoogleLinkPrefs(email: 'ben@gmail.com'));
+      final container =
+          make(prefs: const GoogleLinkPrefs(email: 'ben@gmail.com'));
       final controller = container.read(googleConnectionProvider.notifier);
       expect(container.read(googleConnectionProvider).status,
           GoogleLinkStatus.connected);
@@ -249,7 +261,8 @@ void main() {
     });
 
     test('başarılı okuma bağlıya döndürür ve son eşitlemeyi saklar', () async {
-      final container = make(prefs: const GoogleLinkPrefs(email: 'ben@gmail.com'));
+      final container =
+          make(prefs: const GoogleLinkPrefs(email: 'ben@gmail.com'));
       final controller = container.read(googleConnectionProvider.notifier);
       controller.reportFailure(
         const GoogleHealthException(GoogleHealthErrorKind.missingScope),

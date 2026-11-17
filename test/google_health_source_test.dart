@@ -110,7 +110,8 @@ class FakeGoogleServer {
           final range = (jsonDecode(request.body) as Map)['range'] as Map;
           DateTime day(Map<dynamic, dynamic> civil) {
             final d = civil['date'] as Map;
-            return DateTime(d['year'] as int, d['month'] as int, d['day'] as int);
+            return DateTime(
+                d['year'] as int, d['month'] as int, d['day'] as int);
           }
 
           final start = day(range['start'] as Map);
@@ -120,26 +121,26 @@ class FakeGoogleServer {
           final isSteps = path.contains('/steps/');
           final source = isSteps ? steps : kcal;
           return ok({
-              'rollupDataPoints': [
-                for (final entry in source.entries)
-                  if (!entry.key.isBefore(start) &&
-                      (entry.key.isBefore(end) ||
-                          (inclusiveEnd && entry.key == end)))
-                    {
-                      'civilStartTime': {
-                        'date': {
-                          'year': entry.key.year,
-                          'month': entry.key.month,
-                          'day': entry.key.day,
-                        },
+            'rollupDataPoints': [
+              for (final entry in source.entries)
+                if (!entry.key.isBefore(start) &&
+                    (entry.key.isBefore(end) ||
+                        (inclusiveEnd && entry.key == end)))
+                  {
+                    'civilStartTime': {
+                      'date': {
+                        'year': entry.key.year,
+                        'month': entry.key.month,
+                        'day': entry.key.day,
                       },
-                      if (isSteps)
-                        'steps': {'countSum': '${entry.value}'}
-                      else
-                        'activeEnergyBurned': {'kcalSum': entry.value},
                     },
-              ],
-            });
+                    if (isSteps)
+                      'steps': {'countSum': '${entry.value}'}
+                    else
+                      'activeEnergyBurned': {'kcalSum': entry.value},
+                  },
+            ],
+          });
         }
         if (path.endsWith('/sleep/dataPoints')) {
           return ok({'dataPoints': sleep});
@@ -172,21 +173,27 @@ void main() {
           DateTime(2026, 11, 15, 22),
           DateTime(2026, 11, 16, 6),
           stages: [
-            stage('ASLEEP', DateTime(2026, 11, 15, 22), DateTime(2026, 11, 16, 6)),
+            stage('ASLEEP', DateTime(2026, 11, 15, 22),
+                DateTime(2026, 11, 16, 6)),
           ],
         ),
         // 16'sı 17:30–18:30 şekerleme (evresiz): 18:00 sınırında bölünür,
         // 30 dk 16'sına, 30 dk 17'sine.
-        sleepPoint(DateTime(2026, 11, 16, 17, 30), DateTime(2026, 11, 16, 18, 30)),
+        sleepPoint(
+            DateTime(2026, 11, 16, 17, 30), DateTime(2026, 11, 16, 18, 30)),
         // 16→17 gecesi, saat (evreli, uyanık bölümlü).
         sleepPoint(
           DateTime(2026, 11, 16, 23),
           DateTime(2026, 11, 17, 7),
           stages: [
-            stage('AWAKE', DateTime(2026, 11, 16, 23), DateTime(2026, 11, 16, 23, 10)),
-            stage('LIGHT', DateTime(2026, 11, 16, 23, 10), DateTime(2026, 11, 17, 2)),
-            stage('AWAKE', DateTime(2026, 11, 17, 2), DateTime(2026, 11, 17, 2, 20)),
-            stage('DEEP', DateTime(2026, 11, 17, 2, 20), DateTime(2026, 11, 17, 5)),
+            stage('AWAKE', DateTime(2026, 11, 16, 23),
+                DateTime(2026, 11, 16, 23, 10)),
+            stage('LIGHT', DateTime(2026, 11, 16, 23, 10),
+                DateTime(2026, 11, 17, 2)),
+            stage('AWAKE', DateTime(2026, 11, 17, 2),
+                DateTime(2026, 11, 17, 2, 20)),
+            stage('DEEP', DateTime(2026, 11, 17, 2, 20),
+                DateTime(2026, 11, 17, 5)),
             stage('REM', DateTime(2026, 11, 17, 5), DateTime(2026, 11, 17, 7)),
           ],
         ),
@@ -195,19 +202,23 @@ void main() {
           DateTime(2026, 11, 16, 23, 30),
           DateTime(2026, 11, 17, 7, 30),
           stages: [
-            stage('ASLEEP', DateTime(2026, 11, 16, 23, 30), DateTime(2026, 11, 17, 1, 30)),
-            stage('ASLEEP', DateTime(2026, 11, 17, 6), DateTime(2026, 11, 17, 7, 30)),
+            stage('ASLEEP', DateTime(2026, 11, 16, 23, 30),
+                DateTime(2026, 11, 17, 1, 30)),
+            stage('ASLEEP', DateTime(2026, 11, 17, 6),
+                DateTime(2026, 11, 17, 7, 30)),
           ],
         ),
       ];
     source = GoogleHealthSource(
       link: link,
-      api: GoogleHealthApi(accessToken: link.accessToken, client: server.client()),
+      api: GoogleHealthApi(
+          accessToken: link.accessToken, client: server.client()),
     );
   });
 
   group('readToday / readPastDays', () {
-    test('bugün: adım, aktif kalori ve 18:00 penceresinde birleşik uyku', () async {
+    test('bugün: adım, aktif kalori ve 18:00 penceresinde birleşik uyku',
+        () async {
       final snapshot = await source.readToday(now: now);
 
       expect(snapshot.status, HealthStatus.ok);
@@ -238,8 +249,8 @@ void main() {
       expect(s16.source, HealthSourceKind.googleHealth);
       // Tek istek her veri türü için (3 istek), uyku süzgeci pencereyi kapsar.
       expect(server.requests, hasLength(3));
-      final sleepRequest =
-          server.requests.firstWhere((r) => r.url.path.endsWith('/sleep/dataPoints'));
+      final sleepRequest = server.requests
+          .firstWhere((r) => r.url.path.endsWith('/sleep/dataPoints'));
       expect(
         sleepRequest.url.queryParameters['filter'],
         'sleep.interval.end_time >= "${utc(DateTime(2026, 11, 14, 18))}" AND '
@@ -264,7 +275,8 @@ void main() {
     test('bağlı değil → notConnected; 403 → reconnect', () async {
       link.tokenError =
           const GoogleHealthException(GoogleHealthErrorKind.notConnected);
-      expect((await source.readToday(now: now)).status, HealthStatus.notConnected);
+      expect(
+          (await source.readToday(now: now)).status, HealthStatus.notConnected);
       server.failStatus = 403;
       link.tokenError = null;
       expect((await source.readToday(now: now)).status, HealthStatus.reconnect);
@@ -339,9 +351,12 @@ void main() {
       expect(run.distanceKm, 6.12);
       expect(run.caloriesBurned, 402);
       expect(run.loggedAt, DateTime(2026, 11, 16, 7, 5));
-      final lift = repository.workouts.firstWhere((w) => w.workoutType == 'weights');
-      expect(lift.durationMin, 45, reason: 'activeDuration yoksa aralık süresi');
-      final walk = repository.workouts.firstWhere((w) => w.workoutType == 'other');
+      final lift =
+          repository.workouts.firstWhere((w) => w.workoutType == 'weights');
+      expect(lift.durationMin, 45,
+          reason: 'activeDuration yoksa aralık süresi');
+      final walk =
+          repository.workouts.firstWhere((w) => w.workoutType == 'other');
       expect(walk.durationMin, 600, reason: '700 dk → üst sınır 600');
       expect(walk.distanceKm, isNull);
       expect(walk.caloriesBurned, isNull);
@@ -367,10 +382,12 @@ void main() {
       expect(repository.workouts, hasLength(3));
 
       // Kullanıcı aktarılan koşuyu siler: sonraki eşitlemede geri gelmez.
-      final run = repository.workouts.firstWhere((w) => w.workoutType == 'running');
+      final run =
+          repository.workouts.firstWhere((w) => w.workoutType == 'running');
       await repository.deleteWorkout(run.id);
       await source.importWorkouts(repository, now: now);
-      expect(repository.workouts.where((w) => w.workoutType == 'running'), isEmpty);
+      expect(repository.workouts.where((w) => w.workoutType == 'running'),
+          isEmpty);
 
       // Google'da sonradan oluşan yeni antrenman aktarılır.
       server.exercises = [
@@ -447,7 +464,10 @@ void main() {
     expect(
       sleepMinutesInWindow(
         [
-          (DateTime(2026, 11, 16, 17), DateTime(2026, 11, 16, 19)), // 60 içeride
+          (
+            DateTime(2026, 11, 16, 17),
+            DateTime(2026, 11, 16, 19)
+          ), // 60 içeride
           (DateTime(2026, 11, 16, 23), DateTime(2026, 11, 17, 3)), // 240
           (DateTime(2026, 11, 17, 1), DateTime(2026, 11, 17, 4)), // +60 taşan
           (DateTime(2026, 11, 17, 17, 30), DateTime(2026, 11, 17, 20)), // 30

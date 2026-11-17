@@ -267,11 +267,17 @@ void main() {
 
       expect(sessions, hasLength(2));
       final staged = sessions.first;
-      expect(staged.asleep, [
-        (DateTime.utc(2026, 11, 16, 20, 45), DateTime.utc(2026, 11, 17)),
-        (DateTime.utc(2026, 11, 17), DateTime.utc(2026, 11, 17, 2)),
-        (DateTime.utc(2026, 11, 17, 2, 10), DateTime.utc(2026, 11, 17, 4, 30)),
-      ], reason: 'AWAKE ve RESTLESS sayılmaz');
+      expect(
+          staged.asleep,
+          [
+            (DateTime.utc(2026, 11, 16, 20, 45), DateTime.utc(2026, 11, 17)),
+            (DateTime.utc(2026, 11, 17), DateTime.utc(2026, 11, 17, 2)),
+            (
+              DateTime.utc(2026, 11, 17, 2, 10),
+              DateTime.utc(2026, 11, 17, 4, 30)
+            ),
+          ],
+          reason: 'AWAKE ve RESTLESS sayılmaz');
       expect(sessions[1].asleep, [
         (DateTime.utc(2026, 11, 15, 21), DateTime.utc(2026, 11, 16, 5)),
       ]);
@@ -333,7 +339,8 @@ void main() {
       final run = list.first;
       expect(run.id, 'ex-abc');
       expect(run.exerciseType, 'RUNNING');
-      expect(run.activeDuration, const Duration(seconds: 2280, milliseconds: 500));
+      expect(
+          run.activeDuration, const Duration(seconds: 2280, milliseconds: 500));
       expect(run.distanceMeters, 6120);
       expect(run.caloriesKcal, 401.7);
       expect(run.createTime, DateTime.utc(2026, 11, 16, 5));
@@ -392,9 +399,12 @@ void main() {
     });
 
     test('403 kapsam yetersiz → izin eksik', () async {
-      for (final reason in ['ACCESS_TOKEN_SCOPE_INSUFFICIENT', 'MISSING_OAUTH_SCOPE']) {
-        final error =
-            await failWith(403, body: googleError(403, 'PERMISSION_DENIED', reason));
+      for (final reason in [
+        'ACCESS_TOKEN_SCOPE_INSUFFICIENT',
+        'MISSING_OAUTH_SCOPE'
+      ]) {
+        final error = await failWith(403,
+            body: googleError(403, 'PERMISSION_DENIED', reason));
         expect(error.kind, GoogleHealthErrorKind.missingScope, reason: reason);
         expect(error.message, contains('izni eksik'));
       }
@@ -433,7 +443,11 @@ void main() {
       final error = await failWith(
         403,
         body: {
-          'error': {'code': 403, 'message': 'denied', 'status': 'PERMISSION_DENIED'},
+          'error': {
+            'code': 403,
+            'message': 'denied',
+            'status': 'PERMISSION_DENIED'
+          },
         },
       );
       expect(error.kind, GoogleHealthErrorKind.reconnect);
@@ -452,7 +466,9 @@ void main() {
     });
 
     test('diğer 4xx → istek reddedildi (kod mesajda)', () async {
-      final error = await failWith(400, body: {'error': {'code': 400}});
+      final error = await failWith(400, body: {
+        'error': {'code': 400}
+      });
       expect(error.kind, GoogleHealthErrorKind.requestRejected);
       expect(error.message, contains('400'));
     });
@@ -463,7 +479,8 @@ void main() {
         client: MockClient((_) async => throw http.ClientException('offline')),
       );
       await expectLater(
-        offline.dailySteps(from: DateTime(2026, 11, 16), to: DateTime(2026, 11, 17)),
+        offline.dailySteps(
+            from: DateTime(2026, 11, 16), to: DateTime(2026, 11, 17)),
         throwsA(
           isA<GoogleHealthException>()
               .having((e) => e.kind, 'kind', GoogleHealthErrorKind.network),
@@ -474,7 +491,8 @@ void main() {
         client: MockClient((_) async => http.Response('<html>', 200)),
       );
       await expectLater(
-        broken.dailySteps(from: DateTime(2026, 11, 16), to: DateTime(2026, 11, 17)),
+        broken.dailySteps(
+            from: DateTime(2026, 11, 16), to: DateTime(2026, 11, 17)),
         throwsA(
           isA<GoogleHealthException>().having(
             (e) => e.kind,
@@ -488,15 +506,16 @@ void main() {
     test('erişim anahtarı alınamazsa istek gönderilmez', () async {
       var sent = 0;
       final api = GoogleHealthApi(
-        accessToken: () async =>
-            throw const GoogleHealthException(GoogleHealthErrorKind.notConnected),
+        accessToken: () async => throw const GoogleHealthException(
+            GoogleHealthErrorKind.notConnected),
         client: MockClient((_) async {
           sent++;
           return jsonResponse(const {});
         }),
       );
       await expectLater(
-        api.dailySteps(from: DateTime(2026, 11, 16), to: DateTime(2026, 11, 17)),
+        api.dailySteps(
+            from: DateTime(2026, 11, 16), to: DateTime(2026, 11, 17)),
         throwsA(isA<GoogleHealthException>()),
       );
       expect(sent, 0);
