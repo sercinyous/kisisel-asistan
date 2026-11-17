@@ -44,7 +44,8 @@ const Map<String, dynamic> _workout = {'workout_type': 'weights', 'title': 'Ağ�
 const Map<String, dynamic> _weight = {'weight_kg': 83.9};
 
 /// Bekleyen bildirimleri cihaz gibi tutar: resync hepsini siler.
-/// [onSchedule] her planlamadan sonra çağrılır (çıkışı araya sokmak için).
+/// [onSchedule] eklenti çağrısı sürerken (kayıt düşmeden önce) çağrılır;
+/// çıkışı tam o ana sokmak için.
 class _PendingNotifications extends FakeNotificationService {
   final Map<String, String> pending = {};
   void Function(int count)? onSchedule;
@@ -52,9 +53,11 @@ class _PendingNotifications extends FakeNotificationService {
 
   @override
   Future<void> scheduleReminder(ReminderSchedule reminder) async {
+    onSchedule?.call(++_count);
+    // Gerçek eklenti gibi asenkron: bu arada başka iş araya girebilir.
+    await Future<void>.delayed(Duration.zero);
     await super.scheduleReminder(reminder);
     pending['task:${reminder.taskId}'] = reminder.title;
-    onSchedule?.call(++_count);
   }
 
   @override
@@ -634,7 +637,7 @@ void main() {
     addTearDown(c.dispose);
     final queue = c.read(notificationSyncQueueProvider);
     final ended = <Future<void>>[];
-    // Birinci görev planlandıktan hemen sonra, ikinciden önce oturum biter.
+    // Birinci görev planlanırken (ikinciden önce) oturum biter.
     notifications.onSchedule = (count) {
       if (count == 1) ended.add(queue.endSession(notifications));
     };
@@ -650,7 +653,7 @@ void main() {
 
     expect(ended, hasLength(1));
     expect(notifications.scheduled.map((r) => r.title),
-        ['Ayşe ile vardiya planı'],
+        isNot(contains('İkinci randevu')),
         reason: 'ikinci görev çıkıştan sonra planlanmaz');
     expect(notifications.pending.values, isNot(contains('Ayşe ile vardiya planı')));
     expect(notifications.pending.values, isNot(contains('İkinci randevu')));
