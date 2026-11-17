@@ -39,8 +39,10 @@ Riverpod 2 (kod üretimi yok), `fl_chart`. `schema.sql` tek, idempotent betik; R
 - İçerik: "5/7 gün hedef" + yüzde + ortalama + önceki döneme göre fark; günlük çubuk grafik ve hedef çizgisi
   (tutan gün vurgulu, tutmayan soluk, verisiz gün boş); mevcut seri ve dönem içi en uzun seri.
   Kalori sekmesinde ikincil satır: protein tutturulan gün sayısı.
-- Hedef kuralları (raporlarla aynı eşikler, `docs/SPEC_FAZ3.md` §2): adım ≥ `daily_steps`; uyku ≥ `sleep_minutes`;
-  kalori hedefin %85–%110'u; protein ≥ hedefin %90'ı.
+- Hedef kuralları: kalori hedefin %85–%110'u ve protein ≥ hedefin %90'ı (raporlarla aynı, `docs/SPEC_FAZ3.md` §2);
+  adım ≥ `daily_steps` (%100); uyku ≥ `sleep_minutes`'ın %90'ı (saatler uykuyu eksik ölçer; benim kararım).
+  Raporlarda adım ve uyku için tutturma kuralı yok, bunlar yeni kurallardır. Eşikler tek yerde (Dart sabitleri)
+  durur; Faz 4B'nin sunucu özeti aynı eşikleri SQL'de yeniden yazar ve iki tarafa eşlik testi konur.
 - Verisiz gün paydaya girmez ve "veri yok" diye ayrı sayılır (benim kararım). Raporların kendi paydası değişmez;
   fark README'de not edilir.
 - Veri: `daily_health_metrics` (adım, uyku) ve `nutrition_logs` günlük toplamı (kalori, protein). Hesap saf
@@ -80,6 +82,29 @@ Riverpod 2 (kod üretimi yok), `fl_chart`. `schema.sql` tek, idempotent betik; R
   çubuğu). Kapsam: görev, rutin, not başlıkları; Kokpit gün ve ay görünümü; öğün ve antrenman satırları.
   Ortak bileşen `lib/core/widgets/`. Rutin silinince tamamlama geçmişi de gider (mevcut cascade).
 - "Görev başlıkları" burada başlığı (title) düzenleme ve silme olarak yorumlandı (benim yorumum).
+
+## Netleştirmeler (okuyucu sorularından; hepsi benim kararım)
+- **Denge hangi günde yorum üretir:** O gün en az bir öğün kaydı varsa. Kayıt yoksa gün boş kalır ("henüz öğün
+  girilmedi"), grafikte boşluk olur, yorum ve övgü/uyarı yoktur. Bugün için yorum "şu ana kadar" ibaresi taşır;
+  saat eşiği yoktur.
+- **Sağlık verisi yoksa:** O gün `daily_health_metrics` satırı yoksa yakılan = bazal + antrenman kaydı kalorisi
+  olur ve kartta "aktif kalori verisi yok, tahmin bazala dayanıyor" notu çıkar. Hiç sağlık kaynağı bağlamamış
+  kullanıcı bu notla yaşar; yorum yine verilir.
+- **Haftalık/aylık toplam:** Yalnızca yorum üretilebilen (öğünü olan) günlerin net toplamı; "N gün üzerinden"
+  yazılır. 7 güne ölçeklenmez. Tahmini yağ değişimi = Σnet ÷ 7700, aynı N gün için gözlenen değerdir.
+- **`sex` değerleri:** 'female', 'male', 'unspecified'; null = henüz cevaplanmadı. "Profil eksik" = boy, doğum
+  yılı ya da cinsiyetten biri null. 'unspecified' katsayısı −78. Ayarlar'da üç seçenek; 4B onboarding'i aynı
+  değerleri yazar. CHECK kısıtı üç değeri kabul eder.
+- **Bugün (trend):** Bugün "devam ediyor" sayılır: hedefi zaten tutturduysa tutan gün, aksi hâlde paydaya girmez.
+  Verisiz gün seriyi bozmaz ve atlanır; veri olup hedefi tutturmayan gün seriyi bozar. "Mevcut seri" yalnızca
+  geçerli dönemde gösterilir; geçmiş dönemde yalnızca "en uzun seri" (o dönem içinde) görünür.
+- **Besin değerleri nereden:** Builder önce USDA FoodData Central'dan (API ya da yayımlanmış veri; ağ izin
+  verdiği ölçüde) ve TürKomp'tan okur. İki kaynakta uyuşan satır `dogrulama: iki kaynak`; yalnızca bir kaynakta
+  bulunan ve yaygın yayımlanmış değerlerle ±%5 uyuşan satır `dogrulama: tek kaynak`; diğerleri listeye girmez.
+  Kaynak notu "USDA FDC <kimlik> | TürKomp <kod>" biçimindedir. Liste boyu hedefi ≈100–150; doğrulanabildiği kadar,
+  doldurma yok.
+- **Atwater testi:** Tolerans max(%15, 10 kcal); düşük enerjili, lifli gıdalarda (salatalık, ıspanak, baklagil)
+  yanlış alarm vermesin diye mutlak taban vardır.
 
 ## Yaklaşımlar
 - Trend yeri: (a) Sağlık kartlarından açılan tek sayfa, segmentli — **seçildi**; (b) Raporlar sekmesine koymak:

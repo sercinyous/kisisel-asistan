@@ -14,6 +14,7 @@ hiçbir başkasına görünmeyecek; yalnızca sağlık hedefi özeti, kişinin i
 4. Arkadaşlar: uygulama içi istek (e-posta ile), gelen davet kutusu, kabul/red, hedef özetini paylaşma.
 5. Gemini çağrısı sunucudan geçer; anahtar uygulamada olmaz; kişi başına günlük kota.
 6. "Pusholder" ve sahibe özel her şey ürün kodundan kalkar.
+7. Kayıt kapısı: davet almamış e-posta yeni hesap açamaz.
 
 ## Hedef dışı
 E-posta gönderimi (davet uygulama içidir); push bildirimi; mesajlaşma, gruplar, sıralama tabloları; App Store
@@ -94,6 +95,33 @@ yapısı yeni şemayla bozulmamalı.
   doğrulayınca anahtarı Codemagic'ten siler. Hata eşleme: 401 oturum, 429 kota, 402 fatura, 404 "AI sunucusu
   kurulmamış".
 
+## Netleştirmeler (okuyucu sorularından; hepsi benim kararım, sahibin gözden geçirmesi için)
+- **Kayıt kapısı (en önemlisi):** Supabase'te "Allow new users to sign up" AÇIK olmalı (Google ile ilk giriş yeni
+  kullanıcı oluşturur; README'deki "kapat" adımı değişir). Kapıyı bir `before insert` tetikleyicisi (ya da
+  "Before User Created" kancası) tutar: yalnızca en az bir kullanıcıdan bekleyen arkadaş isteği almış e-posta
+  hesap açabilir; diğerleri "Bu e-posta için davet yok" hatası alır. Mevcut hesaplar etkilenmez. Böylece
+  davet hem arkadaşlık hem kayıt izni olur ve ayrı bir izin listesi tutulmaz. Sınırlar: kullanıcı başına en çok
+  20 bekleyen istek; zincirleme davet (arkadaşın arkadaşı) mümkündür, kabul edildi. Google "Testing" modu ayrı
+  bir kapıdır: arkadaşların Gmail'leri yine test kullanıcısı olarak eklenir.
+- **Yeni hesabın içeriği:** `seed_personal_assistant` ve `on_auth_user_created_seed` nötrleşir: yalnızca
+  `user_settings` satırı oluşur (sahibin rutinleri, ekip görevleri, "84,5 → 78 kg" notu ve 84,5 kg tartısı gelmez).
+  Başlangıç rutinleri onboarding'in 5. adımında seçilir; onboarding "kilo" cevabını ayrıca bir tartı kaydı olarak
+  yazar (4A bazal hesabı ve Kilo kartı son tartıyı kullanır). Atlayan kullanıcı boş başlar. Sahibin mevcut
+  verisine dokunulmaz.
+- **Arkadaş özeti:** `friend_goal_summary` Pazartesi–Pazar haftası için, arkadaşın saat diliminde, paylaşılan her
+  metrik için `tutturulan_gün` ve `verisi_olan_gün` döner (tarih yok). Bitmemiş bugün yalnızca hedefi tutturduysa
+  sayılır (4A ile aynı). Eşikler 4A sabitleriyle aynıdır; SQL ve Dart arasında eşlik testi vardır. Anahtar kapalıysa
+  "paylaşmıyor". Kimlik alanı yalnızca `display_name`; boşsa kısmen maskelenmiş e-posta (`s***@gmail.com`).
+  Listeyi besleyen beşinci işlev `my_friends()` eklenir (id, görünen ad, paylaşım anahtarları).
+- **Google girişi ve Google Health:** İkisi tek `GoogleSignIn.instance.initialize` çağrısını paylaşır
+  (`clientId` + `serverClientId`). Google Health yalnızca saklanan kaynak tercihi "Google" ise bağlı sayılır
+  (giriş hesabı sessizce bulunsa bile "izin eksik" dememek için). Uygulamadan çıkış Google yuvasına dokunmaz.
+- **Maliyet:** Rapor zamanlayıcısı yalnızca ilk kurulumunu bitirmiş (`onboarded_at` dolu) kullanıcılar için çalışır.
+  "Raporu yeniden oluştur" kişi başına günde en çok 10 kez; sayaç `ai_usage`'ta ayrı bir türdür.
+- **Eski TestFlight yapısı:** Yazma tarafı tetikleyiciyle korunur. Okuma tarafında eski yapı, 'İş'e taşınan
+  sahibin işlerini kapsam filtresinde göstermeyebilir; sahip yeni yapıyı yükleyince düzelir ve bu kabul
+  edilir. Sıra: yeni yapı TestFlight'a düşünce SQL çalıştırılır.
+
 ## Yaklaşımlar
 - Davet: (a) uygulama içi istek — **kullanıcı seçti**; (b) e-posta gönderimi: gönderici hesabı ve domain gerekir;
   (c) davet kodu.
@@ -114,7 +142,7 @@ Paylaşılan tek şey sağlık hedef günleri, varsayılan kapalı; ince proxy; 
 Google hesap bağlama kapsam dışı; önerilen hedef formülleri; 100/gün kota; push yok.
 
 ## Sahip kurulumları (uygulama dışı)
-Google Cloud: Web OAuth istemcisi, arkadaşların Gmail'leri test kullanıcısı. Supabase: Google sağlayıcısı,
+Google Cloud: Web OAuth istemcisi, arkadaşların Gmail'leri test kullanıcısı. Supabase: "Allow new users to sign up" açık, Google sağlayıcısı,
 Edge Function dağıtımı (`ai-proxy`, `generate-reports`), secret'lar. Codemagic: `GOOGLE_WEB_CLIENT_ID`.
 App Store Connect: arkadaşları TestFlight'a ekleme.
 
