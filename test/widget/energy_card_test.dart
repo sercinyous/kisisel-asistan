@@ -37,7 +37,7 @@ final _thu = DateTime(2026, 11, 19);
 DateTime _now = DateTime(2026, 11, 17, 12);
 
 final UserSettings _complete = const UserSettings.defaults()
-    .copyWith(heightCm: 180, birthYear: 1996, sex: 'male');
+    .copyWith(startWeightKg: 84.5, heightCm: 180, birthYear: 1996, sex: 'male');
 
 void main() {
   late FakeHealthRepository health;

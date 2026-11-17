@@ -4,9 +4,12 @@
 create schema auth;
 
 create table auth.users (
-  id         uuid primary key,
-  email      text,
-  created_at timestamptz default now()
+  id                 uuid primary key,
+  email              text,
+  -- Gerçek Supabase'te doğrulanmış e-posta bu sütunla anlaşılır (Google girişinde
+  -- dolu gelir). Arkadaş istekleri yalnızca doğrulanmış e-postayla eşleşir.
+  email_confirmed_at timestamptz,
+  created_at         timestamptz default now()
 );
 
 create function auth.uid() returns uuid

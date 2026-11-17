@@ -1,3 +1,4 @@
+import '../../../core/config/app_targets.dart';
 import '../../../core/utils/date_utils.dart';
 
 /// Tekrarlama türü. Günlük iş, haftanın 7 gününe yayılmış haftalık iştir.
@@ -29,7 +30,7 @@ class Routine {
     this.createdAt,
   });
 
-  static const String scopeWork = 'Pusholder';
+  static const String scopeWork = AppTargets.workCategory;
   static const String scopePersonal = 'Kişisel';
   static const List<String> scopes = [scopeWork, scopePersonal];
   static const List<String> categories = [
@@ -94,7 +95,7 @@ class Routine {
     return Routine(
       id: map['id'] as String,
       title: map['title'] as String,
-      scope: map['scope'] as String? ?? scopePersonal,
+      scope: AppTargets.normalizeWork(map['scope'] as String? ?? scopePersonal),
       category: map['category'] as String? ?? 'kisisel',
       frequency: RoutineFrequency.fromDb(map['frequency']),
       daysOfWeek: days is List

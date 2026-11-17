@@ -470,9 +470,9 @@ void main() {
     setUp(() {
       harness = KokpitHarness()..mockPlatformChannel();
       harness.routines.routines = [
-        daily('r1', 'Sabah push performans kontrolü'),
+        daily('r1', 'Sabah görev kontrolü'),
         // Saatli rutin bildirim planına girer.
-        daily('r2', 'Editör vardiya kontrolü', time: '23:30:00'),
+        daily('r2', 'Gelen kutusu kontrolü', time: '23:30:00'),
         Routine(
           id: 'm1',
           title: 'Maaş ödemeleri',
@@ -490,10 +490,10 @@ void main() {
         'hâlâ tamamlar', (tester) async {
       await harness.pump(tester);
 
-      await longPressRow(tester, 'Sabah push performans kontrolü');
+      await longPressRow(tester, 'Sabah görev kontrolü');
       expect(find.text('Düzenle'), findsOneWidget);
       expect(find.text('Sil'), findsOneWidget);
-      expect(harness.isChecked(tester, 'Sabah push performans kontrolü'),
+      expect(harness.isChecked(tester, 'Sabah görev kontrolü'),
           isFalse,
           reason: 'uzun basış işaretlemez');
 
@@ -502,8 +502,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Düzenle'), findsNothing);
 
-      await harness.tapRow(tester, 'Sabah push performans kontrolü');
-      expect(harness.isChecked(tester, 'Sabah push performans kontrolü'),
+      await harness.tapRow(tester, 'Sabah görev kontrolü');
+      expect(harness.isChecked(tester, 'Sabah görev kontrolü'),
           isTrue);
       expect(harness.routines.toggles, hasLength(1));
     });
@@ -511,7 +511,7 @@ void main() {
     testWidgets('rutin: Düzenle formu mevcut kaydı açar', (tester) async {
       await harness.pump(tester);
 
-      await longPressRow(tester, 'Editör vardiya kontrolü');
+      await longPressRow(tester, 'Gelen kutusu kontrolü');
       await tester.tap(find.text('Düzenle'));
       await tester.pumpAndSettle();
 
@@ -524,7 +524,7 @@ void main() {
             )
             .controller!
             .text,
-        'Editör vardiya kontrolü',
+        'Gelen kutusu kontrolü',
       );
     });
 
@@ -545,19 +545,19 @@ void main() {
         hasLength(2),
       );
 
-      await longPressRow(tester, 'Editör vardiya kontrolü');
+      await longPressRow(tester, 'Gelen kutusu kontrolü');
       await tester.tap(find.text('Sil'));
       await tester.pumpAndSettle();
       expect(find.text('Sabit silinsin mi?'), findsOneWidget);
       expect(
-        find.text('"Editör vardiya kontrolü" ve tamamlanma geçmişi kalıcı '
+        find.text('"Gelen kutusu kontrolü" ve tamamlanma geçmişi kalıcı '
             'olarak silinecek.'),
         findsOneWidget,
       );
       await confirmInDialog(tester);
 
       expect(harness.routines.routines.map((r) => r.id), ['r1', 'm1']);
-      expect(find.text('Editör vardiya kontrolü'), findsNothing);
+      expect(find.text('Gelen kutusu kontrolü'), findsNothing);
       expect(find.text('Sabit silindi.'), findsOneWidget);
       expect(harness.notifications.resyncCount, greaterThan(resyncBefore),
           reason: 'bildirim planı yeniden kurulmalı');
@@ -579,13 +579,13 @@ void main() {
       await tester.pumpAndSettle();
       final resyncBefore = harness.notifications.resyncCount;
 
-      await longPressRow(tester, 'Editör vardiya kontrolü');
+      await longPressRow(tester, 'Gelen kutusu kontrolü');
       await tester.tap(find.text('Sil'));
       await tester.pumpAndSettle();
       await cancelInDialog(tester);
 
       expect(harness.routines.routines, hasLength(3));
-      expect(find.text('Editör vardiya kontrolü'), findsOneWidget);
+      expect(find.text('Gelen kutusu kontrolü'), findsOneWidget);
       expect(harness.notifications.resyncCount, resyncBefore);
     });
 
@@ -595,12 +595,12 @@ void main() {
       await tester.pumpAndSettle();
       final resyncBefore = harness.notifications.resyncCount;
 
-      await swipeRow(tester, 'Sabah push performans kontrolü');
+      await swipeRow(tester, 'Sabah görev kontrolü');
       expect(find.text('Sabit silinsin mi?'), findsOneWidget);
       await confirmInDialog(tester);
 
       expect(harness.routines.routines.map((r) => r.id), ['r2', 'm1']);
-      expect(find.text('Sabah push performans kontrolü'), findsNothing);
+      expect(find.text('Sabah görev kontrolü'), findsNothing);
       expect(harness.notifications.resyncCount, greaterThan(resyncBefore));
       expect(tester.takeException(), isNull);
       await drain(tester);
@@ -780,7 +780,7 @@ void main() {
         }
         await harness.pump(tester, textScale: scale);
 
-        await longPressRow(tester, 'Sabah push performans kontrolü');
+        await longPressRow(tester, 'Sabah görev kontrolü');
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Sil'));
         await tester.pumpAndSettle();
@@ -788,7 +788,7 @@ void main() {
         expect(tester.takeException(), isNull);
         await cancelInDialog(tester);
 
-        await swipeRow(tester, 'Sabah push performans kontrolü');
+        await swipeRow(tester, 'Sabah görev kontrolü');
         expect(find.text('Sabit silinsin mi?'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await cancelInDialog(tester);

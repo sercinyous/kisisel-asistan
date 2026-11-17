@@ -237,7 +237,7 @@ abstract final class AppColors {
       };
 
   static Color forTaskCategory(String category) => switch (category) {
-        'Pusholder' => ops,
+        'İş' => ops,
         'Ekip' => accent,
         'Finans' => warning,
         _ => fitness,

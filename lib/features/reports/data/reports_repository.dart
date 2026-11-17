@@ -24,10 +24,13 @@ class ReportGenerationException implements Exception {
 }
 
 /// `generate-reports` hatasının kullanıcıya gösterilecek metni. Sunucunun
-/// girdi hatası (400) için yazdığı Türkçe ileti varsa o; yoksa duruma göre
-/// genel bir ileti. [status] 0: istek sunucuya ulaşamadı.
+/// girdi hatası (400) ya da günlük yenileme sınırı (429) için yazdığı Türkçe
+/// ileti varsa o; yoksa duruma göre genel bir ileti. [status] 0: istek
+/// sunucuya ulaşamadı.
 String reportErrorMessage(int status, Object? details) {
-  if (status == 400 && details is Map && details['error'] is String) {
+  if ((status == 400 || status == 429) &&
+      details is Map &&
+      details['error'] is String) {
     return details['error'] as String;
   }
   return switch (status) {

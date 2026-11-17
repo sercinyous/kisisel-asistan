@@ -1,3 +1,5 @@
+import '../../../core/config/app_targets.dart';
+
 /// `tasks` tablosundaki bir satır (tek seferlik görev ya da randevu).
 class TaskItem {
   const TaskItem({
@@ -48,7 +50,8 @@ class TaskItem {
         id: map['id'] as String,
         title: map['title'] as String,
         description: map['description'] as String?,
-        category: map['category'] as String? ?? 'Kişisel',
+        category:
+            AppTargets.normalizeWork(map['category'] as String? ?? 'Kişisel'),
         priority: map['priority'] as String? ?? 'medium',
         status: map['status'] as String? ?? 'todo',
         assignee: map['assignee'] as String?,

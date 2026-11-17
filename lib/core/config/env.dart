@@ -13,7 +13,18 @@ abstract final class Env {
 
   static const String supabaseAnonKey =
       String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  /// İsteğe bağlı (geçiş için): doluysa Gemini doğrudan bu anahtarla çağrılır;
+  /// boşsa AI çağrıları sunucudaki `ai-proxy` Edge Function'ından geçer (oturum
+  /// belirteciyle, anahtar uygulamada olmaz).
   static const String geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
+
+  /// `GEMINI_API_KEY` boşsa AI proxy modu.
+  static bool get usesAiProxy => geminiApiKey.trim().isEmpty;
+
+  /// AI proxy adresi: `<SUPABASE_URL>/functions/v1/ai-proxy`.
+  static String get aiProxyUrl => aiProxyUrlFor(supabaseUrl);
+
   static const String geminiModel = String.fromEnvironment(
     'GEMINI_MODEL',
     defaultValue: 'gemini-3.8-flash',
@@ -28,13 +39,28 @@ abstract final class Env {
   static String get googleIosClientId =>
       normalizeGoogleClientId(_rawGoogleIosClientId);
 
+  static const String _rawGoogleWebClientId =
+      String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+
+  /// İsteğe bağlı: Supabase ile Google girişi için Web OAuth istemci kimliği
+  /// (`serverClientId`). Kimlik belirtecinin hedef kitlesi budur; Supabase >
+  /// Authentication > Providers > Google "Authorized Client IDs" listesinde
+  /// olmalıdır. Verilmemiş ya da biçimi geçersizse boştur; o zaman giriş
+  /// ekranında Google düğmesi gizlenir, e-posta girişi çalışır.
+  static String get googleWebClientId =>
+      normalizeGoogleClientId(_rawGoogleWebClientId);
+
   /// Eksik olan zorunlu anahtarların adları (boşsa yapılandırma tamdır).
   static List<String> get missingKeys => [
         if (supabaseUrl.isEmpty) 'SUPABASE_URL',
         if (supabaseAnonKey.isEmpty) 'SUPABASE_ANON_KEY',
-        if (geminiApiKey.isEmpty) 'GEMINI_API_KEY',
       ];
 }
+
+/// [supabaseUrl] (normalize edilmiş köken) için `ai-proxy` fonksiyonunun adresi;
+/// adres boşsa boş metin.
+String aiProxyUrlFor(String supabaseUrl) =>
+    supabaseUrl.isEmpty ? '' : '$supabaseUrl/functions/v1/ai-proxy';
 
 /// [raw] içinden yalnızca `şema://alan[:port]` kısmını döndürür. Şemasız
 /// yazılmışsa (`xxxx.supabase.co`) `https://` eklenir. Ayrıştırılamazsa
@@ -48,7 +74,7 @@ String normalizeSupabaseUrl(String raw) {
   return uri.origin;
 }
 
-/// Google OAuth iOS istemci kimliğini kırpar ve doğrular. Biçim
+/// Google OAuth iOS ya da Web istemci kimliğini kırpar ve doğrular. Biçim
 /// `<proje numarası>-<harf/rakam>.apps.googleusercontent.com` değilse boş
 /// metin döner (yanlış değerle giriş penceresi açılmaz, seçenek kapalı kalır).
 String normalizeGoogleClientId(String raw) {

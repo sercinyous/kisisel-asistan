@@ -6,6 +6,10 @@ alınınca bir satır eklenir. Şema için tek kaynak `supabase/schema.sql`, mim
 ## Ürün
 - **Ritim** (Kişisel Asistan): tek kullanıcılı iOS uygulaması. Pusholder operasyonu (editörler Duhan, İlhan,
   Mehmet, Sedat; vardiya ve görevler) ile kişisel sağlık (84,5 → 78 kg hedefi, antrenman, makrolar) bir arada.
+- Faz 4B: 'Pusholder' ve sahibe özel her şey ürün kodundan kalktı. Görev/not kategorisi ve rutin kapsamı herkes için
+  'İş'; eski 'Pusholder' değeri yalnızca okunurken (`AppTargets.normalizeWork`, AI yanıtı çözümü) 'İş'e eşlenir,
+  asla yazılmaz. Ekip isteğe bağlıdır, varsayılanı boştur; kilo hedefi varsayılanı 70/70'tir. AI komutu kullanıcının
+  `work_description` alanını (tek satır, en çok 300 karakter, yalnızca bağlam) kullanır. Demo verisi nötrdür.
 - App Store Connect adı "Ritim: Rutin, İş ve Sağlık"; bundle id `com.sercinyous.kisiselasistan`;
   SKU `kisiselasistan-ios`.
 - Aylık sabitler (ör. ayın 15'i maaş ödemesi) bitiş gününden 3 gün önce görünür, gün geçince "gecikti" olur,
@@ -27,6 +31,12 @@ alınınca bir satır eklenir. Şema için tek kaynak `supabase/schema.sql`, mim
 - Model `gemini-3.8-flash`, `thinkingLevel: low`, `temperature` verilmez, `responseSchema` kullanılır.
   Model kalkarsa uygulama yeniden yazılmaz: `GEMINI_MODEL` dart-define ile değişir.
 - Hata 404 = model bulunamadı. Hata 402 = ön ödemeli bakiye ya da fatura bitti (AI Studio > Billing).
+- Faz 4B: AI çağrıları sunucudaki Edge Function `ai-proxy`'den geçer (`GEMINI_API_KEY` yalnızca fonksiyon secret'ında;
+  modeli `GEMINI_MODEL` secret'ı seçer; günlük kota `AI_DAILY_LIMIT`, varsayılan 100/kişi, `ai_usage` kind `ai`).
+  Uygulamada `GEMINI_API_KEY` dart-define boşsa proxy modu, doluysa doğrudan çağrı (geçiş). Proxy 429 = günlük kota
+  (yeniden denenmez); Gemini'nin kendi 429/5xx'i 503, 401/403/404'ü 502 olarak iletilir; 402 aynen. Yeniden
+  denemeler kotadan düşer. "Raporu yeniden oluştur" günde 10 (`ai_usage` kind `report_regen`); rapor zamanlayıcısı
+  yalnızca `onboarded_at` dolu kullanıcılar için üretir.
 
 ## Dağıtım
 - Codemagic: `ios-testflight` (main'e push) ve `ios-adhoc` (elle). `ios/` CI'da `flutter create` ile üretilir,
@@ -105,6 +115,7 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4a-saglik-detay-design.md` (Net
 - `service_role` ya da secret anahtar uygulamaya, repoya, sohbete girmez. Yalnızca anon/publishable anahtar.
 - `.p8`, `.p12`, parola ve anahtar değerleri sohbete yapıştırılmaz; yalnızca Codemagic'e girilir.
 - Gerçek Google client id repoya gömülmez; yalnızca Codemagic'te `GOOGLE_IOS_CLIENT_ID`.
+- Google ile giriş (Faz 4B): `google_sign_in` → kimlik belirteci → `signInWithIdToken`; Web istemci kimliği yalnızca Codemagic'te `GOOGLE_WEB_CLIENT_ID` (boşsa Google düğmesi gizli). Tek `GoogleSignIn.instance.initialize` çağrısı Google Health ile paylaşılır; uygulamadan çıkış Google yuvasına dokunmaz; Health yalnızca Ayarlar'dan bağlanınca bağlı sayılır.
 - Supabase MCP salt-okunur ve tek projeye kilitli (`.mcp.json`); yazan araçlar `.claude/settings.json` ile
   engelli. Yalnızca şema, politika, advisor ve log sorgulanır; kullanıcı tablolarında SELECT çalıştırılmaz.
   Salt-okunur kip prompt injection ile veri sızmasını engellemez, bu yüzden bu kural elle uygulanır.

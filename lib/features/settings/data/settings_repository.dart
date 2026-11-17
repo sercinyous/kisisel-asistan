@@ -31,9 +31,11 @@ class SettingsRepository {
         .maybeSingle();
     if (existing != null) return UserSettings.fromMap(existing);
 
+    // Yalnızca kullanıcı kimliği yazılır: sütun varsayılanlarını (nötr
+    // hedefler, boş `onboarded_at`) veritabanı verir; yeni hesap kılavuza düşer.
     // ignoreDuplicates: aynı anda başka bir okuma satırı açtıysa onunki kalır.
     await _client.from('user_settings').upsert(
-      {'user_id': userId, ...const UserSettings.defaults().toMap()},
+      {'user_id': userId},
       onConflict: 'user_id',
       ignoreDuplicates: true,
     );

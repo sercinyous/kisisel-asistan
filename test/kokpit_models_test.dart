@@ -33,14 +33,14 @@ void main() {
         'category': 'Ekip',
         'priority': 'high',
         'status': 'in_progress',
-        'assignee': 'Duhan',
+        'assignee': 'Ayşe',
         'due_at': '2026-11-17T12:00:00+00:00',
         'remind_at': '2026-11-17T11:30:00+00:00',
       });
       expect(t.category, 'Ekip');
       expect(t.priority, 'high');
       expect(t.isDone, isFalse);
-      expect(t.assignee, 'Duhan');
+      expect(t.assignee, 'Ayşe');
       expect(t.dueAt!.isUtc, isFalse);
       expect(t.dueAt!.toUtc(), DateTime.utc(2026, 11, 17, 12));
       expect(t.effectiveTime!.toUtc(), DateTime.utc(2026, 11, 17, 11, 30));

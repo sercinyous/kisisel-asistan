@@ -38,7 +38,7 @@ void main() {
           category: 'Ekip',
           priority: 'high',
           status: 'todo',
-          assignee: 'Duhan',
+          assignee: 'Ayşe',
           dueAt: DateTime(2099, 1, 5, 15),
           remindAt: DateTime(2099, 1, 5, 14, 30),
         ),
@@ -55,7 +55,7 @@ void main() {
       routines: const [
         Routine(
           id: 'r1',
-          title: 'Sabah push performans kontrolü (CTR, teslim oranı)',
+          title: 'Sabah görev ve takvim kontrolü (plan, öncelik)',
           scope: Routine.scopeWork,
           category: 'operasyon',
           hour: 9,

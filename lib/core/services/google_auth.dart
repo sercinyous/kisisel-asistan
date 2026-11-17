@@ -18,8 +18,22 @@ const List<String> googleHealthScopes = [
 /// Testler ve demo bu sağlayıcıyı ezer.
 final googleClientIdProvider = Provider<String>((ref) => Env.googleIosClientId);
 
+/// Derlemeye verilen Web istemci kimliği (`serverClientId`); Supabase ile
+/// Google girişi için gerekir, boşsa giriş ekranında Google düğmesi gizlenir.
+final googleServerClientIdProvider =
+    Provider<String>((ref) => Env.googleWebClientId);
+
+/// Uygulamanın tek `GoogleSignIn.instance.initialize` çağrısının sahibi:
+/// Google ile giriş ve Google Health aynı örneği paylaşır.
+final googleSignInHostProvider = Provider<GoogleSignInHost>(
+  (ref) => GoogleSignInHost(
+    clientId: ref.watch(googleClientIdProvider),
+    serverClientId: ref.watch(googleServerClientIdProvider),
+  ),
+);
+
 final googleAuthClientProvider = Provider<GoogleAuthClient>(
-  (ref) => GoogleSignInAuthClient(clientId: ref.watch(googleClientIdProvider)),
+  (ref) => GoogleSignInAuthClient.withHost(ref.watch(googleSignInHostProvider)),
 );
 
 /// Bağlı Google hesabı.
@@ -102,22 +116,84 @@ abstract interface class GoogleAuthClient {
   Future<void> disconnect();
 }
 
+/// `GoogleSignIn.instance.initialize` çağrısını tek seferde yapan ortak ev
+/// sahibi. Eklenti ömürde yalnızca bir kez başlatılabilir; Google ile giriş
+/// (Supabase) ve Google Health bu nesneyi paylaşır, böylece `clientId` ve
+/// `serverClientId` ikisi için aynı çağrıyla verilir.
+class GoogleSignInHost {
+  GoogleSignInHost({
+    required this.clientId,
+    this.serverClientId = '',
+    GoogleSignIn? signIn,
+  }) : _injected = signIn;
+
+  /// iOS OAuth istemci kimliği; boşsa eklenti hiç başlatılmaz.
+  final String clientId;
+
+  /// Web OAuth istemci kimliği (kimlik belirtecinin hedef kitlesi); boşsa
+  /// verilmez (yalnızca Google Health kullanılan derleme).
+  final String serverClientId;
+
+  final GoogleSignIn? _injected;
+  Future<void>? _initialization;
+
+  // Tekil örneğe ancak gerektiğinde erişilir (Google seçilmeyen derlemede
+  // ve testlerde eklenti hiç başlatılmaz).
+  GoogleSignIn get signIn => _injected ?? GoogleSignIn.instance;
+
+  /// Eklentiyi başlatır; sonraki çağrılar aynı sonucu paylaşır. Hata verirse
+  /// bir sonraki denemede yeniden çağrılabilsin diye bırakılır.
+  Future<void> ensureInitialized() {
+    if (clientId.isEmpty) {
+      return Future.error(
+        const GoogleAuthException(GoogleAuthErrorKind.configuration),
+      );
+    }
+    return _initialization ??= signIn
+        .initialize(
+          clientId: clientId,
+          serverClientId: serverClientId.isEmpty ? null : serverClientId,
+        )
+        .catchError((Object error, StackTrace stack) {
+      _initialization = null;
+      Error.throwWithStackTrace(
+        translateGoogleSignInError(error, interactive: false),
+        stack,
+      );
+    });
+  }
+}
+
 /// `google_sign_in` 7.x ile çalışan gerçek istemci (iOS).
 class GoogleSignInAuthClient implements GoogleAuthClient {
   GoogleSignInAuthClient({
-    required this.clientId,
+    required String clientId,
+    String serverClientId = '',
     GoogleSignIn? signIn,
-    this.timeout = const Duration(seconds: 30),
-  }) : _injected = signIn;
+    Duration timeout = const Duration(seconds: 30),
+  }) : this.withHost(
+          GoogleSignInHost(
+            clientId: clientId,
+            serverClientId: serverClientId,
+            signIn: signIn,
+          ),
+          timeout: timeout,
+        );
 
-  final String clientId;
+  /// Başlatmayı başka bileşenlerle (Google ile giriş) paylaşan kurucu.
+  GoogleSignInAuthClient.withHost(
+    this.host, {
+    this.timeout = const Duration(seconds: 30),
+  });
+
+  final GoogleSignInHost host;
+
+  String get clientId => host.clientId;
 
   /// Etkileşimsiz isteklerin üst süresi; aşılırsa ağ hatası sayılır ve
   /// uygulama beklemeye devam etmez.
   final Duration timeout;
 
-  final GoogleSignIn? _injected;
-  Future<void>? _initialization;
   GoogleSignInAccount? _account;
 
   /// Süren sessiz geri yükleme (`restorePreviousSignIn`). iOS'ta GIDSignIn'in
@@ -132,25 +208,9 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
   /// bitene kadar yeni sessiz geri yükleme başlamaz.
   Future<void>? _interactive;
 
-  // Tekil örneğe ancak gerektiğinde erişilir (Google seçilmeyen derlemede
-  // ve testlerde eklenti hiç başlatılmaz).
-  GoogleSignIn get _signIn => _injected ?? GoogleSignIn.instance;
+  GoogleSignIn get _signIn => host.signIn;
 
-  Future<void> _ensureInitialized() {
-    if (clientId.isEmpty) {
-      return Future.error(
-        const GoogleAuthException(GoogleAuthErrorKind.configuration),
-      );
-    }
-    // `initialize` uygulama ömründe yalnızca bir kez çağrılmalıdır; hata
-    // verirse bir sonraki denemede yeniden çağrılabilsin diye bırakılır.
-    return _initialization ??= _signIn
-        .initialize(clientId: clientId)
-        .catchError((Object error, StackTrace stack) {
-      _initialization = null;
-      Error.throwWithStackTrace(_translate(error, interactive: false), stack);
-    });
-  }
+  Future<void> _ensureInitialized() => host.ensureInitialized();
 
   @override
   Future<GoogleToken> silentToken(List<String> scopes) async {
@@ -168,7 +228,7 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
       try {
         account = await _restoreAccount();
       } catch (error) {
-        throw _translate(error, interactive: false);
+        throw translateGoogleSignInError(error, interactive: false);
       }
       if (account == null) {
         throw const GoogleAuthException(GoogleAuthErrorKind.noSession);
@@ -179,7 +239,7 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
       authorization =
           await account.authorizationClient.authorizationForScopes(scopes);
     } catch (error) {
-      final translated = _translate(error, interactive: false);
+      final translated = translateGoogleSignInError(error, interactive: false);
       // Ağ hatası dışında oturum bir dahaki sefere baştan geri yüklenir.
       if (translated.kind != GoogleAuthErrorKind.network) _account = null;
       throw translated;
@@ -196,7 +256,7 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
   /// Kayıtlı oturumu geri yükler; eşzamanlı çağrılar tek yerel çağrıyı
   /// paylaşır ([_restoring]). Paylaşılan çağrı [timeout] ile sınırlıdır: yerel
   /// tamamlanma hiç gelmezse kapı açılır ve sonraki çağrı yeniden dener.
-  /// Zaman aşımı [TimeoutException] olarak iletilir ([_translate] ağ hatası yapar).
+  /// Zaman aşımı [TimeoutException] olarak iletilir ([translateGoogleSignInError] ağ hatası yapar).
   Future<GoogleSignInAccount?> _restoreAccount() {
     final inFlight = _restoring;
     if (inFlight != null) return inFlight;
@@ -259,7 +319,7 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
     } on GoogleAuthException {
       rethrow;
     } catch (error) {
-      throw _translate(error, interactive: true);
+      throw translateGoogleSignInError(error, interactive: true);
     }
   }
 
@@ -283,61 +343,61 @@ class GoogleSignInAuthClient implements GoogleAuthClient {
 
   static GoogleAccount _toAccount(GoogleSignInAccount account) =>
       GoogleAccount(email: account.email, displayName: account.displayName);
+}
 
-  /// Eklenti hatalarını uygulamanın hata türüne çevirir. iOS'ta GIDSignIn
-  /// dışındaki hatalar `PlatformException` olarak, kodu "alan: numara"
-  /// biçiminde gelir (örn. `org.openid.appauth.general: -5`).
-  ///
-  /// Sessiz yolda (yeniden yetkilendirme) yalnızca yenileme anahtarının
-  /// kesin reddi oturumu öldürür: AppAuth `org.openid.appauth.oauth_token`
-  /// alanı (invalid_grant gibi 4xx JSON hataları). Bağlantı hatası (`general:
-  /// -5`), Google 5xx (`-6`), JSON olmayan yanıt (`-7`, ör. oturum açma
-  /// sayfası) ve tanınmayan her `PlatformException` geçicidir: [network]
-  /// döner, bağlı oturum "yeniden bağlan" durumuna düşmez.
-  static GoogleAuthException _translate(
-    Object error, {
-    required bool interactive,
-  }) {
-    if (error is GoogleAuthException) return error;
-    // Paylaşılan geri yükleme ya da üst süre aşıldı.
-    if (error is TimeoutException) {
-      return const GoogleAuthException(GoogleAuthErrorKind.network);
-    }
-    if (error is GoogleSignInException) {
-      return switch (error.code) {
-        GoogleSignInExceptionCode.canceled =>
-          const GoogleAuthException(GoogleAuthErrorKind.canceled),
-        GoogleSignInExceptionCode.clientConfigurationError ||
-        GoogleSignInExceptionCode.providerConfigurationError =>
-          const GoogleAuthException(GoogleAuthErrorKind.configuration),
-        GoogleSignInExceptionCode.interrupted ||
-        GoogleSignInExceptionCode.uiUnavailable =>
-          const GoogleAuthException(
-            GoogleAuthErrorKind.unknown,
-            'Google giriş penceresi açılamadı. Tekrar dene.',
-          ),
-        _ => GoogleAuthException(
-            interactive
-                ? GoogleAuthErrorKind.unknown
-                : GoogleAuthErrorKind.expired,
-          ),
-      };
-    }
-    if (error is PlatformException) {
-      final code = error.code;
-      if (code.startsWith('NSURLErrorDomain')) {
-        return const GoogleAuthException(GoogleAuthErrorKind.network);
-      }
-      if (interactive) {
-        return const GoogleAuthException(GoogleAuthErrorKind.unknown);
-      }
-      if (code.startsWith('org.openid.appauth.oauth_token')) {
-        return const GoogleAuthException(GoogleAuthErrorKind.expired);
-      }
-      return const GoogleAuthException(GoogleAuthErrorKind.network);
-    }
-    return GoogleAuthException(
-      interactive ? GoogleAuthErrorKind.unknown : GoogleAuthErrorKind.expired,
-    );
+/// Eklenti hatalarını uygulamanın hata türüne çevirir. iOS'ta GIDSignIn
+/// dışındaki hatalar `PlatformException` olarak, kodu "alan: numara"
+/// biçiminde gelir (örn. `org.openid.appauth.general: -5`).
+///
+/// Sessiz yolda (yeniden yetkilendirme) yalnızca yenileme anahtarının
+/// kesin reddi oturumu öldürür: AppAuth `org.openid.appauth.oauth_token`
+/// alanı (invalid_grant gibi 4xx JSON hataları). Bağlantı hatası (`general:
+/// -5`), Google 5xx (`-6`), JSON olmayan yanıt (`-7`, ör. oturum açma
+/// sayfası) ve tanınmayan her `PlatformException` geçicidir: [network]
+/// döner, bağlı oturum "yeniden bağlan" durumuna düşmez.
+GoogleAuthException translateGoogleSignInError(
+  Object error, {
+  required bool interactive,
+}) {
+  if (error is GoogleAuthException) return error;
+  // Paylaşılan geri yükleme ya da üst süre aşıldı.
+  if (error is TimeoutException) {
+    return const GoogleAuthException(GoogleAuthErrorKind.network);
   }
+  if (error is GoogleSignInException) {
+    return switch (error.code) {
+      GoogleSignInExceptionCode.canceled =>
+        const GoogleAuthException(GoogleAuthErrorKind.canceled),
+      GoogleSignInExceptionCode.clientConfigurationError ||
+      GoogleSignInExceptionCode.providerConfigurationError =>
+        const GoogleAuthException(GoogleAuthErrorKind.configuration),
+      GoogleSignInExceptionCode.interrupted ||
+      GoogleSignInExceptionCode.uiUnavailable =>
+        const GoogleAuthException(
+          GoogleAuthErrorKind.unknown,
+          'Google giriş penceresi açılamadı. Tekrar dene.',
+        ),
+      _ => GoogleAuthException(
+          interactive
+              ? GoogleAuthErrorKind.unknown
+              : GoogleAuthErrorKind.expired,
+        ),
+    };
+  }
+  if (error is PlatformException) {
+    final code = error.code;
+    if (code.startsWith('NSURLErrorDomain')) {
+      return const GoogleAuthException(GoogleAuthErrorKind.network);
+    }
+    if (interactive) {
+      return const GoogleAuthException(GoogleAuthErrorKind.unknown);
+    }
+    if (code.startsWith('org.openid.appauth.oauth_token')) {
+      return const GoogleAuthException(GoogleAuthErrorKind.expired);
+    }
+    return const GoogleAuthException(GoogleAuthErrorKind.network);
+  }
+  return GoogleAuthException(
+    interactive ? GoogleAuthErrorKind.unknown : GoogleAuthErrorKind.expired,
+  );
 }

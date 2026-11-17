@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/templates/meal_templates.dart';
+import '../../../core/templates/template_chips.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
@@ -164,6 +166,26 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
       _name.text = food.name;
       _grams.text = HealthFormat.plain(_defaultGrams);
       _fill(food, _defaultGrams);
+    });
+  }
+
+  /// Şablon öğün türünü, adı, miktarı, kalori ve makroları doldurur (yaklaşık
+  /// değerler). Besin listesinden seçim bırakılır; her alan elle düzenlenir.
+  void _applyTemplate(MealTemplate template) {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _food = null;
+      _portionIndex = null;
+      _portionCount = 1;
+      _search.clear();
+      _grams.clear();
+      _mealType = template.mealType;
+      _name.text = template.foodName;
+      _quantity.text = template.quantityText;
+      _calories.text = _fieldNumber(template.calories);
+      _protein.text = _fieldNumber(template.proteinG);
+      _carbs.text = _fieldNumber(template.carbsG);
+      _fat.text = _fieldNumber(template.fatG);
     });
   }
 
@@ -510,6 +532,13 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
       error: _error,
       onSave: _save,
       children: [
+        if (widget.log == null)
+          TemplateChips<MealTemplate>(
+            templates: MealTemplates.all,
+            labelOf: (template) => template.label,
+            onSelected: _applyTemplate,
+            hint: 'Değerler yaklaşıktır; kendi porsiyonuna göre düzenle.',
+          ),
         OpsChoiceWrap<String>(
           options: [
             for (final type in NutritionLog.mealTypes)

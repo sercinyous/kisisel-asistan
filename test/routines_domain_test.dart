@@ -111,7 +111,7 @@ void main() {
 
     test('aylık satır', () {
       final r = Routine.fromMap(row({
-        'scope': 'Pusholder',
+        'scope': 'İş',
         'category': 'finans',
         'frequency': 'monthly',
         'day_of_month': 15,
@@ -120,7 +120,7 @@ void main() {
         'sort_order': 120,
         'created_at': '2026-11-01T09:00:00+00:00',
       }));
-      expect(r.scope, 'Pusholder');
+      expect(r.scope, 'İş');
       expect(r.frequency, RoutineFrequency.monthly);
       expect(r.isMonthly, isTrue);
       expect(r.isDaily, isFalse, reason: 'aylık iş günlük sayılmaz');
@@ -153,7 +153,7 @@ void main() {
       );
       expect(r.toInsertMap(), {
         'title': 'Ekip toplantısı',
-        'scope': 'Pusholder',
+        'scope': 'İş',
         'category': 'operasyon',
         'frequency': 'weekly',
         'days_of_week': [1, 5],

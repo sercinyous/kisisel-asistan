@@ -300,7 +300,7 @@ void main() {
     testWidgets('geçmiş ay salt okunur: Yapıldı / Yapılmadı', (tester) async {
       harness.routines.routines = [
         monthly('m1', 'Maaş ödemeleri', 15, hour: 10),
-        monthly('m2', 'Aylık push performans raporu', 1),
+        monthly('m2', 'Aylık faaliyet raporu', 1),
       ];
       harness.routines.completions = {
         RoutineCompletionKey('m2', DateTime(2026, 2)),
@@ -311,11 +311,11 @@ void main() {
       expect(find.text('1 / 2'), findsOneWidget);
       expect(find.text('Yapıldı'), findsOneWidget);
       expect(find.text('Yapılmadı'), findsOneWidget);
-      expect(find.text('15 Şubat · 10:00 · Pusholder'), findsOneWidget);
-      expect(harness.isChecked(tester, 'Aylık push performans raporu'), isTrue);
+      expect(find.text('15 Şubat · 10:00 · İş'), findsOneWidget);
+      expect(harness.isChecked(tester, 'Aylık faaliyet raporu'), isTrue);
 
       await harness.tapRow(tester, 'Maaş ödemeleri');
-      await harness.tapRow(tester, 'Aylık push performans raporu');
+      await harness.tapRow(tester, 'Aylık faaliyet raporu');
       expect(harness.routines.toggles, isEmpty);
       expect(find.text('1 / 2'), findsOneWidget);
     });
@@ -326,7 +326,7 @@ void main() {
       await harness.pump(tester, month: DateTime(2026, 2));
       expect(
           find.byKey(const ValueKey('kokpit-dot-monthly-28')), findsOneWidget);
-      expect(find.text('28 Şubat · Pusholder'), findsOneWidget);
+      expect(find.text('28 Şubat · İş'), findsOneWidget);
     });
 
     testWidgets('içinde bulunulan ayın durum rozetleri', (tester) async {
@@ -453,7 +453,7 @@ void main() {
         (tester) async {
       harness.tasks.tasks = [
         task('t1', 'Bayi toplantısı', DateTime(2026, 2, 18, 14, 30),
-            assignee: 'Duhan'),
+            assignee: 'Ayşe'),
         task('t2', 'Rapor teslimi', DateTime(2026, 2, 5, 9), done: true),
         task('t3', 'Mart işi', DateTime(2026, 3, 1, 9)),
       ];
@@ -463,7 +463,7 @@ void main() {
       expect(find.text('Bu ayın randevuları'), findsOneWidget);
       expect(find.text('1 / 2'), findsOneWidget);
       expect(find.text('Bayi toplantısı'), findsOneWidget);
-      expect(find.text('14:30 · Ekip · Duhan'), findsOneWidget);
+      expect(find.text('14:30 · Ekip · Ayşe'), findsOneWidget);
       expect(find.text('Mart işi'), findsNothing);
       expect(
         tester.widget<Text>(find.text('Rapor teslimi')).style!.decoration,
@@ -615,7 +615,7 @@ void main() {
         Routine.fromMap(const {'id': 'r1', 'title': 'Günlük kontrol'}),
         monthly(
           'm1',
-          'Aylık push performans raporunun hazırlanması ve ekiple paylaşımı',
+          'Aylık faaliyet performans raporunun hazırlanması ve ekiple paylaşımı',
           15,
           hour: 10,
         ),
@@ -633,7 +633,7 @@ void main() {
           'Push bildirim performans raporunu hazırla ve ekip ile paylaş, '
               'ardından haftalık toplantıda sun',
           DateTime(month.year, month.month, 15, 14, 30),
-          assignee: 'Mehmet',
+          assignee: 'Elif',
         ),
         task('t2', 'Rapor teslimi', DateTime(month.year, month.month, 15, 9),
             done: true),

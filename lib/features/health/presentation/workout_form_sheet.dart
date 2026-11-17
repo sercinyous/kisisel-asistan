@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/templates/template_chips.dart';
+import '../../../core/templates/workout_templates.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../operations/presentation/operations_widgets.dart';
 import 'health_format.dart';
@@ -74,6 +76,16 @@ class _WorkoutFormSheetState extends ConsumerState<WorkoutFormSheet> {
     super.dispose();
   }
 
+  /// Şablon türü, başlığı ve süreyi doldurur; mesafe ve kalori kullanıcıda
+  /// kalır. Her alan sonradan düzenlenir.
+  void _applyTemplate(WorkoutTemplate template) => setState(() {
+        if (WorkoutLog.workoutTypes.contains(template.workoutType)) {
+          _type = template.workoutType;
+        }
+        _title.text = template.title;
+        _duration.text = '${template.durationMin}';
+      });
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final at = combineDateTime(_date, _time);
@@ -133,6 +145,12 @@ class _WorkoutFormSheetState extends ConsumerState<WorkoutFormSheet> {
       error: _error,
       onSave: _save,
       children: [
+        if (widget.workout == null)
+          TemplateChips<WorkoutTemplate>(
+            templates: WorkoutTemplates.all,
+            labelOf: (template) => template.label,
+            onSelected: _applyTemplate,
+          ),
         OpsChoiceWrap<String>(
           options: [
             for (final type in WorkoutLog.workoutTypes)

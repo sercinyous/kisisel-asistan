@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/templates/routine_templates.dart';
+import '../../../core/templates/template_chips.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../routines/data/routines_repository.dart';
 import '../../routines/domain/routine.dart';
@@ -86,6 +88,26 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
 
   bool get _isMonthly => _frequency == RoutineFrequency.monthly;
 
+  /// Şablon başlığı, sıklığı, günleri ve saati doldurur (kişisel kapsam);
+  /// her alan sonradan düzenlenir.
+  void _applyTemplate(RoutineTemplate template) => setState(() {
+        _title.text = template.title;
+        _scope = Routine.scopePersonal;
+        if (Routine.categories.contains(template.category)) {
+          _category = template.category;
+        }
+        _frequency = template.frequency;
+        _days = {
+          ...(template.isMonthly ? Routine.everyDay : template.daysOfWeek)
+              .where((d) => d >= 1 && d <= 7),
+        };
+        _daysError = false;
+        _dayOfMonth = (template.dayOfMonth ?? _dayOfMonth).clamp(1, 31);
+        _time = template.hasTime
+            ? TimeOfDay(hour: template.hour!, minute: template.minute!)
+            : null;
+      });
+
   Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
@@ -165,6 +187,12 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
       error: _error,
       onSave: _save,
       children: [
+        if (widget.routine == null)
+          TemplateChips<RoutineTemplate>(
+            templates: RoutineTemplates.all,
+            labelOf: (template) => template.label,
+            onSelected: _applyTemplate,
+          ),
         TextFormField(
           controller: _title,
           maxLength: _titleMax,

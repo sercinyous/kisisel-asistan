@@ -14,14 +14,18 @@ function geminiOk(text = "Güzel bir gün.") {
 }
 
 function setup(overrides = {}) {
-  const calls = { metrics: [], save: [], fetch: [], log: [] };
+  const calls = { metrics: [], save: [], fetch: [], log: [], quota: [] };
   const store = {
     userIdFromJwt: async (token) => (token === "gecerli-jwt" ? "user-1" : null),
     listUsers: async () => [
-      { id: "user-1", timeZone: "Europe/Istanbul" },
-      { id: "user-2", timeZone: "Europe/Istanbul" },
+      { id: "user-1", timeZone: "Europe/Istanbul", onboarded: true },
+      { id: "user-2", timeZone: "Europe/Istanbul", onboarded: true },
     ],
-    timeZoneOf: async () => "Europe/Istanbul",
+    userOf: async (userId) => ({ id: userId, timeZone: "Europe/Istanbul", onboarded: true }),
+    consumeQuota: async (userId, kind, limit) => {
+      calls.quota.push({ userId, kind, limit });
+      return true;
+    },
     metrics: async (kind, userId, date) => {
       calls.metrics.push({ kind, userId, date });
       return METRICS;
@@ -118,13 +122,132 @@ test("JWT: yalnızca o kullanıcı için üretir", async () => {
   assert.deepEqual(calls.save.map((s) => s.userId), ["user-1"]);
 });
 
-test("JWT: ayar satırı yoksa İstanbul günü kullanılır", async () => {
+test("JWT: saat dilimi boşsa İstanbul günü kullanılır", async () => {
   const { handler, calls } = setup({
-    store: { timeZoneOf: async () => null },
+    store: { userOf: async (userId) => ({ id: userId, timeZone: "", onboarded: true }) },
     deps: { now: () => new Date("2026-11-16T21:30:00Z") }, // 00:30 İstanbul, 17 Kasım
   });
   await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
   assert.equal(calls.save[0].date, "2026-11-17");
+});
+
+test("cron: onboarded olmayan kullanıcı için rapor üretilmez", async () => {
+  const { handler, calls } = setup({
+    store: {
+      listUsers: async () => [
+        { id: "user-1", timeZone: "Europe/Istanbul", onboarded: true },
+        { id: "user-2", timeZone: "Europe/Istanbul", onboarded: false },
+      ],
+    },
+  });
+  const response = await handler(post({ kind: "daily" }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).users, 1);
+  assert.deepEqual(calls.metrics.map((m) => m.userId), ["user-1"]);
+  assert.deepEqual(calls.save.map((s) => s.userId), ["user-1"]);
+  assert.equal(calls.fetch.length, 1); // yalnızca onboarded kullanıcı için Gemini çağrılır
+});
+
+test("cron: kimsenin kurulumu bitmediyse 200 ve users 0, Gemini çağrılmaz", async () => {
+  const { handler, calls } = setup({
+    store: { listUsers: async () => [{ id: "user-1", timeZone: "Europe/Istanbul", onboarded: false }] },
+  });
+  const response = await handler(post({ kind: "daily" }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).users, 0);
+  assert.equal(calls.fetch.length, 0);
+  assert.equal(calls.save.length, 0);
+});
+
+test("cron: kota düşülmez (yalnızca kullanıcı JWT'li yeniden üretim sayılır)", async () => {
+  const { handler, calls } = setup();
+  await handler(post({ kind: "daily" }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(calls.quota.length, 0);
+});
+
+test("JWT: onboarded olmayan kullanıcı 403, Gemini çağrılmaz ve kota düşülmez", async () => {
+  const { handler, calls } = setup({
+    store: { userOf: async (userId) => ({ id: userId, timeZone: "Europe/Istanbul", onboarded: false }) },
+  });
+  const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).ok, false);
+  assert.equal(calls.fetch.length, 0);
+  assert.equal(calls.save.length, 0);
+  assert.equal(calls.quota.length, 0);
+});
+
+test("JWT: ayar satırı olmayan kullanıcı 403", async () => {
+  const { handler, calls } = setup({ store: { userOf: async () => null } });
+  const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 403);
+  assert.equal(calls.save.length, 0);
+});
+
+test("JWT: yeniden üretim 'report_regen' kotasından, varsayılan 10 ile düşer", async () => {
+  const { handler, calls } = setup();
+  const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.quota, [{ userId: "user-1", kind: "report_regen", limit: 10 }]);
+});
+
+test("JWT: kota secret'tan ayarlanabilir", async () => {
+  const { handler, calls } = setup({ deps: { regenDailyLimit: 3 } });
+  await handler(post({ kind: "weekly" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(calls.quota[0].limit, 3);
+});
+
+test("JWT: günlük 10 yeniden üretimden sonra 429, Türkçe mesaj; Gemini çağrılmaz, rapor yazılmaz", async () => {
+  // Sayaç sunucudaki consume_ai_quota gibi çalışır: kota içindeyse artırır.
+  const used = new Map();
+  const { handler, calls } = setup({
+    store: {
+      consumeQuota: async (userId, kind, limit) => {
+        const key = `${userId}/${kind}`;
+        const count = used.get(key) ?? 0;
+        if (count >= limit) return false;
+        used.set(key, count + 1);
+        return true;
+      },
+    },
+  });
+  const auth = { Authorization: "Bearer gecerli-jwt" };
+  for (let i = 0; i < 10; i++) {
+    assert.equal((await handler(post({ kind: "daily" }, auth))).status, 200, `${i + 1}. istek`);
+  }
+  assert.equal(calls.save.length, 10);
+  const blocked = await handler(post({ kind: "daily" }, auth));
+  assert.equal(blocked.status, 429);
+  const body = await blocked.json();
+  assert.equal(body.ok, false);
+  assert.match(body.error, /rapor yenileme hakkın doldu \(10\)/);
+  assert.equal(calls.save.length, 10);
+  assert.equal(calls.fetch.length, 10);
+});
+
+test("JWT: geçersiz (gelecek) tarih 400 döner ve kotayı yemez", async () => {
+  const { handler, calls } = setup();
+  const response = await handler(
+    post({ kind: "daily", date: "2026-11-17" }, { Authorization: "Bearer gecerli-jwt" }),
+  );
+  assert.equal(response.status, 400);
+  assert.equal(calls.quota.length, 0);
+});
+
+test("JWT: geçersiz gövde kotayı yemez", async () => {
+  const { handler, calls } = setup();
+  await handler(post({ kind: "aylik" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(calls.quota.length, 0);
+});
+
+test("JWT: kota düşülemezse (veritabanı hatası) 500 ve hiçbir şey üretilmez", async () => {
+  const { handler, calls } = setup({
+    store: { consumeQuota: async () => { throw new Error("rpc hatası"); } },
+  });
+  const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 500);
+  assert.equal(calls.fetch.length, 0);
+  assert.equal(calls.save.length, 0);
 });
 
 test("Gemini isteği: uç nokta, anahtar başlıkta, zaman aşımı sinyali", async () => {

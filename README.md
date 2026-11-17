@@ -241,7 +241,8 @@ Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
 3. **Supabase**: yeni proje aç → SQL Editor'da `supabase/schema.sql` dosyasını çalıştır →
    Authentication > Users bölümünden kendi kullanıcını (e-posta + şifre) oluştur.
    Başlangıç verisi kullanıcı oluştuğu anda yüklenir. Authentication > Sign In / Providers altında
-   "Allow new users to sign up" seçeneğini kapat: başka kimse hesap açamasın.
+   "Allow new users to sign up" seçeneği **açık** kalır (Google ile ilk giriş yeni kullanıcı oluşturur);
+   davet almamış e-postayı kayıt kapısı engeller ("Bu e-posta için davet yok"). Ayrıntı: "Google ile giriş".
 4. **Anahtarlar**: `dart_defines.example.json` dosyasını `dart_defines.json` olarak kopyala ve doldur.
 5. **Çalıştır** (HealthKit gerçek cihaz ister):
    ```bash
@@ -413,6 +414,35 @@ myaccount.google.com > Güvenlik > Üçüncü taraf erişimi.
 alanlar ve kapsamlarla yazıldı ve sahte HTTP ile sınandı. Gerçek bir Google hesabı ve iPhone ile bu
 ortamda denenmedi; ilk bağlantıda Ayarlar'daki son eşitleme saatini ve Kokpit değerlerini Fitbit
 uygulamasıyla karşılaştır.
+
+## Google ile giriş
+
+Giriş ekranında **Google ile devam et** ana yoldur, **E-posta ile giriş** ikincildir. Akış: `google_sign_in`
+(yalnızca e-posta ve profil) → kimlik belirteci → `supabase.auth.signInWithIdToken(provider: google)`.
+Google Health bağlantısıyla aynı `GoogleSignIn.instance.initialize` çağrısını paylaşır (`clientId` iOS,
+`serverClientId` Web); çıkış yapmak Google Health bağlantısına dokunmaz. Google Health yalnızca Ayarlar'dan
+bağlanınca bağlı sayılır.
+
+1. **Google Cloud Console > Clients > Create client**: Application type **Web application** > Client ID'yi kopyala
+   (iOS istemcisi "Google Health ile bağlantı" adımında zaten var). Testing modunda arkadaşların Gmail adreslerini
+   **Audience > Test users**'a ekle.
+2. **Supabase > Authentication > Providers > Google**: aç; **Client IDs** alanına Web ve iOS istemci
+   kimliklerini virgülle yaz; "Skip nonce checks" kutusunu işaretle (yerel iOS girişi nonce göndermez).
+3. **Codemagic > `app_secrets`**: `GOOGLE_WEB_CLIENT_ID` = Web istemci kimliği (gizli değil). Boşsa ya da
+   `GOOGLE_IOS_CLIENT_ID` yoksa Google düğmesi gizlenir; tarayıcı demosunda da gizlidir. Yerelde aynı anahtarı
+   `dart_defines.json`'a yaz.
+
+**Hesap birleşmesi**: Supabase aynı doğrulanmış e-postayı aynı kullanıcıya bağlar. Hesabın Gmail adresiyle
+açıldıysa Google girişi aynı veriyi açar; başka bir e-postayla açıldıysa Google **yeni boş hesap** açar
+(davet gerekir) ve eski hesabına e-posta/şifreyle girmeye devam edersin.
+
+**Kayıt kapısı**: davet almamış e-posta Google ile de hesap açamaz; uygulama "Bu e-posta için davet yok. Ritim
+kullanan bir arkadaşından seni e-posta adresinle arkadaş olarak eklemesini iste" der. GoTrue tetikleyici
+hatasının metnini göstermediği için kapı reddi bazen genel "Database error saving new user" olarak döner;
+uygulama ikisini de aynı mesaja çevirir.
+
+**Doğrulama durumu**: giriş mantığı sahte Google ve Supabase ile sınandı; gerçek Google girişi gerçek projede
+iki hesapla denenmeden bitmiş sayılmaz.
 
 ## Tarayıcı demosu ve ekran görüntüleri
 

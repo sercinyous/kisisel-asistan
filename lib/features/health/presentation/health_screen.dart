@@ -52,8 +52,7 @@ class HealthScreen extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 '${HealthFormat.plain(targets.startWeightKg)} kg → '
-                '${HealthFormat.plain(targets.targetWeightKg)} kg, '
-                'kas kütlesini koruyarak',
+                '${HealthFormat.plain(targets.targetWeightKg)} kg',
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: AppColors.textSecondary),
               ),

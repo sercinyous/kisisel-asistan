@@ -2,9 +2,13 @@
 // (index.ts gerçeklerini bağlar), böylece bu dosya Deno/npm içe aktarımı
 // olmadan Node ile sınanabilir (handler.test.mjs).
 import {
+  type ConsumeQuota,
+  DEFAULT_REPORT_REGEN_DAILY_LIMIT,
+  REPORT_REGEN_QUOTA_KIND,
+} from "../_shared/quota.ts";
+import {
   buildGeminiRequest,
   buildPrompt,
-  DEFAULT_TIME_ZONE,
   extractBearer,
   parseGeminiText,
   parseRequest,
@@ -16,16 +20,20 @@ import {
 export interface ReportUser {
   id: string;
   timeZone: string;
+  /** user_settings.onboarded_at dolu mu; ilk kurulumunu bitirmeyen için rapor üretilmez. */
+  onboarded: boolean;
 }
 
 /** Veritabanı işlemleri (service_role istemcisiyle; yalnızca sunucuda). */
 export interface ReportStore {
   /** Kullanıcı JWT'sini doğrular; geçersizse null. */
   userIdFromJwt(token: string): Promise<string | null>;
-  /** Rapor üretilecek tüm kullanıcılar (zamanlanmış çalıştırma). */
+  /** Tüm kullanıcılar (zamanlanmış çalıştırma); onboarded olmayanı işleyici eler. */
   listUsers(): Promise<ReportUser[]>;
-  /** Kullanıcının saat dilimi; ayar satırı yoksa null. */
-  timeZoneOf(userId: string): Promise<string | null>;
+  /** Tek kullanıcının ayarı; ayar satırı yoksa null. */
+  userOf(userId: string): Promise<ReportUser | null>;
+  /** consume_ai_quota: kota içindeyse sayacı atomik artırıp true. */
+  consumeQuota: ConsumeQuota;
   metrics(kind: ReportKind, userId: string, date: string): Promise<unknown>;
   save(
     kind: ReportKind,
@@ -42,6 +50,8 @@ export interface HandlerDeps {
   cronSecret: string;
   geminiApiKey: string;
   geminiModel: string;
+  /** Kişi başına günde en çok "Raporu yeniden oluştur" sayısı (varsayılan 10). */
+  regenDailyLimit?: number;
   fetch: typeof fetch;
   now: () => Date;
   log: (message: string) => void;
@@ -132,7 +142,12 @@ async function generateForUser(
   }
 }
 
+export function regenQuotaMessage(limit: number): string {
+  return `Bugünlük rapor yenileme hakkın doldu (${limit}). Yarın yeniden dene.`;
+}
+
 export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Response> {
+  const regenLimit = deps.regenDailyLimit ?? DEFAULT_REPORT_REGEN_DAILY_LIMIT;
   return async (req) => {
     if (req.method !== "POST") {
       return json(405, { ok: false, error: "Yalnızca POST desteklenir." });
@@ -167,13 +182,34 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
 
     let users: ReportUser[];
     try {
-      users = jwtUserId === null ? await deps.store.listUsers() : [{
-        id: jwtUserId,
-        timeZone: (await deps.store.timeZoneOf(jwtUserId)) ?? DEFAULT_TIME_ZONE,
-      }];
+      if (jwtUserId === null) {
+        // Zamanlanmış çalıştırma: yalnızca ilk kurulumunu bitirmiş kullanıcılar.
+        users = (await deps.store.listUsers()).filter((user) => user.onboarded);
+      } else {
+        const user = await deps.store.userOf(jwtUserId);
+        if (user === null || !user.onboarded) {
+          return json(403, { ok: false, error: "Önce ilk kurulumu tamamla." });
+        }
+        users = [user];
+      }
     } catch (error) {
       deps.log(`Kullanıcılar okunamadı: ${error instanceof Error ? error.message : String(error)}`);
       return json(500, { ok: false, error: "Kullanıcılar okunamadı." });
+    }
+
+    // "Raporu yeniden oluştur": kişi başına günlük sınır. Geçersiz tarih
+    // (gelecek) kotayı yemez; kota düşülemezse maliyeti korumak için reddedilir.
+    if (jwtUserId !== null) {
+      const target = resolveTarget(parsed.kind, parsed.date, users[0].timeZone, deps.now());
+      if (!target.ok) return json(400, { ok: false, error: target.error });
+      let allowed: boolean;
+      try {
+        allowed = await deps.store.consumeQuota(jwtUserId, REPORT_REGEN_QUOTA_KIND, regenLimit);
+      } catch (error) {
+        deps.log(`Kota düşülemedi: ${error instanceof Error ? error.message : String(error)}`);
+        return json(500, { ok: false, error: "Kullanım kotası denetlenemedi." });
+      }
+      if (!allowed) return json(429, { ok: false, error: regenQuotaMessage(regenLimit) });
     }
 
     const outcomes: UserOutcome[] = new Array(users.length);

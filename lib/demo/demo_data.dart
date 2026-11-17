@@ -1,3 +1,4 @@
+import '../core/config/app_targets.dart';
 import '../core/services/health_service.dart';
 import '../core/utils/date_utils.dart';
 import '../features/ai_quick_add/data/quick_add_repository.dart';
@@ -19,6 +20,13 @@ const int demoHistoryDays = 60;
 const int demoHeightCm = 180;
 const int demoBirthYear = 1990;
 const String demoSex = 'male';
+
+/// Demo kullanıcısının kilo hedefleri (tartı geçmişi 86,2 → 83,6 kg).
+const double demoStartWeightKg = 86;
+const double demoTargetWeightKg = 80;
+
+/// Demodaki isteğe bağlı ekip (Ayarlar > Ekip, görevlerde "İlgili kişi").
+const List<String> _demoTeam = ['Ayşe', 'Can', 'Elif'];
 
 /// Tarayıcı demosunun bellekteki örnek verisi.
 class DemoData {
@@ -192,21 +200,22 @@ class DemoData {
         routines: [
           weekly(
               'r1', 'Sabah tartı ve kilo kaydı', 'Kişisel', 'beslenme', 8, 0),
-          weekly('r2', 'Sabah push performans kontrolü', 'Pusholder',
+          weekly('r2', 'Sabah planı ve öncelikler', AppTargets.workCategory,
               'operasyon', 9, 0),
-          weekly(
-              'r3', 'Editör vardiya kontrolü', 'Pusholder', 'operasyon', 9, 30),
-          weekly('r4', 'Öğlen gündem ve push takvimi', 'Pusholder', 'operasyon',
-              13, 0),
+          weekly('r3', 'Gelen kutusu kontrolü', AppTargets.workCategory,
+              'operasyon', 9, 30),
+          weekly('r4', 'Öğlen görev listesini gözden geçir',
+              AppTargets.workCategory, 'operasyon', 13, 0),
           weekly('r5', 'Ağırlık antrenmanı', 'Kişisel', 'spor', 19, 0,
               days: const [1, 2, 4, 5]),
           weekly('r6', 'Kickboks', 'Kişisel', 'spor', 19, 30, days: const [3]),
           weekly('r7', 'Koşu', 'Kişisel', 'spor', 10, 0, days: const [6]),
           weekly('r8', 'Halı saha', 'Kişisel', 'spor', 20, 0, days: const [7]),
-          weekly('r9', 'Akşam operasyon kapanışı', 'Pusholder', 'operasyon', 22,
-              0),
-          monthly('m1', 'Maaş ödemeleri', 'Pusholder', 'finans', dayIn(2)),
-          monthly('m2', 'Aylık push performans raporu', 'Pusholder',
+          weekly('r9', 'Günü kapat ve yarını planla', AppTargets.workCategory,
+              'operasyon', 22, 0),
+          monthly('m1', 'Maaş ödemeleri', AppTargets.workCategory, 'finans',
+              dayIn(2)),
+          monthly('m2', 'Aylık faaliyet raporu', AppTargets.workCategory,
               'operasyon', 1),
           monthly('m3', 'Kira ve faturalar', 'Kişisel', 'finans', dayIn(-3)),
         ],
@@ -222,12 +231,12 @@ class DemoData {
         ],
       ),
       tasks: FakeTasksRepository(tasks: [
-        task('t1', 'Duhan ile vardiya planı', 'Ekip', 'high',
+        task('t1', 'Ayşe ile haftalık planı gözden geçir', 'Ekip', 'high',
             today.add(const Duration(days: 1, hours: 15)),
-            assignee: 'Duhan'),
+            assignee: _demoTeam.first),
         task('t2', 'Dişçi randevusu', 'Kişisel', 'medium',
             today.add(const Duration(days: 3, hours: 14))),
-        task('t3', 'Push performans raporunu hazırla', 'Pusholder', 'high',
+        task('t3', 'Faaliyet raporunu hazırla', AppTargets.workCategory, 'high',
             today.add(const Duration(days: 2, hours: 12))),
         task('t4', 'Aylık gelir-gider tablosu', 'Finans', 'medium',
             today.add(const Duration(days: 6, hours: 18))),
@@ -236,14 +245,14 @@ class DemoData {
         NoteItem(
           id: 'n1',
           title: 'Form hedefi',
-          content: '84.5 kg → 78 kg. Kas kütlesini koru.',
+          content: 'Haftalık ortalama kiloyu takip et, hedefe acele etmeden yaklaş.',
           isPinned: true,
           createdAt: now,
         ),
         NoteItem(
           id: 'n2',
-          title: 'Fikir: son dakika push şablonları',
-          content: 'Sık kullanılan başlık kalıpları için hazır set.',
+          title: 'Fikir: haftalık gözden geçirme şablonu',
+          content: 'Her pazar tekrar kullanılabilecek kısa bir kontrol listesi.',
           category: 'Fikir',
           createdAt: now,
         ),
@@ -252,12 +261,16 @@ class DemoData {
       // Kokpit'in beslenme özeti Sağlık sekmesindeki öğün kayıtlarından gelir.
       kokpit: FakeKokpitRepository(health: health),
       // Profil dolu: Enerji dengesi kartı sayıları gösterir (boş profilde
-      // "boy, yaş ve cinsiyet gerekli" der). Hedefler varsayılandır.
+      // "boy, yaş ve cinsiyet gerekli" der). Kilo hedefleri demodaki tartı
+      // geçmişiyle tutarlıdır; ekip isteğe bağlıdır, demoda birkaç kişi vardır.
       settings: FakeSettingsRepository(
         settings: const UserSettings.defaults().copyWith(
+          startWeightKg: demoStartWeightKg,
+          targetWeightKg: demoTargetWeightKg,
           heightCm: demoHeightCm,
           birthYear: demoBirthYear,
           sex: demoSex,
+          teamMembers: _demoTeam,
         ),
       ),
       reports: FakeReportsRepository(
@@ -834,12 +847,13 @@ ParsedEntry demoParse(String input, QuickAddMode mode, {DateTime? now}) {
         : trimmed[0].toUpperCase() + trimmed.substring(1);
   }
 
-  final scope = RegExp(r'maaş|push|vardiya|editör|haber|rapor|ekip').hasMatch(s)
-      ? 'Pusholder'
+  final scope = RegExp(r'maaş|toplantı|vardiya|müşteri|rapor|ekip|proje|ofis')
+          .hasMatch(s)
+      ? AppTargets.workCategory
       : 'Kişisel';
   final category = RegExp(r'maaş|ödeme|fatura|kira|bütçe').hasMatch(s)
       ? 'finans'
-      : (scope == 'Pusholder' ? 'operasyon' : 'kisisel');
+      : (scope == AppTargets.workCategory ? 'operasyon' : 'kisisel');
 
   final monthlyMatch = RegExp(r"her ay(?:ın)?\s*(\d{1,2})").firstMatch(s);
   final noteMatch = RegExp(r'^\s*(fikir|not)\s*:\s*(.+)$', caseSensitive: false)
@@ -920,7 +934,7 @@ ParsedEntry demoParse(String input, QuickAddMode mode, {DateTime? now}) {
       due = day.add(const Duration(hours: 9));
     }
     String? assignee;
-    for (final name in const ['Duhan', 'İlhan', 'Mehmet', 'Sedat']) {
+    for (final name in _demoTeam) {
       if (text.toLowerCase().contains(name.toLowerCase())) assignee = name;
     }
     final title = text.replaceAll(
@@ -936,8 +950,8 @@ ParsedEntry demoParse(String input, QuickAddMode mode, {DateTime? now}) {
           ? 'Ekip'
           : category == 'finans'
               ? 'Finans'
-              : scope == 'Pusholder'
-                  ? 'Pusholder'
+              : scope == AppTargets.workCategory
+                  ? AppTargets.workCategory
                   : 'Kişisel',
       'priority': RegExp(r'acil|önemli|hemen').hasMatch(s) ? 'high' : 'medium',
       'assignee': assignee,

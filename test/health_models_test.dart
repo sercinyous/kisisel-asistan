@@ -122,10 +122,10 @@ void main() {
       id: 't1',
       title: '  Rapor ',
       description: '   ',
-      category: 'Pusholder',
+      category: 'İş',
       priority: 'high',
       status: 'todo',
-      assignee: ' Duhan ',
+      assignee: ' Ayşe ',
       dueAt: DateTime(2026, 11, 20, 10),
       remindAt: DateTime(2026, 11, 20, 9, 30),
     );
@@ -134,8 +134,8 @@ void main() {
       final map = task.toWriteMap();
       expect(map['title'], 'Rapor');
       expect(map['description'], isNull);
-      expect(map['assignee'], 'Duhan');
-      expect(map['category'], 'Pusholder');
+      expect(map['assignee'], 'Ayşe');
+      expect(map['category'], 'İş');
       expect(map['priority'], 'high');
       expect(DateTime.parse(map['due_at'] as String),
           DateTime(2026, 11, 20, 10).toUtc());

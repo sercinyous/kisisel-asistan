@@ -44,8 +44,8 @@ void main() {
     test('varsayılanlar veritabanı varsayılanlarıyla aynı', () {
       const d = UserSettings.defaults();
       expect(d.toMap(), {
-        'start_weight_kg': 84.5,
-        'target_weight_kg': 78.0,
+        'start_weight_kg': 70.0,
+        'target_weight_kg': 70.0,
         'daily_calories': 2000,
         'daily_protein_g': 170,
         'daily_carbs_g': 180,
@@ -60,7 +60,7 @@ void main() {
         'quiet_hours_enabled': true,
         'quiet_start': '23:00',
         'quiet_end': '07:30',
-        'team_members': ['Duhan', 'İlhan', 'Mehmet', 'Sedat'],
+        'team_members': <String>[],
         'height_cm': null,
         'birth_year': null,
         'sex': null,

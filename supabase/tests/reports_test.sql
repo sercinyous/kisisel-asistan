@@ -4,6 +4,10 @@
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
 
+-- Kayıt kapısı (signup_invite_gate) bu testin fikstür kullanıcılarını
+-- engellemesin; kapının kendisi signup_gate_test.sql'de sınanır.
+alter table auth.users disable trigger signup_invite_gate;
+
 create schema t;
 
 create function t.eq(p_label text, p_actual jsonb, p_expected jsonb) returns void
@@ -73,6 +77,12 @@ delete from public.fitness_logs;
 delete from public.user_settings where user_id = 'bbbbbbbb-0000-0000-0000-000000000002';
 update public.user_settings set timezone = 'UTC'
   where user_id = 'cccccccc-0000-0000-0000-000000000003';
+-- Beklenen değerler 170 g protein / 10000 adım hedefiyle elle hesaplandı;
+-- tablo varsayılanları (Faz 4B: nötr) değişse de bu fikstür sabit kalır.
+update public.user_settings set daily_protein_g = 170, daily_steps = 10000
+  where user_id in ('aaaaaaaa-0000-0000-0000-000000000001',
+                    'cccccccc-0000-0000-0000-000000000003',
+                    'dddddddd-0000-0000-0000-000000000004');
 
 \set A '''aaaaaaaa-0000-0000-0000-000000000001'''
 \set B '''bbbbbbbb-0000-0000-0000-000000000002'''
@@ -81,7 +91,8 @@ update public.user_settings set timezone = 'UTC'
 
 -- ---------------------------------------------------------------------
 -- A'nın fikstürü. Hafta: 28 Eylül 2026 Pazartesi – 4 Ekim 2026 Pazar.
--- Hedefler varsayılan: 2000 kcal (aralık 1700–2200), 170 g protein (eşik 153).
+-- Hedefler: 2000 kcal (aralık 1700–2200), 170 g protein (eşik 153), 10000 adım, 450 dk
+-- (A, C, D için açıkça yazılır; B'nin ayar satırı yok: tablo varsayılanları 120 g / 8000).
 -- ---------------------------------------------------------------------
 insert into public.routines
   (id, user_id, title, category, frequency, days_of_week, day_of_month, is_active, created_at)
@@ -244,7 +255,7 @@ select t.eq('günlük: hiç veri yok',
     "nutrition": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "days_logged": 0},
     "health": {"steps": 0, "sleep_minutes": 0, "active_kcal": 0, "days_with_data": 0},
     "weight": {"start_kg": null, "end_kg": null, "change_kg": null},
-    "targets": {"calories": 2000, "protein_g": 170, "steps": 10000, "sleep_minutes": 450}
+    "targets": {"calories": 2000, "protein_g": 120, "steps": 8000, "sleep_minutes": 450}
   }'::jsonb);
 
 select t.eq('haftalık: hiç veri yok',
@@ -256,7 +267,7 @@ select t.eq('haftalık: hiç veri yok',
     "nutrition": {"calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "days_logged": 0},
     "health": {"steps": 0, "sleep_minutes": 0, "active_kcal": 0, "days_with_data": 0},
     "weight": {"start_kg": null, "end_kg": null, "change_kg": null},
-    "targets": {"calories": 2000, "protein_g": 170, "steps": 10000, "sleep_minutes": 450},
+    "targets": {"calories": 2000, "protein_g": 120, "steps": 8000, "sleep_minutes": 450},
     "days": [
       {"date": "2026-09-28", "work_rate": null, "form_rate": 0, "calories": 0, "protein_g": 0, "steps": 0, "sleep_minutes": 0, "workouts": 0},
       {"date": "2026-09-29", "work_rate": null, "form_rate": 0, "calories": 0, "protein_g": 0, "steps": 0, "sleep_minutes": 0, "workouts": 0},

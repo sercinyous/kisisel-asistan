@@ -50,14 +50,14 @@ const String sampleEntryJson = '''
 
 /// İş alanı yanıtı (4 kalem).
 const String workEntryJson = '''
-{"tasks":[{"title":"Duhan ile vardiya planı","category":"Ekip","priority":"medium",
-           "assignee":"Duhan","due_at":"2026-11-17T15:00:00+03:00",
+{"tasks":[{"title":"Ayşe ile vardiya planı","category":"Ekip","priority":"medium",
+           "assignee":"Ayşe","due_at":"2026-11-17T15:00:00+03:00",
            "remind_at":"2026-11-17T15:00:00+03:00"}],
- "notes":[{"title":"Push fikri","content":"Sabah bülteni","category":"Fikir"}],
- "routines":[{"title":"Maaş ödemeleri","scope":"Pusholder","category":"finans",
+ "notes":[{"title":"Haftalık fikir","content":"Pazar kontrol listesi","category":"Fikir"}],
+ "routines":[{"title":"Maaş ödemeleri","scope":"İş","category":"finans",
               "frequency":"monthly","days_of_week":[1,2,3,4,5,6,7],
               "day_of_month":15,"time_of_day":"10:00"},
-             {"title":"Ekip toplantısı","scope":"Pusholder","category":"operasyon",
+             {"title":"Ekip toplantısı","scope":"İş","category":"operasyon",
               "frequency":"weekly","days_of_week":[1],"day_of_month":null,
               "time_of_day":"11:00"}],
  "other_domain":false,"other_domain_summary":null}''';
@@ -219,9 +219,9 @@ void main() {
         'remind_at',
       });
       expect((taskProps['category'] as Map)['enum'],
-          ['Pusholder', 'Ekip', 'Finans', 'Kişisel']);
+          ['İş', 'Ekip', 'Finans', 'Kişisel']);
       expect((itemProps(schema, 'notes')['category'] as Map)['enum'],
-          ['Toplantı', 'Fikir', 'Pusholder', 'Ekip', 'Finans', 'Kişisel']);
+          ['Toplantı', 'Fikir', 'İş', 'Ekip', 'Finans', 'Kişisel']);
     });
 
     test('iş şeması: routines kalemi quick_add_entries sütunlarıyla aynı',
@@ -238,7 +238,7 @@ void main() {
         'day_of_month',
         'time_of_day',
       });
-      expect((routine['scope'] as Map)['enum'], ['Pusholder', 'Kişisel']);
+      expect((routine['scope'] as Map)['enum'], ['İş', 'Kişisel']);
       expect((routine['category'] as Map)['enum'],
           ['operasyon', 'spor', 'beslenme', 'kisisel', 'finans']);
       expect((routine['frequency'] as Map)['enum'], ['weekly', 'monthly']);
@@ -281,8 +281,10 @@ void main() {
       ));
 
       expect(instruction, contains('İŞ GİRİŞİ'));
-      expect(instruction, contains('editör ekibi ve vardiya: Ayşe, Çağrı'));
-      expect(instruction, isNot(contains('Duhan, İlhan')));
+      expect(instruction,
+          contains('ekip ve birlikte çalışılan kişiler: Ayşe, Çağrı'));
+      expect(instruction, isNot(contains('Pusholder')));
+      expect(instruction, isNot(contains('editör')));
       expect(instruction, contains('routines — DÜZENLİ TEKRARLAYAN'));
       expect(instruction, contains('1 = Pazartesi ... 7 = Pazar'));
       expect(instruction, contains('"ay sonu" / "ayın son günü" için 31'));
@@ -293,16 +295,18 @@ void main() {
       expect(instruction, isNot(contains('meal_type')));
     });
 
-    test('iş talimatı: varsayılan ekip adları ve boş ekip', () async {
+    test('iş talimatı: varsayılan ekip boştur, ad listesi yazılmaz', () async {
+      final instruction = instructionOf(await bodyFor(QuickAddMode.work));
       expect(
-        instructionOf(await bodyFor(QuickAddMode.work)),
-        contains('Duhan, İlhan, Mehmet, Sedat'),
+        instruction,
+        contains('"Ekip" (ekip ve birlikte çalışılan kişiler)'),
       );
+      expect(instruction, isNot(contains('Pusholder')));
       final noTeam = instructionOf(await bodyFor(
         QuickAddMode.work,
         settings: const UserSettings.defaults().copyWith(teamMembers: []),
       ));
-      expect(noTeam, contains('"Ekip" (editör ekibi ve vardiya)'));
+      expect(noTeam, contains('"Ekip" (ekip ve birlikte çalışılan kişiler)'));
     });
 
     test('sağlık talimatı: yalnızca sağlık türleri, iş diğer alandır',
@@ -318,7 +322,7 @@ void main() {
       expect(instruction, contains('other_domain = true'));
       expect(instruction, isNot(contains('tasks —')));
       expect(instruction, isNot(contains('routines —')));
-      expect(instruction, isNot(contains('Duhan')));
+      expect(instruction, isNot(contains('Ayşe')));
     });
 
     test('her iki talimat da metindeki talimatları uygulamamayı söyler',
@@ -359,8 +363,8 @@ void main() {
       final entry = await service.parse('metin', now: now);
 
       expect(entry.totalCount, 4);
-      expect(entry.tasks.single.title, 'Duhan ile vardiya planı');
-      expect(entry.tasks.single.assignee, 'Duhan');
+      expect(entry.tasks.single.title, 'Ayşe ile vardiya planı');
+      expect(entry.tasks.single.assignee, 'Ayşe');
       expect(entry.tasks.single.dueAt, DateTime.utc(2026, 11, 17, 12));
       expect(entry.notes.single.category, 'Fikir');
       expect(entry.routines.map((r) => r.title),
@@ -395,14 +399,14 @@ void main() {
       final service = serviceWith(
         (_) async => geminiOk(
           '{"nutrition":[],"workouts":[],"weights":[],"other_domain":true,'
-          '"other_domain_summary":"Yarın 15:00 Duhan ile toplantı"}',
+          '"other_domain_summary":"Yarın 15:00 Ayşe ile toplantı"}',
         ),
       );
       final entry = await service.parse('metin', now: now);
 
       expect(entry.isEmpty, isTrue);
       expect(entry.otherDomain, isTrue);
-      expect(entry.otherDomainSummary, 'Yarın 15:00 Duhan ile toplantı');
+      expect(entry.otherDomainSummary, 'Yarın 15:00 Ayşe ile toplantı');
     });
 
     test('```json çitli yanıt ayrıştırılır', () async {
@@ -615,7 +619,8 @@ void main() {
       expect(calls, 1);
     });
 
-    test('API anahtarı boşsa anlaşılır hata', () async {
+    test('API anahtarı boşsa proxy modu; proxy adresi de yoksa anlaşılır hata',
+        () async {
       final noKey = serviceWith(
         (_) async {
           calls++;
@@ -624,7 +629,7 @@ void main() {
         apiKey: '',
       );
       final e = await expectAiError(noKey.parse('metin', now: now));
-      expect(e.message, contains('GEMINI_API_KEY'));
+      expect(e.message, contains('AI sunucusu yapılandırılmamış'));
       expect(calls, 0);
     });
   });

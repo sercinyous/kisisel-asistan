@@ -5,6 +5,7 @@
 /// `quick_add_entries` RPC'sinin beklediği sütun adlarını üretir.
 library;
 
+import '../../../core/config/app_targets.dart';
 import '../../routines/domain/routine.dart';
 import '../../settings/domain/user_settings.dart';
 import 'quick_add_mode.dart';
@@ -65,6 +66,17 @@ String _foldTr(String text) => text
     .replaceAll('I', 'i')
     .replaceAll('ı', 'i')
     .toLowerCase();
+
+/// Eski komut ya da yanıtlardaki 'Pusholder' (büyük/küçük harf fark etmez)
+/// 'İş'e eşlenir (geçiş uyumu); diğer değerler olduğu gibi döner.
+Object? _legacyWork(Object? value) {
+  final text = _parseText(value);
+  if (text != null &&
+      _foldTr(text) == _foldTr(AppTargets.legacyWorkCategory)) {
+    return AppTargets.workCategory;
+  }
+  return value;
+}
 
 String _oneOf(Object? value, List<String> allowed, String fallback) {
   final text = _parseText(value);
@@ -130,7 +142,7 @@ class ParsedTask {
     this.remindAt,
   });
 
-  static const categories = ['Pusholder', 'Ekip', 'Finans', 'Kişisel'];
+  static const categories = AppTargets.taskCategories;
   static const priorities = ['low', 'medium', 'high'];
 
   final String title;
@@ -160,7 +172,7 @@ class ParsedTask {
     return ParsedTask(
       title: _truncate(title, 300),
       description: _parseText(json['description']),
-      category: _oneOf(json['category'], categories, 'Kişisel'),
+      category: _oneOf(_legacyWork(json['category']), categories, 'Kişisel'),
       priority: _oneOf(json['priority'], priorities, 'medium'),
       assignee: _parseText(json['assignee']),
       dueAt: dueAt,
@@ -329,14 +341,7 @@ class ParsedNote {
     required this.category,
   });
 
-  static const categories = [
-    'Toplantı',
-    'Fikir',
-    'Pusholder',
-    'Ekip',
-    'Finans',
-    'Kişisel',
-  ];
+  static const categories = AppTargets.noteCategories;
 
   final String title;
   final String content;
@@ -349,7 +354,7 @@ class ParsedNote {
     return ParsedNote(
       title: _truncate(title, 200),
       content: content ?? '',
-      category: _oneOf(json['category'], categories, 'Kişisel'),
+      category: _oneOf(_legacyWork(json['category']), categories, 'Kişisel'),
     );
   }
 
@@ -443,7 +448,11 @@ class ParsedRoutine {
 
     return ParsedRoutine(
       title: _truncate(title, 200),
-      scope: _oneOf(json['scope'], Routine.scopes, Routine.scopePersonal),
+      scope: _oneOf(
+        _legacyWork(json['scope']),
+        Routine.scopes,
+        Routine.scopePersonal,
+      ),
       category: _oneOf(json['category'], Routine.categories, 'kisisel'),
       frequency: monthly ? RoutineFrequency.monthly : RoutineFrequency.weekly,
       daysOfWeek: monthly || frequency == 'daily'

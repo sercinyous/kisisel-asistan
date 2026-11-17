@@ -59,7 +59,7 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
 
   static const Map<QuickAddMode, List<String>> _examples = {
     QuickAddMode.work: [
-      'Yarın 15:00\'te Duhan ile vardiya planını konuşacağım',
+      'Yarın 15:00\'te dişçi randevum var',
       'Her ayın 15\'i maaş ödemesi',
       'Her pazartesi 11:00 ekip toplantısı',
     ],
@@ -71,8 +71,8 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
   };
 
   static const Map<QuickAddMode, String> _hints = {
-    QuickAddMode.work: 'Örn. Yarın 15:00\'te Duhan ile vardiya planını '
-        'konuşacağım, her ayın 15\'i maaş ödemesi',
+    QuickAddMode.work: 'Örn. Yarın 15:00\'te dişçi randevum var, her ayın '
+        '15\'i maaş ödemesi',
     QuickAddMode.health: 'Örn. Öğlen 200 gr tavuk yedim, akşam 45 dk '
         'ağırlık çalıştım',
   };

@@ -7,6 +7,10 @@
 -- Çalıştırma: supabase/tests/run_local.sh (temiz ve yükseltilmiş veritabanında).
 \set ON_ERROR_STOP on
 
+-- Kayıt kapısı (signup_invite_gate) bu testin fikstür kullanıcılarını
+-- engellemesin; kapının kendisi signup_gate_test.sql'de sınanır.
+alter table auth.users disable trigger signup_invite_gate;
+
 insert into auth.users (id, email) values
   ('f1f1f1f1-0000-0000-0000-000000000001', 'fi-a@test'),
   ('f2f2f2f2-0000-0000-0000-000000000002', 'fi-b@test')

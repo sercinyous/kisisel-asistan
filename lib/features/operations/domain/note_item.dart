@@ -1,3 +1,5 @@
+import '../../../core/config/app_targets.dart';
+
 /// `notes` tablosundaki bir satır.
 class NoteItem {
   const NoteItem({
@@ -22,7 +24,8 @@ class NoteItem {
         id: map['id'] as String,
         title: map['title'] as String,
         content: map['content'] as String? ?? '',
-        category: map['category'] as String? ?? 'Kişisel',
+        category:
+            AppTargets.normalizeWork(map['category'] as String? ?? 'Kişisel'),
         isPinned: map['is_pinned'] as bool? ?? false,
         createdAt: _date(map['created_at']),
         updatedAt: _date(map['updated_at']),

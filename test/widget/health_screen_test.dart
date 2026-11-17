@@ -17,6 +17,7 @@ import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.da
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
+import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/test_fonts.dart';
@@ -130,7 +131,12 @@ void main() {
         routinesRepositoryProvider.overrideWithValue(routines),
         kokpitRepositoryProvider
             .overrideWithValue(FakeKokpitRepository(health: health)),
-        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+        settingsRepositoryProvider.overrideWithValue(
+          FakeSettingsRepository(
+            settings: const UserSettings.defaults()
+                .copyWith(startWeightKg: 84.5, targetWeightKg: 78),
+          ),
+        ),
         healthServiceProvider.overrideWithValue(
           FakeHealthService(
             snapshot ??
@@ -179,7 +185,8 @@ void main() {
     await pumpScreen(tester, textScale: 1.3);
 
     expect(find.text('Sağlık'), findsOneWidget);
-    expect(find.text('84,5 kg → 78 kg, kas kütlesini koruyarak'), findsOneWidget);
+    expect(find.text('84,5 kg → 78 kg'), findsOneWidget);
+    expect(find.textContaining('kas kütlesi'), findsNothing);
     expect(bigValue(tester, 'weight-latest'), '83,6');
     expect(
       tester.widget<Text>(find.byKey(const Key('weight-last-label'))).data,
