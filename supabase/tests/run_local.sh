@@ -118,7 +118,7 @@ echo "tamam: report_claim_lease"
 echo "== 2f) hatırlatıcılar ve Yaptım kayıtları (reminders_test.sql) =="
 run -d fresh -f "$HERE/reminders_test.sql" >/dev/null
 echo "tamam: reminders"
-echo "== 2f) su takibi ve haftalık check-in (faz5_health_extras_test.sql) =="
+echo "== 2g) su takibi ve haftalık check-in (faz5_health_extras_test.sql) =="
 run -d fresh -f "$HERE/faz5_health_extras_test.sql" >/dev/null
 echo "tamam: faz5_health_extras"
 
