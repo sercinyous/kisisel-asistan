@@ -215,7 +215,7 @@ void main() {
     await tester.drag(scrollOf(ReportsScreen), const Offset(0, 5000));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Günlük'));
+    await tester.tap(find.text('Gün'));
     await tester.pumpAndSettle();
     // Bugünün raporu gece üretilir; dolu görünüm için düne gidilir.
     await tester.tap(find.byTooltip('Önceki gün'));

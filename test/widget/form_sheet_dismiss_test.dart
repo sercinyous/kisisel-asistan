@@ -182,8 +182,12 @@ void main() {
   }
 
   void expectShellAlive() {
-    expect(find.byType(HomeShell), findsOneWidget);
-    expect(find.byTooltip('Yeni giriş'), findsOneWidget);
+    // Kilo formu ayrıntı ekranından açılır; kabuk altında (sahne dışı) kalır.
+    expect(find.byType(HomeShell, skipOffstage: false), findsOneWidget);
+    expect(
+      find.byTooltip('Yeni giriş', skipOffstage: false),
+      findsOneWidget,
+    );
   }
 
   final forms = <String, (String, Future<void> Function(WidgetTester), int Function())>{

@@ -207,6 +207,7 @@ void main() {
       'öne gelince Sağlık sekmesinin verisi yeniden okunur; adım grafiği '
       'HealthKit yedeklendikten sonra', (tester) async {
     final container = await pumpShell(tester);
+    await selectTab(tester, 'Sağlık');
     // Beslenme görünümü açık: öğün listesi kurulu olsun.
     container.read(healthSegmentProvider.notifier).state =
         HealthSegment.nutrition;
@@ -236,7 +237,6 @@ void main() {
       reason: 'adım grafiği, HealthKit yedeği yazıldıktan sonra okunmalı',
     );
     // Sağlık sekmesi yeni kaydı gösteriyor (öğün grubu açılınca).
-    await selectTab(tester, 'Sağlık');
     await tester.tap(find.byKey(const ValueKey('meal-group-snack')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('meal-gece')), findsOneWidget);
@@ -280,7 +280,7 @@ void main() {
       (tester) async {
     await pumpShell(tester);
     await selectTab(tester, 'Raporlar');
-    await tester.tap(find.text('Günlük'));
+    await tester.tap(find.text('Gün'));
     await tester.pumpAndSettle();
     expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
 
