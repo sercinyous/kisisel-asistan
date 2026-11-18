@@ -124,8 +124,8 @@ class ReportDailyCompletionCard extends StatelessWidget {
                                       KokpitFormat.weekdayShort(
                                         days[index].date,
                                       ),
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
                                         color: AppColors.textMuted,
                                       ),
                                     ),

@@ -483,19 +483,23 @@ void main() {
       return container;
     }
 
-    testWidgets('Enerji dengesi kartı Kilo kartının hemen altında durur',
+    testWidgets('Enerji net kartı Kilo kartının hemen altında durur ve detayı açar',
         (tester) async {
       health
         ..metrics = [active(_tue, 520)]
         ..nutrition = [meals(_tue, 1000)];
       await pumpHealth(tester);
 
-      expect(find.byType(EnergyCard), findsOneWidget);
+      expect(find.byType(EnergyNetCard), findsOneWidget);
       expect(
-        tester.getTopLeft(find.byType(EnergyCard)).dy,
+        tester.getTopLeft(find.byType(EnergyNetCard)).dy,
         greaterThan(tester.getBottomLeft(find.byType(WeightCard)).dy),
       );
-      expect(text(tester, 'energy-net'), '−410');
+      expect(bigValue(tester, 'energy-net-today'), '−410');
+
+      await tester.tap(find.byType(EnergyNetCard));
+      await tester.pumpAndSettle();
+      expect(find.byType(EnergyDetailScreen), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

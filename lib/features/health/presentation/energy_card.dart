@@ -343,3 +343,79 @@ class _Figure extends StatelessWidget {
     );
   }
 }
+
+/// Özet sekmesinin enerji kartı: yalnızca bugünün net kcal'i. Alınan,
+/// yakılan ve yorum dokununca açılan detay ekranındadır.
+class EnergyNetCard extends ConsumerWidget {
+  const EnergyNetCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final today = AppDates.startOfDay(ref.watch(trendClockProvider)());
+    final energy = ref.watch(energyDayProvider(today));
+    final day = energy.valueOrNull;
+
+    return BentoCard(
+      onTap: day == null ? null : () => EnergyDetailScreen.open(context),
+      child: energy.when(
+        skipLoadingOnRefresh: true,
+        skipLoadingOnReload: true,
+        loading: () => const HealthCardLoading(height: 56),
+        error: (_, __) => HealthCompactMessage(
+          text: 'Enerji dengesi yüklenemedi.',
+          onRetry: () {
+            ref
+              ..invalidate(userSettingsProvider)
+              ..invalidate(energyDayProvider);
+          },
+        ),
+        data: (value) {
+          if (value == null) return const _ProfileMissing();
+          final net = value.net;
+          final label = net == null
+              ? 'Enerji · bugün yakılan'
+              : 'Enerji · bugün net';
+          final number = net == null
+              ? HealthFormat.count(value.burned)
+              : formatEnergyNet(net);
+          return Semantics(
+            label: '$label $number kcal',
+            button: true,
+            container: true,
+            child: ExcludeSemantics(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          label,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 2),
+                        HealthBigValue(
+                          key: const Key('energy-net-today'),
+                          value: number,
+                          unit: 'kcal',
+                          singleLine: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
+import 'package:kisisel_asistan/features/friends/domain/friends_models.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_providers.dart';
 
 import '../helpers/reports_fakes.dart';
@@ -18,9 +19,6 @@ const fullSummary = 'İş tarafında güçlü bir hafta: görevlerin dörtte ü�
 
 IconButton arrow(WidgetTester tester, IconData icon) =>
     tester.widget<IconButton>(find.widgetWithIcon(IconButton, icon));
-
-FilledButton filledButton(WidgetTester tester) =>
-    tester.widget<FilledButton>(find.byType(FilledButton));
 
 void main() {
   late ReportsHarness harness;
@@ -38,6 +36,20 @@ void main() {
 
   setUp(() => harness = ReportsHarness());
 
+  Future<void> openDetails(WidgetTester tester) async {
+    await harness.tapKey(tester, 'reports-details');
+  }
+
+  IconButton refreshButton(WidgetTester tester) => tester.widget<IconButton>(
+        find.byKey(const ValueKey('reports-refresh')),
+      );
+
+  Future<void> tapRefresh(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey('reports-refresh')));
+    await tester.pump();
+    await tester.pump();
+  }
+
   group('haftalık görünüm', () {
     testWidgets('dolu rapor 375x667 ve metin ölçeği 1.3 ile taşmadan çizilir',
         (tester) async {
@@ -52,37 +64,48 @@ void main() {
       ];
       await harness.pump(tester, textScale: 1.3);
 
-      expect(find.text('Raporlar'), findsOneWidget);
+      expect(find.text('İçgörü'), findsOneWidget);
+      expect(find.text('Hafta'), findsOneWidget);
       expect(find.text('16 – 22 Kasım'), findsOneWidget);
       expect(find.text('%100'), findsOneWidget);
       expect(find.text('%71'), findsOneWidget);
+      await harness.expectNoOverflowWhileScrolling(tester);
+
+      await openDetails(tester);
       expect(find.text('Görev 9 / 12 · Rutin %82'), findsOneWidget);
       expect(find.text('Antrenman 5 / 7 · Protein 5 gün'), findsOneWidget);
-
-      await harness.expectNoOverflowWhileScrolling(tester);
-      // Kaydırma sonunda listenin altı görünür.
+      await tester.scrollUntilVisible(find.text('26 Eki – 1 Kas'), 150);
       expect(find.text('Geçmiş haftalar'), findsOneWidget);
       expect(find.text('9 – 15 Kasım'), findsOneWidget);
       expect(find.text('İş %74 · Form %80 · −0,5 kg'), findsOneWidget);
-      expect(find.text('26 Eki – 1 Kas'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('grafik, ortalamalar ve yorum taslaktaki içerikle gelir',
+    testWidgets('üst kart puanlar + yorum; grafik ve ayrıntılar',
         (tester) async {
       final semantics = tester.ensureSemantics();
       harness.reports.weekly = [weeklyReport(thisWeek, summary: fullSummary)];
       await harness.pump(tester);
 
-      expect(find.text('Günlük tamamlama'), findsOneWidget);
-      // Seriler yalnızca renkle ayrılmaz: lejant etiketi + ekran okuyucu özeti.
-      expect(find.text('İş'), findsWidgets);
-      expect(find.text('Form'), findsWidgets);
+      expect(find.text('Haftalık değerlendirme'), findsOneWidget);
+      expect(find.textContaining('İş tarafında güçlü bir hafta'), findsOneWidget);
+      // Büyük düğme yok; yenileme başlıktaki simgede.
+      expect(find.text('Raporu yeniden oluştur'), findsNothing);
+      expect(find.byTooltip('Raporu yeniden oluştur'), findsOneWidget);
+      // Öneriler "Devamı" ile açılır.
+      expect(find.text('Perşembe antrenmanını sabaha al.'), findsNothing);
+      await harness.tapText(tester, 'Devamı');
+      await tester.pumpAndSettle();
+      expect(find.text('Perşembe antrenmanını sabaha al.'), findsOneWidget);
+      expect(find.text('Öğle öğününe 30 g protein ekle.'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('Günlük tamamlama'), 150);
       expect(
         find.bySemanticsLabel(RegExp(r'Pzt: iş %100, form %100')),
         findsOneWidget,
       );
 
-      await tester.scrollUntilVisible(find.text('Aktif kalori'), 150);
+      await openDetails(tester);
       for (final text in const [
         'Ort. kalori',
         '1.960',
@@ -97,18 +120,11 @@ void main() {
         'Aktif kalori',
         '430',
       ]) {
+        await tester.scrollUntilVisible(find.text(text), 100);
         expect(find.text(text), findsOneWidget, reason: text);
       }
-
-      await tester.scrollUntilVisible(
-        find.text('Raporu yeniden oluştur'),
-        150,
-      );
-      expect(find.text('Haftalık değerlendirme'), findsOneWidget);
-      expect(find.textContaining('İş tarafında güçlü bir hafta'), findsOneWidget);
-      expect(find.text('Perşembe antrenmanını sabaha al.'), findsOneWidget);
-      expect(find.text('Öğle öğününe 30 g protein ekle.'), findsOneWidget);
-      expect(find.text('Raporu yeniden oluştur'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('İş ayrıntısı'), 150);
+      expect(find.text('İş ayrıntısı'), findsOneWidget);
       semantics.dispose();
     });
 
@@ -119,7 +135,7 @@ void main() {
       expect(find.text('%78'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Yorum üretilemedi'), 200);
       expect(find.text('Yorum üretilemedi'), findsOneWidget);
-      expect(find.text('Raporu yeniden oluştur'), findsOneWidget);
+      expect(find.byTooltip('Raporu yeniden oluştur'), findsOneWidget);
     });
 
     testWidgets('rapor yoksa oluşturma çağrısı gösterilir', (tester) async {
@@ -127,7 +143,6 @@ void main() {
 
       expect(find.text('Bu hafta için rapor henüz oluşmadı'), findsOneWidget);
       expect(find.text('Raporu oluştur'), findsOneWidget);
-      expect(find.text('Raporu yeniden oluştur'), findsNothing);
       expect(find.text('Günlük tamamlama'), findsNothing);
     });
 
@@ -155,31 +170,82 @@ void main() {
       expect(arrow(tester, Icons.chevron_right_rounded).onPressed, isNull);
     });
 
-    testWidgets('listeden geçmiş haftaya dokununca o hafta yüklenir',
+    testWidgets('ayrıntılardaki geçmiş haftaya dokununca o hafta yüklenir',
         (tester) async {
       harness.reports.weekly = [
         weeklyReport(thisWeek),
         weeklyReport(lastWeek, workRate: 55, summary: 'Geçen haftanın özeti.'),
       ];
       await harness.pump(tester);
+      await openDetails(tester);
 
-      await harness.tapKey(tester, 'reports-week-2026-11-09');
-
-      await tester.drag(find.byType(ListView), const Offset(0, 2000));
-      await tester.pumpAndSettle();
-      expect(find.text('9 – 15 Kasım'), findsOneWidget);
-      expect(find.text('%55'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Geçen haftanın özeti.'), 200);
-      expect(find.text('Geçen haftanın özeti.'), findsOneWidget);
-      // Seçili hafta listede yer almaz; içinde bulunulan hafta listeye girer.
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('reports-week-2026-11-16')),
-        200,
-      );
       expect(
-        find.byKey(const ValueKey('reports-week-2026-11-09')),
+        find.byKey(const ValueKey('reports-week-2026-11-16')),
         findsNothing,
       );
+      await harness.tapKey(tester, 'reports-week-2026-11-09');
+
+      expect(find.text('9 – 15 Kasım'), findsOneWidget);
+      expect(find.text('%55'), findsOneWidget);
+      expect(find.text('Geçen haftanın özeti.'), findsOneWidget);
+    });
+
+    testWidgets('arkadaş satırı sırayı gösterir; arkadaş yoksa gizli',
+        (tester) async {
+      harness.reports.weekly = [weeklyReport(thisWeek)];
+      await harness.pump(tester);
+      expect(find.byKey(const ValueKey('reports-friends')), findsNothing);
+    });
+
+    testWidgets('arkadaş varsa "bu hafta N. sıradasın" yazar', (tester) async {
+      harness
+        ..reports.weekly = [weeklyReport(thisWeek)]
+        ..leaderboard = const [
+          LeaderboardEntry(
+            userId: 'me',
+            isSelf: true,
+            displayName: 'Ben',
+            email: 'ben@example.com',
+            stepsWeek: 40000,
+          ),
+          LeaderboardEntry(
+            userId: 'a',
+            isSelf: false,
+            displayName: 'Ayşe',
+            email: 'ayse@example.com',
+            stepsWeek: 52000,
+          ),
+        ];
+      await harness.pump(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('reports-friends')),
+        150,
+      );
+      expect(
+        find.text('Arkadaşlar · bu hafta 2. sıradasın'),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('ay görünümü', () {
+    testWidgets('Ay sekmesi ay özetini gösterir; geleceğe gidilmez',
+        (tester) async {
+      await harness.pump(tester);
+      await tester.tap(find.text('Ay'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ay özeti'), findsOneWidget);
+      expect(find.text('Rutinler'), findsOneWidget);
+      expect(find.text('Görevler'), findsOneWidget);
+      expect(find.text('Bu ay'), findsOneWidget);
+      expect(arrow(tester, Icons.chevron_right_rounded).onPressed, isNull);
+      expect(find.byKey(const ValueKey('reports-refresh')), findsNothing);
+
+      await tester.tap(find.byTooltip('Önceki ay'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bu ay'), findsNothing);
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -193,13 +259,12 @@ void main() {
         ..regenerateGate = Completer<void>();
       await harness.pump(tester);
 
-      await harness.tapText(tester, 'Raporu yeniden oluştur');
+      await tapRefresh(tester);
 
       expect(harness.reports.regenerated, [
         (kind: ReportKind.weekly, date: thisWeek),
       ]);
-      expect(find.text('Oluşturuluyor…'), findsOneWidget);
-      expect(filledButton(tester).onPressed, isNull);
+      expect(refreshButton(tester).onPressed, isNull);
       expect(find.text('Eski özet.'), findsOneWidget);
 
       harness.reports.regenerateGate!.complete();
@@ -207,8 +272,7 @@ void main() {
 
       expect(find.text('Yeni özet.'), findsOneWidget);
       expect(find.text('Eski özet.'), findsNothing);
-      expect(find.text('Raporu yeniden oluştur'), findsOneWidget);
-      expect(filledButton(tester).onPressed, isNotNull);
+      expect(refreshButton(tester).onPressed, isNotNull);
     });
 
     testWidgets('hata satır içinde gösterilir; tekrar dene başarıya ulaşır',
@@ -221,7 +285,7 @@ void main() {
             const ReportGenerationException('Bağlantı kurulamadı.');
       await harness.pump(tester);
 
-      await harness.tapText(tester, 'Raporu yeniden oluştur');
+      await tapRefresh(tester);
       await tester.pumpAndSettle();
 
       expect(find.text('Bağlantı kurulamadı.'), findsOneWidget);
@@ -256,7 +320,7 @@ void main() {
   group('günlük görünüm', () {
     Future<void> openDaily(WidgetTester tester, {double textScale = 1.0}) async {
       await harness.pump(tester, textScale: textScale);
-      await tester.tap(find.text('Günlük'));
+      await tester.tap(find.text('Gün'));
       await tester.pumpAndSettle();
     }
 

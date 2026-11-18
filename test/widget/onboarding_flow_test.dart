@@ -167,7 +167,7 @@ void main() {
       const titles = [
         'Kokpit: günün tek bakışta',
         '+ ile iki ayrı giriş',
-        'Operasyon ve aylık sabitler',
+        'İşler ve aylık rutinler',
         'Sağlık: trend ve denge',
         'Raporlar ve Arkadaşlar',
       ];

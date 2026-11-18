@@ -12,7 +12,7 @@ import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/profile_goals_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../helpers/fakes.dart';
@@ -61,7 +61,7 @@ void main() {
           notificationServiceProvider.overrideWithValue(notifications),
           authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
         ],
-        child: MaterialApp(theme: AppTheme.dark, home: const SettingsScreen()),
+        child: MaterialApp(theme: AppTheme.dark, home: const ProfileGoalsPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -207,9 +207,12 @@ void main() {
     await showProfile(tester);
     await enter(tester, heightKey, '99');
 
-    // Tembel liste alanı bellekten atana kadar aşağı kaydırılır.
+    // Kısa ekranda tembel liste alanı bellekten atana kadar yukarı kaydırılır
+    // (profil, hedeflerin altındadır).
+    tester.view.physicalSize = const Size(750, 500);
+    await tester.pumpAndSettle();
     for (var i = 0; i < 12; i++) {
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
       await tester.pumpAndSettle();
     }
     expect(find.byKey(heightKey), findsNothing);

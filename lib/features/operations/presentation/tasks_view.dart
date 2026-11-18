@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
-import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../domain/task_item.dart';
@@ -36,7 +35,7 @@ String taskDeleteMessage(TaskItem task) =>
 
 /// Görevi siler; başarılıysa `true`. Bildirim planı ve Kokpit/Ay listeleri
 /// `OpsTasksNotifier.delete` içinde tazelenir. [confirm] doğruysa önce onay
-/// sorulur (üç nokta menüsü); uzun basış ve kaydırma onayı kendisi sorar.
+/// sorulur; uzun basış ve kaydırma onayı kendisi sorar.
 Future<bool> deleteTask(
   BuildContext context,
   TaskItem task, {
@@ -147,6 +146,27 @@ class TasksView extends ConsumerWidget {
     final filter =
         active.contains(selectedFilter) ? selectedFilter : null;
     final tasks = ref.watch(opsTasksProvider);
+    final laterChoice = ref.watch(opsLaterExpandedProvider);
+
+    Widget row(TaskItem task) => TaskRowActions(
+          // Durum konuma değil kayda bağlı kalsın: liste kayınca satır
+          // yanlış kaydın eylemini taşımaz.
+          key: ValueKey('ops-task-${task.id}'),
+          task: task,
+          child: _TaskRow(
+            categoryColor: taskCategoryColor(categories, task.category),
+            task: task,
+            onToggle: () => _toggle(context, ref, task),
+            onEdit: () => openTaskForm(context, task),
+          ),
+        );
+
+    List<Widget> rows(List<TaskItem> items) => [
+          for (final (index, task) in items.indexed) ...[
+            if (index > 0) const Divider(indent: 52, height: 1),
+            row(task),
+          ],
+        ];
 
     return RefreshIndicator(
       onRefresh: () => ref.read(opsTasksProvider.notifier).reload(),
@@ -154,17 +174,6 @@ class TasksView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: opsListPadding,
         children: [
-          OpsSectionHeader(title: 'Görevler', onAdd: () => openTaskForm(context)),
-          OpsFilterChips<String?>(
-            options: [
-              (null, 'Tümü'),
-              for (final c in active) (c, c),
-            ],
-            selected: filter,
-            onSelected: (value) =>
-                ref.read(taskCategoryFilterProvider.notifier).state = value,
-          ),
-          const SizedBox(height: 12),
           ...tasks.when(
             loading: () => const [OpsLoading()],
             error: (_, __) => [
@@ -184,36 +193,46 @@ class TasksView extends ConsumerWidget {
                   OpsMessage(
                     icon: Icons.task_alt_rounded,
                     text: filter == null
-                        ? 'Açık görev yok. "Ekle" ile yeni görev oluştur.'
+                        ? 'Açık görev yok. + ile yeni görev oluştur.'
                         : '$filter kategorisinde açık görev yok.',
                   ),
                 ];
               }
+              final groups = groupTasks(visible, DateTime.now());
+              final laterOpen = laterChoice ??
+                  (groups.today.isEmpty && groups.week.isEmpty);
               return [
-                BentoCard(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    children: [
-                      for (final (index, task) in visible.indexed) ...[
-                        if (index > 0) const Divider(indent: 52),
-                        TaskRowActions(
-                          // Durum konuma değil kayda bağlı kalsın: liste
-                          // kayınca satır yanlış kaydın eylemini taşımaz.
-                          key: ValueKey('ops-task-${task.id}'),
-                          task: task,
-                          child: _TaskRow(
-                          categoryColor: taskCategoryColor(categories, task.category),
-                            task: task,
-                            onToggle: () => _toggle(context, ref, task),
-                            onEdit: () => openTaskForm(context, task),
-                            onDelete: () =>
-                                deleteTask(context, task, confirm: true),
-                          ),
-                        ),
-                      ],
-                    ],
+                if (groups.today.isNotEmpty)
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-today'),
+                    title: 'Bugün',
+                    count: groups.today.length,
+                    children: rows(groups.today),
                   ),
-                ),
+                if (groups.week.isNotEmpty) ...[
+                  if (groups.today.isNotEmpty)
+                    const SizedBox(height: AppSpacing.grid),
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-week'),
+                    title: 'Bu hafta',
+                    count: groups.week.length,
+                    children: rows(groups.week),
+                  ),
+                ],
+                if (groups.later.isNotEmpty) ...[
+                  if (groups.today.isNotEmpty || groups.week.isNotEmpty)
+                    const SizedBox(height: AppSpacing.grid),
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-later'),
+                    title: 'Sonra',
+                    count: groups.later.length,
+                    collapsed: !laterOpen,
+                    onHeaderTap: () => ref
+                        .read(opsLaterExpandedProvider.notifier)
+                        .state = !laterOpen,
+                    children: rows(groups.later),
+                  ),
+                ],
               ];
             },
           ),
@@ -223,12 +242,43 @@ class TasksView extends ConsumerWidget {
   }
 }
 
+/// Görevlerin Bugün / Bu hafta / Sonra grupları.
+typedef TaskGroups = ({
+  List<TaskItem> today,
+  List<TaskItem> week,
+  List<TaskItem> later,
+});
+
+/// Bugün: bugüne ya da geçmişe tarihli (geciken) görevler. Bu hafta: yarından
+/// pazar sonuna kadar. Sonra: daha ileri tarihli ve tarihsiz görevler. Bu
+/// oturumda tamamlananlar kendi tarihinin grubunda, grubun sonunda kalır.
+TaskGroups groupTasks(List<TaskItem> tasks, DateTime now) {
+  final tomorrow = AppDates.startOfDay(now).add(const Duration(days: 1));
+  final weekEnd = AppDates.startOfDay(now)
+      .add(Duration(days: DateTime.daysPerWeek - now.weekday + 1));
+  final today = <TaskItem>[], week = <TaskItem>[], later = <TaskItem>[];
+  for (final task in tasks) {
+    final when = task.scheduledAt;
+    if (when != null && when.isBefore(tomorrow)) {
+      today.add(task);
+    } else if (when != null && when.isBefore(weekEnd)) {
+      week.add(task);
+    } else {
+      later.add(task);
+    }
+  }
+  List<TaskItem> doneLast(List<TaskItem> list) => [
+        ...list.where((t) => !t.isDone),
+        ...list.where((t) => t.isDone),
+      ];
+  return (today: doneLast(today), week: doneLast(week), later: doneLast(later));
+}
+
 class _TaskRow extends StatelessWidget {
   const _TaskRow({
     required this.task,
     required this.onToggle,
     required this.onEdit,
-    required this.onDelete,
     required this.categoryColor,
   });
 
@@ -236,25 +286,26 @@ class _TaskRow extends StatelessWidget {
   final Color categoryColor;
   final VoidCallback onToggle;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final when = task.scheduledAt;
     final overdue = !task.isDone && when != null && when.isBefore(DateTime.now());
-    final muted = theme.textTheme.labelMedium;
+    final muted = theme.textTheme.labelMedium
+        ?.copyWith(color: AppColors.textSecondary);
 
     return InkWell(
       onTap: onEdit,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 4, 0, 4),
+        padding: const EdgeInsets.fromLTRB(4, 4, AppSpacing.cardPadding, 4),
         child: Row(
           children: [
             Checkbox(
               key: ValueKey('task-check-${task.id}'),
               value: task.isDone,
               onChanged: (_) => onToggle(),
+              activeColor: AppColors.ops,
             ),
             Expanded(
               child: Column(
@@ -274,12 +325,18 @@ class _TaskRow extends StatelessWidget {
                   Text.rich(
                     TextSpan(
                       children: [
-                        TextSpan(
-                          text: task.category,
-                          style: TextStyle(
-                            color: categoryColor,
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Icon(
+                              Icons.circle,
+                              size: 6,
+                              color: categoryColor,
+                            ),
                           ),
                         ),
+                        TextSpan(text: task.category),
                         if (task.assignee != null)
                           TextSpan(text: ' · ${task.assignee}'),
                         if (when != null)
@@ -290,10 +347,7 @@ class _TaskRow extends StatelessWidget {
                                 : null,
                           ),
                         if (task.priority == 'high')
-                          TextSpan(
-                            text: ' · Yüksek',
-                            style: TextStyle(color: AppColors.danger),
-                          ),
+                          const TextSpan(text: ' · Yüksek'),
                       ],
                     ),
                     maxLines: 2,
@@ -303,7 +357,6 @@ class _TaskRow extends StatelessWidget {
                 ],
               ),
             ),
-            OpsItemMenu(onEdit: onEdit, onDelete: onDelete),
           ],
         ),
       ),

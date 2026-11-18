@@ -40,7 +40,7 @@ class WaterCard extends ConsumerWidget {
           BentoLabel(
             icon: Icons.water_drop_rounded,
             label: 'Su',
-            color: AppColors.accent,
+            color: AppColors.water,
             trailing: 'bugün',
           ),
           const SizedBox(height: 8),
@@ -132,7 +132,7 @@ class WaterSummaryCard extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.water_drop_rounded, size: 18, color: AppColors.accent),
+          Icon(Icons.water_drop_rounded, size: 18, color: AppColors.water),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -168,7 +168,7 @@ class WaterSummaryCard extends ConsumerWidget {
                   ? Icons.refresh_rounded
                   : Icons.add_circle_rounded,
             ),
-            color: AppColors.accent,
+            color: AppColors.water,
           ),
         ],
       ),
@@ -190,7 +190,7 @@ class _WaterBar extends StatelessWidget {
         value: progress,
         minHeight: height,
         backgroundColor: AppColors.surfaceHigh,
-        color: AppColors.accent,
+        color: AppColors.water,
       ),
     );
   }

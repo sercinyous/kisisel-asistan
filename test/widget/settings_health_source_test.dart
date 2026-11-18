@@ -12,7 +12,7 @@ import 'package:kisisel_asistan/features/health/presentation/health_providers.da
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/connections_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -89,7 +89,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(theme: AppTheme.dark, home: const SettingsScreen()),
+        child: MaterialApp(theme: AppTheme.dark, home: const ConnectionsPage()),
       ),
     );
     await tester.pumpAndSettle();

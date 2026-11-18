@@ -21,7 +21,6 @@ import 'package:kisisel_asistan/features/ai_quick_add/data/quick_add_repository.
 import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/presentation/ai_quick_add_modal.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
-import 'package:kisisel_asistan/features/health/presentation/health_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
@@ -185,8 +184,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Operasyon'));
     await shot('06_operasyon_gorevler');
-    await tester.tap(find.text('Sabitler'));
-    await shot('07_operasyon_sabitler');
+    await tester.tap(find.text('Rutinler'));
+    await shot('07_operasyon_rutinler');
 
     await tester.tap(find.byTooltip('Kokpit'));
     await tester.pumpAndSettle();
@@ -201,9 +200,9 @@ void main() {
 
     await tester.tap(find.byTooltip('Sağlık'));
     await shot('09_saglik');
-    await tester.drag(scrollOf(HealthScreen), const Offset(0, -560));
+    await tester.tap(find.text('Beslenme'));
     await shot('10_saglik_ogunler');
-    await tester.drag(scrollOf(HealthScreen), const Offset(0, -700));
+    await tester.tap(find.text('Hareket'));
     await shot('11_saglik_antrenman');
 
     await tester.tap(find.byTooltip('Raporlar'));

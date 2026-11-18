@@ -403,14 +403,9 @@ void main() {
       expect(harness.isChecked(tester, 'Maaş ödemeleri'), isTrue);
       expect(find.byType(SnackBar), findsNothing);
 
-      await harness.showView(tester, 'Gün');
-      expect(find.text('Yaklaşan aylık işler'), findsOneWidget);
-      expect(harness.isChecked(tester, 'Maaş ödemeleri'), isTrue);
-
-      // Gün görünümünden geri al → Ay görünümü de güncellenir.
+      // İkinci dokunuş geri alır.
       harness.routines.toggleGate = null;
       await harness.tapRow(tester, 'Maaş ödemeleri');
-      await harness.showView(tester, 'Ay');
       expect(find.text('0 / 1'), findsOneWidget);
       expect(harness.isChecked(tester, 'Maaş ödemeleri'), isFalse);
     });

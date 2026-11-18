@@ -53,7 +53,7 @@ class OnboardingPreferencesStep extends StatelessWidget {
       children: [
         const OnboardingStepHeader(
           title: 'Bildirimler',
-          subtitle: 'Görev, rutin ve aylık sabit hatırlatmaları. İstersen '
+          subtitle: 'Görev, rutin ve aylık iş hatırlatmaları. İstersen '
               'kapalı bırak, sonra Ayarlar\'dan açabilirsin.',
         ),
         BentoCard(

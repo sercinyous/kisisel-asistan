@@ -13,12 +13,10 @@ import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
-import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_providers.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
-import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/shell/presentation/home_shell.dart';
 
@@ -192,22 +190,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Ay görünümünde [title] satırındaki durum rozeti.
-  OccurrenceStatus chipOf(WidgetTester tester, String title) {
-    final row = find.ancestor(
-      of: find.text(title),
-      matching: find.byType(InkWell),
-    );
-    return tester
-        .widget<KokpitStatusChip>(
-          find.descendant(
-            of: row.first,
-            matching: find.byType(KokpitStatusChip),
-          ),
-        )
-        .status;
-  }
-
   HealthDayReading reading(DateTime day, {int steps = 0}) => (
         day: day,
         snapshot: HealthSnapshot(
@@ -219,50 +201,6 @@ void main() {
 
   int stepsOn(Iterable<DailyHealthMetric> days, DateTime day) =>
       days.firstWhere((m) => m.day == day).steps;
-
-  testWidgets('öne gelince Ay özeti yeniden okunur, rozetler güncellenir',
-      (tester) async {
-    final now = DateTime.now();
-    routines.routines = [
-      const Routine(
-        id: 'm1',
-        title: 'Maaş ödemeleri',
-        scope: Routine.scopeWork,
-        category: 'finans',
-        frequency: RoutineFrequency.monthly,
-        dayOfMonth: 15,
-      ),
-    ];
-    await pumpShell(tester);
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SegmentedButton<KokpitView>),
-        matching: find.text('Ay'),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // fetchInRange'i yalnızca Ay özeti çağırır.
-    final before = tasks.fetchInRangeCount;
-    expect(before, greaterThan(0), reason: 'Ay özeti okundu');
-    expect(chipOf(tester, 'Maaş ödemeleri'), isNot(OccurrenceStatus.done));
-
-    routines.completions.add(
-      RoutineCompletionKey(
-        'm1',
-        DateTime(now.year, now.month),
-        completedAt: now,
-      ),
-    );
-    await backgroundAndResume(tester);
-
-    expect(
-      tasks.fetchInRangeCount,
-      greaterThan(before),
-      reason: 'öne gelince yeniden okundu',
-    );
-    expect(chipOf(tester, 'Maaş ödemeleri'), OccurrenceStatus.done);
-  });
 
   testWidgets(
       'öne gelince Sağlık sekmesinin verisi yeniden okunur; adım grafiği '

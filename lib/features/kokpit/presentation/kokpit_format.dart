@@ -32,6 +32,13 @@ abstract final class KokpitFormat {
     return '${minutes ~/ 60} sa ${minutes % 60} dk';
   }
 
+  /// Dakikayı saate çevirir: 450 → "7,5", 480 → "8".
+  static String hours(int minutes) {
+    final h = minutes / 60;
+    if (h == h.roundToDouble()) return h.toStringAsFixed(0);
+    return _oneDecimal.format(h);
+  }
+
   /// "84,5"
   static String kg(double value) => _oneDecimal.format(value);
 

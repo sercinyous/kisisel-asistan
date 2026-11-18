@@ -2,14 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'reports_providers.dart';
 
-/// Raporlar sekmesinin iki görünümü.
-enum ReportsView { weekly, daily }
+/// İçgörü sekmesinin üç görünümü (Gün / Hafta / Ay).
+enum ReportsView { daily, weekly, monthly }
 
 final reportsViewProvider =
     StateProvider<ReportsView>((ref) => ReportsView.weekly);
 
 /// Seçili hafta (Pazartesi); `null` = içinde bulunulan hafta.
 final reportsWeekProvider = StateProvider<DateTime?>((ref) => null);
+
+/// Seçili ay (ayın 1'i); `null` = içinde bulunulan ay.
+final reportsMonthProvider = StateProvider<DateTime?>((ref) => null);
 
 /// Seçili gün (yerel gün başı); `null` = bugün.
 final reportsDayProvider = StateProvider<DateTime?>((ref) => null);

@@ -13,6 +13,7 @@ import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/domain/kokpit_models.dart';
+import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_month_view.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
@@ -115,7 +116,7 @@ class KokpitHarness {
         container: container,
         child: MaterialApp(
           theme: AppTheme.dark,
-          home: const Scaffold(body: KokpitScreen()),
+          home: const Scaffold(body: KokpitHarnessBody()),
         ),
       ),
     );
@@ -123,20 +124,13 @@ class KokpitHarness {
     return container;
   }
 
-  /// Gün | Ay seçicisinden görünüm değiştirir.
+  /// Kokpit (Gün) ile Ay görünümü arasında geçer. Kokpit artık Ay
+  /// görünümünü göstermez; parçaları başka ekranlarda yeniden kullanılır.
   Future<void> showView(WidgetTester tester, String label) async {
-    final segment = find.descendant(
-      of: find.byType(SegmentedButton<KokpitView>),
-      matching: find.text(label),
-    );
-    // Liste tembel kurulur: aşağı kaydırılmışsa seçici ağaçta olmaz, önce başa dön.
-    if (segment.evaluate().isEmpty) {
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, 5000));
-      await tester.pumpAndSettle();
-    }
-    await tester.ensureVisible(segment);
-    await tester.pumpAndSettle();
-    await tester.tap(segment);
+    final element = tester.element(find.byType(KokpitHarnessBody));
+    ProviderScope.containerOf(element)
+        .read(kokpitViewProvider.notifier)
+        .state = label == 'Ay' ? KokpitView.month : KokpitView.day;
     await tester.pumpAndSettle();
   }
 
@@ -188,5 +182,21 @@ class KokpitHarness {
           ),
         )
         .checked;
+  }
+}
+
+/// Testlerde Kokpit ekranını ya da tek başına Ay görünümünü çizer.
+class KokpitHarnessBody extends ConsumerWidget {
+  const KokpitHarnessBody({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return switch (ref.watch(kokpitViewProvider)) {
+      KokpitView.day => const KokpitScreen(),
+      KokpitView.month => ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+          children: const [KokpitMonthView()],
+        ),
+    };
   }
 }

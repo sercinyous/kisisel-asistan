@@ -450,3 +450,36 @@ class _CategoryBars extends StatelessWidget {
     );
   }
 }
+
+/// Kaydırma kabı olmadan gömülebilen pano (İçgörü > Ayrıntılar > İş ayrıntısı).
+class TaskDashboardSection extends ConsumerWidget {
+  const TaskDashboardSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(taskDashboardProvider);
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppSpacing.xl),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => BentoCard(
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Pano yüklenemedi',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () => ref.invalidate(taskDashboardProvider),
+              child: const Text('Tekrar dene'),
+            ),
+          ],
+        ),
+      ),
+      data: (stats) => TaskDashboardGrid(stats: stats),
+    );
+  }
+}

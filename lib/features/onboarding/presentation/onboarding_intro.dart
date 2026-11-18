@@ -19,13 +19,13 @@ class OnboardingIntroCard {
   final List<String> bullets;
 }
 
-/// Kılavuzun 5 kartı: Kokpit, + ile iki ayrı giriş, Operasyon ve aylık sabit
+/// Kılavuzun 5 kartı: Kokpit, + ile iki ayrı giriş, İşler ve aylık rutin
 /// mantığı, Sağlık (trend ve denge), Raporlar ve Arkadaşlar.
 const List<OnboardingIntroCard> onboardingIntroCards = [
   OnboardingIntroCard(
     icon: Icons.dashboard_rounded,
     title: 'Kokpit: günün tek bakışta',
-    body: 'Bugünün görevleri, rutinlerin, yaklaşan aylık sabitler ve beslenme '
+    body: 'Bugünün görevleri, rutinlerin, yaklaşan aylık işler ve beslenme '
         'özetin burada toplanır.',
     bullets: [
       'Gün görünümü bugünü, Ay görünümü ayın tamamını gösterir.',
@@ -44,11 +44,11 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
   ),
   OnboardingIntroCard(
     icon: Icons.checklist_rounded,
-    title: 'Operasyon ve aylık sabitler',
-    body: 'Operasyon sekmesinde görevler, notlar ve sabitler (tekrarlayan '
-        'işler) durur. Aylık sabitler ayın belirli günü bir iştir.',
+    title: 'İşler ve aylık rutinler',
+    body: 'İşler sekmesinde görevler, notlar ve rutinler (tekrarlayan '
+        'işler) durur. Aylık rutinler ayın belirli günü bir iştir.',
     bullets: [
-      'Ayın 15\'i ödeme gibi sabitler gününden birkaç gün önce görünür '
+      'Ayın 15\'i ödeme gibi rutinler gününden birkaç gün önce görünür '
           '(Ayarlar\'dan değişir).',
       'Gün geçince "gecikti" olur, ay sonunda "yapılmadı" diye kapanır.',
       'Tarih hafta sonuna denk gelse de kaymaz.',

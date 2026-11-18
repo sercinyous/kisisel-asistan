@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../routines/data/routines_repository.dart';
+import '../../reminders/domain/reminder.dart';
+import '../../reminders/presentation/reminder_form_sheet.dart';
+import '../../reminders/presentation/reminders_providers.dart';
+import '../../reminders/presentation/reminders_screen.dart';
 import '../../routines/domain/routine.dart';
 import 'operations_providers.dart';
 import 'operations_screen.dart';
@@ -39,7 +42,7 @@ String routineScheduleLabel(Routine r) {
   return time == null ? days : '$days · $time';
 }
 
-/// Sabit formunu açar (yeni ya da düzenleme) ve sonucu bildirir. Operasyon
+/// Rutin formunu açar (yeni ya da düzenleme) ve sonucu bildirir. Operasyon
 /// listesi ile Kokpit satırlarının ortak yoludur; kayıt sonrası sağlayıcıları
 /// ve bildirim planını form kendisi tazeler.
 Future<void> openRoutineForm(BuildContext context, [Routine? routine]) async {
@@ -67,20 +70,19 @@ Future<void> openRoutineForm(BuildContext context, [Routine? routine]) async {
     ..showSnackBar(
       SnackBar(
         content:
-            Text(routine == null ? 'Sabit eklendi.' : 'Sabit güncellendi.'),
+            Text(routine == null ? 'Rutin eklendi.' : 'Rutin güncellendi.'),
       ),
     );
 }
 
-const String routineDeleteTitle = 'Sabit silinsin mi?';
+const String routineDeleteTitle = 'Rutin silinsin mi?';
 
 String routineDeleteMessage(Routine routine) =>
     '"${routine.title}" ve tamamlanma geçmişi kalıcı olarak silinecek.';
 
-/// Sabiti (ve tamamlanma geçmişini) siler; başarılıysa `true`. Gün/Ay
+/// Rutini (ve tamamlanma geçmişini) siler; başarılıysa `true`. Gün/Ay
 /// ekranları, haftalık antrenman planı ve bildirim planı tazelenir. [confirm]
-/// doğruysa önce onay sorulur (üç nokta menüsü); uzun basış ve kaydırma onayı
-/// kendisi sorar.
+/// doğruysa önce onay sorulur; uzun basış ve kaydırma onayı kendisi sorar.
 Future<bool> deleteRoutine(
   BuildContext context,
   Routine routine, {
@@ -102,15 +104,15 @@ Future<bool> deleteRoutine(
     notifyRoutineChange(container.invalidate);
   } catch (_) {
     messenger.showSnackBar(
-      const SnackBar(content: Text('Sabit silinemedi.')),
+      const SnackBar(content: Text('Rutin silinemedi.')),
     );
     return false;
   }
-  messenger.showSnackBar(const SnackBar(content: Text('Sabit silindi.')));
+  messenger.showSnackBar(const SnackBar(content: Text('Rutin silindi.')));
   return true;
 }
 
-/// Sabit satırına uzun basış menüsü (Düzenle / Sil) ve sola kaydırarak silme
+/// Rutin satırına uzun basış menüsü (Düzenle / Sil) ve sola kaydırarak silme
 /// ekler; Operasyon listesi ve Kokpit (rutin, aylık iş, ay günü) ortak kullanır.
 class RoutineRowActions extends StatelessWidget {
   const RoutineRowActions({
@@ -146,43 +148,95 @@ class RoutinesView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(routineScopeFilterProvider);
     final routines = ref.watch(opsRoutinesProvider);
+    final reminders = ref.watch(remindersProvider);
 
-    Widget group(String title, IconData icon, List<Routine> items) => BentoCard(
-          padding: const EdgeInsets.only(top: AppSpacing.cardPadding, bottom: 4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.cardPadding,
-                ),
-                child: BentoLabel(
-                  icon: icon,
-                  label: title,
-                  trailing: '${items.length}',
+    List<Widget> rows(List<Routine> items) => [
+          for (final (index, routine) in items.indexed) ...[
+            if (index > 0)
+              const Divider(indent: AppSpacing.cardPadding, height: 1),
+            RoutineRowActions(
+              key: ValueKey('ops-routine-${routine.id}'),
+              routine: routine,
+              child: _RoutineRow(
+                routine: routine,
+                onEdit: () => openRoutineForm(context, routine),
+              ),
+            ),
+          ],
+        ];
+
+    final reminderGroup = OpsGroupCard(
+      key: const ValueKey('ops-group-reminders'),
+      title: 'Hatırlatıcılar',
+      count: reminders.valueOrNull?.length ?? 0,
+      action: IconButton(
+        key: const ValueKey('ops-reminder-add'),
+        tooltip: 'Hatırlatıcı ekle',
+        icon: Icon(Icons.add_rounded, color: AppColors.ops),
+        onPressed: () => ReminderFormSheet.show(context),
+      ),
+      children: reminders.when(
+        skipLoadingOnRefresh: true,
+        loading: () => const [OpsLoading()],
+        error: (_, __) => [
+          OpsMessage(
+            icon: Icons.cloud_off_rounded,
+            text: 'Hatırlatıcılar yüklenemedi.',
+            onRetry: () => ref.invalidate(remindersProvider),
+          ),
+        ],
+        data: (items) => [
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.cardPadding,
+                12,
+                AppSpacing.cardPadding,
+                8,
+              ),
+              child: Text(
+                'Su, ilaç, yürüyüş gibi alışkanlıklar için + ile '
+                'hatırlatıcı ekle.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+          for (final (index, reminder) in items.indexed) ...[
+            if (index > 0)
+              const Divider(indent: AppSpacing.cardPadding, height: 1),
+            _ReminderRow(
+              key: ValueKey('ops-reminder-${reminder.id}'),
+              reminder: reminder,
+              onTap: () => ReminderFormSheet.show(context, reminder: reminder),
+            ),
+          ],
+          if (items.isNotEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: TextButton(
+                  key: const ValueKey('ops-reminders-all'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const RemindersScreen(),
+                    ),
+                  ),
+                  child: const Text('Tümünü yönet'),
                 ),
               ),
-              const SizedBox(height: 4),
-              for (final (index, routine) in items.indexed) ...[
-                if (index > 0) const Divider(indent: AppSpacing.cardPadding),
-                RoutineRowActions(
-                  key: ValueKey('ops-routine-${routine.id}'),
-                  routine: routine,
-                  child: _RoutineRow(
-                    routine: routine,
-                    onEdit: () => openRoutineForm(context, routine),
-                    onDelete: () =>
-                        deleteRoutine(context, routine, confirm: true),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
+            ),
+        ],
+      ),
+    );
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(opsRoutinesProvider);
+        ref
+          ..invalidate(opsRoutinesProvider)
+          ..invalidate(remindersProvider);
         try {
           await ref.read(opsRoutinesProvider.future);
         } catch (_) {
@@ -193,26 +247,12 @@ class RoutinesView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: opsListPadding,
         children: [
-          OpsSectionHeader(
-            title: 'Sabitler',
-            onAdd: () => openRoutineForm(context),
-          ),
-          OpsFilterChips<String?>(
-            options: [
-              (null, 'Tümü'),
-              for (final s in Routine.scopes) (s, s),
-            ],
-            selected: filter,
-            onSelected: (value) =>
-                ref.read(routineScopeFilterProvider.notifier).state = value,
-          ),
-          const SizedBox(height: 12),
           ...routines.when(
             loading: () => const [OpsLoading()],
             error: (_, __) => [
               OpsMessage(
                 icon: Icons.cloud_off_rounded,
-                text: 'Sabitler yüklenemedi.',
+                text: 'Rutinler yüklenemedi.',
                 onRetry: () => ref.invalidate(opsRoutinesProvider),
               ),
             ],
@@ -226,26 +266,57 @@ class RoutinesView extends ConsumerWidget {
                   OpsMessage(
                     icon: Icons.repeat_rounded,
                     text: filter == null
-                        ? 'Henüz sabit yok. "Ekle" ile tekrarlayan iş oluştur.'
-                        : '$filter kapsamında sabit yok.',
+                        ? 'Henüz rutin yok. + ile tekrarlayan iş oluştur.'
+                        : '$filter kapsamında rutin yok.',
                   ),
                 ];
               }
-              final weekly = visible.where((r) => !r.isMonthly).toList();
+              final weekday = DateTime.now().weekday;
+              final today = [
+                for (final r in visible)
+                  if (!r.isMonthly && r.daysOfWeek.contains(weekday)) r,
+              ];
+              final otherDays = [
+                for (final r in visible)
+                  if (!r.isMonthly && !r.daysOfWeek.contains(weekday)) r,
+              ];
               final monthly = visible.where((r) => r.isMonthly).toList()
                 ..sort(
                   (a, b) => (a.dayOfMonth ?? 1).compareTo(b.dayOfMonth ?? 1),
                 );
-              return [
-                if (weekly.isNotEmpty)
-                  group('Günlük ve haftalık', Icons.repeat_rounded, weekly),
-                if (weekly.isNotEmpty && monthly.isNotEmpty)
-                  const SizedBox(height: AppSpacing.grid),
+              final groups = [
+                if (today.isNotEmpty)
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-routines-today'),
+                    title: 'Bugün',
+                    count: today.length,
+                    children: rows(today),
+                  ),
+                if (otherDays.isNotEmpty)
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-routines-week'),
+                    title: 'Haftanın diğer günleri',
+                    count: otherDays.length,
+                    children: rows(otherDays),
+                  ),
                 if (monthly.isNotEmpty)
-                  group('Aylık', Icons.calendar_month_rounded, monthly),
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-routines-monthly'),
+                    title: 'Aylık',
+                    count: monthly.length,
+                    children: rows(monthly),
+                  ),
+              ];
+              return [
+                for (final (index, group) in groups.indexed) ...[
+                  if (index > 0) const SizedBox(height: AppSpacing.grid),
+                  group,
+                ],
               ];
             },
           ),
+          const SizedBox(height: AppSpacing.grid),
+          reminderGroup,
         ],
       ),
     );
@@ -253,15 +324,10 @@ class RoutinesView extends ConsumerWidget {
 }
 
 class _RoutineRow extends StatelessWidget {
-  const _RoutineRow({
-    required this.routine,
-    required this.onEdit,
-    required this.onDelete,
-  });
+  const _RoutineRow({required this.routine, required this.onEdit});
 
   final Routine routine;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -270,12 +336,15 @@ class _RoutineRow extends StatelessWidget {
     return InkWell(
       onTap: onEdit,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.cardPadding, 8, 0, 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.cardPadding,
+          vertical: 10,
+        ),
         child: Row(
           children: [
             Icon(
               Icons.circle,
-              size: 10,
+              size: 6,
               color: active
                   ? AppColors.forRoutineCategory(routine.category)
                   : AppColors.textMuted,
@@ -302,7 +371,8 @@ class _RoutineRow extends StatelessWidget {
                     ].join(' · '),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium,
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -316,7 +386,62 @@ class _RoutineRow extends StatelessWidget {
                   color: AppColors.textMuted,
                 ),
               ),
-            OpsItemMenu(onEdit: onEdit, onDelete: onDelete),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReminderRow extends StatelessWidget {
+  const _ReminderRow({super.key, required this.reminder, required this.onTap});
+
+  final Reminder reminder;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = reminder.enabled;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.cardPadding,
+          vertical: 10,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.alarm_rounded,
+              size: 18,
+              color: enabled ? AppColors.ops : AppColors.textMuted,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    reminder.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: enabled ? null : AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [reminder.scheduleLabel, if (!enabled) 'Kapalı']
+                        .join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

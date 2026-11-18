@@ -189,7 +189,7 @@ void main() {
     'görev': (
       'Operasyon',
       (tester) async {
-        await tapVisible(tester, find.text('Ekle'));
+        await tapVisible(tester, find.byTooltip('Ekle'));
         await tester.enterText(
             find.widgetWithText(TextFormField, 'Başlık'), 'Yeni iş');
       },
@@ -198,8 +198,8 @@ void main() {
     'sabit': (
       'Operasyon',
       (tester) async {
-        await tapVisible(tester, find.text('Sabitler'));
-        await tapVisible(tester, find.text('Ekle'));
+        await tapVisible(tester, find.text('Rutinler'));
+        await tapVisible(tester, find.byTooltip('Ekle'));
         await tester.enterText(
             find.widgetWithText(TextFormField, 'Başlık'), 'Rapor');
       },
@@ -209,7 +209,7 @@ void main() {
       'Operasyon',
       (tester) async {
         await tapVisible(tester, find.text('Notlar'));
-        await tapVisible(tester, find.text('Ekle'));
+        await tapVisible(tester, find.byTooltip('Ekle'));
         await tester.enterText(
             find.widgetWithText(TextFormField, 'Başlık'), 'Not');
       },

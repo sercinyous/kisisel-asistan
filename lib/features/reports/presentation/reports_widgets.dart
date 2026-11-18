@@ -153,7 +153,8 @@ class ReportStat extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Text(
             value,
-            style: theme.textTheme.titleMedium?.copyWith(fontFeatures: _tabular),
+            style:
+                theme.textTheme.titleMedium?.copyWith(fontFeatures: _tabular),
           ),
         ),
       ],
@@ -258,7 +259,10 @@ class ReportTargetRow extends StatelessWidget {
   }
 }
 
-/// Yapay zekâ değerlendirme kartı ve (yeniden) oluşturma düğmesi.
+/// Yapay zekâ değerlendirme kartı. İsteğe bağlı [header] (ör. İş / Form
+/// puanları) metnin üstünde durur; uzun yorum 4 satırda kesilir ve "Devamı"
+/// ile açılır. Yeniden oluşturma başlıktaki [ReportRefreshButton] ile yapılır;
+/// kartta düğme yalnızca rapor yokken ya da son deneme hata verdiyse görünür.
 class ReportAiCard extends ConsumerWidget {
   const ReportAiCard({
     super.key,
@@ -271,6 +275,7 @@ class ReportAiCard extends ConsumerWidget {
     this.status = ReportAiStatus.pending,
     this.summary,
     this.generatedAt,
+    this.header,
   });
 
   final ReportKind kind;
@@ -289,6 +294,9 @@ class ReportAiCard extends ConsumerWidget {
   final String? summary;
   final DateTime? generatedAt;
 
+  /// Yorumun üstünde gösterilen içerik (yalnızca rapor varken).
+  final Widget? header;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -300,20 +308,16 @@ class ReportAiCard extends ConsumerWidget {
       reportRegenerationProvider.select((s) => s.errors[target]),
     );
     final text = status == ReportAiStatus.ok ? summary : null;
-
-    final String buttonLabel;
-    if (error != null) {
-      buttonLabel = 'Tekrar dene';
-    } else if (exists) {
-      buttonLabel = 'Raporu yeniden oluştur';
-    } else {
-      buttonLabel = 'Raporu oluştur';
-    }
+    final showButton = !exists || error != null;
 
     return BentoCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (exists && header != null) ...[
+            header!,
+            const SizedBox(height: 14),
+          ],
           BentoLabel(
             icon: Icons.auto_awesome_rounded,
             label: title,
@@ -325,6 +329,7 @@ class ReportAiCard extends ConsumerWidget {
             _Notice(title: emptyMessage, detail: emptyHint)
           else if (text != null)
             _SummaryText(
+              key: ValueKey('summary-$text'),
               parts: ReportsFormat.splitSummary(
                 text,
                 withSuggestions: kind == ReportKind.weekly,
@@ -333,12 +338,14 @@ class ReportAiCard extends ConsumerWidget {
           else if (status == ReportAiStatus.pending)
             const _Notice(
               title: 'Yorum hazırlanıyor',
-              detail: 'Sayılar hazır. Yorum gelmezse raporu yeniden oluştur.',
+              detail: 'Sayılar hazır. Yorum gelmezse yukarıdaki yenile '
+                  'simgesiyle raporu yeniden oluştur.',
             )
           else
             const _Notice(
               title: 'Yorum üretilemedi',
-              detail: 'Sayılar kaydedildi. Yorum için raporu yeniden oluştur.',
+              detail: 'Sayılar kaydedildi. Yorum için yukarıdaki yenile '
+                  'simgesiyle raporu yeniden oluştur.',
             ),
           if (exists && generatedAt != null) ...[
             const SizedBox(height: 8),
@@ -372,25 +379,186 @@ class ReportAiCard extends ConsumerWidget {
               ],
             ),
           ],
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: busy ? null : () => runRegeneration(ref, kind, date),
-            child: busy
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.textSecondary,
+          if (showButton) ...[
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: busy ? null : () => runRegeneration(ref, kind, date),
+              child: busy
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      const Flexible(child: Text('Oluşturuluyor…')),
-                    ],
-                  )
-                : Text(buttonLabel),
+                        const SizedBox(width: 10),
+                        const Flexible(child: Text('Oluşturuluyor…')),
+                      ],
+                    )
+                  : Text(error != null ? 'Tekrar dene' : 'Raporu oluştur'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Başlıktaki küçük yenile simgesi: seçili dönemin raporunu yeniden üretir.
+/// Üretim sürerken döner gösterge çıkar ve dokunulamaz.
+class ReportRefreshButton extends ConsumerWidget {
+  const ReportRefreshButton({
+    super.key,
+    required this.kind,
+    required this.date,
+  });
+
+  final ReportKind kind;
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ReportTarget target = (kind: kind, date: date);
+    final busy = ref.watch(
+      reportRegenerationProvider.select((s) => s.busy.contains(target)),
+    );
+    return IconButton(
+      key: const ValueKey('reports-refresh'),
+      tooltip: busy ? 'Oluşturuluyor…' : 'Raporu yeniden oluştur',
+      onPressed: busy ? null : () => runRegeneration(ref, kind, date),
+      color: AppColors.textSecondary,
+      icon: busy
+          ? SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.accent,
+              ),
+            )
+          : const Icon(Icons.refresh_rounded, size: 22),
+    );
+  }
+}
+
+/// Üst karttaki iki puan (İş %, Form %) yan yana.
+class ReportScorePair extends StatelessWidget {
+  const ReportScorePair({
+    super.key,
+    required this.workRate,
+    required this.formRate,
+  });
+
+  final int? workRate;
+  final int? formRate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _Score(
+            label: 'İş',
+            rate: workRate,
+            color: AppColors.accent,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.grid),
+        Expanded(
+          child: _Score(
+            label: 'Form',
+            rate: formRate,
+            color: AppColors.fitness,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Score extends StatelessWidget {
+  const _Score({required this.label, required this.rate, required this.color});
+
+  final String label;
+  final int? rate;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      container: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              ReportsFormat.rate(rate),
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                color: color,
+                fontFeatures: _tabular,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          KokpitBar(value: (rate ?? 0) / 100, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tek satırlık dokunulabilir bağlantı kartı ("Ayrıntılar ›").
+class ReportLinkRow extends StatelessWidget {
+  const ReportLinkRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return BentoCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.cardPadding,
+        vertical: 14,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color ?? AppColors.accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: AppColors.textMuted,
           ),
         ],
       ),
@@ -422,33 +590,74 @@ class _Notice extends StatelessWidget {
   }
 }
 
-class _SummaryText extends StatelessWidget {
-  const _SummaryText({required this.parts});
+/// Yorum metni: kapalıyken 4 satır; sığmıyorsa ya da öneri varsa "Devamı".
+class _SummaryText extends StatefulWidget {
+  const _SummaryText({super.key, required this.parts});
 
   final SummaryParts parts;
 
   @override
+  State<_SummaryText> createState() => _SummaryTextState();
+}
+
+class _SummaryTextState extends State<_SummaryText> {
+  static const int _collapsedLines = 4;
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final muted =
-        theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(parts.body, style: theme.textTheme.bodyMedium),
-        for (final suggestion in parts.suggestions)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('•', style: muted),
-                const SizedBox(width: 8),
-                Expanded(child: Text(suggestion, style: muted)),
-              ],
+    final parts = widget.parts;
+    final bodyStyle = theme.textTheme.bodyMedium;
+    final muted = bodyStyle?.copyWith(color: AppColors.textSecondary);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(text: parts.body, style: bodyStyle),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: _collapsedLines,
+        )..layout(maxWidth: constraints.maxWidth);
+        final overflows = painter.didExceedMaxLines;
+        painter.dispose();
+        final canExpand = overflows || parts.suggestions.isNotEmpty;
+        final open = _expanded || !canExpand;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              parts.body,
+              style: bodyStyle,
+              maxLines: open ? null : _collapsedLines,
+              overflow: open ? TextOverflow.visible : TextOverflow.ellipsis,
             ),
-          ),
-      ],
+            if (open)
+              for (final suggestion in parts.suggestions)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('•', style: muted),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(suggestion, style: muted)),
+                    ],
+                  ),
+                ),
+            if (canExpand)
+              TextButton(
+                onPressed: () => setState(() => _expanded = !_expanded),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.accent,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(_expanded ? 'Daha az' : 'Devamı'),
+              ),
+          ],
+        );
+      },
     );
   }
 }

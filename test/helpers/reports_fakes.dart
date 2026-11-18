@@ -3,7 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
+import 'package:kisisel_asistan/features/friends/domain/friends_models.dart';
+import 'package:kisisel_asistan/features/friends/presentation/friends_providers.dart';
+import 'package:kisisel_asistan/features/health/domain/health_models.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
+import 'package:kisisel_asistan/features/operations/presentation/dashboard/task_dashboard_providers.dart';
+import 'package:kisisel_asistan/features/operations/presentation/dashboard/task_dashboard_stats.dart';
+import 'package:kisisel_asistan/features/routines/presentation/routines_providers.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_providers.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_screen.dart';
 
@@ -157,6 +163,12 @@ DailyReport dailyReport(
 class ReportsHarness {
   final FakeReportsRepository reports = FakeReportsRepository();
 
+  /// Arkadaş sıralaması (kendin dahil); boşsa arkadaş satırı gizlenir.
+  List<LeaderboardEntry> leaderboard = const [];
+
+  /// Ay görünümünün özeti; `null` ise boş bir ay döner.
+  MonthOverview? monthOverview;
+
   /// Sabit "şimdi": 18 Kasım 2026 Çarşamba; içinde bulunulan hafta 16–22 Kasım.
   static final DateTime now = DateTime(2026, 11, 18, 10);
   static final DateTime today = DateTime(2026, 11, 18);
@@ -174,7 +186,26 @@ class ReportsHarness {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
     final container = ProviderContainer(
-      overrides: [reportsRepositoryProvider.overrideWithValue(reports)],
+      overrides: [
+        reportsRepositoryProvider.overrideWithValue(reports),
+        friendsLeaderboardProvider.overrideWith((ref) async => leaderboard),
+        monthOverviewProvider.overrideWith(
+          (ref, month) async =>
+              monthOverview ??
+              MonthOverview(
+                month: DateTime(month.year, month.month),
+                monthly: const [],
+                tasks: const [],
+                weeklyPlanned: 0,
+                weeklyDone: 0,
+                health: const MonthHealthSummary(),
+              ),
+        ),
+        taskDashboardProvider.overrideWith(
+          (ref) async =>
+              computeTaskDashboardStats(const [], now: now, weekCount: 8),
+        ),
+      ],
     );
     addTearDown(container.dispose);
     container.read(kokpitClockProvider.notifier).state = now;

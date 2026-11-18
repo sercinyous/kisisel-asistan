@@ -161,9 +161,8 @@ class _CheckinBodyState extends ConsumerState<_CheckinBody> {
                           : AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
-                    onSelected: _saving
-                        ? null
-                        : (_) => setState(() => _mood = m),
+                    onSelected:
+                        _saving ? null : (_) => setState(() => _mood = m),
                   ),
                 ),
               ),

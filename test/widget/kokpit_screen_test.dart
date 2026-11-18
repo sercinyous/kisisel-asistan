@@ -13,6 +13,7 @@ import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/domain/kokpit_models.dart';
+import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_screen.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
@@ -212,24 +213,54 @@ void main() {
       expect(find.text('1.450'), findsOneWidget);
       expect(find.text('/ 2.000 kcal'), findsOneWidget);
       expect(find.text('550 kcal kaldı'), findsOneWidget);
-      expect(find.text('Protein'), findsOneWidget);
+      expect(find.text('Protein'), findsNothing, reason: 'makro yok');
 
+      expect(find.text('Günlük işler'), findsOneWidget);
+      expect(find.text('0 / 5'), findsOneWidget);
+      expect(find.text('5 iş kaldı'), findsOneWidget);
       expect(find.text('8.432'), findsOneWidget);
-      expect(find.text('512 kcal'), findsOneWidget);
+      expect(find.text('hedef 8.000'), findsOneWidget);
       expect(find.text('7 sa 32 dk'), findsOneWidget);
-      expect(find.text('HealthKit · 10:30'), findsOneWidget);
+      expect(find.text('hedef 7,5 sa'), findsOneWidget);
       expect(healthStore.upsertedHealth, hasLength(1),
           reason: 'HealthKit özeti Supabase\'e yedeklenir');
 
-      expect(find.text('Bugünün rutinleri'), findsOneWidget);
-      expect(find.text('0 / 5'), findsOneWidget);
-      expect(find.text('Sabah tartı ve kilo kaydı'), findsOneWidget);
-      expect(find.text('08:00'), findsOneWidget);
+      // Görünüm seçici ve ayrı arkadaş/ayarlar ikonları yok.
+      expect(find.text('Gün'), findsNothing);
+      expect(find.text('Ay'), findsNothing);
+      expect(find.byTooltip('Ayarlar'), findsNothing);
+      expect(find.byTooltip('Hesap'), findsOneWidget);
 
       await scrollThrough(tester);
-      expect(find.text('Bugün ve yaklaşanlar'), findsOneWidget);
-      expect(find.text('Haftalık vardiya çizelgesini yayınla'), findsOneWidget);
-      expect(find.textContaining('Ekip · Ayşe'), findsOneWidget);
+      expect(find.text('Bugünün rutinleri'), findsOneWidget);
+      expect(find.text('Sabah tartı ve kilo kaydı'), findsOneWidget);
+      expect(find.text('08:00'), findsOneWidget);
+      expect(find.text('Tümünü gör (5)'), findsOneWidget);
+      // Yarına ve sonrasına düşen görevler Kokpit'te listelenmez.
+      expect(find.text('Haftalık vardiya çizelgesini yayınla'), findsNothing);
+      expect(find.text('Bugün ve yaklaşanlar'), findsNothing);
+    });
+
+    testWidgets('bugüne düşen görev listeye ve sayaca girer; en fazla 5 satır',
+        (tester) async {
+      final now = DateTime.now();
+      tasks.tasks = [
+        ...sampleReminders(),
+        TaskItem(
+          id: 'today',
+          title: 'Bugünkü görev',
+          category: 'İş',
+          priority: 'medium',
+          status: 'todo',
+          dueAt: DateTime(now.year, now.month, now.day, 23, 59),
+        ),
+      ];
+      await pumpKokpit(tester);
+      expect(find.text('0 / 6'), findsOneWidget);
+      await scrollThrough(tester);
+      expect(find.text('Tümünü gör (6)'), findsOneWidget);
+      expect(find.byType(Divider), findsNWidgets(5),
+          reason: '5 satır arası 4 ayraç + Tümünü gör ayracı');
     });
 
     testWidgets('kalori hedefi aşılınca "fazla" yazar', (tester) async {
@@ -241,15 +272,15 @@ void main() {
     testWidgets('hedefler kullanıcı ayarlarından gelir', (tester) async {
       settings.settings = const UserSettings.defaults().copyWith(
         dailyCalories: 2500,
-        dailyProteinG: 190,
         dailySteps: 12000,
+        sleepMinutes: 480,
       );
       await pumpKokpit(tester);
 
       expect(find.text('/ 2.500 kcal'), findsOneWidget);
       expect(find.text('1.050 kcal kaldı'), findsOneWidget);
-      expect(find.textContaining('/ 190 g', findRichText: true), findsOneWidget);
-      expect(find.text('/ 12.000'), findsOneWidget);
+      expect(find.text('hedef 12.000'), findsOneWidget);
+      expect(find.text('hedef 8 sa'), findsOneWidget);
     });
 
     testWidgets('ayarlar okunamazsa varsayılan hedeflerle çizilir',
@@ -257,10 +288,10 @@ void main() {
       settings.fetchError = Exception('ağ yok');
       await pumpKokpit(tester);
       expect(find.text('/ 2.000 kcal'), findsOneWidget);
-      expect(find.text('/ 8.000'), findsOneWidget);
+      expect(find.text('hedef 8.000'), findsOneWidget);
     });
 
-    testWidgets('aylık işler "Bugünün rutinleri" sayacına girmez',
+    testWidgets('aylık işler Kokpit sayacına ve listesine girmez',
         (tester) async {
       routines.routines = [
         ...sampleRoutines(),
@@ -274,12 +305,10 @@ void main() {
       final container = await pumpKokpit(tester);
 
       expect(find.text('0 / 5'), findsOneWidget);
-      // Aylık iş kendi bölümünde ("Yaklaşan aylık işler") listelenir.
-      expect(find.text('Yaklaşan aylık işler'), findsOneWidget);
-      expect(find.text('Maaş ödemeleri'), findsOneWidget);
+      await scrollThrough(tester);
+      expect(find.text('Maaş ödemeleri'), findsNothing);
       final state = container.read(todayOccurrencesProvider).value!;
       expect(state.monthly.single.routine.id, 'm1');
-      expect(state.monthly.single.status, OccurrenceStatus.dueToday);
     });
 
     testWidgets('boş veri: boş durum mesajları', (tester) async {
@@ -288,8 +317,11 @@ void main() {
       health.snapshot = const HealthSnapshot(status: HealthStatus.unavailable);
       await pumpKokpit(tester);
 
-      expect(find.text('Bugün için tanımlı rutin yok.'), findsOneWidget);
-      expect(find.textContaining('Yaklaşan hatırlatma yok.'), findsOneWidget);
+      await scrollThrough(tester);
+      expect(
+        find.textContaining('Bugün için rutin ya da görev yok.'),
+        findsOneWidget,
+      );
       expect(find.textContaining('yalnızca iPhone\'da'), findsOneWidget);
       expect(healthStore.upsertedHealth, isEmpty);
     });
@@ -299,6 +331,14 @@ void main() {
       await pumpKokpit(tester);
       expect(find.textContaining('HealthKit erişimi verilmedi'), findsOneWidget);
       expect(find.text('Bağlan'), findsOneWidget);
+    });
+
+    testWidgets('Tümünü gör Operasyon sekmesini ister', (tester) async {
+      final container = await pumpKokpit(tester);
+      await scrollThrough(tester);
+      await tester.tap(find.text('Tümünü gör (5)'));
+      await tester.pump();
+      expect(container.read(homeTabRequestProvider), 1);
     });
   });
 
@@ -363,6 +403,8 @@ void main() {
       routines.toggleGate = Completer<void>();
       final container = await pumpKokpit(tester);
 
+      await tester.ensureVisible(find.text('Sabah tartı ve kilo kaydı'));
+      await tester.pump();
       await tester.tap(find.text('Sabah tartı ve kilo kaydı'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -404,6 +446,8 @@ void main() {
       routines.toggleGate = Completer<void>();
       final container = await pumpKokpit(tester);
 
+      await tester.ensureVisible(find.text('Sabah tartı ve kilo kaydı'));
+      await tester.pump();
       await tester.tap(find.text('Sabah tartı ve kilo kaydı'));
       await tester.pump();
       expect(find.text('1 / 5'), findsOneWidget);
@@ -418,24 +462,6 @@ void main() {
         isFalse,
       );
       expect(find.text('Rutin güncellenemedi. Tekrar dene.'), findsOneWidget);
-    });
-  });
-
-  group('hatırlatmalar', () {
-    testWidgets('tamamla: depo çağrılır, liste yenilenir, bilgi verilir',
-        (tester) async {
-      await pumpKokpit(tester);
-      await scrollThrough(tester);
-
-      await tester.tap(find.byTooltip('Tamamlandı olarak işaretle').first);
-      await tester.pumpAndSettle();
-
-      expect(tasks.completedIds, ['t1']);
-      expect(find.text('Haftalık vardiya çizelgesini yayınla'), findsNothing);
-      expect(
-        find.text('Tamamlandı: Haftalık vardiya çizelgesini yayınla'),
-        findsOneWidget,
-      );
     });
   });
 
@@ -472,10 +498,22 @@ void main() {
       expect(find.text('Rutinler yüklenemedi.'), findsOneWidget);
 
       routines.fetchError = null;
-      await tester.tap(find.text('Tekrar dene'));
+      final retry = find.descendant(
+        of: find.ancestor(
+          of: find.text('Rutinler yüklenemedi.'),
+          matching: find.byType(Row),
+        ),
+        matching: find.text('Tekrar dene'),
+      );
+      await tester.ensureVisible(retry.first);
+      await tester.pumpAndSettle();
+      await tester.tap(retry.first);
       await tester.pumpAndSettle();
       expect(find.text('Rutinler yüklenemedi.'), findsNothing);
-      expect(find.text('Bugün için tanımlı rutin yok.'), findsOneWidget);
+      expect(
+        find.textContaining('Bugün için rutin ya da görev yok.'),
+        findsOneWidget,
+      );
     });
   });
 }

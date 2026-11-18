@@ -360,7 +360,7 @@ class SleepWeekCard extends ConsumerWidget {
           BentoLabel(
             icon: Icons.bedtime_rounded,
             label: 'Uyku',
-            color: AppColors.accent,
+            color: AppColors.sleep,
             trailing: '7 gün',
           ),
           const SizedBox(height: 8),
@@ -376,7 +376,7 @@ class SleepWeekCard extends ConsumerWidget {
               return _WeekMiniBody(
                 days: [for (final d in days) d.day],
                 values: [for (final d in days) d.sleepMinutes.toDouble()],
-                color: AppColors.accent,
+                color: AppColors.sleep,
                 valueKey: const Key('sleep-average'),
                 average: average == null ? null : KokpitFormat.sleep(average),
                 unit: 'ort.',

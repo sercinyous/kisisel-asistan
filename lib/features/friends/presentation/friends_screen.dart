@@ -8,7 +8,12 @@ import '../domain/friends_models.dart';
 import 'friends_providers.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
-  const FriendsScreen({super.key});
+  const FriendsScreen({super.key}) : sharingOnly = false;
+
+  /// Arkadaşlar › Paylaşım ayarları: yalnızca paylaşım anahtarları.
+  const FriendsScreen.sharing({super.key}) : sharingOnly = true;
+
+  final bool sharingOnly;
 
   @override
   ConsumerState<FriendsScreen> createState() => _FriendsScreenState();
@@ -94,7 +99,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Arkadaşlar')),
+      appBar: AppBar(
+        title: Text(widget.sharingOnly ? 'Paylaşım ayarları' : 'Arkadaşlar'),
+      ),
       body: RefreshIndicator(
         color: AppColors.accent,
         onRefresh: () async => refreshFriends(ref),
@@ -106,7 +113,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             AppSpacing.page,
             120,
           ),
-          children: [
+          children: widget.sharingOnly
+              ? [
+                  const SizedBox(height: AppSpacing.grid),
+                  _sharing(theme),
+                ]
+              : [
             title('Davetler'),
             _incoming(theme),
             title('Arkadaşlar'),
@@ -137,8 +149,35 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               ),
             ),
             _outgoing(theme),
-            title('Paylaşım anahtarları'),
-            _sharing(theme),
+            const SizedBox(height: AppSpacing.section),
+            BentoCard(
+              key: const Key('friends-sharing-settings'),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => const FriendsScreen.sharing(),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.visibility_rounded,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      'Paylaşım ayarları',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),

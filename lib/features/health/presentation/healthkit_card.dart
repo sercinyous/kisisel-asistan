@@ -169,3 +169,87 @@ class HealthKitCard extends ConsumerWidget {
     }
   }
 }
+
+/// Sağlık sekmesinin üstünde, yalnızca kaynakta sorun varken (bağlı değil,
+/// onay gerekli, erişim yok, okuma hatası) görünen tek satırlık uyarı.
+/// Kaynağın tüm ayarları Hesap › Bağlantılar'dadır.
+class HealthSourceBanner extends ConsumerWidget {
+  const HealthSourceBanner({super.key});
+
+  static bool _isProblem(HealthStatus status) => switch (status) {
+        HealthStatus.ok || HealthStatus.unavailable => false,
+        HealthStatus.denied ||
+        HealthStatus.notConnected ||
+        HealthStatus.reconnect ||
+        HealthStatus.failed =>
+          true,
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final health = ref.watch(healthTodayProvider);
+    final selected = ref.watch(healthSourceProvider);
+    if (health.isLoading && !health.hasValue && !health.hasError) {
+      return const SizedBox.shrink();
+    }
+    final snapshot = health.valueOrNull;
+    final (String, String?, _CardAction) content;
+    if (health.hasError && snapshot == null) {
+      content = (
+        '${selected.shortLabel} verisi okunamadı.',
+        'Tekrar dene',
+        _CardAction.resync,
+      );
+    } else if (snapshot != null && _isProblem(snapshot.status)) {
+      content = snapshot.source == HealthSourceKind.googleHealth
+          ? HealthKitCard._googleMessage(snapshot)
+          : HealthKitCard._healthKitMessage(snapshot);
+    } else {
+      return const SizedBox.shrink();
+    }
+    final (message, action, kind) = content;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.grid),
+      child: BentoCard(
+        key: const Key('health-source-banner'),
+        tint: AppColors.warning,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.m,
+          AppSpacing.xs,
+          AppSpacing.xs,
+          AppSpacing.xs,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline_rounded,
+                size: 20, color: AppColors.warning),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Tooltip(
+                message: message,
+                child: Text(
+                  message,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ),
+            if (action != null)
+              TextButton(
+                onPressed: health.isLoading
+                    ? null
+                    : () => HealthKitCard._run(context, kind),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(healthMinTouch, healthMinTouch),
+                ),
+                child: Text(action),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -21,7 +21,11 @@ import 'kokpit_widgets.dart';
 
 /// Ay görünümü: takvim, aylık sabitler, ayın randevuları ve ay özeti.
 class KokpitMonthView extends ConsumerStatefulWidget {
-  const KokpitMonthView({super.key});
+  const KokpitMonthView({super.key, this.calendarOnly = false});
+
+  /// `true`: yalnızca ay takvimi ve seçilen günün işleri (İşler › Takvim);
+  /// aylık iş, randevu ve özet bölümleri çizilmez.
+  final bool calendarOnly;
 
   @override
   ConsumerState<KokpitMonthView> createState() => _KokpitMonthViewState();
@@ -114,8 +118,9 @@ class _KokpitMonthViewState extends ConsumerState<KokpitMonthView> {
           marks: marks,
           onSelect: _selectDay,
         ),
-        const SizedBox(height: 24),
-        overview.when(
+        if (!widget.calendarOnly) const SizedBox(height: 24),
+        if (!widget.calendarOnly)
+          overview.when(
           skipLoadingOnRefresh: true,
           loading: () => const KokpitSkeletonCard(height: 220),
           error: (_, __) => KokpitInlineMessage(
