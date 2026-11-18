@@ -3670,3 +3670,382 @@ create trigger user_settings_health_source_dirty
   for each row execute function public.health_source_dirty_trigger();
 -- END friend_scope_source
 -- =====================================================================
+
+-- =====================================================================
+-- BEGIN faz5_account
+-- Hata takibi (app_errors) ve "Sorun bildir" (feedback). İkisi de yalnızca
+-- ekleme: kullanıcı kendi satırını bile okuyamaz; sahibi Dashboard'dan
+-- (service_role) okur. Hesap silinince satırlar auth.users kaskadıyla gider.
+-- =====================================================================
+create table if not exists public.app_errors (
+  id           bigint generated always as identity primary key,
+  user_id      uuid default auth.uid() references auth.users (id) on delete cascade,
+  message      text not null check (char_length(message) between 1 and 2000),
+  stack        text check (stack is null or char_length(stack) <= 8000),
+  app_version  text check (app_version is null or char_length(app_version) <= 40),
+  platform     text check (platform is null or char_length(platform) <= 40),
+  created_at   timestamptz not null default now()
+);
+create index if not exists app_errors_user_created_idx
+  on public.app_errors (user_id, created_at);
+
+alter table public.app_errors enable row level security;
+revoke all on public.app_errors from anon, authenticated;
+grant insert (user_id, message, stack, app_version, platform)
+  on public.app_errors to authenticated;
+grant all on public.app_errors to service_role;
+
+drop policy if exists app_errors_insert_own on public.app_errors;
+create policy app_errors_insert_own on public.app_errors
+  for insert to authenticated
+  with check (user_id = (select auth.uid()));
+
+-- Kişi başına günde en çok 50 hata kaydı; fazlası reddedilir.
+create or replace function public.app_errors_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if new.user_id is not null then
+    perform pg_advisory_xact_lock(hashtextextended('app_errors:' || new.user_id::text, 0));
+    if (select count(*) from public.app_errors e
+        where e.user_id = new.user_id
+          and e.created_at > now() - interval '1 day') >= 50 then
+      raise exception 'app_errors rate limit' using errcode = 'P0001';
+    end if;
+  end if;
+  new.created_at := now();
+  return new;
+end;
+$$;
+revoke all on function public.app_errors_rate_limit() from public, anon, authenticated;
+
+drop trigger if exists app_errors_rate_limit on public.app_errors;
+create trigger app_errors_rate_limit before insert on public.app_errors
+  for each row execute function public.app_errors_rate_limit();
+
+create table if not exists public.feedback (
+  id           bigint generated always as identity primary key,
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  message      text not null check (char_length(btrim(message)) between 1 and 2000),
+  category     text not null default 'hata'
+               check (category in ('hata', 'öneri', 'diğer')),
+  app_version  text check (app_version is null or char_length(app_version) <= 40),
+  created_at   timestamptz not null default now()
+);
+create index if not exists feedback_user_created_idx
+  on public.feedback (user_id, created_at);
+
+alter table public.feedback enable row level security;
+revoke all on public.feedback from anon, authenticated;
+grant insert (user_id, message, category, app_version)
+  on public.feedback to authenticated;
+grant all on public.feedback to service_role;
+
+drop policy if exists feedback_insert_own on public.feedback;
+create policy feedback_insert_own on public.feedback
+  for insert to authenticated
+  with check (user_id = (select auth.uid()));
+-- END faz5_account
+-- =====================================================================
+
+-- =====================================================================
+-- BEGIN faz5_health_extras — idempotent
+-- Su takibi (water_logs + user_settings.daily_water_ml), haftalık check-in
+-- (weekly_checkins) ve görev panosu için tamamlanma zamanı dizini.
+-- Rapor metrikleri (report_period_metrics) bu blokta değişmez.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists daily_water_ml integer not null default 2000;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.user_settings'::regclass
+      and conname = 'user_settings_daily_water_ml_check'
+  ) then
+    alter table public.user_settings
+      add constraint user_settings_daily_water_ml_check
+      check (daily_water_ml between 250 and 8000);
+  end if;
+end;
+$$;
+
+create table if not exists public.water_logs (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid()
+              references auth.users (id) on delete cascade,
+  logged_on   date not null default current_date,
+  ml          integer not null check (ml between 1 and 3000),
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists water_logs_user_day_idx
+  on public.water_logs (user_id, logged_on);
+
+alter table public.water_logs enable row level security;
+
+drop policy if exists water_logs_owner_all on public.water_logs;
+create policy water_logs_owner_all on public.water_logs
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
+revoke all on table public.water_logs from anon;
+grant select, insert, delete on table public.water_logs to authenticated;
+
+create table if not exists public.weekly_checkins (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid()
+              references auth.users (id) on delete cascade,
+  -- Haftanın pazartesisi (yerel takvim).
+  week_start  date not null check (extract(isodow from week_start) = 1),
+  mood        smallint not null check (mood between 1 and 5),
+  note        text check (note is null or char_length(note) <= 500),
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (user_id, week_start)
+);
+
+alter table public.weekly_checkins enable row level security;
+
+drop policy if exists weekly_checkins_owner_all on public.weekly_checkins;
+create policy weekly_checkins_owner_all on public.weekly_checkins
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
+revoke all on table public.weekly_checkins from anon;
+grant select, insert, update, delete on table public.weekly_checkins to authenticated;
+
+drop trigger if exists weekly_checkins_set_updated_at on public.weekly_checkins;
+create trigger weekly_checkins_set_updated_at before update on public.weekly_checkins
+  for each row execute function public.set_updated_at();
+
+-- Görev panosu: son 8 haftada tamamlananlar (terminsiz olanlar dahil).
+create index if not exists tasks_user_completed_idx
+  on public.tasks (user_id, completed_at)
+  where completed_at is not null;
+-- END faz5_health_extras
+
+-- =====================================================================
+-- BEGIN faz5_reminders — idempotent
+--   Hatırlatıcılar (Ayarlar > Hatırlatıcılar): kullanıcının kendi saatli
+--   hatırlatmaları (su, ilaç, yürüyüş...) ve "Yaptım" kayıtları.
+--   repeat: once (on_date), daily, weekdays (Pzt-Cum), custom (days_mask:
+--   bit 0 = Pazartesi ... bit 6 = Pazar). reminder_done, bileşik FK ile
+--   yalnızca aynı kullanıcının hatırlatıcısına bağlanabilir
+--   (routine_owner_fk deseni); RLS yalnızca user_id'yi denetler.
+-- =====================================================================
+create table if not exists public.reminders (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title        text not null check (char_length(btrim(title)) between 1 and 120),
+  time_of_day  time not null,
+  repeat       text not null default 'daily'
+               check (repeat in ('once', 'daily', 'weekdays', 'custom')),
+  on_date      date,
+  days_mask    smallint not null default 0 check (days_mask between 0 and 127),
+  enabled      boolean not null default true,
+  created_at   timestamptz not null default now(),
+  constraint reminders_once_date_check
+    check ((repeat = 'once') = (on_date is not null)),
+  constraint reminders_custom_days_check
+    check (repeat <> 'custom' or days_mask > 0),
+  constraint reminders_user_id_id_key unique (user_id, id)
+);
+
+create table if not exists public.reminder_done (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  reminder_id  uuid not null,
+  done_on      date not null,
+  created_at   timestamptz not null default now(),
+  constraint reminder_done_reminder_day_key unique (reminder_id, done_on),
+  constraint reminder_done_user_reminder_fkey
+    foreign key (user_id, reminder_id)
+    references public.reminders (user_id, id) on delete cascade
+);
+
+create index if not exists reminders_user_created_idx
+  on public.reminders (user_id, created_at);
+create index if not exists reminder_done_user_day_idx
+  on public.reminder_done (user_id, done_on);
+
+do $$
+declare
+  t   text;
+  cmd text;
+begin
+  foreach t in array array['reminders', 'reminder_done']
+  loop
+    execute format('alter table public.%I enable row level security', t);
+    foreach cmd in array array['select', 'insert', 'update', 'delete']
+    loop
+      execute format('drop policy if exists %I on public.%I', t || '_owner_' || cmd, t);
+    end loop;
+    execute format(
+      'create policy %I on public.%I for select to authenticated
+         using ((select auth.uid()) = user_id)', t || '_owner_select', t);
+    execute format(
+      'create policy %I on public.%I for insert to authenticated
+         with check ((select auth.uid()) = user_id)', t || '_owner_insert', t);
+    execute format(
+      'create policy %I on public.%I for update to authenticated
+         using ((select auth.uid()) = user_id)
+         with check ((select auth.uid()) = user_id)', t || '_owner_update', t);
+    execute format(
+      'create policy %I on public.%I for delete to authenticated
+         using ((select auth.uid()) = user_id)', t || '_owner_delete', t);
+  end loop;
+end;
+$$;
+
+revoke all on table public.reminders, public.reminder_done from anon;
+grant select, insert, update, delete on table public.reminders, public.reminder_done
+  to authenticated;
+-- END faz5_reminders
+
+-- =====================================================================
+-- BEGIN faz5_onboarding — idempotent
+--   Faz 5 ilk kurulum: user_settings.activity_level (hareket düzeyi; kalori
+--   önerisinin katsayısı). Boy, doğum yılı ve cinsiyet sütunları ve
+--   check'leri Faz 4A'dan beri vardır (height_cm 100..250, sex female/male/
+--   unspecified ya da null); burada eksikse eklenir. complete_onboarding aynı
+--   sözleşmeyle (tek transaction, op_key ile idempotent) yeniden tanımlanır
+--   ve ek olarak activity_level ile gövdedeki saat dilimini (payload.timezone,
+--   pg_timezone_names'te olmalı) yazar.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists height_cm smallint,
+  add column if not exists birth_year smallint,
+  add column if not exists sex text,
+  add column if not exists activity_level text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.user_settings'::regclass
+      and conname = 'user_settings_activity_level_check'
+  ) then
+    alter table public.user_settings
+      add constraint user_settings_activity_level_check
+      check (activity_level in ('sedentary', 'light', 'moderate', 'active',
+                                'very_active'));
+  end if;
+end;
+$$;
+
+create or replace function public.complete_onboarding(payload jsonb, op_key uuid)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_uid      uuid := auth.uid();
+  v_prev     uuid;
+  v_result   jsonb;
+  v_settings jsonb := coalesce(payload -> 'settings', '{}'::jsonb);
+  v_row      public.user_settings;
+  v_tz       text := nullif(btrim(payload ->> 'timezone'), '');
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if complete_onboarding.op_key is null then
+    raise exception 'op_key gerekli' using errcode = '22004';
+  end if;
+  if jsonb_typeof(v_settings) <> 'object' then
+    raise exception 'settings nesne olmalı' using errcode = '22023';
+  end if;
+  if v_tz is not null
+     and not exists (select 1 from pg_timezone_names z where z.name = v_tz) then
+    raise exception 'Geçersiz saat dilimi: %', v_tz using errcode = '22023';
+  end if;
+
+  -- Kullanıcının işlem satırı kilitlenir: aynı anahtarla eşzamanlı ikinci
+  -- çağrı ilki bitene dek bekler, sonra kayıtlı sonucu görür.
+  insert into onboarding_ops (user_id) values (v_uid)
+  on conflict (user_id) do nothing;
+  select o.op_key, o.result into v_prev, v_result
+  from onboarding_ops o
+  where o.user_id = v_uid
+  for update;
+
+  if v_prev is not distinct from complete_onboarding.op_key then
+    return v_result;
+  end if;
+
+  if jsonb_typeof(payload -> 'weight_kg') = 'number' then
+    insert into fitness_logs (user_id, log_type, weight_kg, source)
+    values (v_uid, 'weight', (payload ->> 'weight_kg')::numeric, 'manual');
+  end if;
+
+  insert into routines (user_id, title, scope, category, frequency, days_of_week,
+                        day_of_month, time_of_day, notify, is_active, sort_order)
+  select v_uid, x.title, coalesce(x.scope, 'Kişisel'), coalesce(x.category, 'kisisel'),
+         coalesce(x.frequency, 'weekly'),
+         case when coalesce(x.frequency, 'weekly') = 'monthly'
+                   or x.days_of_week is null or cardinality(x.days_of_week) = 0
+              then '{1,2,3,4,5,6,7}'::smallint[]
+              else x.days_of_week end,
+         case when x.frequency = 'monthly' then x.day_of_month end,
+         x.time_of_day, coalesce(x.notify, true), coalesce(x.is_active, true),
+         coalesce(x.sort_order, 0)
+  from jsonb_to_recordset(coalesce(payload -> 'routines', '[]'::jsonb))
+    as x(title text, scope text, category text, frequency text,
+         days_of_week smallint[], day_of_month smallint, time_of_day time,
+         notify boolean, is_active boolean, sort_order integer);
+
+  insert into user_settings (user_id) values (v_uid)
+  on conflict (user_id) do nothing;
+
+  -- Gövdede olmayan alan mevcut değerini korur (jsonb_populate_record tabanı
+  -- satırın kendisidir); açık null yazılır. user_id değişmez; timezone
+  -- yalnızca gövdede geçerli bir IANA adı varsa yazılır.
+  update user_settings s
+     set (start_weight_kg, target_weight_kg, daily_calories, daily_protein_g,
+          daily_carbs_g, daily_fat_g, daily_steps, sleep_minutes,
+          notifications_enabled, routine_notifications, monthly_lead_days,
+          monthly_remind_time, event_remind_minutes, quiet_hours_enabled,
+          quiet_start, quiet_end, team_members, height_cm, birth_year, sex,
+          display_name, work_description, task_categories, activity_level,
+          timezone, onboarded_at)
+       = (select r.start_weight_kg, r.target_weight_kg, r.daily_calories,
+                 r.daily_protein_g, r.daily_carbs_g, r.daily_fat_g, r.daily_steps,
+                 r.sleep_minutes, r.notifications_enabled, r.routine_notifications,
+                 r.monthly_lead_days, r.monthly_remind_time, r.event_remind_minutes,
+                 r.quiet_hours_enabled, r.quiet_start, r.quiet_end,
+                 coalesce(r.team_members, '{}'), r.height_cm, r.birth_year, r.sex,
+                 r.display_name, r.work_description, r.task_categories,
+                 r.activity_level, coalesce(v_tz, s.timezone),
+                 coalesce(r.onboarded_at, now())
+          from jsonb_populate_record(s, v_settings) r)
+   where s.user_id = v_uid
+  returning s.* into v_row;
+
+  if v_row.user_id is null then
+    raise exception 'Ayar satırı yazılamadı' using errcode = '42501';
+  end if;
+
+  v_result := jsonb_build_object('settings', to_jsonb(v_row));
+  update onboarding_ops
+     set op_key = complete_onboarding.op_key,
+         result = v_result,
+         completed_at = now()
+   where user_id = v_uid;
+  return v_result;
+end;
+$$;
+
+revoke all on function public.complete_onboarding(jsonb, uuid) from public, anon;
+grant execute on function public.complete_onboarding(jsonb, uuid) to authenticated;
+
+revoke all on function public.complete_onboarding(jsonb, uuid) from public, anon;
+grant execute on function public.complete_onboarding(jsonb, uuid) to authenticated;
+-- END faz5_onboarding

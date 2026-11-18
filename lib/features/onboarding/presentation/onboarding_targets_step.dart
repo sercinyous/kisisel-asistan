@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/bento.dart';
+import '../../settings/domain/user_settings.dart';
 import '../domain/goal_suggestion.dart';
 import '../domain/onboarding_answers.dart';
 import 'onboarding_widgets.dart';
 
-/// 3. adım: hesaplanan önerilen hedefler; hepsi düzenlenebilir.
+/// 5. adım: hareket düzeyi ve amaç seçilir; VKİ gösterilir, hedef kilo ve
+/// günlük hedefler önerilir; hepsi düzenlenebilir.
 class OnboardingTargetsStep extends StatelessWidget {
   const OnboardingTargetsStep({
     super.key,
     required this.goal,
+    required this.onGoal,
+    required this.activity,
+    required this.onActivity,
+    required this.bmi,
+    required this.targetWeight,
     required this.calories,
     required this.protein,
     required this.carbs,
@@ -19,6 +28,13 @@ class OnboardingTargetsStep extends StatelessWidget {
   });
 
   final OnboardingGoal goal;
+  final ValueChanged<OnboardingGoal> onGoal;
+  final ActivityLevel activity;
+  final ValueChanged<ActivityLevel> onActivity;
+
+  /// Şimdiki boy ve kiloyla vücut kitle indeksi.
+  final double bmi;
+  final TextEditingController targetWeight;
   final TextEditingController calories;
   final TextEditingController protein;
   final TextEditingController carbs;
@@ -55,9 +71,73 @@ class OnboardingTargetsStep extends StatelessWidget {
       children: [
         const OnboardingStepHeader(
           title: 'Önerilen hedeflerin',
-          subtitle: 'Boyun, kilon, yaşın ve amacına göre hesapladım. '
-              'İstediğini değiştir.',
+          subtitle: 'Boyun, kilon, yaşın, hareket düzeyin ve amacına göre '
+              'hesapladım. İstediğini değiştir.',
         ),
+        BentoCard(
+          key: const Key('onboarding-bmi'),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Vücut kitle indeksi',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              Text(
+                '${bmi.toStringAsFixed(1).replaceAll('.', ',')} · '
+                '${bmiCategory(bmi)}',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: AppColors.accent),
+              ),
+            ],
+          ),
+        ),
+        const OnboardingLabel('Hareket düzeyin'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final level in ActivityLevel.values)
+              ChoiceChip(
+                key: Key('onboarding-activity-${level.name}'),
+                label: Text(level.label),
+                showCheckmark: false,
+                selected: activity == level,
+                onSelected: (_) => onActivity(level),
+              ),
+          ],
+        ),
+        OnboardingHint(activity.description),
+        const OnboardingLabel('Amacın'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final option in OnboardingGoal.values)
+              ChoiceChip(
+                key: Key('onboarding-goal-${option.name}'),
+                label: Text(option.label),
+                showCheckmark: false,
+                selected: goal == option,
+                onSelected: (_) => onGoal(option),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        OnboardingField(
+          key: const Key('onboarding-target-weight'),
+          controller: targetWeight,
+          label: 'Hedef kilo',
+          suffix: 'kg',
+          helper: 'Sağlıklı VKİ aralığına (18,5–24,9) göre önerildi.',
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: OnboardingField.decimal,
+          validator: OnboardingValidators.targetWeight,
+        ),
+        const SizedBox(height: 12),
         OnboardingFieldRow(
           left: OnboardingField(
             key: const Key('onboarding-calories'),
@@ -160,8 +240,9 @@ class OnboardingTargetsStep extends StatelessWidget {
           ),
         ),
         OnboardingHint(
-          'Kalori: bazal metabolizma × 1,4 → ${_goalText()}. Protein: kilo başına '
-          '1,8 g. Adım 8000, uyku 7,5 saat. Bunlar tahmindir, tıbbi tavsiye '
+          'Kalori: bazal metabolizma (Mifflin–St Jeor) × '
+          '${activity.factor.toString().replaceAll('.', ',')} → ${_goalText()}. '
+          'Protein: kilo başına 1,6 g. Adım 8000, uyku 7,5 saat. Bunlar tahmindir, tıbbi tavsiye '
           'değildir.',
         ),
       ],

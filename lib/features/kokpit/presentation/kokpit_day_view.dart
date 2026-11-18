@@ -9,7 +9,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../health/presentation/water_card.dart';
 import '../../operations/domain/task_item.dart';
+import '../../reports/presentation/weekly_checkin_card.dart';
 import '../../operations/presentation/routines_view.dart'
     show RoutineRowActions;
 import '../../operations/presentation/tasks_view.dart' show TaskRowActions;
@@ -37,6 +39,10 @@ class KokpitDayView extends StatelessWidget {
         _MonthlyDueSection(),
         SizedBox(height: 24),
         _RemindersSection(),
+        SizedBox(height: AppSpacing.grid),
+        WaterSummaryCard(),
+        SizedBox(height: AppSpacing.grid),
+        WeeklyCheckinCard(bottomSpacing: 0),
       ],
     );
   }

@@ -1,4 +1,6 @@
 import '../../health/domain/energy_balance.dart';
+import '../../health/domain/health_models.dart';
+import '../../settings/domain/user_settings.dart';
 import 'onboarding_answers.dart';
 
 /// `user_settings` hedef sütunlarının veritabanı sınırları (schema.sql ve
@@ -56,24 +58,66 @@ class OnboardingTargets {
       '$steps adım, $sleepMinutes dk)';
 }
 
+/// Vücut kitle indeksi: kg / m². Geçersiz girdi [ArgumentError] fırlatır.
+double bodyMassIndex({required double weightKg, required int heightCm}) {
+  if (!weightKg.isFinite || weightKg <= 0) {
+    throw ArgumentError.value(weightKg, 'weightKg', 'must be positive');
+  }
+  if (heightCm <= 0) {
+    throw ArgumentError.value(heightCm, 'heightCm', 'must be positive');
+  }
+  final m = heightCm / 100;
+  return weightKg / (m * m);
+}
+
+/// VKİ'nin Türkçe sınıfı (DSÖ eşikleri).
+String bmiCategory(double bmi) {
+  if (bmi < GoalSuggestion.healthyBmiMin) return 'Zayıf';
+  if (bmi < 25) return 'Normal';
+  if (bmi < 30) return 'Fazla kilolu';
+  return 'Obez';
+}
+
 /// Cevaplardan önerilen hedefler. Formüller sabittir ve tıbbi tavsiye değildir:
 ///
-/// * kalori = bazal (Mifflin-St Jeor, 4A'nın [basalKcal]'i) × 1,4 +
-///   amaç farkı (−500 / 0 / +300); 18 yaş altında açık uygulanmaz (4A,
-///   reşit olmayana açık hedefi koymaz) ve sonuç [minCalories]'in altına
-///   inmez;
-/// * protein = 1,8 g × kilo;
+/// * kalori = bazal (Mifflin–St Jeor, 4A'nın [basalKcal]'i) × hareket
+///   katsayısı ([ActivityLevel.factor]) + amaç farkı (−500 / 0 / +300);
+///   18 yaş altında açık uygulanmaz ve sonuç [minCalories]'in altına inmez;
+/// * protein = 1,6 g × kilo;
 /// * yağ = kalorinin %27'si (9 kcal/g), karbonhidrat = kalan kalori (4 kcal/g);
-/// * adım 8000, uyku 7,5 saat.
+/// * adım 8000, uyku 7,5 saat;
+/// * hedef kilo: VKİ sağlıklı aralıktaysa (18,5–24,9) mevcut kilo, değilse
+///   aralığın en yakın ucundaki kilo.
 abstract final class GoalSuggestion {
-  static const double activityFactor = 1.4;
-  static const double proteinPerKg = 1.8;
+  static const double proteinPerKg = 1.6;
   static const double fatShare = 0.27;
   static const int steps = 8000;
   static const int sleepMinutes = 450;
+  static const double healthyBmiMin = 18.5;
+  static const double healthyBmiMax = 24.9;
 
   /// Açıkla bile önerilen en düşük günlük kalori.
   static const int minCalories = 1200;
+
+  /// Sağlıklı VKİ aralığında kalan önerilen hedef kilo (bir ondalık).
+  static double suggestTargetWeight({
+    required double weightKg,
+    required int heightCm,
+  }) {
+    final bmi = bodyMassIndex(weightKg: weightKg, heightCm: heightCm);
+    final m2 = (heightCm / 100) * (heightCm / 100);
+    final double target;
+    if (bmi > healthyBmiMax) {
+      target = healthyBmiMax * m2;
+    } else if (bmi < healthyBmiMin) {
+      target = healthyBmiMin * m2;
+    } else {
+      target = weightKg;
+    }
+    return ((target * 10).roundToDouble() / 10)
+        .clamp(WeightLimits.minKg, WeightLimits.maxKg)
+        .toDouble();
+  }
 
   static OnboardingTargets compute(
     OnboardingAnswers answers, {
@@ -87,7 +131,7 @@ abstract final class GoalSuggestion {
       sex: answers.sex,
     );
     final delta = age < EnergyBands.adultAge ? 0 : answers.goal.kcalDelta;
-    final calories = (basal * activityFactor + delta)
+    final calories = (basal * answers.activity.factor + delta)
         .round()
         .clamp(minCalories, TargetLimits.caloriesMax);
     final protein = (proteinPerKg * answers.weightKg)

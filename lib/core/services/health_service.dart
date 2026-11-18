@@ -81,6 +81,45 @@ class HealthSnapshot {
   bool get hasData => steps > 0 || activeKcal > 0 || sleepMinutes > 0;
 }
 
+/// Sağlık kaynağından okunan en son boy ve kilo; bilinmeyen alan `null`.
+class BodyMeasurements {
+  const BodyMeasurements({this.heightCm, this.weightKg});
+
+  final int? heightCm;
+  final double? weightKg;
+
+  bool get isEmpty => heightCm == null && weightKg == null;
+}
+
+/// Ham ölçümlerden (boy metre, kilo kg) en son geçerli boy ve kiloyu seçer.
+/// Boy cm'ye yuvarlanır, kilo bir ondalığa; aralık dışı değer atlanır.
+BodyMeasurements latestBodyMeasurements(
+  Iterable<({String type, double value, DateTime at})> samples,
+) {
+  ({double value, DateTime at})? height;
+  ({double value, DateTime at})? weight;
+  for (final s in samples) {
+    if (!s.value.isFinite) continue;
+    if (s.type == 'height') {
+      final cm = s.value * 100;
+      if (cm < 100 || cm > 250) continue;
+      if (height == null || s.at.isAfter(height.at)) {
+        height = (value: cm, at: s.at);
+      }
+    } else if (s.type == 'weight') {
+      if (s.value < 30 || s.value > 250) continue;
+      if (weight == null || s.at.isAfter(weight.at)) {
+        weight = (value: s.value, at: s.at);
+      }
+    }
+  }
+  return BodyMeasurements(
+    heightCm: height?.value.round(),
+    weightKg:
+        weight == null ? null : (weight.value * 10).roundToDouble() / 10,
+  );
+}
+
 /// Bir günün sağlık okuması ([day] yerel gün başı).
 typedef HealthDayReading = ({DateTime day, HealthSnapshot snapshot});
 
@@ -199,7 +238,17 @@ class HealthService implements HealthDataSource {
     HealthDataType.STEPS,
     HealthDataType.ACTIVE_ENERGY_BURNED,
     ..._sleepTypes,
+    ..._bodyTypes,
   ];
+
+  /// İlk kurulumda boy ve kilo ön doldurması için okunan tipler.
+  static const List<HealthDataType> _bodyTypes = [
+    HealthDataType.HEIGHT,
+    HealthDataType.WEIGHT,
+  ];
+
+  /// Boy ve kilonun aranacağı geçmiş.
+  static const Duration bodyLookback = Duration(days: 3650);
 
   bool get isSupported =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -269,6 +318,33 @@ class HealthService implements HealthDataSource {
       for (final window in windows.take(windows.length - 1))
         (day: window.day, snapshot: await _read(window, current)),
     ];
+  }
+
+  /// Apple Sağlık'taki en son boy (cm) ve kilo (kg). İzin yoksa, veri yoksa
+  /// ya da okuma hata verirse ilgili alan `null` olur; hiçbir zaman fırlatmaz.
+  /// Sınır dışı değerler (boy 100–250 cm, kilo 30–250 kg) yok sayılır.
+  Future<BodyMeasurements> readLatestBody({DateTime? now}) async {
+    if (!isSupported) return const BodyMeasurements();
+    try {
+      if (!await requestAccess()) return const BodyMeasurements();
+      final end = now ?? DateTime.now();
+      final points = await _health.getHealthDataFromTypes(
+        types: _bodyTypes,
+        startTime: end.subtract(bodyLookback),
+        endTime: end,
+      );
+      return latestBodyMeasurements([
+        for (final p in points)
+          if (p.value is NumericHealthValue)
+            (
+              type: p.type == HealthDataType.HEIGHT ? 'height' : 'weight',
+              value: (p.value as NumericHealthValue).numericValue.toDouble(),
+              at: p.dateTo,
+            ),
+      ]);
+    } catch (_) {
+      return const BodyMeasurements();
+    }
   }
 
   Future<HealthSnapshot> _read(HealthDayWindow window, DateTime readAt) async {

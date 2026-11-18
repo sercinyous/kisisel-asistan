@@ -5,34 +5,46 @@ import '../../settings/domain/user_settings.dart';
 import '../domain/onboarding_answers.dart';
 import 'onboarding_widgets.dart';
 
-/// 2. adım: sorular (görünen ad, boy, doğum yılı, cinsiyet, kilo, hedef kilo,
-/// amaç, isteğe bağlı iş tanımı). Durum üst ekrandadır.
+/// Profil adımında seçilebilen saat dilimleri (IANA). Cihazın dilimi listede
+/// yoksa başa eklenir.
+const List<(String, String)> onboardingTimezones = [
+  ('Europe/Istanbul', 'İstanbul (GMT+3)'),
+  ('Europe/London', 'Londra'),
+  ('Europe/Berlin', 'Berlin'),
+  ('Europe/Amsterdam', 'Amsterdam'),
+  ('Europe/Paris', 'Paris'),
+  ('Europe/Moscow', 'Moskova'),
+  ('Asia/Dubai', 'Dubai'),
+  ('Asia/Baku', 'Bakü'),
+  ('Asia/Tokyo', 'Tokyo'),
+  ('America/New_York', 'New York'),
+  ('America/Chicago', 'Chicago'),
+  ('America/Los_Angeles', 'Los Angeles'),
+  ('UTC', 'UTC'),
+];
+
+/// 2. adım: profil (görünen ad, doğum yılı, isteğe bağlı cinsiyet, saat
+/// dilimi, isteğe bağlı iş tanımı). Durum üst ekrandadır.
 class OnboardingProfileStep extends StatelessWidget {
   const OnboardingProfileStep({
     super.key,
     required this.name,
-    required this.height,
     required this.birthYear,
-    required this.weight,
-    required this.targetWeight,
     required this.work,
     required this.sex,
     required this.onSex,
-    required this.goal,
-    required this.onGoal,
+    required this.timezone,
+    required this.onTimezone,
     required this.nowYear,
   });
 
   final TextEditingController name;
-  final TextEditingController height;
   final TextEditingController birthYear;
-  final TextEditingController weight;
-  final TextEditingController targetWeight;
   final TextEditingController work;
   final Sex? sex;
   final ValueChanged<Sex> onSex;
-  final OnboardingGoal? goal;
-  final ValueChanged<OnboardingGoal> onGoal;
+  final String timezone;
+  final ValueChanged<String> onTimezone;
   final int nowYear;
 
   static const List<(Sex, String)> sexOptions = [
@@ -43,13 +55,17 @@ class OnboardingProfileStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zones = [
+      if (!onboardingTimezones.any((z) => z.$1 == timezone)) (timezone, timezone),
+      ...onboardingTimezones,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const OnboardingStepHeader(
           title: 'Seni tanıyalım',
-          subtitle: 'Hedeflerini senin için hesaplayabilmem için birkaç soru. '
-              'Hepsini sonra Ayarlar\'dan değiştirebilirsin.',
+          subtitle: 'Birkaç kısa soru. Hepsini sonra Ayarlar\'dan '
+              'değiştirebilirsin.',
         ),
         OnboardingField(
           key: const Key('onboarding-name'),
@@ -61,29 +77,17 @@ class OnboardingProfileStep extends StatelessWidget {
           validator: OnboardingValidators.displayName,
         ),
         const SizedBox(height: 12),
-        OnboardingFieldRow(
-          left: OnboardingField(
-            key: const Key('onboarding-height'),
-            controller: height,
-            label: 'Boy',
-            suffix: 'cm',
-            keyboardType: TextInputType.number,
-            inputFormatters: OnboardingField.digitsOnly,
-            maxLength: 3,
-            validator: OnboardingValidators.height,
-          ),
-          right: OnboardingField(
-            key: const Key('onboarding-birth-year'),
-            controller: birthYear,
-            label: 'Doğum yılı',
-            keyboardType: TextInputType.number,
-            inputFormatters: OnboardingField.digitsOnly,
-            maxLength: 4,
-            validator: (value) =>
-                OnboardingValidators.birthYear(value, nowYear: nowYear),
-          ),
+        OnboardingField(
+          key: const Key('onboarding-birth-year'),
+          controller: birthYear,
+          label: 'Doğum yılı',
+          keyboardType: TextInputType.number,
+          inputFormatters: OnboardingField.digitsOnly,
+          maxLength: 4,
+          validator: (value) =>
+              OnboardingValidators.birthYear(value, nowYear: nowYear),
         ),
-        const OnboardingLabel('Cinsiyet'),
+        const OnboardingLabel('Cinsiyet (isteğe bağlı)'),
         Wrap(
           spacing: 8,
           runSpacing: 4,
@@ -102,43 +106,21 @@ class OnboardingProfileStep extends StatelessWidget {
           'Yalnızca enerji ihtiyacı tahmininde kullanılır.',
         ),
         const SizedBox(height: 16),
-        OnboardingFieldRow(
-          left: OnboardingField(
-            key: const Key('onboarding-weight'),
-            controller: weight,
-            label: 'Kilo',
-            suffix: 'kg',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: OnboardingField.decimal,
-            validator: OnboardingValidators.weight,
+        DropdownButtonFormField<String>(
+          key: const Key('onboarding-timezone'),
+          initialValue: timezone,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Saat dilimi',
+            helperText: 'Günlük ve haftalık raporlar bu saate göre kesilir.',
           ),
-          right: OnboardingField(
-            key: const Key('onboarding-target-weight'),
-            controller: targetWeight,
-            label: 'Hedef kilo',
-            suffix: 'kg',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: OnboardingField.decimal,
-            validator: OnboardingValidators.targetWeight,
-          ),
-        ),
-        const OnboardingHint(
-          'Hedef kiloyu boş bırakırsan şimdiki kilon hedef olur.',
-        ),
-        const OnboardingLabel('Amacın'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: [
-            for (final option in OnboardingGoal.values)
-              ChoiceChip(
-                key: Key('onboarding-goal-${option.name}'),
-                label: Text(option.label),
-                showCheckmark: false,
-                selected: goal == option,
-                onSelected: (_) => onGoal(option),
-              ),
+          items: [
+            for (final (id, label) in zones)
+              DropdownMenuItem(value: id, child: Text(label)),
           ],
+          onChanged: (value) {
+            if (value != null) onTimezone(value);
+          },
         ),
         const SizedBox(height: 16),
         OnboardingField(

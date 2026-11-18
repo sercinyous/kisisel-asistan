@@ -1,4 +1,7 @@
 import '../../operations/domain/task_category.dart';
+import 'activity_level.dart';
+
+export 'activity_level.dart';
 
 /// Gün içi saat (`time` sütunu). Flutter'ın `TimeOfDay`'inden bağımsızdır ki
 /// alan katmanı arayüz kitaplığına bağlanmasın.
@@ -72,16 +75,17 @@ class UserSettings {
     this.workDescription,
     this.onboardedAt,
     this.taskCategoriesRaw,
+    this.activityLevel,
   });
 
   const UserSettings.defaults()
       : startWeightKg = 70,
         targetWeightKg = 70,
         dailyCalories = 2000,
-        dailyProteinG = 170,
-        dailyCarbsG = 180,
+        dailyProteinG = 120,
+        dailyCarbsG = 220,
         dailyFatG = 65,
-        dailySteps = 10000,
+        dailySteps = 8000,
         sleepMinutes = 450,
         notificationsEnabled = true,
         routineNotifications = true,
@@ -98,7 +102,8 @@ class UserSettings {
         displayName = null,
         workDescription = null,
         onboardedAt = null,
-        taskCategoriesRaw = null;
+        taskCategoriesRaw = null,
+        activityLevel = null;
 
   /// Profil alanlarının sınırları; supabase/schema.sql'deki check'lerle aynıdır.
   static const int heightCmMin = 100;
@@ -158,6 +163,9 @@ class UserSettings {
   /// (yerleşik liste geçerli ve sütun yazılmaz).
   final List<TaskCategory>? taskCategoriesRaw;
 
+  /// Günlük hareket düzeyi (kalori önerisinin katsayısı); `null` = cevaplanmadı.
+  final ActivityLevel? activityLevel;
+
   /// Etkin görev kategorileri tanımı (kapalılar dahil).
   List<TaskCategory> get taskCategories =>
       taskCategoriesRaw ?? TaskCategory.defaults;
@@ -216,6 +224,7 @@ class UserSettings {
       taskCategoriesRaw: map['task_categories'] is List
           ? TaskCategory.parseList(map['task_categories'])
           : null,
+      activityLevel: ActivityLevel.tryParse(map['activity_level']),
     );
   }
 
@@ -279,6 +288,9 @@ class UserSettings {
         // diğer ayarların kaydı bozulmasın.
         if (taskCategoriesRaw != null)
           'task_categories': TaskCategory.toJsonList(taskCategoriesRaw!),
+        // Yalnızca seçildiyse yazılır (sütunu henüz olmayan şemada diğer
+        // ayarların kaydı bozulmasın).
+        if (activityLevel != null) 'activity_level': activityLevel!.dbValue,
       };
 
   UserSettings copyWith({
@@ -306,6 +318,7 @@ class UserSettings {
     String? workDescription,
     DateTime? onboardedAt,
     List<TaskCategory>? taskCategories,
+    ActivityLevel? activityLevel,
     bool clearHeightCm = false,
     bool clearBirthYear = false,
     bool clearSex = false,
@@ -342,5 +355,6 @@ class UserSettings {
         taskCategoriesRaw: taskCategories == null
             ? taskCategoriesRaw
             : TaskCategory.ensureActive(taskCategories),
+        activityLevel: activityLevel ?? this.activityLevel,
       );
 }

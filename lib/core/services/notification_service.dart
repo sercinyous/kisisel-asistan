@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' show DartPluginRegistrant;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,7 +8,36 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../features/reminders/data/reminder_action_inbox.dart';
+import '../../features/reminders/domain/reminder.dart';
 import 'notification_plan.dart';
+
+export '../../features/reminders/domain/reminder.dart' show HabitReminderSchedule;
+
+/// Hatırlatıcı bildirimlerinin iOS kategorisi ve "Yaptım" eylemi.
+const String reminderCategoryId = 'hatirlatici';
+const String reminderDoneActionId = 'yaptim';
+
+/// "Yaptım" eylemini gelen kutusuna yazar (oturum denetimi işlenirken yapılır).
+Future<void> recordReminderResponse(
+  NotificationResponse response, {
+  DateTime? at,
+}) async {
+  if (response.actionId != reminderDoneActionId) return;
+  final action =
+      ReminderDoneAction.fromPayload(response.payload, at ?? DateTime.now());
+  if (action == null) return;
+  await ReminderActionInbox.add(action);
+}
+
+/// Uygulama arka planda ya da kapalıyken gelen bildirim eylemleri (ayrı
+/// isolate). Yalnızca kalıcı kutuya yazar; Supabase'e uygulama açılınca,
+/// oturumdaki kullanıcı eylemin sahibiyse yazılır.
+@pragma('vm:entry-point')
+void reminderNotificationBackgroundHandler(NotificationResponse response) {
+  DartPluginRegistrant.ensureInitialized();
+  unawaited(recordReminderResponse(response).catchError((Object _) {}));
+}
 
 /// main() içinde `init()` edilmiş örnek ProviderScope override'ı ile verilir.
 final notificationServiceProvider = Provider<NotificationService>(
@@ -95,16 +127,42 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
     }
 
-    const settings = InitializationSettings(
+    final settings = InitializationSettings(
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,
+        notificationCategories: [
+          DarwinNotificationCategory(
+            reminderCategoryId,
+            actions: [
+              DarwinNotificationAction.plain(reminderDoneActionId, 'Yaptım'),
+            ],
+          ),
+        ],
       ),
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
     );
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (response) => unawaited(
+        recordReminderResponse(response).catchError((Object _) {}),
+      ),
+      onDidReceiveBackgroundNotificationResponse:
+          reminderNotificationBackgroundHandler,
+    );
     _ready = true;
+
+    // Uygulama "Yaptım" eylemiyle açıldıysa (kapalıyken) eylem kaybolmasın.
+    try {
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      final response = launch?.notificationResponse;
+      if (launch?.didNotificationLaunchApp == true && response != null) {
+        await recordReminderResponse(response);
+      }
+    } catch (_) {
+      // Açılış ayrıntısı okunamazsa eylem yalnızca kaybolur; uygulama sürer.
+    }
   }
 
   /// İzin durumunu pencere açmadan okur; Ayarlar ekranı yalnızca durumu
@@ -212,6 +270,90 @@ class NotificationService {
       if (!reminder.when.isAfter(DateTime.now())) continue;
       await scheduleReminder(reminder);
       used++;
+    }
+  }
+
+  static const NotificationDetails _habitDetails = NotificationDetails(
+    iOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentBanner: true,
+      presentList: true,
+      presentSound: true,
+      interruptionLevel: InterruptionLevel.active,
+      categoryIdentifier: reminderCategoryId,
+    ),
+    android: AndroidNotificationDetails(
+      'asistan_hatirlatici',
+      'Hatırlatıcılar',
+      channelDescription: 'Kendi kurduğun hatırlatıcılar (su, ilaç, yürüyüş...)',
+      importance: Importance.high,
+      priority: Priority.high,
+      actions: [
+        AndroidNotificationAction(
+          reminderDoneActionId,
+          'Yaptım',
+          cancelNotification: true,
+        ),
+      ],
+    ),
+  );
+
+  /// Hatırlatıcıları planlar. [resync] bekleyenleri sildikten SONRA, aynı
+  /// eşitleme turunda çağrılır; böylece çıkışta (resync boş listeyle) bunlar
+  /// da silinir. Bekleyen sayısı sınırı aşılmaz.
+  Future<void> scheduleHabitReminders(
+    List<HabitReminderSchedule> reminders,
+  ) async {
+    if (!_ready || reminders.isEmpty) return;
+    var used = (await _plugin.pendingNotificationRequests()).length;
+    for (final r in reminders) {
+      if (used >= _maxPending) break;
+      final key = 'reminder:${r.reminderId}';
+      final onceAt = r.onceAt;
+      if (onceAt != null) {
+        final when = tz.TZDateTime.from(onceAt, tz.local);
+        if (!when.isAfter(tz.TZDateTime.now(tz.local))) continue;
+        await _plugin.zonedSchedule(
+          _stableId(key),
+          r.title,
+          'Hatırlatıcı',
+          when,
+          _habitDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: r.payload,
+        );
+        used++;
+        continue;
+      }
+      final days = r.isoDays.toSet();
+      if (days.length == 7) {
+        await _plugin.zonedSchedule(
+          _stableId(key),
+          r.title,
+          'Günlük hatırlatıcı',
+          _nextTime(r.hour, r.minute),
+          _habitDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: r.payload,
+        );
+        used++;
+        continue;
+      }
+      for (final weekday in days) {
+        if (used >= _maxPending) break;
+        await _plugin.zonedSchedule(
+          _stableId('$key:$weekday'),
+          r.title,
+          'Hatırlatıcı',
+          _nextWeekdayTime(weekday, r.hour, r.minute),
+          _habitDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+          payload: r.payload,
+        );
+        used++;
+      }
     }
   }
 

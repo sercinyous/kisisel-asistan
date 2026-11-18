@@ -55,7 +55,8 @@ select tf.eq('yeni hesabın ayar satırı nötr varsayılanlarla açılır',
     "event_remind_minutes": 30, "quiet_hours_enabled": true, "team_members": [],
     "height_cm": null, "birth_year": null, "sex": null,
     "display_name": null, "work_description": null, "onboarded_at": null,
-    "task_categories": null, "health_source": null}'::jsonb);
+    "task_categories": null, "health_source": null, "daily_water_ml": 2000,
+    "activity_level": null}'::jsonb);
 select tf.eq('yeni hesaba rutin/görev/not/tartı/öğün/ekip yüklenmez',
   (select to_jsonb(
      (select count(*) from public.routines where user_id = :A)

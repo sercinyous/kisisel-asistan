@@ -93,6 +93,21 @@ else
   echo "✓ AppDelegate bildirim delegesi ayarlı"
 fi
 
+# --- 4b) Bildirim eylemleri ("Yaptım") arka planda -------------------------
+# Uygulama kapalıyken bildirimdeki eyleme basılınca flutter_local_notifications
+# arka plan isolate'inde eklentileri kaydedebilsin diye registrant geri çağrısı.
+if [[ -f "$APP_DELEGATE" ]] && ! grep -q "setPluginRegistrantCallback" "$APP_DELEGATE"; then
+  perl -0pi -e 's/^(\s*)(return super\.application\(application, didFinishLaunchingWithOptions: launchOptions\))/$1FlutterLocalNotificationsPlugin.setPluginRegistrantCallback { registry in\n$1  GeneratedPluginRegistrant.register(with: registry)\n$1}\n$1$2/m' "$APP_DELEGATE"
+  if ! grep -q "^import flutter_local_notifications" "$APP_DELEGATE"; then
+    perl -pi -e 's/^(import Flutter)$/$1\nimport flutter_local_notifications/' "$APP_DELEGATE"
+  fi
+fi
+if [[ -f "$APP_DELEGATE" ]] && grep -q "setPluginRegistrantCallback" "$APP_DELEGATE"; then
+  echo "✓ Bildirim eylemleri için eklenti kaydı ayarlı"
+else
+  echo "UYARI: AppDelegate.swift'e setPluginRegistrantCallback eklenemedi; kapalı uygulamada 'Yaptım' çalışmayabilir." >&2
+fi
+
 # --- 5) Google ile giriş (google_sign_in) ----------------------------------
 # GIDClientID: istemci kimliği. CFBundleURLTypes: Google girişinin uygulamaya
 # dönüş adresi, ters çevrilmiş istemci kimliği (com.googleusercontent.apps.…).

@@ -5,7 +5,7 @@ import '../../data/tasks_repository.dart';
 import 'task_dashboard_stats.dart';
 
 /// Pano: açık görevler + son 8 haftaya (ve bu haftanın sonuna) planlanmış
-/// görevler; istatistikler [computeTaskDashboardStats] ile türetilir.
+/// görevler + son 8 haftada tamamlananlar (terminsiz olanlar da sayılsın); istatistikler [computeTaskDashboardStats] ile türetilir.
 final taskDashboardProvider =
     FutureProvider.autoDispose<TaskDashboardStats>((ref) async {
   final repo = ref.watch(tasksRepositoryProvider);
@@ -17,6 +17,7 @@ final taskDashboardProvider =
   final results = await Future.wait([
     repo.fetchOpen(),
     repo.fetchInRange(from, to),
+    repo.fetchCompletedSince(from),
   ]);
   return computeTaskDashboardStats(
     [for (final list in results) ...list],

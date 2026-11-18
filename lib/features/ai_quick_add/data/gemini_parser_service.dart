@@ -265,6 +265,13 @@ KAYIT TÜRLERİ
    - Tekrarlayan bir işi "tasks"e, tek seferlik bir işi "routines"e YAZMA.
 3. notes — fikir, toplantı notu, akılda tutulacak bilgi (eylem gerektirmeyen).
    - category: "Toplantı", "Fikir", "İş", "Ekip", "Finans" veya "Kişisel".
+4. reminders — kullanıcının KENDİNE kurduğu belirli saatli alışkanlık hatırlatıcısı ("her gün 22:00'de su içmeyi hatırlat", "hafta içi 15:00 esneme molası hatırlat", "yarın 9'da ilacımı hatırlat"). Saat yoksa reminders'a YAZMA.
+   - title: kısa eylem ("Su iç", "İlacını al").
+   - time_of_day: 24 saatlik "HH:MM".
+   - repeat: "daily" (her gün), "weekdays" (hafta içi), "custom" (belirli günler), "once" (tek sefer).
+   - days_of_week: yalnızca "custom" için ISO gün numaraları; diğerlerinde [].
+   - date: yalnızca "once" için "YYYY-MM-DD"; diğerlerinde null.
+   - Bir işe/randevuya bağlı tek seferlik hatırlatma "tasks"e, iş rutini "routines"e yazılır; bunları reminders'a ikinci kez yazma.
 
 DİĞER ALAN (sağlık & beslenme)
 - Yenilen/içilen besinler, YAPILMIŞ antrenmanlar ve tartı sonuçları bu girişe ait değildir; uygulamanın ayrı bir sağlık girişi vardır. Bunlar için kayıt ÜRETME (görev ya da not olarak da yazma).
@@ -359,6 +366,24 @@ $_commonRules''';
     },
   };
 
+  static const Map<String, dynamic> _reminderSchema = {
+    'type': 'ARRAY',
+    'items': {
+      'type': 'OBJECT',
+      'properties': {
+        'title': {'type': 'STRING'},
+        'time_of_day': {'type': 'STRING'},
+        'repeat': {'type': 'STRING', 'enum': ParsedReminder.repeats},
+        'days_of_week': {
+          'type': 'ARRAY',
+          'items': {'type': 'INTEGER'},
+        },
+        'date': _nullableString,
+      },
+      'required': ['title', 'time_of_day', 'repeat'],
+    },
+  };
+
   static const Map<String, dynamic> _nutritionSchema = {
     'type': 'ARRAY',
     'items': {
@@ -420,6 +445,7 @@ $_commonRules''';
       'tasks': _taskSchema(taskCategories),
       'notes': _noteSchema,
       'routines': _routineSchema,
+      'reminders': _reminderSchema,
       'other_domain': _otherDomainFlag,
       'other_domain_summary': _nullableString,
     },

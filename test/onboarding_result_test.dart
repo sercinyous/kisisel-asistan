@@ -71,7 +71,38 @@ void main() {
         'display_name': 'Ayşe',
         'work_description': 'Mimarım.',
         'onboarded_at': '2026-11-17T09:30:00.000Z',
+        'activity_level': 'light',
       });
+    });
+
+    test('hareket düzeyi ve saat dilimi sonuca ve RPC gövdesine girer', () {
+      final result = buildOnboardingResult(
+        base: const UserSettings.defaults(),
+        answers: OnboardingAnswers(
+          displayName: 'Ayşe',
+          heightCm: 168,
+          birthYear: 1992,
+          sex: Sex.female,
+          weightKg: 70.5,
+          targetWeightKg: 65,
+          goal: OnboardingGoal.lose,
+          activity: ActivityLevel.veryActive,
+        ),
+        targets: _targets,
+        preferences: const OnboardingPreferences(),
+        routines: const [],
+        now: _now,
+        timezone: 'Europe/Berlin',
+      );
+      expect(result.settings.activityLevel, ActivityLevel.veryActive);
+      final payload = onboardingPayload(result);
+      expect(payload['timezone'], 'Europe/Berlin');
+      expect((payload['settings'] as Map)['activity_level'], 'very_active');
+      expect(
+        onboardingPayload(_build()).containsKey('timezone'),
+        isFalse,
+        reason: 'saat dilimi verilmezse gövdeye girmez (sunucu değeri korunur)',
+      );
     });
 
     test('cinsiyet veritabanı değeri olarak yazılır', () {

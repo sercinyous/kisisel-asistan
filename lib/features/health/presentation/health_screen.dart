@@ -10,7 +10,9 @@ import 'health_format.dart';
 import 'health_providers.dart';
 import 'healthkit_card.dart';
 import 'meals_section.dart';
+import 'water_card.dart';
 import 'weight_card.dart';
+import 'weight_eta_card.dart';
 import 'workouts_section.dart';
 
 /// Sağlık sekmesi: kilo, enerji dengesi (dokununca hafta/ay detayı), haftalık
@@ -60,6 +62,8 @@ class HealthScreen extends ConsumerWidget {
               const BentoGrid(
                 children: [
                   BentoCell(child: WeightCard()),
+                  BentoCell(child: WeightEtaCard()),
+                  BentoCell(child: WaterCard()),
                   BentoCell(child: EnergyCard()),
                   BentoCell(span: 1, child: WorkoutWeekCard()),
                   BentoCell(span: 1, child: StepsWeekCard()),

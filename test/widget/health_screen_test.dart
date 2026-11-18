@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kisisel_asistan/demo/demo_health_extras.dart';
+import 'package:kisisel_asistan/features/health/data/water_repository.dart';
+import 'package:kisisel_asistan/features/reports/data/weekly_checkin_repository.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/widgets/bento.dart';
@@ -127,6 +130,9 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        waterRepositoryProvider.overrideWithValue(FakeWaterRepository()),
+        weeklyCheckinRepositoryProvider
+            .overrideWithValue(FakeWeeklyCheckinRepository()),
         healthRepositoryProvider.overrideWithValue(health),
         routinesRepositoryProvider.overrideWithValue(routines),
         kokpitRepositoryProvider

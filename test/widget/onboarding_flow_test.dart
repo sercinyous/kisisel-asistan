@@ -112,14 +112,20 @@ void main() {
     expect(find.text('Seni tanıyalım'), findsOneWidget);
   }
 
-  /// Erkek, 80 kg, 180 cm, 36 yaşında, "kilo ver".
-  Future<void> fillProfile(WidgetTester tester, {String goal = 'lose'}) async {
+  /// Profil (erkek, 36 yaş) → sağlık adımı atlanır → boy 180, kilo 80 →
+  /// hedefler adımı (amaç [goal]).
+  Future<void> fillToTargets(WidgetTester tester, {String goal = 'lose'}) async {
     await type(tester, 'onboarding-name', ' Ayşe ');
-    await type(tester, 'onboarding-height', '180');
     await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
     await tap(tester, 'onboarding-sex-male');
+    await tap(tester, 'onboarding-next');
+    expect(find.text('Sağlık verisi'), findsOneWidget);
+    await tap(tester, 'onboarding-next');
+    expect(find.text('Boy ve kilo'), findsOneWidget);
+    await type(tester, 'onboarding-height', '180');
     await type(tester, 'onboarding-weight', '80');
-    await type(tester, 'onboarding-target-weight', '78');
+    await tap(tester, 'onboarding-next');
+    expect(find.text('Önerilen hedeflerin'), findsOneWidget);
     await tap(tester, 'onboarding-goal-$goal');
   }
 
@@ -231,69 +237,126 @@ void main() {
     });
   });
 
-  group('Sorular ve hedefler', () {
-    testWidgets('İleri, tüm zorunlu cevaplar geçerli olana dek kapalı',
+  group('Sıra: profil, sağlık, boy-kilo, hedefler, rutinler', () {
+    testWidgets('profil: ad ve doğum yılı zorunlu, cinsiyet isteğe bağlı',
         (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
+      expect(find.text('Adım 2 / 6'), findsOneWidget);
+      expect(find.byKey(const Key('onboarding-timezone')), findsOneWidget);
+      expect(find.text('Belirtmek istemiyorum'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
-
       await type(tester, 'onboarding-name', 'Ayşe');
+      expect(nextEnabled(tester), isFalse, reason: 'doğum yılı yok');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      expect(nextEnabled(tester), isTrue, reason: 'cinsiyet isteğe bağlı');
+
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Adım 3 / 6'), findsOneWidget);
+      expect(find.text('Sağlık verisi'), findsOneWidget);
+      expect(find.text('İleri'), findsOneWidget);
+    });
+
+    testWidgets('boy ve kilo zorunlu ve sınırlı', (tester) async {
+      await pumpGate(tester);
+      await skipIntro(tester);
+      await type(tester, 'onboarding-name', 'Ayşe');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Adım 4 / 6'), findsOneWidget);
+      expect(nextEnabled(tester), isFalse);
       await type(tester, 'onboarding-height', '50');
       expect(find.text('100–250 arasında olmalı.'), findsOneWidget);
       await type(tester, 'onboarding-height', '180');
-      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      expect(nextEnabled(tester), isFalse, reason: 'kilo yok');
       await type(tester, 'onboarding-weight', '80');
-      expect(nextEnabled(tester), isFalse, reason: 'cinsiyet ve amaç yok');
-      await tap(tester, 'onboarding-sex-female');
-      expect(nextEnabled(tester), isFalse, reason: 'amaç yok');
-      await tap(tester, 'onboarding-goal-maintain');
-      // Hedef kilo ve iş tanımı isteğe bağlı.
+      expect(nextEnabled(tester), isTrue);
+      expect(fieldText(tester, 'onboarding-height'), '180');
+    });
+
+    testWidgets('Apple Sağlık bağlanınca boy ve kilo son ölçümle dolar',
+        (tester) async {
+      h.healthService.body =
+          const BodyMeasurements(heightCm: 182, weightKg: 81.4);
+      await pumpGate(tester);
+      await skipIntro(tester);
+      await type(tester, 'onboarding-name', 'Ayşe');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
+      await tap(tester, 'onboarding-health-request');
+      expect(find.text('İzin verildi.'), findsOneWidget);
+      await tap(tester, 'onboarding-next');
+
+      expect(find.text('Boy ve kilo'), findsOneWidget);
+      expect(fieldText(tester, 'onboarding-height'), '182');
+      expect(fieldText(tester, 'onboarding-weight'), '81,4');
+      expect(find.textContaining('son ölçümlerinle'), findsOneWidget);
       expect(nextEnabled(tester), isTrue);
     });
 
-    testWidgets('önerilen hedefler formüle göre dolar ve düzenlenebilir',
-        (tester) async {
+    testWidgets('sağlık kaynağı bağlanmazsa alanlar boş kalır', (tester) async {
+      h.healthService.body =
+          const BodyMeasurements(heightCm: 182, weightKg: 81.4);
       await pumpGate(tester);
       await skipIntro(tester);
-      await fillProfile(tester);
+      await type(tester, 'onboarding-name', 'Ayşe');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
       await tap(tester, 'onboarding-next');
+      await tap(tester, 'onboarding-next');
+      expect(fieldText(tester, 'onboarding-height'), '');
+      expect(fieldText(tester, 'onboarding-weight'), '');
+    });
 
-      expect(find.text('Önerilen hedeflerin'), findsOneWidget);
-      // Bazal 1750 x 1,4 = 2450; ver: -500.
-      expect(fieldText(tester, 'onboarding-calories'), '1950');
-      expect(fieldText(tester, 'onboarding-protein'), '144');
+    testWidgets('hedefler: VKİ, hareket düzeyi, önerilen hedef kilo ve '
+        'düzenlenebilir hedefler', (tester) async {
+      await pumpGate(tester);
+      await skipIntro(tester);
+      await fillToTargets(tester);
+      expect(find.text('Adım 5 / 6'), findsOneWidget);
+      // 80 / 1,8² = 24,7 → Normal; hedef kilo = mevcut kilo.
+      expect(find.text('24,7 · Normal'), findsOneWidget);
+      expect(fieldText(tester, 'onboarding-target-weight'), '80');
+      // Bazal 1750 x 1,375 = 2406; ver: -500.
+      expect(fieldText(tester, 'onboarding-calories'), '1906');
+      expect(fieldText(tester, 'onboarding-protein'), '128');
       expect(fieldText(tester, 'onboarding-steps'), '8000');
       expect(fieldText(tester, 'onboarding-sleep'), '450');
       expect(find.text('7 sa 30 dk'), findsOneWidget);
 
+      await tap(tester, 'onboarding-activity-moderate');
+      // 1750 x 1,55 = 2712,5 → 2713 - 500.
+      expect(fieldText(tester, 'onboarding-calories'), '2213');
+      await tap(tester, 'onboarding-goal-maintain');
+      expect(fieldText(tester, 'onboarding-calories'), '2713');
+
       await type(tester, 'onboarding-calories', '99');
       expect(nextEnabled(tester), isFalse, reason: 'sınır altı');
-      await type(tester, 'onboarding-calories', '1900');
+      await type(tester, 'onboarding-calories', '2000');
       expect(nextEnabled(tester), isTrue);
+      await tap(tester, 'onboarding-targets-reset');
+      expect(fieldText(tester, 'onboarding-calories'), '2713');
     });
 
-    testWidgets('geri dönünce düzenleme korunur; hesabı etkileyen cevap '
-        'değişince yeniden önerilir', (tester) async {
+    testWidgets('geri dönünce düzenleme korunur; kilo değişince yeniden '
+        'önerilir', (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
-      await fillProfile(tester);
-      await tap(tester, 'onboarding-next');
+      await fillToTargets(tester);
       await type(tester, 'onboarding-calories', '1900');
 
       await tap(tester, 'onboarding-back');
-      expect(find.text('Seni tanıyalım'), findsOneWidget);
+      expect(find.text('Boy ve kilo'), findsOneWidget);
       await tap(tester, 'onboarding-next');
       expect(fieldText(tester, 'onboarding-calories'), '1900');
 
       await tap(tester, 'onboarding-back');
-      await tap(tester, 'onboarding-goal-maintain');
+      await type(tester, 'onboarding-weight', '100');
       await tap(tester, 'onboarding-next');
-      expect(fieldText(tester, 'onboarding-calories'), '2450');
-
-      await type(tester, 'onboarding-calories', '2000');
-      await tap(tester, 'onboarding-targets-reset');
-      expect(fieldText(tester, 'onboarding-calories'), '2450');
+      // 100 / 1,8² = 30,9 → hedef 24,9 x 3,24 = 80,7.
+      expect(fieldText(tester, 'onboarding-target-weight'), '80,7');
+      expect(find.text('30,9 · Obez'), findsOneWidget);
+      expect(fieldText(tester, 'onboarding-calories'), isNot('1900'));
     });
   });
 
@@ -302,29 +365,26 @@ void main() {
         'açılır', (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
-      await fillProfile(tester);
-      await tap(tester, 'onboarding-next');
+      await fillToTargets(tester);
+      await tap(tester, 'onboarding-activity-moderate');
+      await tap(tester, 'onboarding-goal-lose');
+      await type(tester, 'onboarding-target-weight', '78');
       await type(tester, 'onboarding-calories', '1900');
       await tap(tester, 'onboarding-next');
 
-      // Bildirimler: izin istenir.
+      // Son adım: rutinler + bildirimler, Başla.
+      expect(find.text('Adım 6 / 6'), findsOneWidget);
+      expect(find.text('Başlangıç rutinleri'), findsOneWidget);
       expect(find.text('Bildirimler'), findsWidgets);
+      expect(find.text('Başla'), findsOneWidget);
+      await tap(tester, 'onboarding-routine-yuruyus');
+      await tap(tester, 'onboarding-routine-kira');
+      await tester.ensureVisible(
+          find.byKey(const Key('onboarding-request-permission')));
+      await tester.pumpAndSettle();
       await tap(tester, 'onboarding-request-permission');
       expect(h.notifications.permissionRequests, 1);
       expect(find.text('İzin verildi.'), findsOneWidget);
-      await tap(tester, 'onboarding-next');
-
-      // Rutinler: varsayılan boş; ikisi seçilir.
-      expect(find.text('Başlangıç rutinleri'), findsOneWidget);
-      await tap(tester, 'onboarding-routine-yuruyus');
-      await tap(tester, 'onboarding-routine-kira');
-      await tap(tester, 'onboarding-next');
-
-      // Sağlık kaynağı.
-      expect(find.text('Sağlık verisi'), findsOneWidget);
-      await tap(tester, 'onboarding-health-request');
-      expect(find.text('İzin verildi.'), findsOneWidget);
-      expect(find.text('Başla'), findsOneWidget);
       await tap(tester, 'onboarding-next');
 
       expect(find.text('ana kabuk'), findsOneWidget);
@@ -335,13 +395,15 @@ void main() {
       expect(saved.heightCm, 180);
       expect(saved.birthYear, DateTime.now().year - 36);
       expect(saved.sex, 'male');
+      expect(saved.activityLevel, ActivityLevel.moderate);
       expect(saved.startWeightKg, 80);
       expect(saved.targetWeightKg, 78);
       expect(saved.dailyCalories, 1900);
-      expect(saved.dailyProteinG, 144);
+      expect(saved.dailyProteinG, 128);
       expect(saved.dailySteps, 8000);
       expect(saved.sleepMinutes, 450);
       expect(saved.workDescription, isNull);
+      expect(h.onboarding.payloads.single['timezone'], 'Europe/Istanbul');
 
       expect(h.routines.routines.map((r) => r.title),
           ['Yürüyüş yap', 'Kirayı öde']);
@@ -349,20 +411,28 @@ void main() {
       expect(h.health.weights.single.weightKg, 80);
     });
 
-    testWidgets('hiç rutin seçilmezse boş başlanır', (tester) async {
+    testWidgets('cinsiyet seçilmezse "belirtmek istemiyorum" yazılır; hiç '
+        'rutin seçilmezse boş başlanır', (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
-      await fillProfile(tester, goal: 'maintain');
-      for (var i = 0; i < 4; i++) {
-        await tap(tester, 'onboarding-next');
-      }
-      expect(find.text('Sağlık verisi'), findsOneWidget);
+      await type(tester, 'onboarding-name', 'Ayşe');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
+      await tap(tester, 'onboarding-next');
+      await type(tester, 'onboarding-height', '170');
+      await type(tester, 'onboarding-weight', '70');
+      await tap(tester, 'onboarding-next');
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Başla'), findsOneWidget);
       await tap(tester, 'onboarding-next');
 
       expect(find.text('ana kabuk'), findsOneWidget);
       expect(h.routines.routines, isEmpty);
       expect(h.health.weights, hasLength(1));
-      expect(h.settings.saved.single.isOnboarded, isTrue);
+      final saved = h.settings.saved.single;
+      expect(saved.isOnboarded, isTrue);
+      expect(saved.sex, 'unspecified');
+      expect(saved.activityLevel, ActivityLevel.light);
     });
 
     testWidgets('kayıt hatasında kapı açılmaz ve hiçbir şey yazılmaz; yeniden '
@@ -370,10 +440,8 @@ void main() {
         (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
-      await fillProfile(tester);
-      for (var i = 0; i < 4; i++) {
-        await tap(tester, 'onboarding-next');
-      }
+      await fillToTargets(tester);
+      await tap(tester, 'onboarding-next');
       h.settings.saveError = StateError('ağ yok');
       await tap(tester, 'onboarding-next');
 

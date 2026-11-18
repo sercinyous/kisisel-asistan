@@ -125,12 +125,30 @@ class FakeNotificationService implements NotificationService {
     resyncCount++;
     lastRoutines = routines;
     lastReminders = reminders;
+    lastHabitReminders = const [];
+  }
+
+  /// Son [scheduleHabitReminders] çağrısına verilen hatırlatıcılar
+  /// ([resync] bunları da siler).
+  List<HabitReminderSchedule> lastHabitReminders = const [];
+
+  @override
+  Future<void> scheduleHabitReminders(
+    List<HabitReminderSchedule> reminders,
+  ) async {
+    lastHabitReminders = reminders;
   }
 }
 
 class FakeHealthService implements HealthService {
-  FakeHealthService(this.snapshot, {List<HealthDayReading>? pastDays})
-      : pastDays = pastDays ?? [];
+  FakeHealthService(
+    this.snapshot, {
+    List<HealthDayReading>? pastDays,
+    this.body = const BodyMeasurements(),
+  }) : pastDays = pastDays ?? [];
+
+  /// [readLatestBody] ne dönerse o (izin yoksa boş).
+  BodyMeasurements body;
 
   HealthSnapshot snapshot;
 
@@ -157,6 +175,10 @@ class FakeHealthService implements HealthService {
     pastDayReads++;
     return snapshot.status == HealthStatus.ok ? List.of(pastDays) : const [];
   }
+
+  @override
+  Future<BodyMeasurements> readLatestBody({DateTime? now}) async =>
+      snapshot.status == HealthStatus.ok ? body : const BodyMeasurements();
 }
 
 /// Google ile girişin yerine geçer: pencere açılmaz, hesap bellekte durur.
@@ -510,6 +532,16 @@ class FakeTasksRepository implements TasksRepository {
           t,
     ]..sort((a, b) => a.scheduledAt!.compareTo(b.scheduledAt!));
     return hits;
+  }
+
+  @override
+  Future<List<TaskItem>> fetchCompletedSince(DateTime from) async {
+    if (fetchError != null) throw fetchError!;
+    return [
+      for (final t in tasks)
+        if (t.isDone && t.completedAt != null && !t.completedAt!.isBefore(from))
+          t,
+    ]..sort((a, b) => a.completedAt!.compareTo(b.completedAt!));
   }
 
   @override
@@ -1026,6 +1058,9 @@ class FakeOnboardingRepository implements OnboardingRepository {
   final Map<String, UserSettings> completed = {};
   final List<String> calls = [];
 
+  /// Başarıyla yazılan gövdeler, sırayla.
+  final List<Map<String, dynamic>> payloads = [];
+
   @override
   Future<UserSettings> complete(
     Map<String, dynamic> payload,
@@ -1052,6 +1087,7 @@ class FakeOnboardingRepository implements OnboardingRepository {
         ),
       );
       completed[opKey] = saved;
+      payloads.add(payload);
       return saved;
     } catch (_) {
       health.weights = weightsBefore;

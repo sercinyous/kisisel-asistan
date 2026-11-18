@@ -4244,9 +4244,9 @@
    "İçecekler"
   ],
   "kcal100": 7.7,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 0.3,
+  "carbs100": 1.0,
+  "fat100": 0.4,
   "portions": [
    {
     "name": "1 fincan",
@@ -4288,9 +4288,9 @@
    "İçecekler"
   ],
   "kcal100": 37.5,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 1.7,
+  "carbs100": 2.6,
+  "fat100": 2.0,
   "portions": [
    {
     "name": "1 bardak (200 ml)",
@@ -4311,9 +4311,9 @@
    "İçecekler"
   ],
   "kcal100": 42.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 0.0,
+  "carbs100": 10.6,
+  "fat100": 0.0,
   "portions": [
    {
     "name": "1 kutu (330 ml)",
@@ -4542,9 +4542,9 @@
    "Akşam Öğünleri"
   ],
   "kcal100": 127.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 8.7,
+  "carbs100": 22.8,
+  "fat100": 0.5,
   "portions": [
    {
     "name": "1 porsiyon",
@@ -4565,9 +4565,9 @@
    "Haşlanmış Yiyecekler"
   ],
   "kcal100": 35.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 2.4,
+  "carbs100": 7.2,
+  "fat100": 0.4,
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık"
@@ -4583,9 +4583,9 @@
    "Kızartılmış Yiyecekler"
   ],
   "kcal100": 312.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 3.4,
+  "carbs100": 41.4,
+  "fat100": 14.7,
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık",
@@ -4602,9 +4602,9 @@
    "Kızartılmış Yiyecekler"
   ],
   "kcal100": 260.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 27.0,
+  "carbs100": 6.0,
+  "fat100": 15.0,
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık",
@@ -4622,9 +4622,9 @@
    "Kızartılmış Yiyecekler"
   ],
   "kcal100": 220.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 13.6,
+  "carbs100": 0.8,
+  "fat100": 17.5,
   "portions": [
    {
     "name": "1 adet",
@@ -4646,9 +4646,9 @@
    "Kızartılmış Yiyecekler"
   ],
   "kcal100": 150.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 1.6,
+  "carbs100": 8.0,
+  "fat100": 12.5,
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık",
@@ -4665,9 +4665,9 @@
    "Kızartılmış Yiyecekler"
   ],
   "kcal100": 180.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 1.2,
+  "carbs100": 9.0,
+  "fat100": 15.5,
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık",
@@ -5264,9 +5264,9 @@
    "Kahvaltılık Ürünler"
   ],
   "kcal100": 350.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 26.0,
+  "carbs100": 2.0,
+  "fat100": 27.0,
   "portions": [
    {
     "name": "1 dilim",
@@ -5288,9 +5288,9 @@
    "Kahvaltılık Ürünler"
   ],
   "kcal100": 100.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 12.0,
+  "carbs100": 3.5,
+  "fat100": 4.0,
   "portions": [
    {
     "name": "1 porsiyon",
@@ -5374,9 +5374,9 @@
    "Kahvaltılık Ürünler"
   ],
   "kcal100": 330.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 10.0,
+  "carbs100": 58.0,
+  "fat100": 6.0,
   "portions": [
    {
     "name": "1 adet",
@@ -5573,9 +5573,9 @@
    "Akşam Öğünleri"
   ],
   "kcal100": 200.0,
-  "protein100": null,
-  "carbs100": null,
-  "fat100": null,
+  "protein100": 29.0,
+  "carbs100": 0.0,
+  "fat100": 9.0,
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık"

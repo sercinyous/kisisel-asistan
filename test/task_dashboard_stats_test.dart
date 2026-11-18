@@ -1,4 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/demo/demo_backend.dart';
+import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
+import 'package:kisisel_asistan/features/operations/presentation/dashboard/task_dashboard_providers.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
 import 'package:kisisel_asistan/features/operations/presentation/dashboard/task_dashboard_stats.dart';
 
@@ -80,5 +84,29 @@ void main() {
     expect(stats.completionRate, 0.5);
     expect(
         stats.categories.map((e) => '${e.key}:${e.value}'), ['Ev:2', 'İş:2']);
+  });
+
+  test('terminsiz tamamlanan görev haftalık sayıya girer', () {
+    final stats = computeTaskDashboardStats([
+      _task('nodate-done', done: true, completedAt: DateTime(2026, 11, 16, 8)),
+    ], now: _now);
+    expect(stats.thisWeek, 1);
+    expect(stats.weekdayCounts[0], 1);
+  });
+
+  test('pano sağlayıcısı terminsiz tamamlananları da çeker', () async {
+    final now = DateTime.now();
+    final repo = FakeTasksRepository(tasks: [
+      _task('nodate-done', done: true, completedAt: now),
+      _task('very-old', done: true, completedAt: DateTime(2020, 1, 1)),
+    ]);
+    expect(await repo.fetchCompletedSince(now.subtract(const Duration(days: 1))),
+        hasLength(1));
+    final container = ProviderContainer(
+      overrides: [tasksRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(container.dispose);
+    final stats = await container.read(taskDashboardProvider.future);
+    expect(stats.thisWeek, 1);
   });
 }
