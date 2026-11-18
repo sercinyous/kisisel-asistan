@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Tek Çizgi",
+  "style": "Monoline",
+  "story": "Tek bir kesintisiz çizgi hem topacı hem dönüşünü çizer. Hızlı dönerken dengede kalan topaç gibi, rutinlerin seni dik tutar. Ritim, günlerini akıcı ve dengeli tutmak için burada.",
+  "bg": "linear-gradient(160deg,#1F5F5B,#123C3F)",
+  "svg": "<path d=\"M12 60C8 44 28 31 50 31C66 31 80 38 78 50C75 62 58 72 50 84C42 72 25 62 22 50C20 38 34 31 50 31L50 15\" fill=\"none\" stroke=\"#F6EBD3\" stroke-width=\"6.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M86 38C89 45 89 53 86 60\" fill=\"none\" stroke=\"#F6EBD3\" stroke-width=\"6.5\" stroke-linecap=\"round\" opacity=\"0.55\"/>"
+ },
+ {
+  "name": "Ensō Topaç",
+  "style": "Japon minimalizmi",
+  "story": "Fırça darbesiyle çizilmiş açık bir daire ve ortasında küçük, dengede bir topaç. Boşluk da ritmin parçasıdır: sakin kal, rutinin seni döndürsün. Az şey, doğru yerde.",
+  "bg": "#F1E8D6",
+  "svg": "<defs><filter id=\"s9r\" x=\"-10%\" y=\"-10%\" width=\"120%\" height=\"120%\"><feTurbulence type=\"fractalNoise\" baseFrequency=\"0.05\" numOctaves=\"2\" seed=\"4\" result=\"n\"/><feDisplacementMap in=\"SourceGraphic\" in2=\"n\" scale=\"2.2\"/></filter></defs><g filter=\"url(#s9r)\"><path d=\"M69 21C81 29 86 45 80 60C73 75 55 83 40 80C25 77 15 64 15 50C15 35 26 22 43 18\" fill=\"none\" stroke=\"#2A2521\" stroke-width=\"8\" stroke-linecap=\"round\"/><path d=\"M71 24C82 33 85 47 79 60\" fill=\"none\" stroke=\"#2A2521\" stroke-width=\"4\" stroke-linecap=\"round\" opacity=\"0.8\"/></g><path d=\"M41 44C41 40 59 40 59 44C59 50 54 56 50 62C46 56 41 50 41 44Z\" fill=\"#2A2521\" stroke=\"#2A2521\" stroke-width=\"2.5\" stroke-linejoin=\"round\"/><path d=\"M50 36L50 42\" stroke=\"#2A2521\" stroke-width=\"3\" stroke-linecap=\"round\"/><circle cx=\"76\" cy=\"22\" r=\"4.5\" fill=\"#C23B2A\"/>"
+ },
+ {
+  "name": "Kil Topaç",
+  "style": "Organik, el yapımı",
+  "story": "Elle yoğrulmuş sıcak bir kil topaç: yumuşak, biraz kusurlu, tamamen insan. Gövdesindeki dalgalar günlük ritmini, yanındaki yaylar dönüşünü anlatır. Dengede kalmak için mükemmel olmak gerekmez.",
+  "bg": "#F4EFE6",
+  "svg": "<path d=\"M47 15C49 13 53 13 54 16L53 29L47 29Z\" fill=\"#CC785C\"/><path d=\"M50 27C70 25 83 36 80 49C77 60 62 70 52 84C50 86 49 86 48 84C38 70 22 60 20 48C18 36 31 28 50 27Z\" fill=\"#CC785C\"/><path d=\"M29 46C38 52 44 40 51 46C58 52 64 40 72 46\" fill=\"none\" stroke=\"#F4EFE6\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M12 38C9 48 11 58 17 66\" fill=\"none\" stroke=\"#A9573C\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M88 38C91 48 89 58 83 66\" fill=\"none\" stroke=\"#A9573C\" stroke-width=\"5\" stroke-linecap=\"round\"/>"
+ }
+]
