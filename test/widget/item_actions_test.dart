@@ -1123,6 +1123,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      // Öğün grupları kapalı gelir; kalemler için kahvaltı açılır.
+      await tester.tap(find.byKey(const ValueKey('meal-group-breakfast')));
+      await tester.pumpAndSettle();
     }
 
     testWidgets('öğün: uzun basış menüsü, onaydan sonra silme', (tester) async {

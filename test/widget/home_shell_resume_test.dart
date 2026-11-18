@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/features/health/presentation/health_segment.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/demo/demo_health_extras.dart';
 import 'package:kisisel_asistan/features/health/data/water_repository.dart';
@@ -205,10 +206,14 @@ void main() {
   testWidgets(
       'öne gelince Sağlık sekmesinin verisi yeniden okunur; adım grafiği '
       'HealthKit yedeklendikten sonra', (tester) async {
-    await pumpShell(tester);
+    final container = await pumpShell(tester);
+    // Beslenme görünümü açık: öğün listesi kurulu olsun.
+    container.read(healthSegmentProvider.notifier).state =
+        HealthSegment.nutrition;
+    await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('meal-gece'), skipOffstage: false),
-      findsNothing,
+      find.byKey(const ValueKey('meal-group-snack'), skipOffstage: false),
+      findsOneWidget,
     );
 
     health.nutritionLogs = [
@@ -230,11 +235,11 @@ void main() {
       lessThan(health.log.indexOf('metrics')),
       reason: 'adım grafiği, HealthKit yedeği yazıldıktan sonra okunmalı',
     );
-    // Sağlık sekmesi (arka planda kurulu) yeni kaydı gösteriyor.
-    expect(
-      find.byKey(const ValueKey('meal-gece'), skipOffstage: false),
-      findsOneWidget,
-    );
+    // Sağlık sekmesi yeni kaydı gösteriyor (öğün grubu açılınca).
+    await selectTab(tester, 'Sağlık');
+    await tester.tap(find.byKey(const ValueKey('meal-group-snack')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('meal-gece')), findsOneWidget);
   });
 
   testWidgets(

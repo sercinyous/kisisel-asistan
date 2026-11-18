@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/features/health/presentation/weight_card.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
@@ -218,6 +219,7 @@ void main() {
     'öğün': (
       'Sağlık',
       (tester) async {
+        await tapVisible(tester, find.text('Beslenme'));
         await tapVisible(tester, find.text('Öğün ekle'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Elle gir'));
@@ -229,6 +231,7 @@ void main() {
     'antrenman': (
       'Sağlık',
       (tester) async {
+        await tapVisible(tester, find.text('Hareket'));
         await tapVisible(tester, find.widgetWithText(TextButton, 'Ekle').last);
         await tester.enterText(
             find.byKey(const Key('workout-duration')), '30');
@@ -238,6 +241,7 @@ void main() {
     'kilo': (
       'Sağlık',
       (tester) async {
+        await tapVisible(tester, find.byType(WeightCard));
         await tapVisible(tester, find.text('Kilo ekle'));
         await tester.enterText(find.byKey(const Key('weight-kg')), '82,9');
       },
