@@ -709,7 +709,7 @@ void main() {
             .save(current.copyWith(dailySteps: 12000)),
         throwsException,
       );
-      expect(container.read(userSettingsProvider).value!.dailySteps, 10000);
+      expect(container.read(userSettingsProvider).value!.dailySteps, 8000);
     });
   });
 

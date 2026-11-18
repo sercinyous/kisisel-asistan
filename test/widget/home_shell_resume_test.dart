@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kisisel_asistan/demo/demo_health_extras.dart';
+import 'package:kisisel_asistan/features/health/data/water_repository.dart';
+import 'package:kisisel_asistan/features/reports/data/weekly_checkin_repository.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
@@ -132,6 +135,9 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        waterRepositoryProvider.overrideWithValue(FakeWaterRepository()),
+        weeklyCheckinRepositoryProvider
+            .overrideWithValue(FakeWeeklyCheckinRepository()),
         routinesRepositoryProvider.overrideWithValue(routines),
         tasksRepositoryProvider.overrideWithValue(tasks),
         notesRepositoryProvider.overrideWithValue(FakeNotesRepository()),
@@ -274,7 +280,8 @@ void main() {
     await backgroundAndResume(tester);
 
     int reads(String name) => health.log.where((e) => e == name).length;
-    expect(reads('weights'), 1, reason: 'kilo serisi');
+    expect(reads('weights'), 2,
+        reason: 'kilo serisi (grafik) + 8 haftalık seri (hedefe varış)');
     expect(reads('workouts'), 2, reason: 'antrenman günlüğü + haftalık plan');
     expect(reads('meals'), 1, reason: 'bugünün öğünleri');
     expect(reads('metrics'), 1, reason: '7 günlük adım');

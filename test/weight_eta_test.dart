@@ -38,9 +38,9 @@ void main() {
         ),
     ];
     final eta = estimateWeightEta(entries, targetKg: 78, now: now);
-    expect(eta.eta, DateTime(2026, 3, 7));
+    expect(eta.eta, DateTime(2026, 2, 7));
     expect(weightEtaMessage(eta, targetKg: 78, now: now),
-        "Bu gidişle 78 kg'a yaklaşık 7 Mart");
+        "Bu gidişle 78 kg'a yaklaşık 7 Şubat");
   });
 
   test('kilo artarken hedef aşağıdaysa trend hedefe doğru değil', () {

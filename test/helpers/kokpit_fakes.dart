@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/demo/demo_health_extras.dart';
+import 'package:kisisel_asistan/features/health/data/water_repository.dart';
+import 'package:kisisel_asistan/features/reports/data/weekly_checkin_repository.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/health_source.dart'
     show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
@@ -84,6 +87,9 @@ class KokpitHarness {
 
     final container = ProviderContainer(
       overrides: [
+        waterRepositoryProvider.overrideWithValue(FakeWaterRepository()),
+        weeklyCheckinRepositoryProvider
+            .overrideWithValue(FakeWeeklyCheckinRepository()),
         routinesRepositoryProvider.overrideWithValue(routines),
         tasksRepositoryProvider.overrideWithValue(tasks),
         kokpitRepositoryProvider.overrideWithValue(kokpit),

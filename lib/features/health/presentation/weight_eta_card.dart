@@ -33,7 +33,7 @@ class WeightEtaCard extends ConsumerWidget {
             skipLoadingOnRefresh: true,
             loading: () => const HealthCardLoading(height: 40),
             error: (_, __) => HealthCompactMessage(
-              text: 'Kilo ölçümleri yüklenemedi.',
+              text: 'Tahmin hesaplanamadı.',
               onRetry: () => ref.invalidate(weightSeriesProvider),
             ),
             data: (entries) {

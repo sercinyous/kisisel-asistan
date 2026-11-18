@@ -74,7 +74,6 @@ class ReportsScreen extends ConsumerWidget {
           children: [
             Text('Raporlar', style: theme.textTheme.headlineMedium),
             const SizedBox(height: 16),
-            const WeeklyCheckinCard(),
             SegmentedButton<ReportsView>(
               showSelectedIcon: false,
               segments: const [
@@ -109,6 +108,8 @@ class ReportsScreen extends ConsumerWidget {
               ReportsView.weekly => const ReportsWeeklyView(),
               ReportsView.daily => const ReportsDailyView(),
             },
+            const SizedBox(height: 16),
+            const WeeklyCheckinCard(bottomSpacing: 0),
           ],
         ),
       ),

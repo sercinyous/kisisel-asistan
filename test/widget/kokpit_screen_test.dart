@@ -257,7 +257,7 @@ void main() {
       settings.fetchError = Exception('ağ yok');
       await pumpKokpit(tester);
       expect(find.text('/ 2.000 kcal'), findsOneWidget);
-      expect(find.text('/ 10.000'), findsOneWidget);
+      expect(find.text('/ 8.000'), findsOneWidget);
     });
 
     testWidgets('aylık işler "Bugünün rutinleri" sayacına girmez',

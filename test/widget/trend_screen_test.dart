@@ -33,7 +33,9 @@ void main() {
   setUp(() {
     _now = DateTime(2026, 11, 19, 12);
     health = FakeHealthRepository();
-    settingsRepo = FakeSettingsRepository();
+    // Testlerin adım eşikleri 10.000 hedefine göre kuruludur.
+    settingsRepo = FakeSettingsRepository()
+      ..settings = const UserSettings.defaults().copyWith(dailySteps: 10000);
   });
 
   DailyHealthMetric metric(DateTime day, {int steps = 0, int sleep = 0}) =>

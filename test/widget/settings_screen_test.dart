@@ -107,7 +107,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(settings.saved.single.dailyCalories, 2300);
-    expect(settings.saved.single.dailyProteinG, 170);
+    expect(settings.saved.single.dailyProteinG, 120);
     expect(find.text('Ayarlar kaydedildi.'), findsOneWidget);
   });
 

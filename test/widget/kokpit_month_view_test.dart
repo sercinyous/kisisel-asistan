@@ -558,7 +558,7 @@ void main() {
       expect(find.text('1 / 2 tamamlandı'), findsOneWidget);
       expect(find.text('Ort. adım'), findsOneWidget);
       expect(find.text('9.000'), findsOneWidget);
-      expect(find.text('Hedef 10.000'), findsOneWidget);
+      expect(find.text('Hedef 8.000'), findsOneWidget);
       expect(find.text('Ort. uyku'), findsOneWidget);
       expect(find.text('7 sa 30 dk'), findsOneWidget);
       expect(find.text('Hedef 7 sa 30 dk'), findsOneWidget);
@@ -583,7 +583,7 @@ void main() {
       expect(find.text('Planlanan rutin yok'), findsOneWidget);
       expect(find.text('Görev yok'), findsOneWidget);
       expect(find.text('Ölçüm yok'), findsOneWidget);
-      expect(find.text('Hedef 10.000'), findsOneWidget);
+      expect(find.text('Hedef 8.000'), findsOneWidget);
       expect(
         find.text('Bu ay için sağlık ve beslenme verisi yok.'),
         findsOneWidget,

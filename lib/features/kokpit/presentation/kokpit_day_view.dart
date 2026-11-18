@@ -33,15 +33,16 @@ class KokpitDayView extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        WeeklyCheckinCard(),
         _TodayBento(),
-        SizedBox(height: AppSpacing.grid),
-        WaterSummaryCard(),
         SizedBox(height: 24),
         _RoutinesSection(),
         _MonthlyDueSection(),
         SizedBox(height: 24),
         _RemindersSection(),
+        SizedBox(height: AppSpacing.grid),
+        WaterSummaryCard(),
+        SizedBox(height: AppSpacing.grid),
+        WeeklyCheckinCard(bottomSpacing: 0),
       ],
     );
   }
