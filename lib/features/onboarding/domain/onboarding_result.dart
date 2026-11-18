@@ -26,6 +26,7 @@ class OnboardingResult {
     required this.settings,
     required this.routines,
     required this.weightKg,
+    this.timezone,
   });
 
   /// `onboarded_at` dolu, tüm cevapları taşıyan tek kayıt.
@@ -36,6 +37,9 @@ class OnboardingResult {
 
   /// "Kilo" cevabı; ayrıca tartı kaydı olarak yazılır.
   final double weightKg;
+
+  /// Seçilen IANA saat dilimi (rapor günü bununla kesilir); `null` = değişmez.
+  final String? timezone;
 }
 
 /// Cevaplardan, hedeflerden ve tercihlerden sonucu kurar. [base] mevcut ayar
@@ -48,6 +52,7 @@ OnboardingResult buildOnboardingResult({
   required OnboardingPreferences preferences,
   required Iterable<RoutineTemplate> routines,
   required DateTime now,
+  String? timezone,
 }) {
   final work = answers.workDescription;
   final settings = base.copyWith(
@@ -66,6 +71,7 @@ OnboardingResult buildOnboardingResult({
     heightCm: answers.heightCm,
     birthYear: answers.birthYear,
     sex: answers.sex.name,
+    activityLevel: answers.activity,
     displayName: answers.displayName,
     workDescription: work,
     clearWorkDescription: work == null,
@@ -78,5 +84,6 @@ OnboardingResult buildOnboardingResult({
         template.toRoutine(sortOrder: index),
     ],
     weightKg: answers.weightKg,
+    timezone: timezone,
   );
 }

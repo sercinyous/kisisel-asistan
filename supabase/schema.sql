@@ -3670,3 +3670,163 @@ create trigger user_settings_health_source_dirty
   for each row execute function public.health_source_dirty_trigger();
 -- END friend_scope_source
 -- =====================================================================
+
+-- =====================================================================
+-- BEGIN faz5_account
+-- Hata takibi (app_errors) ve "Sorun bildir" (feedback). İkisi de yalnızca
+-- ekleme: kullanıcı kendi satırını bile okuyamaz; sahibi Dashboard'dan
+-- (service_role) okur. Hesap silinince satırlar auth.users kaskadıyla gider.
+-- =====================================================================
+create table if not exists public.app_errors (
+  id           bigint generated always as identity primary key,
+  user_id      uuid default auth.uid() references auth.users (id) on delete cascade,
+  message      text not null check (char_length(message) between 1 and 2000),
+  stack        text check (stack is null or char_length(stack) <= 8000),
+  app_version  text check (app_version is null or char_length(app_version) <= 40),
+  platform     text check (platform is null or char_length(platform) <= 40),
+  created_at   timestamptz not null default now()
+);
+create index if not exists app_errors_user_created_idx
+  on public.app_errors (user_id, created_at);
+
+alter table public.app_errors enable row level security;
+revoke all on public.app_errors from anon, authenticated;
+grant insert (user_id, message, stack, app_version, platform)
+  on public.app_errors to authenticated;
+grant all on public.app_errors to service_role;
+
+drop policy if exists app_errors_insert_own on public.app_errors;
+create policy app_errors_insert_own on public.app_errors
+  for insert to authenticated
+  with check (user_id = (select auth.uid()));
+
+-- Kişi başına günde en çok 50 hata kaydı; fazlası reddedilir.
+create or replace function public.app_errors_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if new.user_id is not null then
+    perform pg_advisory_xact_lock(hashtextextended('app_errors:' || new.user_id::text, 0));
+    if (select count(*) from public.app_errors e
+        where e.user_id = new.user_id
+          and e.created_at > now() - interval '1 day') >= 50 then
+      raise exception 'app_errors rate limit' using errcode = 'P0001';
+    end if;
+  end if;
+  new.created_at := now();
+  return new;
+end;
+$$;
+revoke all on function public.app_errors_rate_limit() from public, anon, authenticated;
+
+drop trigger if exists app_errors_rate_limit on public.app_errors;
+create trigger app_errors_rate_limit before insert on public.app_errors
+  for each row execute function public.app_errors_rate_limit();
+
+create table if not exists public.feedback (
+  id           bigint generated always as identity primary key,
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  message      text not null check (char_length(btrim(message)) between 1 and 2000),
+  category     text not null default 'hata'
+               check (category in ('hata', 'öneri', 'diğer')),
+  app_version  text check (app_version is null or char_length(app_version) <= 40),
+  created_at   timestamptz not null default now()
+);
+create index if not exists feedback_user_created_idx
+  on public.feedback (user_id, created_at);
+
+alter table public.feedback enable row level security;
+revoke all on public.feedback from anon, authenticated;
+grant insert (user_id, message, category, app_version)
+  on public.feedback to authenticated;
+grant all on public.feedback to service_role;
+
+drop policy if exists feedback_insert_own on public.feedback;
+create policy feedback_insert_own on public.feedback
+  for insert to authenticated
+  with check (user_id = (select auth.uid()));
+-- END faz5_account
+-- =====================================================================
+
+-- =====================================================================
+-- BEGIN faz5_health_extras — idempotent
+-- Su takibi (water_logs + user_settings.daily_water_ml), haftalık check-in
+-- (weekly_checkins) ve görev panosu için tamamlanma zamanı dizini.
+-- Rapor metrikleri (report_period_metrics) bu blokta değişmez.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists daily_water_ml integer not null default 2000;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.user_settings'::regclass
+      and conname = 'user_settings_daily_water_ml_check'
+  ) then
+    alter table public.user_settings
+      add constraint user_settings_daily_water_ml_check
+      check (daily_water_ml between 250 and 8000);
+  end if;
+end;
+$$;
+
+create table if not exists public.water_logs (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid()
+              references auth.users (id) on delete cascade,
+  logged_on   date not null default current_date,
+  ml          integer not null check (ml between 1 and 3000),
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists water_logs_user_day_idx
+  on public.water_logs (user_id, logged_on);
+
+alter table public.water_logs enable row level security;
+
+drop policy if exists water_logs_owner_all on public.water_logs;
+create policy water_logs_owner_all on public.water_logs
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
+revoke all on table public.water_logs from anon;
+grant select, insert, delete on table public.water_logs to authenticated;
+
+create table if not exists public.weekly_checkins (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid()
+              references auth.users (id) on delete cascade,
+  -- Haftanın pazartesisi (yerel takvim).
+  week_start  date not null check (extract(isodow from week_start) = 1),
+  mood        smallint not null check (mood between 1 and 5),
+  note        text check (note is null or char_length(note) <= 500),
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (user_id, week_start)
+);
+
+alter table public.weekly_checkins enable row level security;
+
+drop policy if exists weekly_checkins_owner_all on public.weekly_checkins;
+create policy weekly_checkins_owner_all on public.weekly_checkins
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
+revoke all on table public.weekly_checkins from anon;
+grant select, insert, update, delete on table public.weekly_checkins to authenticated;
+
+drop trigger if exists weekly_checkins_set_updated_at on public.weekly_checkins;
+create trigger weekly_checkins_set_updated_at before update on public.weekly_checkins
+  for each row execute function public.set_updated_at();
+
+-- Görev panosu: son 8 haftada tamamlananlar (terminsiz olanlar dahil).
+create index if not exists tasks_user_completed_idx
+  on public.tasks (user_id, completed_at)
+  where completed_at is not null;
+-- END faz5_health_extras

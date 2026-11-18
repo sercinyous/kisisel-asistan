@@ -93,6 +93,7 @@ class OnboardingAnswers {
     required this.targetWeightKg,
     required this.goal,
     this.workDescription,
+    this.activity = ActivityLevel.light,
   });
 
   final String displayName;
@@ -103,11 +104,14 @@ class OnboardingAnswers {
   final double targetWeightKg;
   final OnboardingGoal goal;
 
+  /// Günlük hareket düzeyi (kalori önerisinin katsayısı).
+  final ActivityLevel activity;
+
   /// "Ne iş yapıyorsun"; boşsa `null`.
   final String? workDescription;
 
-  /// Ham girdilerden cevapları kurar; bir alan geçersiz ya da seçilmemişse
-  /// `null`. Boş hedef kilo mevcut kiloya eşitlenir; kilolar `numeric(5,2)`
+  /// Ham girdilerden cevapları kurar; bir alan geçersizse `null`. Seçilmemiş
+  /// cinsiyet "belirtmek istemiyorum", seçilmemiş amaç "koru" sayılır. Boş hedef kilo mevcut kiloya eşitlenir; kilolar `numeric(5,2)`
   /// için iki ondalığa yuvarlanır.
   static OnboardingAnswers? tryParse({
     required String displayName,
@@ -119,8 +123,8 @@ class OnboardingAnswers {
     required OnboardingGoal? goal,
     required String workDescription,
     required int nowYear,
+    ActivityLevel activity = ActivityLevel.light,
   }) {
-    if (sex == null || goal == null) return null;
     if (OnboardingValidators.displayName(displayName) != null ||
         OnboardingValidators.height(height) != null ||
         OnboardingValidators.birthYear(birthYear, nowYear: nowYear) != null ||
@@ -138,11 +142,12 @@ class OnboardingAnswers {
       displayName: displayName.trim(),
       heightCm: OnboardingValidators.parseInt(height)!,
       birthYear: OnboardingValidators.parseInt(birthYear)!,
-      sex: sex,
+      sex: sex ?? Sex.unspecified,
       weightKg: weightKg,
       targetWeightKg: target,
-      goal: goal,
+      goal: goal ?? OnboardingGoal.maintain,
       workDescription: work.isEmpty ? null : work,
+      activity: activity,
     );
   }
 
@@ -151,5 +156,5 @@ class OnboardingAnswers {
   /// Hedef hesabını etkileyen alanların imzası: değişmediyse düzenlenmiş
   /// hedefler korunur, değiştiyse yeniden önerilir.
   String get targetsSignature =>
-      '$weightKg|$heightCm|$birthYear|${sex.name}|${goal.name}';
+      '$weightKg|$heightCm|$birthYear|${sex.name}|${goal.name}|${activity.name}';
 }

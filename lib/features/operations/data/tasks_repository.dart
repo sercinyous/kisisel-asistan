@@ -49,6 +49,18 @@ class TasksRepository {
     return tasks;
   }
 
+  /// [from] anından bu yana tamamlanan görevler (terminsiz olanlar dahil),
+  /// tamamlanma zamanına göre eskiden yeniye.
+  Future<List<TaskItem>> fetchCompletedSince(DateTime from) async {
+    final rows = await _client
+        .from('tasks')
+        .select()
+        .eq('status', 'done')
+        .gte('completed_at', from.toUtc().toIso8601String())
+        .order('completed_at', ascending: true);
+    return [for (final row in rows) TaskItem.fromMap(row)];
+  }
+
   /// Tamamlanmamış ve zamanı gelecekte olan görev/hatırlatmalar.
   Future<List<TaskItem>> fetchUpcoming({DateTime? from, int limit = 6}) async {
     final now = from ?? DateTime.now();

@@ -16,6 +16,7 @@ Map<String, dynamic> onboardingPayload(OnboardingResult result) => {
       'weight_kg': result.weightKg,
       'routines': [for (final r in result.routines) r.toInsertMap()],
       'settings': result.settings.toMap(),
+      if (result.timezone != null) 'timezone': result.timezone,
     };
 
 /// İlk kurulumu sunucuda TEK transaction'da yazar. Aynı [opKey] ile tekrar
