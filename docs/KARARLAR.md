@@ -175,3 +175,4 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (
 - Faz 5 Hatırlatıcılar: `reminders` + `reminder_done` (bileşik FK, sahip RLS); bildirimler eşitleme kuyruğunda resync'ten sonra planlanır (anahtar `reminder:<id>[:gün]`, yük `reminder:<id>:<sahip>`); bildirimdeki "Yaptım" kalıcı kutuya yazılır, yalnızca sahibi oturumdayken işlenir; AI hızlı eklemede hatırlatıcılar RPC dışında ayrı insert ile yazılır.
 - Faz 5 sağlık ekleri: su (water_logs, user_settings.daily_water_ml=2000) ve haftalık check-in (weekly_checkins) ayrı tablolar, sahip RLS; rapor metriklerine (report_period_metrics) eklenmedi. Kilo hedefi tahmini son 8 haftanın doğrusal regresyonuyla, istemcide hesaplanır.
 - Uygulama ikonu: mint topaç (ios_setup/AppIcon.appiconset, tek 1024 px); configure_ios.sh derlemede kopyalar.
+- Topaç animasyonu: lib/core/widgets/ritim_top (spin/settle/idle, hareket azaltmada durağan); açılış, AI hızlı giriş ve ilk kurulum karşılamasında.

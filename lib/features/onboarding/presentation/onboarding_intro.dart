@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_top/ritim_top.dart';
 
 /// Tanıtım kartı içeriği (renk, çizim sırasında etkin paletten okunur).
 class OnboardingIntroCard {
@@ -79,9 +80,17 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
 
 /// Tek tanıtım kartının sayfası.
 class OnboardingIntroPage extends StatelessWidget {
-  const OnboardingIntroPage({super.key, required this.card, this.accent});
+  const OnboardingIntroPage({
+    super.key,
+    required this.card,
+    this.accent,
+    this.showMark = false,
+  });
 
   final OnboardingIntroCard card;
+
+  /// Kartın üstünde uygulama topacı bir kez dönüp yerine oturur (karşılama).
+  final bool showMark;
 
   /// Simge rengi; verilmezse ana vurgu.
   final Color? accent;
@@ -95,6 +104,12 @@ class OnboardingIntroPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (showMark) ...[
+            const Center(
+              child: RitimTop(mode: RitimTopMode.settle, size: 96),
+            ),
+            const SizedBox(height: 12),
+          ],
           DecoratedBox(
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.14),

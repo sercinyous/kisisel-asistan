@@ -473,6 +473,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               key: ValueKey('intro-$_introPage'),
               card: onboardingIntroCards[_introPage],
               accent: _introAccent(_introPage),
+              showMark: _introPage == 0,
             ),
             const SizedBox(height: 16),
             OnboardingDots(

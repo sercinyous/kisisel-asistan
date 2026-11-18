@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/ritim_top/ritim_top.dart';
 import '../domain/parsed_entry.dart';
 import '../domain/quick_add_mode.dart';
 import 'ai_quick_add_controller.dart';
@@ -252,21 +253,24 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                         ),
                       ],
                     )
-                  else
+                  else ...[
+                    if (state.status == QuickAddStatus.parsing) ...[
+                      const Center(child: RitimTop(size: 40)),
+                      const SizedBox(height: 12),
+                    ],
                     FilledButton.icon(
                       onPressed: state.isBusy ||
                               _textController.text.trim().isEmpty
                           ? null
                           : _parse,
-                      icon: state.status == QuickAddStatus.parsing
-                          ? const _ButtonSpinner()
-                          : const Icon(Icons.auto_awesome_rounded),
+                      icon: const Icon(Icons.auto_awesome_rounded),
                       label: Text(
                         state.status == QuickAddStatus.parsing
                             ? 'Ayrıştırılıyor…'
                             : 'Ayrıştır',
                       ),
                     ),
+                  ],
                 ],
               ),
             ),

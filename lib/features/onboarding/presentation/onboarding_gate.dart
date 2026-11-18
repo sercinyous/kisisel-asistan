@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_top/ritim_top.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../../shell/presentation/home_shell.dart';
 import 'onboarding_screen.dart';
@@ -41,7 +42,7 @@ class OnboardingGate extends ConsumerWidget {
           ..invalidate(onboardedProvider(userId)),
       );
     }
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return const Scaffold(body: Center(child: RitimTop(size: 72)));
   }
 }
 
