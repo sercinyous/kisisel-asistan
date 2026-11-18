@@ -189,7 +189,7 @@ class _MealGroupTileState extends State<_MealGroupTile> {
                   color: AppColors.nutrition,
                 )
               : IconButton(
-                  tooltip: expanded ? 'Kapat' : 'Aç',
+                  tooltip: expanded ? 'Öğünü daralt' : 'Öğünü genişlet',
                   onPressed: () => setState(() => _expanded = !_expanded),
                   icon: Icon(
                     expanded

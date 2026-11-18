@@ -208,14 +208,6 @@ void main() {
       'HealthKit yedeklendikten sonra', (tester) async {
     final container = await pumpShell(tester);
     await selectTab(tester, 'Sağlık');
-    // Beslenme görünümü açık: öğün listesi kurulu olsun.
-    container.read(healthSegmentProvider.notifier).state =
-        HealthSegment.nutrition;
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('meal-group-snack'), skipOffstage: false),
-      findsOneWidget,
-    );
 
     health.nutritionLogs = [
       NutritionLog(id: 'gece', foodName: 'Yoğurt', eatenAt: DateTime.now()),
@@ -226,8 +218,9 @@ void main() {
     int reads(String name) => health.log.where((e) => e == name).length;
     expect(reads('weights'), 2,
         reason: 'kilo serisi (grafik) + 8 haftalık seri (hedefe varış)');
-    expect(reads('workouts'), 2, reason: 'antrenman günlüğü + haftalık plan');
-    expect(reads('meals'), 1, reason: 'bugünün öğünleri');
+    // Özet görünümü: antrenman günlüğü ve öğün listesi başka görünümlerde.
+    expect(reads('workouts'), 1, reason: 'haftalık plan');
+    expect(reads('meals'), 0, reason: 'öğün listesi Beslenme görünümünde');
     expect(reads('metrics'), 1, reason: '7 günlük adım');
     expect(reads('upsert'), 1, reason: 'HealthKit yeniden okundu');
     expect(reads('upsert-days'), 1, reason: 'geçmiş günler yeniden yazıldı');
@@ -236,7 +229,10 @@ void main() {
       lessThan(health.log.indexOf('metrics')),
       reason: 'adım grafiği, HealthKit yedeği yazıldıktan sonra okunmalı',
     );
-    // Sağlık sekmesi yeni kaydı gösteriyor (öğün grubu açılınca).
+    // Beslenme görünümü yeni kaydı gösteriyor (öğün grubu açılınca).
+    container.read(healthSegmentProvider.notifier).state =
+        HealthSegment.nutrition;
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('meal-group-snack')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('meal-gece')), findsOneWidget);
