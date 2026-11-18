@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Denge Taşları",
+  "idea": "Üç yuvarlak çakıl, nehir kıvrımı gibi hafif bir S çizerek üst üste dengede durur.",
+  "story": "Taşlar dümdüz dizilmez; her biri bir öncekine yaslanarak akışın kıvrımını izler. Ritim, görevlerini ve sağlığını birbirine yaslayarak hayatının dengesini bulmana yardım eder.",
+  "bg": "linear-gradient(160deg,#FAD4B8 0%,#F7C6C7 100%)",
+  "svg": "<defs><linearGradient id='opT1' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#8E6FC4'/><stop offset='1' stop-color='#6E54A8'/></linearGradient><linearGradient id='opT2' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#D97A86'/><stop offset='1' stop-color='#C15D6E'/></linearGradient><linearGradient id='opT3' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#5E9FC2'/><stop offset='1' stop-color='#3F7FA6'/></linearGradient></defs><ellipse cx='50' cy='76' rx='26' ry='11' fill='url(#opT3)'/><ellipse cx='56' cy='55' rx='19' ry='10' fill='url(#opT2)'/><ellipse cx='46' cy='36' rx='13' ry='8.5' fill='url(#opT1)'/><circle cx='54' cy='19' r='5' fill='#FFFFFF' opacity='0.9'/>"
+ },
+ {
+  "name": "Düşen Damla",
+  "idea": "Tek bir damla durgun suya düşer ve halkalar düzensizden düzenliye doğru açılır.",
+  "story": "Gün bir damla gibi başlar: küçük bir not, bir hatırlatma. Halkalar dışa doğru sakinleşip eşit aralığa oturur; Ritim dağınık günlerini dalga dalga düzene sokar.",
+  "bg": "linear-gradient(180deg,#D9C9F2 0%,#C9DFF2 100%)",
+  "svg": "<path d='M50 16 C50 16 41 28 41 34 A9 9 0 0 0 59 34 C59 28 50 16 50 16Z' fill='#6E54A8'/><g fill='none' stroke-linecap='round'><path d='M38 62 A12 5 0 0 0 62 62' stroke='#6E54A8' stroke-width='5'/><path d='M27 66 A23 9 0 0 0 73 66' stroke='#5A7FB8' stroke-width='4.5'/><path d='M16 70 A34 13 0 0 0 84 70' stroke='#4A8FB0' stroke-width='4' opacity='0.85'/></g>"
+ },
+ {
+  "name": "Kıvrımda Filiz",
+  "idea": "Nehrin S kıvrımı yukarı doğru yükselir ve ucunda bir filize dönüşür.",
+  "story": "Akış bir yere varmak için kıvrılır; her dönemeç bir büyüme anıdır. Ritim'de küçük adımların birikerek yeşerdiğini, hayatının akışının kendi ritmini bulduğunu görürsün.",
+  "bg": "linear-gradient(200deg,#FBEFC4 0%,#CDEFE3 100%)",
+  "svg": "<defs><linearGradient id='opF' x1='0' y1='1' x2='0' y2='0'><stop offset='0' stop-color='#3F8FA0'/><stop offset='1' stop-color='#3E9A6E'/></linearGradient></defs><path d='M30 86 C30 70 68 70 68 56 C68 42 32 46 34 32 C35 26 42 24 50 26' fill='none' stroke='url(#opF)' stroke-width='8' stroke-linecap='round'/><path d='M50 26 C52 14 64 12 72 16 C68 26 58 30 50 26Z' fill='#E58A9A'/><path d='M50 26 C46 16 36 14 30 18 C34 26 44 29 50 26Z' fill='#7FC4A0'/>"
+ }
+]
