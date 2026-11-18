@@ -7,6 +7,7 @@ import '../../health/presentation/energy_providers.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../operations/presentation/operations_providers.dart';
+import '../../reminders/presentation/reminders_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/gemini_parser_service.dart';
@@ -235,7 +236,10 @@ class QuickAddController
         ..invalidate(energyDayProvider)
         ..invalidate(energyRangeProvider);
     }
-    if (wroteRoutines || wroteTasks) ref.invalidate(notificationSyncProvider);
+    if (result.reminderCount > 0) ref.invalidate(remindersProvider);
+    if (wroteRoutines || wroteTasks || result.reminderCount > 0) {
+      ref.invalidate(notificationSyncProvider);
+    }
     // Operasyon sekmesinin kendi listeleri de bayatlamasın.
     if (wroteRoutines) ref.invalidate(opsRoutinesProvider);
     if (wroteTasks) ref.invalidate(opsTasksProvider);

@@ -56,6 +56,9 @@ run -d fresh -f "$HERE/task_categories_test.sql"
 echo "== 1b3) ilk kurulum RPC'si (complete_onboarding: tek transaction, idempotent) =="
 run -d fresh -f "$HERE/complete_onboarding_test.sql"
 
+echo "== 1b4) Faz 5 ilk kurulum (activity_level, profil ve saat dilimi) =="
+run -d fresh -f "$HERE/faz5_onboarding_test.sql"
+
 echo "== 1c) Faz 4B: kayıt kapısı, arkadaşlar, kota, eşlik =="
 export GOAL_VECTORS="$HERE/goal_vectors.json"
 run -d postgres -c "create database faz4b"
@@ -112,6 +115,9 @@ echo "tamam: report_dirty"
 echo "== 2e) kiralamalı rapor yenileme (report_claim_test.sql) =="
 run -d fresh -f "$HERE/report_claim_test.sql" >/dev/null
 echo "tamam: report_claim_lease"
+echo "== 2f) hatırlatıcılar ve Yaptım kayıtları (reminders_test.sql) =="
+run -d fresh -f "$HERE/reminders_test.sql" >/dev/null
+echo "tamam: reminders"
 echo "== 2f) su takibi ve haftalık check-in (faz5_health_extras_test.sql) =="
 run -d fresh -f "$HERE/faz5_health_extras_test.sql" >/dev/null
 echo "tamam: faz5_health_extras"
@@ -140,6 +146,7 @@ run -d upgrade -f "$HERE/reports_test.sql" >/dev/null 2>"$WORK/upgrade_reports.l
 }
 echo "tamam: rapor testleri yükseltilmiş veritabanında da geçti"
 run -d upgrade -f "$HERE/complete_onboarding_test.sql"
+run -d upgrade -f "$HERE/faz5_onboarding_test.sql" >/dev/null
 run -d upgrade -f "$HERE/fitness_import_test.sql"
 run -d upgrade -f "$HERE/routine_owner_test.sql"
 # Yükseltilmiş veritabanında Faz 4B işlevleri de aynı davranır.
@@ -149,6 +156,7 @@ run -d upgrade -f "$HERE/goal_parity_test.sql" >/dev/null
 run -d upgrade -f "$HERE/report_dirty_test.sql" >/dev/null
 run -d upgrade -f "$HERE/friend_scope_test.sql" >/dev/null
 run -d upgrade -f "$HERE/report_claim_test.sql" >/dev/null
+run -d upgrade -f "$HERE/reminders_test.sql" >/dev/null
 run -d upgrade -f "$HERE/faz5_health_extras_test.sql" >/dev/null
 echo "tamam: Faz 4B testleri sürüm 2'den yükseltilmiş veritabanında da geçti"
 
@@ -181,6 +189,8 @@ else
   run -d upgrade3 -f "$HERE/report_claim_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/routine_owner_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/friend_scope_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/faz5_onboarding_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/reminders_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/faz5_health_extras_test.sql" >/dev/null
   echo "tamam: Faz 4B testleri sürüm 3'ten yükseltilmiş veritabanında da geçti"
   echo "tamam: sürüm 3 yükseltmesi"

@@ -125,6 +125,18 @@ class FakeNotificationService implements NotificationService {
     resyncCount++;
     lastRoutines = routines;
     lastReminders = reminders;
+    lastHabitReminders = const [];
+  }
+
+  /// Son [scheduleHabitReminders] çağrısına verilen hatırlatıcılar
+  /// ([resync] bunları da siler).
+  List<HabitReminderSchedule> lastHabitReminders = const [];
+
+  @override
+  Future<void> scheduleHabitReminders(
+    List<HabitReminderSchedule> reminders,
+  ) async {
+    lastHabitReminders = reminders;
   }
 }
 
@@ -1046,6 +1058,9 @@ class FakeOnboardingRepository implements OnboardingRepository {
   final Map<String, UserSettings> completed = {};
   final List<String> calls = [];
 
+  /// Başarıyla yazılan gövdeler, sırayla.
+  final List<Map<String, dynamic>> payloads = [];
+
   @override
   Future<UserSettings> complete(
     Map<String, dynamic> payload,
@@ -1072,6 +1087,7 @@ class FakeOnboardingRepository implements OnboardingRepository {
         ),
       );
       completed[opKey] = saved;
+      payloads.add(payload);
       return saved;
     } catch (_) {
       health.weights = weightsBefore;

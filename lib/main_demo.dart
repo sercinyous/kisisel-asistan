@@ -24,15 +24,20 @@ import 'features/onboarding/data/onboarding_repository.dart';
 import 'demo/demo_backend.dart';
 import 'demo/demo_data.dart';
 import 'demo/demo_foods.dart';
+import 'demo/demo_health_extras.dart';
 import 'features/ai_quick_add/data/gemini_parser_service.dart';
 import 'features/ai_quick_add/data/quick_add_repository.dart';
 import 'features/health/data/food_catalog.dart';
 import 'features/health/data/health_repository.dart';
+import 'features/health/data/water_repository.dart';
 import 'features/health/presentation/health_source_providers.dart';
 import 'features/kokpit/data/kokpit_repository.dart';
 import 'features/operations/data/notes_repository.dart';
 import 'features/operations/data/tasks_repository.dart';
+import 'demo/demo_reminders.dart';
+import 'features/reminders/data/reminders_repository.dart';
 import 'features/reports/data/reports_repository.dart';
+import 'features/reports/data/weekly_checkin_repository.dart';
 import 'features/routines/data/routines_repository.dart';
 import 'features/settings/data/settings_repository.dart';
 import 'features/shell/presentation/home_shell.dart';
@@ -113,11 +118,16 @@ Future<void> main() async {
         tasksRepositoryProvider.overrideWithValue(data.tasks),
         notesRepositoryProvider.overrideWithValue(data.notes),
         healthRepositoryProvider.overrideWithValue(data.health),
+        waterRepositoryProvider.overrideWithValue(FakeWaterRepository()),
+        weeklyCheckinRepositoryProvider
+            .overrideWithValue(FakeWeeklyCheckinRepository()),
         // Paketli liste boşsa demo örnek besinleriyle çalışır.
         foodCatalogProvider
             .overrideWith((ref) => loadDemoFoodCatalog(rootBundle)),
         kokpitRepositoryProvider.overrideWithValue(data.kokpit),
         reportsRepositoryProvider.overrideWithValue(data.reports),
+        remindersRepositoryProvider
+            .overrideWithValue(MemoryRemindersRepository()),
         initialHealthSourceProvider.overrideWithValue(healthSource),
         // Demo tek kullanıcılıdır ve HealthKit sahtedir: onay verilmiş sayılır.
         appleHealthConsentStoreProvider.overrideWithValue(

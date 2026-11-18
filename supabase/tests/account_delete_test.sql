@@ -9,8 +9,8 @@ set client_min_messages = notice;
 \ir helpers_faz4b.sql
 
 alter table auth.users disable trigger signup_invite_gate;
-select tf.mkuser('d1000000-0000-0000-0000-000000000001', 'silinecek@example.com');
-select tf.mkuser('d2000000-0000-0000-0000-000000000002', 'kalan@example.com');
+select tf.mkuser('fa500000-0000-0000-0000-000000000001', 'faz5-silinecek@example.com');
+select tf.mkuser('fa500000-0000-0000-0000-000000000002', 'faz5-kalan@example.com');
 alter table auth.users enable trigger signup_invite_gate;
 
 -- 1) auth.users'a bağlı her FK kaskat olmalı (tek istisna: friend_requests.target_user
@@ -36,28 +36,28 @@ end;
 $$;
 
 -- 2) Kullanıcının her türlü verisi.
-insert into public.tasks (user_id, title) values ('d1000000-0000-0000-0000-000000000001', 'Görev');
-insert into public.notes (user_id, title) values ('d1000000-0000-0000-0000-000000000001', 'Not');
+insert into public.tasks (user_id, title) values ('fa500000-0000-0000-0000-000000000001', 'Görev');
+insert into public.notes (user_id, title) values ('fa500000-0000-0000-0000-000000000001', 'Not');
 insert into public.friend_sharing (user_id, share_steps)
-  values ('d1000000-0000-0000-0000-000000000001', true) on conflict (user_id) do nothing;
+  values ('fa500000-0000-0000-0000-000000000001', true) on conflict (user_id) do nothing;
 insert into public.friendships (user_a, user_b)
-  values ('d1000000-0000-0000-0000-000000000001', 'd2000000-0000-0000-0000-000000000002');
+  values ('fa500000-0000-0000-0000-000000000001', 'fa500000-0000-0000-0000-000000000002');
 insert into public.friend_requests (from_user, target_email)
-  values ('d1000000-0000-0000-0000-000000000001', 'baskasi@example.com');
+  values ('fa500000-0000-0000-0000-000000000001', 'baskasi@example.com');
 insert into public.friend_requests (from_user, target_email, target_user)
-  values ('d2000000-0000-0000-0000-000000000002', 'silinecek@example.com',
-          'd1000000-0000-0000-0000-000000000001');
-insert into public.app_errors (user_id, message) values ('d1000000-0000-0000-0000-000000000001', 'hata');
-insert into public.feedback (user_id, message) values ('d1000000-0000-0000-0000-000000000001', 'not');
+  values ('fa500000-0000-0000-0000-000000000002', 'faz5-silinecek@example.com',
+          'fa500000-0000-0000-0000-000000000001');
+insert into public.app_errors (user_id, message) values ('fa500000-0000-0000-0000-000000000001', 'hata');
+insert into public.feedback (user_id, message) values ('fa500000-0000-0000-0000-000000000001', 'not');
 
 -- 3) Edge Function'ın açık silmeleri + auth kullanıcısının silinmesi.
 delete from public.friendships
-  where user_a = 'd1000000-0000-0000-0000-000000000001' or user_b = 'd1000000-0000-0000-0000-000000000001';
+  where user_a = 'fa500000-0000-0000-0000-000000000001' or user_b = 'fa500000-0000-0000-0000-000000000001';
 delete from public.friend_requests
-  where from_user = 'd1000000-0000-0000-0000-000000000001'
-     or target_user = 'd1000000-0000-0000-0000-000000000001'
-     or target_email = 'silinecek@example.com';
-delete from auth.users where id = 'd1000000-0000-0000-0000-000000000001';
+  where from_user = 'fa500000-0000-0000-0000-000000000001'
+     or target_user = 'fa500000-0000-0000-0000-000000000001'
+     or target_email = 'faz5-silinecek@example.com';
+delete from auth.users where id = 'fa500000-0000-0000-0000-000000000001';
 
 -- 4) Hiçbir public tablo uuid sütununda bu kimlik kalmamalı; e-posta da.
 do $$
@@ -74,10 +74,10 @@ begin
   loop
     if r.data_type = 'uuid' then
       execute format('select count(*) from public.%I where %I = $1', r.table_name, r.column_name)
-        into n using 'd1000000-0000-0000-0000-000000000001'::uuid;
+        into n using 'fa500000-0000-0000-0000-000000000001'::uuid;
     else
       execute format('select count(*) from public.%I where %I = $1', r.table_name, r.column_name)
-        into n using 'silinecek@example.com';
+        into n using 'faz5-silinecek@example.com';
     end if;
     if n > 0 then
       raise exception 'BAŞARISIZ: silinen kullanıcı public.%.% içinde kaldı (% satır)',
@@ -89,4 +89,4 @@ end;
 $$;
 
 select tf.ok('diğer kullanıcının verisi duruyor',
-  exists (select 1 from public.user_settings where user_id = 'd2000000-0000-0000-0000-000000000002'));
+  exists (select 1 from public.user_settings where user_id = 'fa500000-0000-0000-0000-000000000002'));

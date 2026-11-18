@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/operations/data/tasks_repository.dart';
+import '../../features/reminders/data/reminders_repository.dart';
+import '../../features/reminders/domain/reminder.dart';
 import '../../features/routines/data/routines_repository.dart';
 import '../../features/routines/domain/routine.dart';
 import '../../features/settings/domain/user_settings.dart';
@@ -118,6 +120,16 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
         )
       : const <RoutineCompletionKey>{};
   final tasks = await tasksRepository.fetchOpen();
+  // Hatırlatıcılar (Ayarlar > Hatırlatıcılar). Okunamazsa diğer bildirimler
+  // yine planlanır. `read`: depo oturuma bağlıdır; izlenirse çıkışta bu tur
+  // yeniden çalışıp silinen bildirimleri geri planlardı.
+  var habits = const <HabitReminderSchedule>[];
+  try {
+    final reminders = await ref.read(remindersRepositoryProvider).fetchAll();
+    habits = habitSchedulesOf(reminders, now);
+  } catch (_) {
+    habits = const [];
+  }
 
   final plan = buildNotificationPlan(
     now: now,
@@ -127,13 +139,27 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
     tasks: tasks,
   );
 
+  // Hatırlatıcılara yer kalsın diye görev hatırlatmaları (en yakınlar
+  // korunarak) kırpılır.
+  final routineSchedules = routineSchedulesOf(plan, routines);
+  final habitSlots = habits.fold<int>(0, (sum, h) => sum + h.slots);
+  final routineSlots = routineSchedules.fold<int>(
+    0,
+    (sum, r) => sum +
+        (r.daysOfWeek.toSet().length == 7 ? 1 : r.daysOfWeek.toSet().length),
+  );
+  final taskRoom = maxPendingNotifications - routineSlots - habitSlots;
+  final taskReminders = [
+    for (final p in plan)
+      if (p.kind == PlannedKind.task) _reminderOf(p),
+  ];
+
   await queue.run(current, () async {
     await notifications.resync(
-      routines: routineSchedulesOf(plan, routines),
-      reminders: [
-        for (final p in plan)
-          if (p.kind == PlannedKind.task) _reminderOf(p),
-      ],
+      routines: routineSchedules,
+      reminders: taskReminders.length > taskRoom
+          ? taskReminders.take(taskRoom < 0 ? 0 : taskRoom).toList()
+          : taskReminders,
     );
     // resync bekleyenleri sildiği için aylık tek seferlikler ondan sonra eklenir.
     for (final p in plan) {
@@ -142,6 +168,9 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
         await notifications.scheduleReminder(_reminderOf(p));
       }
     }
+    // Hatırlatıcılar da resync'ten sonra, aynı turda planlanır: çıkışta
+    // endSession'ın resync'i bunları da siler.
+    await notifications.scheduleHabitReminders(habits);
   });
 });
 

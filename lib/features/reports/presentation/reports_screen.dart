@@ -7,6 +7,7 @@ import 'reports_daily_view.dart';
 import 'reports_providers.dart';
 import 'reports_state.dart';
 import 'reports_weekly_view.dart';
+import 'weekly_checkin_card.dart';
 
 /// Raporlar: sunucuda otomatik üretilen **haftalık** ve **günlük** raporlar.
 /// Sayılar rapordan gösterilir; uygulamada yeniden hesaplanmaz.
@@ -73,6 +74,7 @@ class ReportsScreen extends ConsumerWidget {
           children: [
             Text('Raporlar', style: theme.textTheme.headlineMedium),
             const SizedBox(height: 16),
+            const WeeklyCheckinCard(),
             SegmentedButton<ReportsView>(
               showSelectedIcon: false,
               segments: const [

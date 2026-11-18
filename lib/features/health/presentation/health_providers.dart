@@ -9,6 +9,7 @@ import '../../routines/presentation/routines_providers.dart';
 import '../data/health_repository.dart';
 import 'energy_providers.dart';
 import 'health_source_providers.dart';
+import 'water_providers.dart';
 
 export '../data/health_repository.dart';
 export 'health_source_providers.dart';
@@ -186,7 +187,8 @@ void invalidateHealthData(ProviderContainer container) {
     ..invalidate(recentWorkoutsProvider)
     ..invalidate(weekWorkoutPlanProvider)
     ..invalidate(todayNutritionProvider)
-    ..invalidate(monthOverviewProvider);
+    ..invalidate(monthOverviewProvider)
+    ..invalidate(waterTodayProvider);
   // Enerji dengesi öğün, antrenman, kilo ve günlük sağlık özetinden hesaplanır;
   // "bugün" ve bazal oranı da saate bağlıdır.
   invalidateEnergyData(container);

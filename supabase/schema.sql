@@ -3830,3 +3830,222 @@ create index if not exists tasks_user_completed_idx
   on public.tasks (user_id, completed_at)
   where completed_at is not null;
 -- END faz5_health_extras
+
+-- =====================================================================
+-- BEGIN faz5_reminders — idempotent
+--   Hatırlatıcılar (Ayarlar > Hatırlatıcılar): kullanıcının kendi saatli
+--   hatırlatmaları (su, ilaç, yürüyüş...) ve "Yaptım" kayıtları.
+--   repeat: once (on_date), daily, weekdays (Pzt-Cum), custom (days_mask:
+--   bit 0 = Pazartesi ... bit 6 = Pazar). reminder_done, bileşik FK ile
+--   yalnızca aynı kullanıcının hatırlatıcısına bağlanabilir
+--   (routine_owner_fk deseni); RLS yalnızca user_id'yi denetler.
+-- =====================================================================
+create table if not exists public.reminders (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title        text not null check (char_length(btrim(title)) between 1 and 120),
+  time_of_day  time not null,
+  repeat       text not null default 'daily'
+               check (repeat in ('once', 'daily', 'weekdays', 'custom')),
+  on_date      date,
+  days_mask    smallint not null default 0 check (days_mask between 0 and 127),
+  enabled      boolean not null default true,
+  created_at   timestamptz not null default now(),
+  constraint reminders_once_date_check
+    check ((repeat = 'once') = (on_date is not null)),
+  constraint reminders_custom_days_check
+    check (repeat <> 'custom' or days_mask > 0),
+  constraint reminders_user_id_id_key unique (user_id, id)
+);
+
+create table if not exists public.reminder_done (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  reminder_id  uuid not null,
+  done_on      date not null,
+  created_at   timestamptz not null default now(),
+  constraint reminder_done_reminder_day_key unique (reminder_id, done_on),
+  constraint reminder_done_user_reminder_fkey
+    foreign key (user_id, reminder_id)
+    references public.reminders (user_id, id) on delete cascade
+);
+
+create index if not exists reminders_user_created_idx
+  on public.reminders (user_id, created_at);
+create index if not exists reminder_done_user_day_idx
+  on public.reminder_done (user_id, done_on);
+
+do $$
+declare
+  t   text;
+  cmd text;
+begin
+  foreach t in array array['reminders', 'reminder_done']
+  loop
+    execute format('alter table public.%I enable row level security', t);
+    foreach cmd in array array['select', 'insert', 'update', 'delete']
+    loop
+      execute format('drop policy if exists %I on public.%I', t || '_owner_' || cmd, t);
+    end loop;
+    execute format(
+      'create policy %I on public.%I for select to authenticated
+         using ((select auth.uid()) = user_id)', t || '_owner_select', t);
+    execute format(
+      'create policy %I on public.%I for insert to authenticated
+         with check ((select auth.uid()) = user_id)', t || '_owner_insert', t);
+    execute format(
+      'create policy %I on public.%I for update to authenticated
+         using ((select auth.uid()) = user_id)
+         with check ((select auth.uid()) = user_id)', t || '_owner_update', t);
+    execute format(
+      'create policy %I on public.%I for delete to authenticated
+         using ((select auth.uid()) = user_id)', t || '_owner_delete', t);
+  end loop;
+end;
+$$;
+
+revoke all on table public.reminders, public.reminder_done from anon;
+grant select, insert, update, delete on table public.reminders, public.reminder_done
+  to authenticated;
+-- END faz5_reminders
+
+-- =====================================================================
+-- BEGIN faz5_onboarding — idempotent
+--   Faz 5 ilk kurulum: user_settings.activity_level (hareket düzeyi; kalori
+--   önerisinin katsayısı). Boy, doğum yılı ve cinsiyet sütunları ve
+--   check'leri Faz 4A'dan beri vardır (height_cm 100..250, sex female/male/
+--   unspecified ya da null); burada eksikse eklenir. complete_onboarding aynı
+--   sözleşmeyle (tek transaction, op_key ile idempotent) yeniden tanımlanır
+--   ve ek olarak activity_level ile gövdedeki saat dilimini (payload.timezone,
+--   pg_timezone_names'te olmalı) yazar.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists height_cm smallint,
+  add column if not exists birth_year smallint,
+  add column if not exists sex text,
+  add column if not exists activity_level text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.user_settings'::regclass
+      and conname = 'user_settings_activity_level_check'
+  ) then
+    alter table public.user_settings
+      add constraint user_settings_activity_level_check
+      check (activity_level in ('sedentary', 'light', 'moderate', 'active',
+                                'very_active'));
+  end if;
+end;
+$$;
+
+create or replace function public.complete_onboarding(payload jsonb, op_key uuid)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_uid      uuid := auth.uid();
+  v_prev     uuid;
+  v_result   jsonb;
+  v_settings jsonb := coalesce(payload -> 'settings', '{}'::jsonb);
+  v_row      public.user_settings;
+  v_tz       text := nullif(btrim(payload ->> 'timezone'), '');
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if complete_onboarding.op_key is null then
+    raise exception 'op_key gerekli' using errcode = '22004';
+  end if;
+  if jsonb_typeof(v_settings) <> 'object' then
+    raise exception 'settings nesne olmalı' using errcode = '22023';
+  end if;
+  if v_tz is not null
+     and not exists (select 1 from pg_timezone_names z where z.name = v_tz) then
+    raise exception 'Geçersiz saat dilimi: %', v_tz using errcode = '22023';
+  end if;
+
+  -- Kullanıcının işlem satırı kilitlenir: aynı anahtarla eşzamanlı ikinci
+  -- çağrı ilki bitene dek bekler, sonra kayıtlı sonucu görür.
+  insert into onboarding_ops (user_id) values (v_uid)
+  on conflict (user_id) do nothing;
+  select o.op_key, o.result into v_prev, v_result
+  from onboarding_ops o
+  where o.user_id = v_uid
+  for update;
+
+  if v_prev is not distinct from complete_onboarding.op_key then
+    return v_result;
+  end if;
+
+  if jsonb_typeof(payload -> 'weight_kg') = 'number' then
+    insert into fitness_logs (user_id, log_type, weight_kg, source)
+    values (v_uid, 'weight', (payload ->> 'weight_kg')::numeric, 'manual');
+  end if;
+
+  insert into routines (user_id, title, scope, category, frequency, days_of_week,
+                        day_of_month, time_of_day, notify, is_active, sort_order)
+  select v_uid, x.title, coalesce(x.scope, 'Kişisel'), coalesce(x.category, 'kisisel'),
+         coalesce(x.frequency, 'weekly'),
+         case when coalesce(x.frequency, 'weekly') = 'monthly'
+                   or x.days_of_week is null or cardinality(x.days_of_week) = 0
+              then '{1,2,3,4,5,6,7}'::smallint[]
+              else x.days_of_week end,
+         case when x.frequency = 'monthly' then x.day_of_month end,
+         x.time_of_day, coalesce(x.notify, true), coalesce(x.is_active, true),
+         coalesce(x.sort_order, 0)
+  from jsonb_to_recordset(coalesce(payload -> 'routines', '[]'::jsonb))
+    as x(title text, scope text, category text, frequency text,
+         days_of_week smallint[], day_of_month smallint, time_of_day time,
+         notify boolean, is_active boolean, sort_order integer);
+
+  insert into user_settings (user_id) values (v_uid)
+  on conflict (user_id) do nothing;
+
+  -- Gövdede olmayan alan mevcut değerini korur (jsonb_populate_record tabanı
+  -- satırın kendisidir); açık null yazılır. user_id değişmez; timezone
+  -- yalnızca gövdede geçerli bir IANA adı varsa yazılır.
+  update user_settings s
+     set (start_weight_kg, target_weight_kg, daily_calories, daily_protein_g,
+          daily_carbs_g, daily_fat_g, daily_steps, sleep_minutes,
+          notifications_enabled, routine_notifications, monthly_lead_days,
+          monthly_remind_time, event_remind_minutes, quiet_hours_enabled,
+          quiet_start, quiet_end, team_members, height_cm, birth_year, sex,
+          display_name, work_description, task_categories, activity_level,
+          timezone, onboarded_at)
+       = (select r.start_weight_kg, r.target_weight_kg, r.daily_calories,
+                 r.daily_protein_g, r.daily_carbs_g, r.daily_fat_g, r.daily_steps,
+                 r.sleep_minutes, r.notifications_enabled, r.routine_notifications,
+                 r.monthly_lead_days, r.monthly_remind_time, r.event_remind_minutes,
+                 r.quiet_hours_enabled, r.quiet_start, r.quiet_end,
+                 coalesce(r.team_members, '{}'), r.height_cm, r.birth_year, r.sex,
+                 r.display_name, r.work_description, r.task_categories,
+                 r.activity_level, coalesce(v_tz, s.timezone),
+                 coalesce(r.onboarded_at, now())
+          from jsonb_populate_record(s, v_settings) r)
+   where s.user_id = v_uid
+  returning s.* into v_row;
+
+  if v_row.user_id is null then
+    raise exception 'Ayar satırı yazılamadı' using errcode = '42501';
+  end if;
+
+  v_result := jsonb_build_object('settings', to_jsonb(v_row));
+  update onboarding_ops
+     set op_key = complete_onboarding.op_key,
+         result = v_result,
+         completed_at = now()
+   where user_id = v_uid;
+  return v_result;
+end;
+$$;
+
+revoke all on function public.complete_onboarding(jsonb, uuid) from public, anon;
+grant execute on function public.complete_onboarding(jsonb, uuid) to authenticated;
+
+revoke all on function public.complete_onboarding(jsonb, uuid) from public, anon;
+grant execute on function public.complete_onboarding(jsonb, uuid) to authenticated;
+-- END faz5_onboarding

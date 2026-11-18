@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../friends/presentation/friends_button.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../health/presentation/water_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_screen.dart';
 import 'kokpit_day_view.dart';
@@ -24,6 +25,7 @@ class KokpitScreen extends ConsumerWidget {
     ref.invalidate(todayOccurrencesProvider);
     ref.invalidate(upcomingRemindersProvider);
     ref.invalidate(todayNutritionProvider);
+    ref.invalidate(waterTodayProvider);
     ref.invalidate(monthOverviewProvider);
     // HealthKit yeniden okunup yedeklenir; bitince 7 günlük adım grafiği ve
     // Ay ortalamaları da tazelenir.

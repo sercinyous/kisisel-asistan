@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/features/health/domain/energy_balance.dart';
 import 'package:kisisel_asistan/features/onboarding/domain/goal_suggestion.dart';
 import 'package:kisisel_asistan/features/onboarding/domain/onboarding_answers.dart';
+import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 
 OnboardingAnswers _answers({
   double weight = 80,
@@ -9,6 +10,7 @@ OnboardingAnswers _answers({
   int birthYear = 1990,
   Sex sex = Sex.male,
   OnboardingGoal goal = OnboardingGoal.lose,
+  ActivityLevel activity = ActivityLevel.light,
 }) =>
     OnboardingAnswers(
       displayName: 'Ayşe',
@@ -18,19 +20,40 @@ OnboardingAnswers _answers({
       weightKg: weight,
       targetWeightKg: weight,
       goal: goal,
+      activity: activity,
     );
 
 OnboardingTargets _suggest(OnboardingAnswers a, {int nowYear = 2026}) =>
     GoalSuggestion.compute(a, nowYear: nowYear);
 
 void main() {
-  group('GoalSuggestion: kalori = bazal x 1,4 + amaç farkı', () {
+  group('GoalSuggestion: kalori = bazal x hareket katsayısı + amaç farkı', () {
     // Erkek, 80 kg, 180 cm, 36 yaş: bazal 800 + 1125 - 180 + 5 = 1750;
-    // x 1,4 = 2450.
+    // az hareketli x 1,375 = 2406,25.
     test('ver −500, koru 0, al +300', () {
-      expect(_suggest(_answers(goal: OnboardingGoal.lose)).calories, 1950);
-      expect(_suggest(_answers(goal: OnboardingGoal.maintain)).calories, 2450);
-      expect(_suggest(_answers(goal: OnboardingGoal.gain)).calories, 2750);
+      expect(_suggest(_answers(goal: OnboardingGoal.lose)).calories, 1906);
+      expect(_suggest(_answers(goal: OnboardingGoal.maintain)).calories, 2406);
+      expect(_suggest(_answers(goal: OnboardingGoal.gain)).calories, 2706);
+    });
+
+    test('hareket düzeyi katsayıları: 1,2 / 1,375 / 1,55 / 1,725 / 1,9', () {
+      expect([for (final l in ActivityLevel.values) l.factor],
+          [1.2, 1.375, 1.55, 1.725, 1.9]);
+      int kcal(ActivityLevel level) => _suggest(
+            _answers(goal: OnboardingGoal.maintain, activity: level),
+          ).calories;
+      expect(kcal(ActivityLevel.sedentary), 2100);
+      expect(kcal(ActivityLevel.moderate), 2713);
+      expect(kcal(ActivityLevel.active), 3019);
+      expect(kcal(ActivityLevel.veryActive), 3325);
+    });
+
+    test('hareket düzeyi veritabanı değerleri', () {
+      expect([for (final l in ActivityLevel.values) l.dbValue],
+          ['sedentary', 'light', 'moderate', 'active', 'very_active']);
+      expect(ActivityLevel.tryParse('very_active'), ActivityLevel.veryActive);
+      expect(ActivityLevel.tryParse('lazy'), isNull);
+      expect(ActivityLevel.tryParse(null), isNull);
     });
 
     test('amaç farkları sabit', () {
@@ -49,13 +72,13 @@ void main() {
       final other = _suggest(
         _answers(sex: Sex.unspecified, goal: OnboardingGoal.maintain),
       ).calories;
-      // Bazal farkı x 1,4: (5 - (-161)) x 1,4 = 232,4; (5 - (-78)) x 1,4 = 116,2.
-      expect(male - female, closeTo(232.4, 1));
-      expect(male - other, closeTo(116.2, 1));
+      // Bazal farkı x 1,375: 166 x 1,375 = 228,25; 83 x 1,375 = 114,1.
+      expect(male - female, closeTo(228.25, 1));
+      expect(male - other, closeTo(114.1, 1));
     });
 
     test('küçük kadın, 66 yaş: açık hedefi 1200 kcal altına inmez', () {
-      // Bazal 450 + 937,5 - 330 - 161 = 896,5; x 1,4 - 500 = 755 -> 1200.
+      // Bazal 450 + 937,5 - 330 - 161 = 896,5; x 1,375 - 500 = 733 -> 1200.
       final targets = _suggest(
         _answers(
           weight: 45,
@@ -71,7 +94,7 @@ void main() {
 
     test('18 yaş altında açık uygulanmaz (4A: reşit olmayana açık hedefi yok)',
         () {
-      // 16 yaş: bazal 600 + 1075 - 80 + 5 = 1600; x 1,4 = 2240.
+      // 16 yaş: bazal 600 + 1075 - 80 + 5 = 1600; x 1,375 = 2200.
       final lose = _suggest(
         _answers(weight: 60, height: 172, birthYear: 2010),
       );
@@ -83,7 +106,7 @@ void main() {
           goal: OnboardingGoal.maintain,
         ),
       );
-      expect(lose.calories, 2240);
+      expect(lose.calories, 2200);
       expect(lose.calories, maintain.calories);
       // 18 yaşında açık uygulanır.
       final adult = _suggest(
@@ -94,10 +117,10 @@ void main() {
   });
 
   group('GoalSuggestion: protein, makrolar, adım, uyku', () {
-    test('protein kilo başına 1,8 g', () {
-      expect(_suggest(_answers(weight: 80)).proteinG, 144);
-      expect(_suggest(_answers(weight: 100)).proteinG, 180);
-      expect(GoalSuggestion.proteinPerKg, 1.8);
+    test('protein kilo başına 1,6 g', () {
+      expect(_suggest(_answers(weight: 80)).proteinG, 128);
+      expect(_suggest(_answers(weight: 100)).proteinG, 160);
+      expect(GoalSuggestion.proteinPerKg, 1.6);
     });
 
     test('adım 8000, uyku 7,5 saat (450 dk)', () {
@@ -108,7 +131,7 @@ void main() {
 
     test('makrolar kaloriyle tutarlı (yağ %27, kalan karbonhidrat)', () {
       final t = _suggest(_answers());
-      expect(t.fatG, inInclusiveRange(58, 59));
+      expect(t.fatG, 57);
       final kcal = t.proteinG * 4 + t.carbsG * 4 + t.fatG * 9;
       expect((kcal - t.calories).abs(), lessThanOrEqualTo(8));
     });
@@ -122,6 +145,7 @@ void main() {
       ]) {
         for (final sex in Sex.values) {
           for (final goal in OnboardingGoal.values) {
+           for (final activity in ActivityLevel.values) {
             final t = _suggest(
               _answers(
                 weight: weight,
@@ -129,6 +153,7 @@ void main() {
                 birthYear: year,
                 sex: sex,
                 goal: goal,
+                activity: activity,
               ),
             );
             final reason = '$weight kg, $height cm, $year, $sex, $goal';
@@ -138,6 +163,7 @@ void main() {
             expect(t.fatG, inInclusiveRange(TargetLimits.fatMin, TargetLimits.fatMax), reason: reason);
             expect(t.steps, inInclusiveRange(TargetLimits.stepsMin, TargetLimits.stepsMax), reason: reason);
             expect(t.sleepMinutes, inInclusiveRange(TargetLimits.sleepMin, TargetLimits.sleepMax), reason: reason);
+           }
           }
         }
       }
@@ -149,6 +175,45 @@ void main() {
         _suggest(_answers()) == _suggest(_answers(goal: OnboardingGoal.gain)),
         isFalse,
       );
+    });
+  });
+
+  group('VKİ ve hedef kilo önerisi', () {
+    test('VKİ = kg / m²', () {
+      expect(bodyMassIndex(weightKg: 80, heightCm: 180), closeTo(24.69, 0.01));
+      expect(bodyMassIndex(weightKg: 45, heightCm: 150), 20);
+      expect(() => bodyMassIndex(weightKg: 0, heightCm: 180),
+          throwsArgumentError);
+      expect(() => bodyMassIndex(weightKg: 70, heightCm: 0),
+          throwsArgumentError);
+    });
+
+    test('VKİ sınıfları', () {
+      expect(bmiCategory(18.4), 'Zayıf');
+      expect(bmiCategory(18.5), 'Normal');
+      expect(bmiCategory(24.9), 'Normal');
+      expect(bmiCategory(25), 'Fazla kilolu');
+      expect(bmiCategory(30), 'Obez');
+    });
+
+    test('sağlıklı aralıktaysa mevcut kilo, değilse en yakın sınır', () {
+      expect(
+          GoalSuggestion.suggestTargetWeight(weightKg: 72, heightCm: 180), 72);
+      // 24,9 x 1,8² = 80,676 -> 80,7.
+      expect(
+          GoalSuggestion.suggestTargetWeight(weightKg: 100, heightCm: 180),
+          80.7);
+      // 18,5 x 1,6² = 47,36 -> 47,4.
+      expect(
+          GoalSuggestion.suggestTargetWeight(weightKg: 40, heightCm: 160), 47.4);
+    });
+
+    test('öneri her zaman kilo sınırları içinde (30–250)', () {
+      expect(
+          GoalSuggestion.suggestTargetWeight(weightKg: 30, heightCm: 100), 30);
+      expect(
+          GoalSuggestion.suggestTargetWeight(weightKg: 250, heightCm: 250),
+          155.6);
     });
   });
 
@@ -260,9 +325,11 @@ void main() {
       expect(a.targetWeightKg, 84.46);
     });
 
-    test('cinsiyet ya da amaç seçilmemişse null', () {
-      expect(parse(sex: null), isNull);
-      expect(parse(goal: null), isNull);
+    test('cinsiyet seçilmemişse belirtilmemiş, amaç seçilmemişse koru sayılır',
+        () {
+      expect(parse(sex: null)!.sex, Sex.unspecified);
+      expect(parse(goal: null)!.goal, OnboardingGoal.maintain);
+      expect(parse()!.activity, ActivityLevel.light);
     });
 
     test('geçersiz alan null döndürür', () {
@@ -285,6 +352,22 @@ void main() {
       expect(parse(birthYear: '1991')!.targetsSignature, isNot(base));
       expect(parse(sex: Sex.male)!.targetsSignature, isNot(base));
       expect(parse(goal: OnboardingGoal.gain)!.targetsSignature, isNot(base));
+      expect(
+        OnboardingAnswers.tryParse(
+          displayName: 'Ayşe',
+          height: '180',
+          birthYear: '1990',
+          sex: Sex.female,
+          weight: '84,5',
+          targetWeight: '78',
+          goal: OnboardingGoal.lose,
+          workDescription: '',
+          nowYear: 2026,
+          activity: ActivityLevel.active,
+        )!
+            .targetsSignature,
+        isNot(base),
+      );
     });
   });
 }

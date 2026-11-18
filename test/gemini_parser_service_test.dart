@@ -189,7 +189,7 @@ void main() {
         (((schema['properties'] as Map)[key] as Map)['items'] as Map)['properties']
             as Map<String, dynamic>;
 
-    test('iş şeması: tasks, notes, routines + other_domain; sağlık dizisi yok',
+    test('iş şeması: tasks, notes, routines, reminders + other_domain; sağlık dizisi yok',
         () async {
       final schema = schemaOf(await bodyFor(QuickAddMode.work));
       final props = schema['properties'] as Map<String, dynamic>;
@@ -198,10 +198,13 @@ void main() {
         'tasks',
         'notes',
         'routines',
+        'reminders',
         'other_domain',
         'other_domain_summary',
       });
       expect(schema['required'], ['tasks', 'notes', 'routines', 'other_domain']);
+      final reminder = (props['reminders'] as Map)['items'] as Map;
+      expect(reminder['required'], ['title', 'time_of_day', 'repeat']);
       for (final key in ['tasks', 'notes', 'routines']) {
         expect((props[key] as Map)['type'], 'ARRAY', reason: key);
       }

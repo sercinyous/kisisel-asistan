@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,13 +8,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/services/error_reporter.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode.dart';
 import 'core/utils/date_utils.dart';
 import 'features/health/presentation/health_source_providers.dart';
 
-Future<void> main() async {
+void main() {
+  // Yakalanmamış hatalar (Flutter, platform, zone) oturum açıkken
+  // public.app_errors'a yazılır; testte ve hata ayıklamada kapalı.
+  ErrorReporter? reporter;
+  runZonedGuarded(
+    () => _run(onReporter: (r) => reporter = r),
+    (error, stack) => reporter?.report(error, stack),
+  );
+}
+
+Future<void> _run({required void Function(ErrorReporter) onReporter}) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -31,6 +44,9 @@ Future<void> main() async {
     url: Env.supabaseUrl,
     anonKey: Env.supabaseAnonKey,
   );
+  if (errorReportingEnabled) {
+    onReporter(supabaseErrorReporter(Supabase.instance.client)..install());
+  }
 
   final notifications = NotificationService();
   await notifications.init();

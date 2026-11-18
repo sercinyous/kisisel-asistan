@@ -15,8 +15,12 @@ import '../../friends/presentation/friends_screen.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../onboarding/presentation/onboarding_screen.dart';
+import '../../reminders/presentation/reminders_screen.dart';
 import '../domain/user_settings.dart';
+import 'delete_account_screen.dart';
+import 'feedback_sheet.dart';
 import 'health_source_settings.dart';
+import 'privacy_screen.dart';
 import 'settings_providers.dart';
 import 'task_categories_settings.dart';
 
@@ -133,6 +137,9 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
 
   /// 'female' | 'male' | 'unspecified' | null (cevaplanmadı).
   String? _sex;
+
+  /// Hareket düzeyi; `null` = cevaplanmadı.
+  ActivityLevel? _activity;
   late bool _notificationsEnabled;
   late bool _routineNotifications;
   late bool _quietHoursEnabled;
@@ -204,6 +211,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
     _height.text = s.heightCm?.toString() ?? '';
     _birthYear.text = s.birthYear?.toString() ?? '';
     _sex = s.sex;
+    _activity = s.activityLevel;
     _leadDays.text = '${s.monthlyLeadDays}';
     _eventMinutes.text = '${s.eventRemindMinutes}';
     _displayName.text = s.displayName ?? '';
@@ -223,6 +231,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
       if (c.text.trim() != _savedTexts[i]) return true;
     }
     return _sex != _saved.sex ||
+        _activity != _saved.activityLevel ||
         _notificationsEnabled != _saved.notificationsEnabled ||
         _routineNotifications != _saved.routineNotifications ||
         _quietHoursEnabled != _saved.quietHoursEnabled ||
@@ -283,6 +292,7 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
         heightCm: int.tryParse(_height.text.trim()),
         birthYear: int.tryParse(_birthYear.text.trim()),
         sex: _sex,
+        activityLevel: _activity,
         // Boş metin null yazılır; ilk kurulum anı korunur (geri alınmaz).
         displayName: _blankToNull(_displayName.text),
         workDescription: _blankToNull(_workDescription.text),
@@ -744,6 +754,27 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
               : 'Yalnızca enerji dengesi tahmininde kullanılır.',
         ),
         const SizedBox(height: 12),
+        Text(
+          'Hareket düzeyi',
+          style: theme.textTheme.labelMedium
+              ?.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            for (final level in ActivityLevel.values)
+              ChoiceChip(
+                key: Key('settings-activity-${level.name}'),
+                label: Text(level.label),
+                showCheckmark: false,
+                selected: _activity == level,
+                onSelected: (_) => setState(() => _activity = level),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
         TextFormField(
           key: const Key('settings-work-description'),
           controller: _workDescription,
@@ -787,6 +818,41 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: _replayGuide,
         ),
+        // BEGIN faz5_reminders
+        ListTile(
+          key: const Key('settings-reminders'),
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.alarm_rounded, color: AppColors.textSecondary),
+          title: const Text('Hatırlatıcılar'),
+          subtitle: const Text('Su, ilaç, yürüyüş; "Yaptım" ve seri'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => Navigator.of(context).push<void>(
+            MaterialPageRoute(builder: (_) => const RemindersScreen()),
+          ),
+        ),
+        // END faz5_reminders
+        // BEGIN faz5_account
+        ListTile(
+          key: const Key('settings-privacy'),
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.privacy_tip_rounded, color: AppColors.textSecondary),
+          title: const Text('Gizlilik'),
+          subtitle: const Text('Hangi veri, kim görür, nasıl silinir'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => Navigator.of(context).push<void>(
+            MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+          ),
+        ),
+        ListTile(
+          key: const Key('settings-feedback'),
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.bug_report_rounded, color: AppColors.textSecondary),
+          title: const Text('Sorun bildir'),
+          subtitle: const Text('Hata ya da öneriyi uygulama sahibine ilet'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => FeedbackSheet.show(context),
+        ),
+        // END faz5_account
       ],
     );
   }
@@ -1064,6 +1130,22 @@ class _SettingsFormState extends ConsumerState<_SettingsForm> {
           icon: const Icon(Icons.logout_rounded, size: 18),
           label: Text(_signingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'),
         ),
+        // BEGIN faz5_account
+        const SizedBox(height: AppSpacing.sm),
+        TextButton.icon(
+          key: const Key('settings-delete-account'),
+          onPressed: _signingOut
+              ? null
+              : () => Navigator.of(context).push<void>(
+                    MaterialPageRoute(
+                      builder: (_) => const DeleteAccountScreen(),
+                    ),
+                  ),
+          style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+          icon: const Icon(Icons.delete_forever_rounded, size: 18),
+          label: const Text('Hesabımı sil'),
+        ),
+        // END faz5_account
       ],
     );
   }

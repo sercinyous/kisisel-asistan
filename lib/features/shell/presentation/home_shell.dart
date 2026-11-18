@@ -13,6 +13,7 @@ import '../../health/presentation/health_screen.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_screen.dart';
 import '../../operations/presentation/operations_screen.dart';
+import '../../reminders/presentation/reminders_providers.dart';
 import '../../reports/presentation/reports_providers.dart';
 import '../../reports/presentation/reports_screen.dart';
 import '../../routines/presentation/routines_providers.dart';
@@ -102,6 +103,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
   Widget build(BuildContext context) {
     // Bildirim izni + bekleyen bildirimlerin eşitlenmesi (oturum başına bir kez).
     ref.watch(notificationSyncProvider);
+    // Bildirimdeki "Yaptım" eylemleri (oturum sahibi denetimiyle).
+    ref.watch(reminderActionProcessorProvider);
 
     return Scaffold(
       extendBody: true,

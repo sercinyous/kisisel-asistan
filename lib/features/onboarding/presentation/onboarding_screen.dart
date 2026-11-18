@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/health_service.dart';
@@ -19,6 +20,7 @@ import '../data/onboarding_writer.dart';
 import '../domain/goal_suggestion.dart';
 import '../domain/onboarding_answers.dart';
 import '../domain/onboarding_result.dart';
+import 'onboarding_body_step.dart';
 import 'onboarding_health_step.dart';
 import 'onboarding_intro.dart';
 import 'onboarding_preferences_step.dart';
@@ -26,9 +28,9 @@ import 'onboarding_profile_step.dart';
 import 'onboarding_routines_step.dart';
 import 'onboarding_targets_step.dart';
 
-/// İlk kurulumun adımları: 5 kartlık tanıtım, sorular, hedefler, bildirimler,
-/// başlangıç rutinleri, sağlık kaynağı.
-enum OnboardingStep { intro, profile, targets, preferences, routines, health }
+/// İlk kurulumun adımları: 5 kartlık tanıtım, profil, sağlık kaynağı, boy ve
+/// kilo (kaynaktan ön doldurulur), hedefler, rutinler + bildirimler.
+enum OnboardingStep { intro, profile, health, body, targets, routines }
 
 /// İlk kurulum: kılavuz ve sorular. Giriş sonrası `onboarded_at` boşsa kapı
 /// bunu gösterir; sonuç tek `user_settings` kaydıyla yazılır, seçilen rutinler
@@ -56,7 +58,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   OnboardingStep _step = OnboardingStep.intro;
   int _introPage = 0;
 
-  // 2. adım: sorular.
+  // 2. adım: profil; 4. adım: boy ve kilo; 5. adım: hedef kilo.
   final _name = TextEditingController();
   final _height = TextEditingController();
   final _birthYear = TextEditingController();
@@ -64,9 +66,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _targetWeight = TextEditingController();
   final _work = TextEditingController();
   Sex? _sex;
-  OnboardingGoal? _goal;
+  OnboardingGoal _goal = OnboardingGoal.maintain;
+  ActivityLevel _activity = ActivityLevel.light;
+  String _timezone = 'Europe/Istanbul';
+  bool _bodyLoading = false;
+  bool _bodyFetched = false;
+  bool _bodyPrefilled = false;
 
-  // 3. adım: hedefler (hesap imzası değişmedikçe düzenlemeler korunur).
+  // 5. adım: hedefler (hesap imzası değişmedikçe düzenlemeler korunur).
   final _calories = TextEditingController();
   final _protein = TextEditingController();
   final _carbs = TextEditingController();
@@ -75,17 +82,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _sleep = TextEditingController();
   String? _targetsFor;
 
-  // 4. adım: bildirimler.
+  // 6. adım: bildirimler.
   bool _notificationsEnabled = true;
   OnboardingPermission _permission = OnboardingPermission.unknown;
   bool _quietEnabled = true;
   TimeOfDayValue _quietStart = const TimeOfDayValue(23, 0);
   TimeOfDayValue _quietEnd = const TimeOfDayValue(7, 30);
 
-  // 5. adım: başlangıç rutinleri (şablon kimlikleri). Varsayılan boş.
+  // 6. adım: başlangıç rutinleri (şablon kimlikleri). Varsayılan boş.
   final Set<String> _routineIds = {};
 
-  // 6. adım: sağlık kaynağı.
+  // 3. adım: sağlık kaynağı.
   OnboardingHealthAccess _health = OnboardingHealthAccess.idle;
 
   bool _saving = false;
@@ -111,6 +118,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.initState();
     for (final c in _tracked) {
       c.addListener(_refresh);
+    }
+    unawaited(_loadDeviceTimezone());
+  }
+
+  Future<void> _loadDeviceTimezone() async {
+    try {
+      final name = await FlutterTimezone.getLocalTimezone();
+      if (!mounted || name.trim().isEmpty) return;
+      setState(() => _timezone = name.trim());
+    } catch (_) {
+      // Eklenti yoksa (test, web) varsayılan dilim kalır.
     }
   }
 
@@ -141,6 +159,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         goal: _goal,
         workDescription: _work.text,
         nowYear: _now().year,
+        activity: _activity,
       );
 
   OnboardingTargets? get _targets {
@@ -177,8 +196,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool get _canNext {
     if (_saving) return false;
     return switch (_step) {
-      OnboardingStep.profile => _answers != null,
-      OnboardingStep.targets => _targets != null,
+      OnboardingStep.profile =>
+        OnboardingValidators.displayName(_name.text) == null &&
+            OnboardingValidators.birthYear(_birthYear.text,
+                    nowYear: _now().year) ==
+                null &&
+            OnboardingValidators.workDescription(_work.text) == null,
+      OnboardingStep.body => !_bodyLoading &&
+          OnboardingValidators.height(_height.text) == null &&
+          OnboardingValidators.weight(_weight.text) == null,
+      OnboardingStep.targets => _answers != null && _targets != null,
       _ => true,
     };
   }
@@ -186,7 +213,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String get _nextLabel => switch (_step) {
         OnboardingStep.intro when _introPage == onboardingIntroCards.length - 1 =>
           widget.replay ? 'Bitti' : 'Başlayalım',
-        OnboardingStep.health => 'Başla',
+        OnboardingStep.routines => 'Başla',
         _ => 'İleri',
       };
 
@@ -208,11 +235,68 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _sleep.text = '${t.sleepMinutes}';
   }
 
+  /// Boy, kilo ve profil geçerliyse hedef kilo dahil tüm hedefleri yeniden
+  /// önerir.
   void _resetTargets() {
+    final height = OnboardingValidators.parseInt(_height.text);
+    final weight = OnboardingValidators.parseDecimal(_weight.text);
+    if (height == null ||
+        weight == null ||
+        OnboardingValidators.height(_height.text) != null ||
+        OnboardingValidators.weight(_weight.text) != null) {
+      return;
+    }
+    final target =
+        GoalSuggestion.suggestTargetWeight(weightKg: weight, heightCm: height);
+    _targetWeight.text = _formatKg(target);
     final answers = _answers;
     if (answers == null) return;
     _fillTargets(GoalSuggestion.compute(answers, nowYear: _now().year));
     _targetsFor = answers.targetsSignature;
+  }
+
+  static String _formatKg(double kg) => kg == kg.roundToDouble()
+      ? '${kg.round()}'
+      : kg.toStringAsFixed(1).replaceAll('.', ',');
+
+  /// Sağlık kaynağı bağlandıysa boş boy ve kilo alanlarını en son ölçümlerle
+  /// doldurur (bir kez). Okunamazsa alanlar boş kalır.
+  Future<void> _prefillBody() async {
+    if (_bodyFetched) return;
+    _bodyFetched = true;
+    // Yalnızca bu kurulumda Apple Sağlık izni verildiyse okunur.
+    if (_health != OnboardingHealthAccess.granted) return;
+    final service = ref.read(healthServiceProvider);
+    if (!service.isSupported) return;
+    setState(() => _bodyLoading = true);
+    BodyMeasurements body;
+    try {
+      body = await service.readLatestBody(now: _now());
+    } catch (_) {
+      body = const BodyMeasurements();
+    }
+    if (!mounted) return;
+    setState(() {
+      _bodyLoading = false;
+      if (body.heightCm != null && _height.text.trim().isEmpty) {
+        _height.text = '${body.heightCm}';
+        _bodyPrefilled = true;
+      }
+      if (body.weightKg != null && _weight.text.trim().isEmpty) {
+        _weight.text = _formatKg(body.weightKg!);
+        _bodyPrefilled = true;
+      }
+    });
+  }
+
+  void _onGoal(OnboardingGoal goal) {
+    setState(() => _goal = goal);
+    _resetTargets();
+  }
+
+  void _onActivity(ActivityLevel level) {
+    setState(() => _activity = level);
+    _resetTargets();
   }
 
   void _next() {
@@ -227,17 +311,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           _goTo(OnboardingStep.profile);
         }
       case OnboardingStep.profile:
-        final answers = _answers!;
-        // Hesabı etkileyen cevap değiştiyse hedefler yeniden önerilir.
-        if (_targetsFor != answers.targetsSignature) _resetTargets();
-        _goTo(OnboardingStep.targets);
-      case OnboardingStep.targets:
-        _goTo(OnboardingStep.preferences);
-      case OnboardingStep.preferences:
-        _goTo(OnboardingStep.routines);
-      case OnboardingStep.routines:
         _goTo(OnboardingStep.health);
       case OnboardingStep.health:
+        _goTo(OnboardingStep.body);
+        unawaited(_prefillBody());
+      case OnboardingStep.body:
+        // Hesabı etkileyen cevap değiştiyse hedefler yeniden önerilir.
+        if (_targetsFor != _answers?.targetsSignature) _resetTargets();
+        _goTo(OnboardingStep.targets);
+      case OnboardingStep.targets:
+        _goTo(OnboardingStep.routines);
+      case OnboardingStep.routines:
         unawaited(_finish());
     }
   }
@@ -345,6 +429,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           if (_routineIds.contains(t.id)) t,
       ],
       now: _now(),
+      timezone: _timezone,
     );
 
     setState(() {
@@ -407,20 +492,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       case OnboardingStep.profile:
         return OnboardingProfileStep(
           name: _name,
-          height: _height,
           birthYear: _birthYear,
-          weight: _weight,
-          targetWeight: _targetWeight,
           work: _work,
           sex: _sex,
           onSex: (value) => setState(() => _sex = value),
-          goal: _goal,
-          onGoal: (value) => setState(() => _goal = value),
+          timezone: _timezone,
+          onTimezone: (value) => setState(() => _timezone = value),
           nowYear: _now().year,
         );
+      case OnboardingStep.health:
+        return OnboardingHealthStep(
+          access: _health,
+          onRequest: _requestHealthAccess,
+          onSkip: _next,
+        );
+      case OnboardingStep.body:
+        return OnboardingBodyStep(
+          height: _height,
+          weight: _weight,
+          loading: _bodyLoading,
+          prefilled: _bodyPrefilled,
+        );
       case OnboardingStep.targets:
+        final height = OnboardingValidators.parseInt(_height.text) ?? 170;
+        final weight = OnboardingValidators.parseDecimal(_weight.text) ?? 70;
         return OnboardingTargetsStep(
-          goal: _goal ?? OnboardingGoal.maintain,
+          goal: _goal,
+          onGoal: _onGoal,
+          activity: _activity,
+          onActivity: _onActivity,
+          bmi: bodyMassIndex(weightKg: weight, heightCm: height),
+          targetWeight: _targetWeight,
           calories: _calories,
           protein: _protein,
           carbs: _carbs,
@@ -429,35 +531,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           sleep: _sleep,
           onReset: _resetTargets,
         );
-      case OnboardingStep.preferences:
-        return OnboardingPreferencesStep(
-          notificationsEnabled: _notificationsEnabled,
-          onNotifications: (value) => setState(() => _notificationsEnabled = value),
-          permission: _permission,
-          onRequestPermission: _requestNotificationPermission,
-          quietEnabled: _quietEnabled,
-          onQuiet: (value) => setState(() => _quietEnabled = value),
-          quietStart: _quietStart,
-          quietEnd: _quietEnd,
-          onPickStart: () => _pickQuietTime(start: true),
-          onPickEnd: () => _pickQuietTime(start: false),
-        );
       case OnboardingStep.routines:
-        return OnboardingRoutinesStep(
-          selected: _routineIds,
-          onToggle: (id, value) => setState(
-            () => value ? _routineIds.add(id) : _routineIds.remove(id),
-          ),
-          onSelectAll: () => setState(
-            () => _routineIds.addAll(RoutineTemplates.starters.map((t) => t.id)),
-          ),
-          onClear: () => setState(_routineIds.clear),
-        );
-      case OnboardingStep.health:
-        return OnboardingHealthStep(
-          access: _health,
-          onRequest: _requestHealthAccess,
-          onSkip: _next,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            OnboardingRoutinesStep(
+              selected: _routineIds,
+              onToggle: (id, value) => setState(
+                () => value ? _routineIds.add(id) : _routineIds.remove(id),
+              ),
+              onSelectAll: () => setState(
+                () => _routineIds
+                    .addAll(RoutineTemplates.starters.map((t) => t.id)),
+              ),
+              onClear: () => setState(_routineIds.clear),
+            ),
+            const SizedBox(height: 24),
+            OnboardingPreferencesStep(
+              notificationsEnabled: _notificationsEnabled,
+              onNotifications: (value) =>
+                  setState(() => _notificationsEnabled = value),
+              permission: _permission,
+              onRequestPermission: _requestNotificationPermission,
+              quietEnabled: _quietEnabled,
+              onQuiet: (value) => setState(() => _quietEnabled = value),
+              quietStart: _quietStart,
+              quietEnd: _quietEnd,
+              onPickStart: () => _pickQuietTime(start: true),
+              onPickEnd: () => _pickQuietTime(start: false),
+            ),
+          ],
         );
     }
   }

@@ -34,6 +34,7 @@ class QuickAddResult {
     required this.weightCount,
     required this.noteCount,
     this.routineCount = 0,
+    this.reminderCount = 0,
   });
 
   final List<SavedTask> tasks;
@@ -42,6 +43,7 @@ class QuickAddResult {
   final int weightCount;
   final int noteCount;
   final int routineCount;
+  final int reminderCount;
 
   int get totalCount =>
       tasks.length +
@@ -49,7 +51,8 @@ class QuickAddResult {
       workoutCount +
       weightCount +
       noteCount +
-      routineCount;
+      routineCount +
+      reminderCount;
 }
 
 class QuickAddRepository {
@@ -59,11 +62,22 @@ class QuickAddRepository {
 
   /// Tüm kalemleri `quick_add_entries` RPC'si ile tek transaction'da yazar:
   /// tablolardan biri hata verirse hiçbir kayıt oluşmaz.
+  ///
+  /// Hatırlatıcılar RPC'ye girmez; RPC başarılı olduktan sonra tek bir
+  /// insert ile `reminders` tablosuna yazılır (yalnızca hatırlatıcı varsa
+  /// RPC hiç çağrılmaz).
   Future<QuickAddResult> saveAll(ParsedEntry entry) async {
-    final Object? response = await _client.rpc<Object?>(
-      'quick_add_entries',
-      params: {'payload': entry.toJson()},
-    );
+    final Object? response = entry.rpcCount == 0
+        ? null
+        : await _client.rpc<Object?>(
+            'quick_add_entries',
+            params: {'payload': entry.toJson()},
+          );
+    if (entry.reminders.isNotEmpty) {
+      await _client.from('reminders').insert([
+        for (final r in entry.reminders) r.toDraft().toRow(),
+      ]);
+    }
     final data = response is Map
         ? Map<String, dynamic>.from(response)
         : const <String, dynamic>{};
@@ -95,6 +109,7 @@ class QuickAddRepository {
       weightCount: count('weight_count'),
       noteCount: count('note_count'),
       routineCount: count('routine_count'),
+      reminderCount: entry.reminders.length,
     );
   }
 }

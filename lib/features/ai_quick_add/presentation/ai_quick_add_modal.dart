@@ -598,6 +598,15 @@ class _PreviewList extends StatelessWidget {
           subtitle: r.scheduleLabel,
           onRemove: enabled ? () => onRemove(ParsedKind.routine, i) : null,
         ),
+      for (final (i, r) in entry.reminders.indexed)
+        _PreviewTile(
+          icon: Icons.alarm_rounded,
+          color: AppColors.accent,
+          tag: 'Hatırlatıcı',
+          title: r.title,
+          subtitle: r.scheduleLabel,
+          onRemove: enabled ? () => onRemove(ParsedKind.reminder, i) : null,
+        ),
       for (final (i, w) in entry.workouts.indexed)
         _PreviewTile(
           icon: Icons.fitness_center_rounded,

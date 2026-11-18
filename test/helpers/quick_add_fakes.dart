@@ -50,6 +50,7 @@ class RecordingQuickAddRepository implements QuickAddRepository {
       weightCount: entry.weights.length,
       noteCount: entry.notes.length,
       routineCount: entry.routines.length,
+      reminderCount: entry.reminders.length,
     );
   }
 }

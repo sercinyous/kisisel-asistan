@@ -6,6 +6,7 @@
 library;
 
 import '../../../core/config/app_targets.dart';
+import '../../reminders/domain/reminder.dart';
 import '../../routines/domain/routine.dart';
 import '../../settings/domain/user_settings.dart';
 import 'quick_add_mode.dart';
@@ -481,7 +482,92 @@ class ParsedRoutine {
       };
 }
 
-enum ParsedKind { task, nutrition, workout, weight, note, routine }
+/// Kişisel hatırlatıcı ("her gün 22:00'de su içmeyi hatırlat").
+/// `quick_add_entries` RPC'sine gitmez; `reminders` tablosuna ayrıca yazılır.
+class ParsedReminder {
+  const ParsedReminder({
+    required this.title,
+    required this.time,
+    required this.repeat,
+    this.onDate,
+    this.daysMask = 0,
+  });
+
+  static const List<String> repeats = ['once', 'daily', 'weekdays', 'custom'];
+
+  final String title;
+  final TimeOfDayValue time;
+  final ReminderRepeat repeat;
+  final DateTime? onDate;
+  final int daysMask;
+
+  ReminderDraft toDraft() => ReminderDraft(
+        title: title,
+        time: time,
+        repeat: repeat,
+        onDate: onDate,
+        daysMask: daysMask,
+      );
+
+  /// Önizleme özeti ("Her gün · 22:00").
+  String get scheduleLabel => Reminder(
+        id: '',
+        userId: '',
+        title: title,
+        time: time,
+        repeat: repeat,
+        onDate: onDate,
+        daysMask: daysMask,
+      ).scheduleLabel;
+
+  /// Saati olmayan hatırlatıcı kaydedilemez (`null`). Gün listesi her gün ya
+  /// da hafta içine denk gelirse o tekrar seçilir; tarihsiz "once" bugün
+  /// (saat geçtiyse yarın) olur.
+  static ParsedReminder? fromJson(Map<String, dynamic> json, {DateTime? now}) {
+    final title = _parseText(json['title']);
+    final time = _parseClock(json['time_of_day']);
+    if (title == null || time == null) return null;
+    var repeat = ReminderRepeat.fromDb(
+      _oneOf(json['repeat'], repeats, 'daily'),
+    );
+    var mask = 0;
+    DateTime? onDate;
+    if (repeat == ReminderRepeat.custom) {
+      final rawDays = json['days_of_week'];
+      mask = rawDays is List && rawDays.isNotEmpty
+          ? ReminderDays.maskOf(_parseWeekdays(rawDays))
+          : 0x7F;
+      if (mask == 0x7F) {
+        repeat = ReminderRepeat.daily;
+        mask = 0;
+      } else if (mask == 0x1F) {
+        repeat = ReminderRepeat.weekdays;
+        mask = 0;
+      }
+    } else if (repeat == ReminderRepeat.once) {
+      final date = _parseDate(json['date']);
+      if (date != null) {
+        onDate = reminderDay(date);
+      } else {
+        final at = now ?? DateTime.now();
+        final todayAt =
+            DateTime(at.year, at.month, at.day, time.hour, time.minute);
+        onDate = reminderDay(
+          todayAt.isAfter(at) ? at : at.add(const Duration(days: 1)),
+        );
+      }
+    }
+    return ParsedReminder(
+      title: _truncate(title, ReminderDraft.maxTitleLength),
+      time: time,
+      repeat: repeat,
+      onDate: onDate,
+      daysMask: mask,
+    );
+  }
+}
+
+enum ParsedKind { task, nutrition, workout, weight, note, routine, reminder }
 
 class ParsedEntry {
   const ParsedEntry({
@@ -491,6 +577,7 @@ class ParsedEntry {
     this.weights = const [],
     this.notes = const [],
     this.routines = const [],
+    this.reminders = const [],
     this.otherDomain = false,
     this.otherDomainSummary,
   });
@@ -501,6 +588,9 @@ class ParsedEntry {
   final List<ParsedWeight> weights;
   final List<ParsedNote> notes;
   final List<ParsedRoutine> routines;
+
+  /// Kişisel hatırlatıcılar; RPC yüküne ([toJson]) girmez.
+  final List<ParsedReminder> reminders;
 
   /// Metnin tamamı ya da bir kısmı diğer giriş alanına ait; o kısım için
   /// kayıt üretilmedi.
@@ -515,7 +605,11 @@ class ParsedEntry {
       workouts.length +
       weights.length +
       notes.length +
-      routines.length;
+      routines.length +
+      reminders.length;
+
+  /// `quick_add_entries` RPC'sine giden kalem sayısı (hatırlatıcılar hariç).
+  int get rpcCount => totalCount - reminders.length;
 
   bool get isEmpty => totalCount == 0;
 
@@ -534,6 +628,7 @@ class ParsedEntry {
         weights: _parseList(json['weights'], ParsedWeight.fromJson),
         notes: _parseList(json['notes'], ParsedNote.fromJson),
         routines: _parseList(json['routines'], ParsedRoutine.fromJson),
+        reminders: _parseList(json['reminders'], ParsedReminder.fromJson),
         otherDomain: _parseFlag(json['other_domain']),
         otherDomainSummary: _parseSummary(json['other_domain_summary']),
       );
@@ -553,6 +648,7 @@ class ParsedEntry {
             tasks: tasks,
             notes: notes,
             routines: routines,
+            reminders: reminders,
             otherDomain: otherDomain,
             otherDomainSummary: otherDomainSummary,
           ),
@@ -590,6 +686,7 @@ class ParsedEntry {
       weights: kind == ParsedKind.weight ? drop(weights) : weights,
       notes: kind == ParsedKind.note ? drop(notes) : notes,
       routines: kind == ParsedKind.routine ? drop(routines) : routines,
+      reminders: kind == ParsedKind.reminder ? drop(reminders) : reminders,
       otherDomain: otherDomain,
       otherDomainSummary: otherDomainSummary,
     );
