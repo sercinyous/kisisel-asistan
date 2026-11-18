@@ -6,7 +6,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import '../../settings/presentation/settings_providers.dart';
-import '../../settings/presentation/settings_screen.dart';
+import '../../settings/presentation/profile_goals_page.dart';
 import 'energy_detail_screen.dart';
 import 'energy_providers.dart';
 import 'health_format.dart';
@@ -152,7 +152,7 @@ class _ProfileMissing extends StatelessWidget {
         FilledButton.tonal(
           key: const Key('energy-open-settings'),
           onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+            MaterialPageRoute<void>(builder: (_) => const ProfileGoalsPage()),
           ),
           style: FilledButton.styleFrom(
             minimumSize: const Size(healthMinTouch, healthMinTouch),

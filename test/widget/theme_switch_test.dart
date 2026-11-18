@@ -503,13 +503,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(ThemeModeStore.key), 'light');
 
-      // Cihaz tercihidir: kaydedilmemiş form değişikliği sayılmaz.
-      expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Kaydet'))
-            .onPressed,
-        isNull,
-      );
+      // Cihaz tercihidir: anında uygulanır, Kaydet düğmesi yoktur.
+      expect(find.text('Kaydet'), findsNothing);
 
       await tester.tap(find.text('Sistem'));
       await tester.pumpAndSettle();

@@ -56,20 +56,19 @@ void main() {
 
     setUp(() => harness = KokpitHarness()..mockPlatformChannel());
 
-    testWidgets('Google seçiliyken veriler ve "Google Health · saat" etiketi',
+    testWidgets('Google seçiliyken veriler Google Health\'ten okunur',
         (tester) async {
       await harness.pump(tester, textScale: 1.3, overrides: googleOverrides());
 
       expect(find.text('7.321'), findsOneWidget);
-      expect(find.textContaining('Google Health · '), findsOneWidget);
       expect(find.textContaining('HealthKit'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Apple seçiliyken etiket "HealthKit · saat" kalır',
-        (tester) async {
+    testWidgets('Apple seçiliyken HealthKit verisi gösterilir', (tester) async {
       await harness.pump(tester);
-      expect(find.text('HealthKit · 10:30'), findsOneWidget);
+      expect(find.text('Adım'), findsOneWidget);
+      expect(find.text('—'), findsNothing);
     });
 
     testWidgets('oturum dolmuşsa yeniden bağlan mesajı ve düğmesi',

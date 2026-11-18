@@ -22,7 +22,7 @@ import 'package:kisisel_asistan/features/routines/data/routines_repository.dart'
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 import 'package:kisisel_asistan/features/settings/presentation/settings_providers.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/profile_goals_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../helpers/fakes.dart';
@@ -353,7 +353,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('energy-open-settings')));
       await tester.pumpAndSettle();
-      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.byType(ProfileGoalsPage), findsOneWidget);
     });
 
     testWidgets('profil doldurulunca kart hesaplamaya başlar', (tester) async {

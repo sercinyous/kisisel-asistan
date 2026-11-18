@@ -608,9 +608,10 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('aylık iş satırı (Gün görünümü): uzun basış menüsü ve silme',
+    testWidgets('aylık iş satırı (Ay görünümü): uzun basış menüsü ve silme',
         (tester) async {
       final container = await harness.pump(tester);
+      await harness.showView(tester, 'Ay');
       container.listen(notificationSyncProvider, (_, __) {});
       await tester.pumpAndSettle();
       final resyncBefore = harness.notifications.resyncCount;
@@ -636,7 +637,7 @@ void main() {
           category: 'Ekip',
           priority: 'medium',
           status: 'todo',
-          dueAt: DateTime.now().add(const Duration(hours: 1)),
+          dueAt: DateTime(today().year, today().month, today().day, 23, 59),
         ),
       ];
       final container = await harness.pump(tester);
@@ -673,7 +674,7 @@ void main() {
           category: 'Ekip',
           priority: 'medium',
           status: 'todo',
-          dueAt: DateTime.now().add(const Duration(hours: 1)),
+          dueAt: DateTime(today().year, today().month, today().day, 23, 59),
         ),
       ];
       await harness.pump(tester);
@@ -699,7 +700,7 @@ void main() {
           category: 'Ekip',
           priority: 'medium',
           status: 'todo',
-          dueAt: DateTime.now().add(const Duration(hours: 1)),
+          dueAt: DateTime(today().year, today().month, today().day, 23, 59),
         ),
       ];
       await harness.pump(tester);
