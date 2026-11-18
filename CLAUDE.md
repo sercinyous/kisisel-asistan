@@ -43,3 +43,10 @@
   `supabase-postgres-best-practices` kullanılır. Skill önerisi bu dosyayla çelişirse bu dosya kazanır.
 - Supabase MCP (`.mcp.json`) salt-okunur ve tek projeye kilitlidir (`SUPABASE_PROJECT_REF` ortam değişkeni).
   Yalnızca şema, politika, advisor ve log sorgulanır; kullanıcı tablolarında SELECT çalıştırılmaz.
+
+## 7. Yol haritası
+- Ürün yol haritası `docs/yol_haritasi.html` dosyasındadır ve https://claude.ai/artifact/Y8rJueGYt7XWhPeCWr6N8p adresinde yayındadır.
+- Bir özellik eklendiğinde, bir eksik kapandığında ya da akış değiştiğinde aynı değişiklikte bu dosya da güncellenir:
+  "Sonra" şemasındaki kutunun durumu (`done` / `new` / `part` / `todo`), özet sayılar, Fazlar ve Kalan işler listesi.
+  "Önce" şeması ilk planı gösterir ve değişmez.
+- Güncellemeden sonra dosya aynı Artifact adresine yeniden yayınlanır (`url` ile; yeni adres açılmaz).
