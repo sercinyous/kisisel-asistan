@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Dörtlü",
+  "idea": "Bir merkez etrafında dönen dört çeyrek daireden oluşan fırıldak; görevler, sağlık, raporlar ve arkadaşların tek bir ritimde birleşmesini anlatır.",
+  "bg": "#0B0B0F",
+  "fg": "#7CF2B0",
+  "svg": "<path d='M50 46 H18 A32 32 0 0 1 50 14 Z' fill='#7CF2B0' transform='rotate(0 50 50)'/><path d='M50 46 H18 A32 32 0 0 1 50 14 Z' fill='#7CF2B0' transform='rotate(90 50 50)'/><path d='M50 46 H18 A32 32 0 0 1 50 14 Z' fill='#7CF2B0' transform='rotate(180 50 50)'/><path d='M50 46 H18 A32 32 0 0 1 50 14 Z' fill='#7CF2B0' transform='rotate(270 50 50)'/>"
+ },
+ {
+  "name": "Zirve",
+  "idea": "Yükselen bir tepe ve üstünde parlayan nokta; her günün hedefe doğru atılmış bir adım olduğunu söyler.",
+  "bg": "#101418",
+  "fg": "#FFB547",
+  "svg": "<path d='M14 80 L44 34 Q47 29.5 50 34 L80 80 Z' fill='#FFB547'/><circle cx='72' cy='28' r='10' fill='#FFB547'/>"
+ },
+ {
+  "name": "Filiz",
+  "idea": "Çapraz duran bir yaprak ve tohum noktası; küçük alışkanlıkların zamanla büyüyen bir yaşama dönüştüğünü simgeler.",
+  "bg": "#F4F1EA",
+  "fg": "#1F3D2B",
+  "svg": "<path d='M24 76 C24 44 44 24 76 24 C76 56 56 76 24 76 Z' fill='#1F3D2B'/><path d='M30 70 L60 40' stroke='#F4F1EA' stroke-width='4.5' stroke-linecap='round'/>"
+ }
+]

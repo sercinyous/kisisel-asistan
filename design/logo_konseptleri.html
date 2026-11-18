@@ -1,0 +1,31 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logo Konseptleri</title>
+<style>
+:root{--bg:#f4f4f2;--fg:#111;--mut:#666;--card:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--fg:#f2f2f2;--mut:#999;--card:#111}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,system-ui,sans-serif;padding:24px 16px}
+h1{font-size:20px;margin:0 0 4px}p{color:var(--mut);margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.c{background:var(--card);border-radius:20px;padding:20px}
+.row{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+.ic{border-radius:22.5%;overflow:hidden;flex:none}
+.d{background:#000}.l{background:#fff;box-shadow:0 0 0 1px #0002}
+h2{font-size:16px;margin:16px 0 2px}small{color:var(--mut)}
+</style></head><body>
+<h1>Logo konseptleri: yalnızca sembol</h1>
+<p>Mint (#5EEAD4) OLED siyah üstünde ve açık temada. Büyük boy App Store, küçük boy ana ekran ikonu boyutu.</p>
+<div class="grid" id="g"></div>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="s1" viewBox="0 0 100 100"><path d="M50 18a32 32 0 1 0 32 32" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><path d="M38 52l9-12 8 22 9-14h18" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="s2" viewBox="0 0 100 100"><g fill="currentColor"><rect x="22" y="40" width="12" height="20" rx="6"/><rect x="44" y="24" width="12" height="52" rx="6"/><rect x="66" y="34" width="12" height="32" rx="6"/></g></symbol>
+<symbol id="s3" viewBox="0 0 100 100"><path d="M20 66a30 30 0 0 1 60 0" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="36" r="9" fill="currentColor"/><path d="M28 78h44" stroke="currentColor" stroke-width="9" stroke-linecap="round"/></symbol>
+<symbol id="s4" viewBox="0 0 100 100"><path d="M24 50c0-14 10-24 22-24s18 8 18 16-6 14-14 14H36" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M50 56l18 20" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><circle cx="74" cy="30" r="6" fill="currentColor"/></symbol>
+</defs></svg>
+<script>
+const C=[["s1","1 · Nabız halkası","Açık halka (günün döngüsü) + tek nabız çizgisi. Sağlık ve ritim."],
+["s2","2 · Üç çubuk","Farklı boylarda üç kapsül: görev, sağlık, rapor. Ekolayzer gibi ritim hissi."],
+["s3","3 · Gün doğumu","Yay + nokta + ufuk çizgisi. Her güne düzenli başlamak."],
+["s4","4 · Akış düğümü","Kıvrılan tek çizgi, kuyruk ve nokta. Soyut bir 'R', asistanın akışı."]];
+const ic=(id,s,cls,col)=>`<div class="ic ${cls}" style="width:${s}px;height:${s}px;color:${col}"><svg width="${s}" height="${s}" viewBox="-18 -18 136 136"><use href="#${id}"/></svg></div>`;
+document.getElementById('g').innerHTML=C.map(([id,t,d])=>`<div class="c"><div class="row">${ic(id,120,'d','#5EEAD4')}${ic(id,60,'d','#5EEAD4')}${ic(id,120,'l','#0E736B')}${ic(id,40,'l','#0E736B')}</div><h2>${t}</h2><small>${d}</small></div>`).join('');
+</script></body></html>

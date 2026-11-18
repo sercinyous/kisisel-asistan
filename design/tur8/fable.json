@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Kayan Ufuk",
+  "idea": "Ufuk çizgisinde ikiye ayrılıp birbirine doğru kayan iki yarım daire: batan güneş ile doğan ay tek bir akışta buluşur.",
+  "story": "Üstteki sıcak yarım daire günün işlerini, alttaki serin yarım daire dinlenmeyi ve sağlığı anlatır; ikisi aynı ufukta yan yana kayarak tek bir dalga gibi akar. Ritim, günün iki yarısını birbirine çarptırmadan sırayla taşır: gündüz biter, akşam başlar, hiçbiri diğerini ezmez. İkona bakan kişi kendi gününün dengesini görür.",
+  "bg": "linear-gradient(160deg,#FBEFC4 0%,#F9CDBF 48%,#DCCBF3 100%)",
+  "svg": "<defs><linearGradient id=\"fbA1\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#F6A77C\"/><stop offset=\"1\" stop-color=\"#E8707F\"/></linearGradient><linearGradient id=\"fbA2\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#A88BDD\"/><stop offset=\"1\" stop-color=\"#6D6BC2\"/></linearGradient></defs><path d=\"M17 47.5 A27 27 0 0 1 71 47.5 Z\" fill=\"url(#fbA1)\"/><path d=\"M29 52.5 A27 27 0 0 0 83 52.5 Z\" fill=\"url(#fbA2)\"/>"
+ },
+ {
+  "name": "Gün Halkası",
+  "idea": "Bir yanı kalın bir yanı incelen tek bir halka ve üzerinde yol alan küçük bir ışık: yirmi dört saatin göğü tek çizgide.",
+  "story": "Halka bütün bir gündür; kalın yeri dolu dolu geçen saatleri, incelen yeri sakinleşen akşamı gösterir. Üzerindeki küçük ışık sensin: gökte güneşin yaptığı gibi her gün aynı yolu kendi temponda dolanırsın. Ritim bu turu görünür kılar, nerede hızlandığını ve nerede soluklandığını sana söyler.",
+  "bg": "linear-gradient(200deg,#F7C6C7 0%,#D9C9F2 50%,#C9DFF2 100%)",
+  "svg": "<defs><linearGradient id=\"fbB1\" x1=\"0.9\" y1=\"0\" x2=\"0.1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#C56FA6\"/><stop offset=\"0.55\" stop-color=\"#7C6CC6\"/><stop offset=\"1\" stop-color=\"#4F74BE\"/></linearGradient><radialGradient id=\"fbB2\" cx=\"0.4\" cy=\"0.35\" r=\"0.8\"><stop offset=\"0\" stop-color=\"#FFF6D2\"/><stop offset=\"1\" stop-color=\"#FBD98A\"/></radialGradient></defs><path fill-rule=\"evenodd\" fill=\"url(#fbB1)\" d=\"M48 20 a32 32 0 1 0 0.01 0 Z M52.5 25.5 a22 22 0 1 1 -0.01 0 Z\"/><circle cx=\"70\" cy=\"29\" r=\"9.5\" fill=\"url(#fbB2)\" stroke=\"#E7C8E6\" stroke-width=\"3\"/>"
+ },
+ {
+  "name": "Bulut Geçidi",
+  "idea": "Akşam güneşinin önünden zıt yönlere süzülen iki bulut şeridi: ışık kapanmaz, sadece sırayla görünür.",
+  "story": "Yuvarlak, günün kendisidir; önünden geçen iki bulut ise işler ve bedenin ihtiyaçlarıdır, biri sola biri sağa kendi hızında süzülür. Hiçbiri güneşi tamamen örtmez, aralarından ışık hep görünür. Ritim, gelip geçen her şeyi sıraya koyar ki günün ışığı sana kalsın.",
+  "bg": "linear-gradient(150deg,#CDEFE3 0%,#FBEFC4 55%,#FAD4B8 100%)",
+  "svg": "<defs><linearGradient id=\"fbC1\" x1=\"0.2\" y1=\"0\" x2=\"0.8\" y2=\"1\"><stop offset=\"0\" stop-color=\"#F8B37A\"/><stop offset=\"1\" stop-color=\"#EC7486\"/></linearGradient><linearGradient id=\"fbC2\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#4FB3A3\"/><stop offset=\"1\" stop-color=\"#5E9FCB\"/></linearGradient><linearGradient id=\"fbC3\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#9A82D6\"/><stop offset=\"1\" stop-color=\"#7A6CC4\"/></linearGradient></defs><circle cx=\"50\" cy=\"50\" r=\"27\" fill=\"url(#fbC1)\"/><rect x=\"13\" y=\"33\" width=\"48\" height=\"13\" rx=\"6.5\" fill=\"url(#fbC2)\" stroke=\"#F3EFCF\" stroke-width=\"3\"/><rect x=\"39\" y=\"55\" width=\"48\" height=\"13\" rx=\"6.5\" fill=\"url(#fbC3)\" stroke=\"#FAE3C0\" stroke-width=\"3\"/>"
+ }
+]

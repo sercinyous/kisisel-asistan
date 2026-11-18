@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Basamak",
+    "idea": "Üç basamaklı merdivenin zirvesine konan nokta; adımları, tamamlanan işleri ve arkadaş sıralamasında yükselişi tek siluette toplar.",
+    "bg": "#0A0A0A",
+    "fg": "#C8F560",
+    "svg": "<path d=\"M18 82V68H39V55H61V42H82V82Z\" fill=\"#C8F560\" stroke=\"#C8F560\" stroke-width=\"4\" stroke-linejoin=\"round\"/><circle cx=\"71.5\" cy=\"25\" r=\"9\" fill=\"#C8F560\"/>"
+  },
+  {
+    "name": "Yarım Adım",
+    "idea": "Dikey kesilip bir yarısı yukarı kaydırılmış daire; dünden bugüne atılan adımı, gece ile gündüzü ve asistanla kullanıcının iki yarısını anlatır.",
+    "bg": "#101114",
+    "fg": "#FF6A3D",
+    "svg": "<path d=\"M48 26A30 30 0 0 0 48 86Z\" fill=\"#FFFFFF\"/><path d=\"M52 14A30 30 0 0 1 52 74Z\" fill=\"#FF6A3D\"/>"
+  },
+  {
+    "name": "Çark",
+    "idea": "Aynı yöne dönen dört çeyrek daire; görev, sağlık, rapor ve arkadaşlar alanlarının tek bir günlük döngüde birlikte döndüğünü gösterir.",
+    "bg": "#000000",
+    "fg": "#5B8CFF",
+    "svg": "<path d=\"M18 48V18A30 30 0 0 1 48 48Z\" fill=\"#FFFFFF\"/><path d=\"M52 18H82A30 30 0 0 1 52 48Z\" fill=\"#5B8CFF\"/><path d=\"M82 52V82A30 30 0 0 1 52 52Z\" fill=\"#5B8CFF\"/><path d=\"M48 82H18A30 30 0 0 1 48 52Z\" fill=\"#5B8CFF\"/>"
+  }
+]

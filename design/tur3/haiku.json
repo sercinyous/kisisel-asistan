@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Tamam",
+    "idea": "Görev ve operasyonların tamamlanmasını, yuvarlatılmış kare içinde net bir onay işaretiyle anlatır.",
+    "bg": "#0B0B0F",
+    "fg": "#5EEAD4",
+    "svg": "<rect x='16' y='16' width='68' height='68' rx='22' fill='#5EEAD4'/><path d='M34 52 L45 63 L66 40' fill='none' stroke='#0B0B0F' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'/>"
+  },
+  {
+    "name": "Yaprak",
+    "idea": "Sağlık takibini (adım, uyku, öğünler) doğal bir yaprak formu ve ortadaki damarla anlatır.",
+    "bg": "#F4F1EA",
+    "fg": "#2F7D4F",
+    "svg": "<path d='M24 76 C22 42 40 24 78 22 C80 60 60 78 24 76 Z' fill='#2F7D4F'/><path d='M32 68 L58 42' stroke='#F4F1EA' stroke-width='5' stroke-linecap='round'/>"
+  },
+  {
+    "name": "Basamak",
+    "idea": "Günlük ve haftalık raporların yükselişini ve arkadaş sıralamasındaki ilerlemeyi tek bir yükselen basamak silüetiyle gösterir.",
+    "bg": "#111111",
+    "fg": "#FF6B3D",
+    "svg": "<path d='M16 84 V62 H38 V42 H60 V20 H84 V84 Z' fill='#FF6B3D'/>"
+  }
+]

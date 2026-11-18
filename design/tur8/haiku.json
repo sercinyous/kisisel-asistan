@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Sekme",
+    "idea": "Suya değip sekerek ilerleyen bir taşın bıraktığı, giderek genişleyen halkalarla hayatın düzenli sıçramalarını anlatan bir sembol.",
+    "story": "Görsel, suya değip sekerek ilerleyen bir taşı ve arkasında bıraktığı küçülen halkaları gösterir. Ritim bu sayede hayatın küçük ama düzenli adımlarla ilerlediğini hatırlatır: her gün bir sekme, bir sonraki için hazırlık. Kullanıcı ikonu gördüğünde yorucu bir yük yerine hafif ve tekrar eden bir akış hissi bulur.",
+    "bg": "linear-gradient(165deg, #CDEFE3 0%, #C9DFF2 100%)",
+    "svg": "<defs><linearGradient id=\"hk1s\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#3D7FA6\"/><stop offset=\"1\" stop-color=\"#22577A\"/></linearGradient></defs>\n<ellipse cx=\"50\" cy=\"48\" rx=\"20\" ry=\"9\" transform=\"rotate(-10 50 48)\" fill=\"url(#hk1s)\"/>\n<ellipse cx=\"50\" cy=\"62\" rx=\"30\" ry=\"4.8\" fill=\"none\" stroke=\"#22577A\" stroke-width=\"3.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"50\" cy=\"75\" rx=\"18\" ry=\"3\" fill=\"none\" stroke=\"#22577A\" stroke-width=\"3\" stroke-linecap=\"round\" opacity=\"0.6\"/>"
+  },
+  {
+    "name": "Topaç",
+    "idea": "Tek noktada dengede dönen bir topaç ve etrafındaki kesikli yörünge, ritmin sabit bir merkezden doğduğunu anlatır.",
+    "story": "Görsel, dengede dönen bir topaç ile etrafında süren kesikli bir yörünge gösterir. Ritim bu sayede dış dünyanın hızı ile içteki sakinliğin birlikte var olabileceğini hatırlatır: hızlı dönsen de merkezini bulmak mümkündür. Kullanıcı ikonu gördüğünde, yoğun bir günde bile kendi dengesini koruyabileceğini düşünür.",
+    "bg": "linear-gradient(160deg, #F7C6C7 0%, #D9C9F2 100%)",
+    "svg": "<defs><linearGradient id=\"hk2b\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#A24D9C\"/><stop offset=\"1\" stop-color=\"#6B2F7E\"/></linearGradient></defs>\n<ellipse cx=\"50\" cy=\"30\" rx=\"35\" ry=\"8.5\" fill=\"none\" stroke=\"#6B2F7E\" stroke-width=\"2.6\" stroke-dasharray=\"12 7\" stroke-linecap=\"round\" opacity=\"0.6\"/>\n<path d=\"M19 36 C 17 56 36 62 45 76 Q 48 80 50 87 Q 52 80 55 76 C 64 62 83 56 81 36 Z\" fill=\"url(#hk2b)\"/>\n<ellipse cx=\"50\" cy=\"36\" rx=\"28\" ry=\"8\" fill=\"#B2497A\"/>\n<ellipse cx=\"50\" cy=\"36\" rx=\"9\" ry=\"2.6\" fill=\"#F7C6C7\" opacity=\"0.9\"/>"
+  },
+  {
+    "name": "Uçurtma",
+    "idea": "Rüzgara bırakılmış bir uçurtmanın kuyruğundaki düzenli fiyonklar, gerilim ile serbestliğin dengesini anlatır.",
+    "story": "Rüzgara bırakılmış bir uçurtma, elin tuttuğu ip ile havanın itişi arasında dengede durur ve kuyruğundaki fiyonklar her salınımda düzenli bir ritim tutar. Uygulama kullanıcıya planı sıkı tutmayı değil, rüzgarı okuyup gerilimi ayarlamayı öğretir. Bu ikonu gören kişi, işlerinin ve bedeninin ritmini nazikçe yönlendirilen bir uçuş gibi düşünür.",
+    "bg": "linear-gradient(170deg, #FBEFC4 0%, #FAD4B8 100%)",
+    "svg": "<path d=\"M50 14 L76 40 L50 62 L24 40 Z\" fill=\"#B85C3A\"/>\n<path d=\"M50 14 V62 M24 40 H76\" fill=\"none\" stroke=\"#FBEFC4\" stroke-width=\"1.6\" stroke-linecap=\"round\"/>\n<path d=\"M50 62 Q54 70 50 78 Q46 84 50 86\" fill=\"none\" stroke=\"#B85C3A\" stroke-width=\"2.2\" stroke-linecap=\"round\"/>\n<path d=\"M50 68 L42 64 L42 72 Z M50 68 L58 64 L58 72 Z\" fill=\"#B85C3A\"/>\n<path d=\"M50 78 L44 75 L44 81 Z M50 78 L56 75 L56 81 Z\" fill=\"#B85C3A\"/>"
+  }
+]

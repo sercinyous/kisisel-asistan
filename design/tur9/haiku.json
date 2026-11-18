@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Katmanlı Topaç",
+    "style": "Kağıt Kesim Katmanlı",
+    "story": "Ritim, dengede dönen bir topaç gibi günlük düzenini katman katman kurar. Her katman bir alışkanlık: görevler, sağlık ve dinlenme birbirini taşır. Biri eksilince denge bozulur, bu yüzden her katmana özen gösterilir.",
+    "bg": "#FDF3E7",
+    "svg": "<defs>\n<filter id=\"h9ps\" x=\"-25%\" y=\"-25%\" width=\"150%\" height=\"150%\"><feDropShadow dx=\"0\" dy=\"2.5\" stdDeviation=\"1.4\" flood-color=\"#3a2a4a\" flood-opacity=\"0.24\"/></filter>\n<clipPath id=\"h9pl\"><path d=\"M0 56 Q25 50 50 56 Q75 62 100 56 V100 H0 Z\"/></clipPath>\n<clipPath id=\"h9pu\"><path d=\"M0 0 H100 V56 Q75 62 50 56 Q25 50 0 56 Z\"/></clipPath>\n</defs>\n<g filter=\"url(#h9ps)\">\n  <ellipse cx=\"50\" cy=\"20\" rx=\"7\" ry=\"5\" fill=\"#C5B8F5\"/>\n  <rect x=\"46\" y=\"22\" width=\"8\" height=\"18\" rx=\"3\" fill=\"#C5B8F5\"/>\n</g>\n<g filter=\"url(#h9ps)\"><path d=\"M40 36 C26 36 14 44 14 57 C13 68 33 75 50 88 C67 75 87 68 86 57 C86 44 74 36 60 36 Z\" fill=\"#A8E6CF\" clip-path=\"url(#h9pl)\"/></g>\n<g filter=\"url(#h9ps)\"><path d=\"M40 36 C26 36 14 44 14 57 C13 68 33 75 50 88 C67 75 87 68 86 57 C86 44 74 36 60 36 Z\" fill=\"#F6B8C6\" clip-path=\"url(#h9pu)\"/></g>\n<g filter=\"url(#h9ps)\"><ellipse cx=\"50\" cy=\"37\" rx=\"14\" ry=\"3.5\" fill=\"#FFD9A0\"/></g>"
+  },
+  {
+    "name": "Neon Ritim",
+    "style": "Neon Parlaklık",
+    "story": "Koyu bir gecede parlayan çizgiyle dönen topaç, enerjinin ne kadar hızlı akabileceğini gösterir. Pembe ritim çizgisi kalp atışı gibi düzeni hatırlatır. Rutinlerin ritmi onu dik tutar ve ışığı canlı tutar.",
+    "bg": "radial-gradient(circle at 50% 40%, #0E1A24 0%, #05060A 70%)",
+    "svg": "<defs>\n<filter id=\"h9ng\" x=\"-30%\" y=\"-30%\" width=\"160%\" height=\"160%\">\n  <feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"2.8\" result=\"b\"/>\n  <feMerge><feMergeNode in=\"b\"/><feMergeNode in=\"SourceGraphic\"/></feMerge>\n</filter>\n<filter id=\"h9np\" x=\"-30%\" y=\"-60%\" width=\"160%\" height=\"220%\">\n  <feGaussianBlur in=\"SourceGraphic\" stdDeviation=\"2.2\" result=\"b\"/>\n  <feMerge><feMergeNode in=\"b\"/><feMergeNode in=\"SourceGraphic\"/></feMerge>\n</filter>\n</defs>\n<g fill=\"none\" stroke=\"#5CFFC4\" stroke-width=\"4\" stroke-linejoin=\"round\" stroke-linecap=\"round\" filter=\"url(#h9ng)\">\n  <ellipse cx=\"50\" cy=\"22\" rx=\"7\" ry=\"5\"/>\n  <path d=\"M46 27 V36 M54 27 V36\"/>\n  <path d=\"M40 36 C26 36 14 44 14 57 C13 68 33 75 50 88 C67 75 87 68 86 57 C86 44 74 36 60 36 Z\"/>\n</g>\n<g fill=\"none\" stroke=\"#FF6EC7\" stroke-width=\"3\" stroke-linejoin=\"round\" stroke-linecap=\"round\" filter=\"url(#h9np)\">\n  <path d=\"M22 57 L33 57 L39 49 L46 64 L52 52 L58 57 L78 57\"/>\n</g>"
+  },
+  {
+    "name": "Hızlı Çıkartma",
+    "style": "Oyunlu Çıkartma",
+    "story": "Renkli, neşeli ve hareketli bir topaç: yan yana dönerken işlerini ve sağlığını eğlenceli bir temponun içinde yürütürsün. Her gün küçük bir dönüş, büyük bir denge demektir.",
+    "bg": "#3D3A8C",
+    "svg": "<defs>\n<filter id=\"h9sh\" x=\"-25%\" y=\"-25%\" width=\"150%\" height=\"150%\"><feDropShadow dx=\"0\" dy=\"2.5\" stdDeviation=\"1.8\" flood-color=\"#0b0a2a\" flood-opacity=\"0.35\"/></filter>\n<clipPath id=\"h9sb\"><path d=\"M40 36 C26 36 14 44 14 57 C13 68 33 75 50 88 C67 75 87 68 86 57 C86 44 74 36 60 36 Z\"/></clipPath>\n</defs>\n<g transform=\"rotate(-9 50 50)\">\n  <g fill=\"none\" stroke=\"#FFFFFF\" stroke-width=\"3.5\" stroke-linecap=\"round\">\n    <path d=\"M17 36 Q13 46 17 56\"/>\n    <path d=\"M83 36 Q87 46 83 56\"/>\n    <path d=\"M22 24 L28 29\"/>\n    <path d=\"M78 24 L72 29\"/>\n  </g>\n  <g transform=\"translate(50 50) scale(0.9) translate(-50 -50)\">\n    <g filter=\"url(#h9sh)\" fill=\"#FFFFFF\" stroke=\"#FFFFFF\" stroke-width=\"9\" stroke-linejoin=\"round\">\n      <ellipse cx=\"50\" cy=\"22\" rx=\"7\" ry=\"5\"/>\n      <rect x=\"46\" y=\"22\" width=\"8\" height=\"18\" rx=\"3\"/>\n      <path d=\"M40 36 C26 36 14 44 14 57 C13 68 33 75 50 88 C67 75 87 68 86 57 C86 44 74 36 60 36 Z\"/>\n    </g>\n    <ellipse cx=\"50\" cy=\"22\" rx=\"7\" ry=\"5\" fill=\"#FFD166\"/>\n    <rect x=\"46\" y=\"22\" width=\"8\" height=\"18\" rx=\"3\" fill=\"#FFD166\"/>\n    <path d=\"M40 36 C26 36 14 44 14 57 C13 68 33 75 50 88 C67 75 87 68 86 57 C86 44 74 36 60 36 Z\" fill=\"#FF6B6B\"/>\n    <path d=\"M0 60 Q50 52 100 60 V70 Q50 62 0 70 Z\" fill=\"#06D6A0\" clip-path=\"url(#h9sb)\"/>\n    <ellipse cx=\"31\" cy=\"48\" rx=\"3.5\" ry=\"6\" fill=\"#FFFFFF\" opacity=\"0.9\" transform=\"rotate(-18 31 48)\"/>\n  </g>\n</g>"
+  }
+]

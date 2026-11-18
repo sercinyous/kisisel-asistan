@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Aralık",
+  "style": "Negatif alan",
+  "story": "Topaç burada çizilmedi; dört parçanın arasındaki boşlukta kendiliğinden beliriyor. Günün de böyle: görevlerin ve alışkanlıkların yerli yerine oturduğunda denge arada ortaya çıkar. Ritim o boşluğu korur, topaç dönmeye devam eder.",
+  "bg": "linear-gradient(160deg,#1B2340 0%,#0E1326 100%)",
+  "svg": "<defs><mask id=\"f9m1\"><rect width=\"100\" height=\"100\" fill=\"#fff\"/><path d=\"M46.4 8 H53.6 V29.6 C72 30.4 88 38 88 48.5 C88 53 62 72 50 91.5 C38 72 12 53 12 48.5 C12 38 28 30.4 46.4 29.6 Z\" fill=\"#000\"/></mask></defs><g mask=\"url(#f9m1)\"><path d=\"M50 14 H29 A15 15 0 0 0 14 29 V71 A15 15 0 0 0 29 86 H50 Z\" fill=\"#FF7A59\"/><path d=\"M50 14 H71 A15 15 0 0 1 86 29 V71 A15 15 0 0 1 71 86 H50 Z\" fill=\"#FFC9A8\"/></g>"
+ },
+ {
+  "name": "Renk Çarkı",
+  "style": "Geometrik / Bauhaus",
+  "story": "Topaca yukarıdan bak: bir daire, bir yarım daire, bir üçgen ve tam ortada mil. Dururken ayrı parçalar; dönmeye başlayınca tek bir renge karışırlar. İşlerin, sağlığın ve dinlenmen de ritim tutunca tek bir güne dönüşür.",
+  "bg": "#F3ECDD",
+  "svg": "<circle cx=\"50\" cy=\"50\" r=\"37\" fill=\"#1C1C22\"/><path d=\"M17.96 31.5 A37 37 0 0 1 82.04 68.5 Z\" fill=\"#E0452B\"/><path d=\"M50 50 L47 82 L21 64 Z\" fill=\"#F2B632\"/><circle cx=\"50\" cy=\"50\" r=\"6\" fill=\"#F3ECDD\"/>"
+ },
+ {
+  "name": "Eğik Denge",
+  "style": "İsviçre minimal",
+  "story": "Tek bir gövde, hafifçe yana yatmış; düşmüyor çünkü dönüyor. Altındaki kırmızı yay, ucunun yerde çizdiği izdir: senin rutinlerin. Ritim sürdükçe eğilsen de ayakta kalırsın.",
+  "bg": "#FAFAF7",
+  "svg": "<g transform=\"translate(-2.5 0) rotate(13 50 80)\"><path d=\"M45.8 21 A4.2 4.2 0 0 1 54.2 21 V33 H71 C75 33 77.5 35.6 77.5 39.4 C77.5 53 60 66 50 80 C40 66 22.5 53 22.5 39.4 C22.5 35.6 25 33 29 33 H45.8 Z\" fill=\"#111114\"/></g><path d=\"M26 80.5 A26 6.5 0 0 0 74 84\" fill=\"none\" stroke=\"#E5341F\" stroke-width=\"4.2\" stroke-linecap=\"round\"/>"
+ }
+]

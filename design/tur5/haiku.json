@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Sıra",
+    "idea": "Dağınık noktalar tek bir çizgide yerini bulur; işler sıraya girer.",
+    "bg": "#000000",
+    "fg": "#5EEAD4",
+    "svg": "<circle cx=\"20\" cy=\"28\" r=\"7\" fill=\"#5EEAD4\"/><circle cx=\"33\" cy=\"72\" r=\"7\" fill=\"#5EEAD4\"/><circle cx=\"44\" cy=\"50\" r=\"7\" fill=\"#5EEAD4\"/><circle cx=\"62\" cy=\"50\" r=\"7\" fill=\"#5EEAD4\"/><circle cx=\"80\" cy=\"50\" r=\"7\" fill=\"#5EEAD4\"/>"
+  },
+  {
+    "name": "Yol",
+    "idea": "Gevşek başlayan akış bir büküm sonrası düz bir şeritte ilerler; her şey yoluna girer.",
+    "bg": "#000000",
+    "fg": "#5EEAD4",
+    "svg": "<circle cx=\"20\" cy=\"30\" r=\"8\" fill=\"#5EEAD4\"/><path d=\"M20 30C42 30 42 70 62 70L84 70\" fill=\"none\" stroke=\"#5EEAD4\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+  },
+  {
+    "name": "Halka",
+    "idea": "Dört parça eşit aralıklarla kenetlenip tek bir halka oluşturur; her şey yerli yerinde.",
+    "bg": "#F4F1EA",
+    "fg": "#0E736B",
+    "svg": "<g fill=\"none\" stroke=\"#0E736B\" stroke-width=\"12\"><path d=\"M52.53 21.11A29 29 0 0 1 78.89 47.47\"/><path d=\"M78.89 52.53A29 29 0 0 1 52.53 78.89\"/><path d=\"M47.47 78.89A29 29 0 0 1 21.11 52.53\"/><path d=\"M21.11 47.47A29 29 0 0 1 47.47 21.11\"/></g>"
+  }
+]

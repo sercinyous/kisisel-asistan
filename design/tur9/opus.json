@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Alacakaranlık",
+  "style": "Yumuşak 3B / kil",
+  "story": "Topaç hızla döner ama dengesini hiç kaybetmez. Onu dik tutan, her gün tekrarladığın küçük ritimlerdir. Ritim, gününü yumuşak ama kararlı biçimde döndürür.",
+  "bg": "linear-gradient(160deg,#FFF1EA,#F3E3F7)",
+  "svg": "<defs><linearGradient id=\"o9a\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFB89A\"/><stop offset=\".55\" stop-color=\"#E8709E\"/><stop offset=\"1\" stop-color=\"#7D5CC4\"/></linearGradient><radialGradient id=\"o9b\" cx=\".35\" cy=\".3\" r=\".6\"><stop offset=\"0\" stop-color=\"#fff\" stop-opacity=\".75\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></radialGradient><linearGradient id=\"o9c\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#FFE9DD\"/><stop offset=\"1\" stop-color=\"#C9A8E8\"/></linearGradient></defs>\n<ellipse cx=\"50\" cy=\"86\" rx=\"16\" ry=\"3\" fill=\"#6B4A8F\" opacity=\".25\"/>\n<rect x=\"45\" y=\"16\" width=\"10\" height=\"24\" rx=\"5\" fill=\"url(#o9c)\"/>\n<path d=\"M20 47 C20 37 80 37 80 47 C80 56 60 68 50 84 C40 68 20 56 20 47 Z\" fill=\"url(#o9a)\"/>\n<path d=\"M20 47 C20 52 80 52 80 47\" fill=\"none\" stroke=\"#fff\" stroke-opacity=\".55\" stroke-width=\"2.5\"/>\n<path d=\"M20 47 C20 37 80 37 80 47 C80 56 60 68 50 84 C40 68 20 56 20 47 Z\" fill=\"url(#o9b)\"/>\n<ellipse cx=\"50\" cy=\"41\" rx=\"24\" ry=\"5\" fill=\"#fff\" opacity=\".35\"/>"
+ },
+ {
+  "name": "Cam Denge",
+  "style": "Cam / yarı saydam",
+  "story": "Gece kadar sakin, cam kadar berrak bir denge. Etrafındaki halka, tekrarladığın rutinlerin izidir; döndükçe seni ayakta tutar.",
+  "bg": "#000000",
+  "svg": "<defs><linearGradient id=\"o9g\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#5EEAD4\" stop-opacity=\".9\"/><stop offset=\"1\" stop-color=\"#5EEAD4\" stop-opacity=\".15\"/></linearGradient><linearGradient id=\"o9h\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#CFFAF2\" stop-opacity=\".1\"/><stop offset=\".5\" stop-color=\"#CFFAF2\" stop-opacity=\".7\"/><stop offset=\"1\" stop-color=\"#CFFAF2\" stop-opacity=\".1\"/></linearGradient></defs>\n<ellipse cx=\"50\" cy=\"47\" rx=\"36\" ry=\"9\" fill=\"none\" stroke=\"#5EEAD4\" stroke-opacity=\".35\" stroke-width=\"1.6\"/>\n<rect x=\"46\" y=\"15\" width=\"8\" height=\"26\" rx=\"4\" fill=\"#5EEAD4\" fill-opacity=\".55\"/>\n<path d=\"M20 47 C20 37 80 37 80 47 C80 56 60 68 50 84 C40 68 20 56 20 47 Z\" fill=\"url(#o9g)\" stroke=\"#9FF5E6\" stroke-opacity=\".8\" stroke-width=\"1.2\"/>\n<path d=\"M28 47 C28 41 72 41 72 47 C72 53 58 62 50 74 C42 62 28 53 28 47 Z\" fill=\"#000\" fill-opacity=\".35\"/>\n<path d=\"M20 47 C20 52 80 52 80 47\" fill=\"none\" stroke=\"url(#o9h)\" stroke-width=\"2.5\"/>\n<path d=\"M36 52 C40 60 45 66 50 74\" fill=\"none\" stroke=\"#fff\" stroke-opacity=\".5\" stroke-width=\"1.5\" stroke-linecap=\"round\"/>"
+ },
+ {
+  "name": "Sıcak Dönüş",
+  "style": "İzometrik / 3/4 görünüm",
+  "story": "Hafifçe eğilse de topaç düşmez; ritmi onu yeniden toparlar. Yerdeki gölge ve dönüş yayı, her günün hareketini anlatır. Rutinlerin döndükçe sen dengede kalırsın.",
+  "bg": "linear-gradient(160deg,#FFF4E2,#FBD9B8)",
+  "svg": "<defs><linearGradient id=\"o9w\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#FFC56B\"/><stop offset=\"1\" stop-color=\"#E0562F\"/></linearGradient><linearGradient id=\"o9x\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#FFE3A8\"/><stop offset=\"1\" stop-color=\"#F08A3C\"/></linearGradient></defs>\n<ellipse cx=\"54\" cy=\"84\" rx=\"20\" ry=\"4\" fill=\"#5A2410\" opacity=\".3\"/>\n<path d=\"M18 62 A34 13 0 0 0 84 70\" fill=\"none\" stroke=\"#7A3317\" stroke-opacity=\".45\" stroke-width=\"2.5\" stroke-linecap=\"round\"/>\n<g transform=\"rotate(14 50 82)\"><rect x=\"45\" y=\"16\" width=\"10\" height=\"24\" rx=\"5\" fill=\"url(#o9x)\"/>\n<path d=\"M20 47 C20 37 80 37 80 47 C80 56 60 68 50 82 C40 68 20 56 20 47 Z\" fill=\"url(#o9w)\"/>\n<ellipse cx=\"50\" cy=\"42\" rx=\"26\" ry=\"6\" fill=\"#FFE7B8\" opacity=\".7\"/>\n<path d=\"M20 47 C20 52 80 52 80 47\" fill=\"none\" stroke=\"#FFF2D6\" stroke-width=\"2.5\"/></g>\n<path d=\"M14 42 A38 16 0 0 1 40 28\" fill=\"none\" stroke=\"#7A3317\" stroke-opacity=\".45\" stroke-width=\"2.5\" stroke-linecap=\"round\"/>"
+ }
+]

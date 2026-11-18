@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Hizalanan Noktalar",
+  "idea": "Dağınık duran noktalar soldan sağa sırayla hizaya girip aynı çizgide eşit aralıkla dizilir: her şey yerine oturur.",
+  "bg": "#000000",
+  "fg": "#5EEAD4",
+  "svg": "<circle cx=\"17\" cy=\"30\" r=\"8\" fill=\"#5EEAD4\"/><circle cx=\"33.5\" cy=\"66\" r=\"8\" fill=\"#5EEAD4\"/><circle cx=\"50\" cy=\"40\" r=\"8\" fill=\"#5EEAD4\"/><circle cx=\"66.5\" cy=\"50\" r=\"8\" fill=\"#5EEAD4\"/><circle cx=\"83\" cy=\"50\" r=\"8\" fill=\"#5EEAD4\"/><path d=\"M60 50H88\" stroke=\"#5EEAD4\" stroke-width=\"0\"/>"
+ },
+ {
+  "name": "Yola Giren Yol",
+  "idea": "Büyük salınımlarla başlayan kalın bir çizgi dalga dalga yatışır ve sonunda dümdüz, kararlı bir yola oturur.",
+  "bg": "#F4F1EA",
+  "fg": "#0E736B",
+  "svg": "<path d=\"M14 66C14 18 40 18 40 50C40 76 60 76 60 50C60 40 70 40 72 50L86 50\" fill=\"none\" stroke=\"#0E736B\" stroke-width=\"8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+ },
+ {
+  "name": "Yerine Oturan Parçalar",
+  "idea": "Üç kare parça yerine oturmuştur, dördüncüsü kayarak boşluğa kenetlenir ve bütün tamamlanır.",
+  "bg": "#0B1B2B",
+  "fg": "#FBBF24",
+  "svg": "<rect x=\"14\" y=\"14\" width=\"34\" height=\"34\" rx=\"9\" fill=\"#FBBF24\"/><rect x=\"52\" y=\"14\" width=\"34\" height=\"34\" rx=\"9\" fill=\"#FBBF24\"/><rect x=\"14\" y=\"52\" width=\"34\" height=\"34\" rx=\"9\" fill=\"#FBBF24\"/><rect x=\"54.5\" y=\"54.5\" width=\"31\" height=\"31\" rx=\"9\" fill=\"none\" stroke=\"#FBBF24\" stroke-width=\"4\"/><rect x=\"62\" y=\"62\" width=\"16\" height=\"16\" rx=\"4.5\" fill=\"#FBBF24\"/>"
+ }
+]

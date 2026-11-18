@@ -1,0 +1,23 @@
+[
+ {
+  "name": "Oyuk Kalp",
+  "idea": "Dolu bir kalbin içine negatif boşlukla oyulmuş kalın bir onay işareti yerleştirildi.",
+  "bg": "#000000",
+  "fg": "#5EEAD4",
+  "svg": "<path d=\"M50 83 L19 52 C9 41 12 25 27 20 C37 17 46 22 50 31 C54 22 63 17 73 20 C88 25 91 41 81 52 Z\" fill=\"#5EEAD4\" stroke=\"#5EEAD4\" stroke-width=\"2\" stroke-linejoin=\"round\"/><path d=\"M33 51 L45 63 L68 38\" fill=\"none\" stroke=\"#000000\" stroke-width=\"9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+ },
+ {
+  "name": "Tek Çizgi",
+  "idea": "Kalbin sol yarısı tek çizgiyle akıp alt uçta dönerek sağ kolu uzayan bir onay işaretine dönüşür.",
+  "bg": "#F4F1EA",
+  "fg": "#0E736B",
+  "svg": "<path d=\"M47 30 C42 21 33 17 24 21 C11 27 10 42 20 53 L42 76 L80 23\" fill=\"none\" stroke=\"#0E736B\" stroke-width=\"12\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+ },
+ {
+  "name": "Tamam Mührü",
+  "idea": "Dolu bir onay mührünün içinde boşluktan oyulmuş kalp, kalbin içinde de tamam işareti taşır.",
+  "bg": "#000000",
+  "fg": "#5EEAD4",
+  "svg": "<circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"#5EEAD4\"/><g transform=\"translate(50 52) scale(0.68) translate(-50 -52)\"><path d=\"M50 83 L19 52 C9 41 12 25 27 20 C37 17 46 22 50 31 C54 22 63 17 73 20 C88 25 91 41 81 52 Z\" fill=\"#000000\" stroke=\"#000000\" stroke-width=\"2\" stroke-linejoin=\"round\"/></g><path d=\"M38 50 L47 59 L63 41\" fill=\"none\" stroke=\"#5EEAD4\" stroke-width=\"7.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>"
+ }
+]
