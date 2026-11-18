@@ -1,0 +1,369 @@
+<title>Ritim Yol Haritası</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Düzen: tek sütunluk strateji belgesi. Üstte başlık + rakamlar + sıradaki adım; ortada aynı iskelet üzerine çizilmiş Önce / Sonra şemaları; altta faz çizelgesi ve öncelik sırasına göre kalan işler. */
+:root{
+  --bg:#f3f5f4;--surface:#ffffff;--band:#ebefee;--fg:#12201e;--muted:#536462;--line:#d3dcda;--line-strong:#b3c1be;
+  --accent:#0e736b;--accent-soft:#e1f0ee;--on-fill:#ffffff;
+  --done:#0e736b;--done-bg:#dcefec;--new:#3350c4;--new-bg:#e4e9fb;--part:#99600c;--part-bg:#f7ebd2;--todo:#b0362f;--todo-bg:#f9e3e1;
+  --edge:#6a7b78;--ghost:#c3cecc;
+  --display:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;--body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#090d0c;--surface:#111817;--band:#19221f;--fg:#e4ecea;--muted:#94a6a2;--line:#27322f;--line-strong:#3d4c48;
+  --accent:#5eead4;--accent-soft:#12302b;--on-fill:#07110f;
+  --done:#5eead4;--done-bg:#12332e;--new:#9aabff;--new-bg:#1c2450;--part:#f0b95a;--part-bg:#372a10;--todo:#f6918a;--todo-bg:#3d1d1b;
+  --edge:#8a9c98;--ghost:#35423f;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#090d0c;--surface:#111817;--band:#19221f;--fg:#e4ecea;--muted:#94a6a2;--line:#27322f;--line-strong:#3d4c48;
+  --accent:#5eead4;--accent-soft:#12302b;--on-fill:#07110f;
+  --done:#5eead4;--done-bg:#12332e;--new:#9aabff;--new-bg:#1c2450;--part:#f0b95a;--part-bg:#372a10;--todo:#f6918a;--todo-bg:#3d1d1b;
+  --edge:#8a9c98;--ghost:#35423f;color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font:400 15px/1.6 var(--body)}
+*,*::before,*::after{box-sizing:border-box}
+.page{max-width:1240px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:56px}
+.page>*{min-width:0}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.015em}
+h1{font-size:clamp(28px,4.4vw,44px);line-height:1.1;font-weight:700;max-width:20ch}
+h2{font-size:22px;line-height:1.25;font-weight:600}
+h3{font-size:17px;font-weight:600}
+p{margin:0}
+.eyebrow{font:600 12px/1.4 var(--body);letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.muted{color:var(--muted)}
+
+/* Başlık */
+.head{display:grid;gap:28px}
+.head-top{display:grid;gap:14px}
+.lead{font-size:17px;line-height:1.6;color:var(--muted);max-width:66ch}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line-strong);margin:0;padding:0}
+.stats div{padding:16px 20px 4px 0;display:grid;gap:2px;align-content:start}
+.stats div+div{padding-left:20px;border-left:1px solid var(--line)}
+.stats dt{order:2;color:var(--muted);font-size:13.5px;line-height:1.45}
+.stats dd{margin:0;font:700 34px/1.1 var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.next{background:var(--accent-soft);border-radius:14px;padding:20px 24px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 28px;align-items:baseline}
+.next strong{font:600 17px/1.4 var(--display)}
+.next p{grid-column:2;color:var(--fg);max-width:70ch}
+.next .eyebrow{grid-row:1/3}
+
+/* Bölüm başlığı */
+.sec{display:grid;gap:20px}
+.sec-head{display:grid;gap:6px}
+.sec-head p{color:var(--muted);max-width:68ch}
+
+/* Şema denetimleri */
+.bar{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:999px;padding:3px;background:var(--surface);max-width:100%}
+.seg button{font:600 13.5px/1 var(--body);color:var(--muted);background:transparent;border:0;border-radius:999px;padding:9px 16px;cursor:pointer;white-space:nowrap}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg button:focus-visible,.scroll:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--muted)}
+.legend li{display:inline-flex;align-items:center;gap:7px}
+.legend svg{flex:none}
+
+.views{display:grid;gap:20px;align-items:start}
+.views>*{min-width:0}
+.views[data-view="once"] #p-sonra,.views[data-view="sonra"] #p-once{display:none}
+@media (min-width:1200px){.views[data-view="ikili"]{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}.views[data-view="ikili"] .panel{padding:16px 12px}.views[data-view="ikili"] .panel>:not(.scroll){padding-inline:6px}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px}
+.panel>*{min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.panel-head span{font-size:13px;color:var(--muted)}
+.panel>p{color:var(--muted);font-size:14px;line-height:1.55;max-width:70ch}
+.scroll{overflow-x:auto;border-radius:10px}
+.scroll svg{display:block;width:100%;min-width:520px;max-width:780px;height:auto;margin:0 auto}
+.hint{display:none;font-size:12.5px;color:var(--muted)}
+@media (max-width:700px){.hint{display:block}.scroll svg{min-width:620px}}
+
+/* SVG şema */
+.dg text{font-family:var(--body);fill:var(--fg)}
+.dg .band{fill:var(--band)}
+.dg .lane{font-size:10.5px;font-weight:600;letter-spacing:.09em;fill:var(--muted)}
+.dg .shell{fill:none;stroke:var(--line-strong);stroke-width:1}
+.dg .cap{font-size:11.5px;font-weight:500;fill:var(--muted)}
+.dg .nt{font-size:12.5px;font-weight:600}
+.dg .ns{font-size:10.5px;fill:var(--muted)}
+.dg .n{stroke-width:1.25}
+.dg .n-plan{fill:var(--surface);stroke:var(--line-strong)}
+.dg .n-ghost{fill:none;stroke:var(--ghost);stroke-dasharray:3 4}
+.dg .n-done{fill:var(--done-bg);stroke:var(--done)}
+.dg .n-new{fill:var(--new-bg);stroke:var(--new)}
+.dg .n-part{fill:var(--part-bg);stroke:var(--part)}
+.dg .n-todo{fill:var(--todo-bg);stroke:var(--todo);stroke-dasharray:5 3}
+.dg .e{fill:none;stroke:var(--edge);stroke-width:1.4;stroke-linejoin:round}
+.dg .tree{fill:none;stroke:var(--line-strong);stroke-width:1.25}
+.dg .ah{fill:var(--edge)}
+.b-done{fill:var(--done)}.b-new{fill:var(--new)}.b-part{fill:var(--part)}.b-todo{fill:var(--todo)}
+.g{fill:none;stroke:var(--on-fill);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.gf{fill:var(--on-fill)}
+
+.verdict{font-size:15px;max-width:72ch}
+.verdict b{font-weight:600}
+
+/* Fazlar */
+.phases{list-style:none;margin:0;padding:0;border-top:1px solid var(--line-strong)}
+.phases li{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:6px 24px;padding:14px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.phases b{font:600 16px/1.3 var(--display)}
+.phases b small{display:block;font:400 12.5px/1.4 var(--body);color:var(--muted)}
+.phases p{color:var(--muted);max-width:68ch}
+.ok{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--done);white-space:nowrap}
+
+/* Kalan işler */
+.todo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+.grp{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:12px}
+.grp header{display:grid;gap:2px}
+.grp header div{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.grp .cnt{font:700 22px/1 var(--display);font-variant-numeric:tabular-nums}
+.grp header p{font-size:13px;color:var(--muted)}
+.k1 h3,.k1 .cnt{color:var(--todo)}.k2 h3,.k2 .cnt{color:var(--part)}.k3 h3,.k3 .cnt{color:var(--muted)}
+.grp ul{list-style:none;margin:0;padding:0}
+.grp li{padding:11px 0;border-top:1px solid var(--line);display:grid;gap:1px}
+.grp li b{font-weight:600}
+.grp li span{color:var(--muted);font-size:13.5px;line-height:1.5}
+
+@media (max-width:900px){
+  .todo{grid-template-columns:minmax(0,1fr)}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats div:nth-child(3){padding-left:0;border-left:0}
+  .stats div:nth-child(n+3){border-top:1px solid var(--line)}
+}
+@media (max-width:640px){
+  .page{gap:44px;padding-block:28px 64px}
+  .next{grid-template-columns:minmax(0,1fr);padding:18px}
+  .next p,.next .eyebrow{grid-column:1;grid-row:auto}
+  .phases li{grid-template-columns:minmax(0,1fr) auto}
+  .phases p{grid-column:1/-1;grid-row:2}
+  .panel{padding:14px}
+  .seg{width:100%}.seg button{flex:1;padding:10px 6px}
+  .stats dd{font-size:28px}
+}
+@media (prefers-reduced-motion:no-preference){.seg button{transition:background-color .15s,color .15s}}
+</style>
+
+<div class="page">
+  <header class="head">
+    <div class="head-top">
+      <p class="eyebrow">Ritim · ürün yol haritası</p>
+      <h1>Planladığımız uygulama ile bugün elimizdeki uygulama</h1>
+      <p class="lead">Uygulamanın tamamı tek bir akış: kullanıcı giriş yapar, ilk kurulumu bitirir, beş sekmeli uygulamaya girer. Her sekme sunucudaki kendi verisini okur; yapay zekâ ve raporlar sunucuda çalışır. Aşağıdaki iki şema aynı iskelet üzerine çizildi: biri ilk planı, diğeri bugünkü durumu gösterir.</p>
+    </div>
+
+    <dl class="stats">
+      <div><dt>tamamlanan faz (Faz 2'den güvenlik incelemelerine)</dt><dd>6</dd></div>
+      <div><dt>bağımsız inceleme bulgusu kapatıldı</dt><dd>12</dd></div>
+      <div><dt>otomatik test geçiyor (Flutter)</dt><dd>1348</dd></div>
+      <div><dt>kalan iş, 4'ü dağıtım için şart</dt><dd>8</dd></div>
+    </dl>
+
+    <div class="next">
+      <span class="eyebrow">Sıradaki adım</span>
+      <strong>Dağıtım için şart olan dört işi kapatmak</strong>
+      <p>Hesap silme, gizlilik metni, Apple inceleyici hesabı ve uygulama ikonu. İkon için logo seçimi sizden bekleniyor; diğer üçü geliştirme tarafında sırayla yapılacak.</p>
+    </div>
+  </header>
+
+  <section class="sec" aria-labelledby="h-akis">
+    <div class="sec-head">
+      <h2 id="h-akis">Uygulamanın akışı: önce ve sonra</h2>
+      <p>Yukarıdan aşağıya okunur: kullanıcı, giriş ve kurulum, uygulama, sunucu, dış servisler. Kutuların yeri iki şemada da aynıdır; fark yalnızca hangi kutunun var olduğu ve ne durumda olduğudur.</p>
+    </div>
+
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Şema görünümü">
+        <button type="button" id="v-once" data-v="once" aria-pressed="false">Önce</button>
+        <button type="button" id="v-sonra" data-v="sonra" aria-pressed="false">Sonra</button>
+        <button type="button" id="v-ikili" data-v="ikili" aria-pressed="true">İkisi birlikte</button>
+      </div>
+      <ul class="legend" aria-label="Renklerin anlamı">
+        <li><svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</li>
+        <li><svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-new"/><path class="g" d="M-3.2 0h6.4M0-3.2v6.4"/></svg>Sonradan eklendi</li>
+        <li><svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-part"/><circle r="3.4" class="g"/><path class="gf" d="M0-3.4a3.4 3.4 0 0 1 0 6.8z"/></svg>Kısmen</li>
+        <li><svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-todo"/><circle r="3.2" class="g"/></svg>Eksik</li>
+        <li><svg class="dg" width="22" height="14" viewBox="0 0 22 14" aria-hidden="true"><rect x="1" y="1" width="20" height="12" rx="4" class="n n-ghost"/></svg>Planda yoktu</li>
+      </ul>
+    </div>
+
+    <div class="views" id="views" data-view="ikili">
+      <article class="panel" id="p-once" aria-labelledby="h-once">
+        <div class="panel-head"><h3 id="h-once">Önce</h3><span>İlk plan · Faz 2 sözleşmesi · tek kullanıcı</span></div>
+        <p>Sahip giriş yapar; Kokpit günü özetler, Operasyon işleri, Sağlık bedeni, Raporlar haftayı toplar. Arkadaşlar, ilk kurulum, güvenlik katmanları ve öğün seçici bu planda yoktu.</p>
+        <p class="hint">Şemayı yana kaydırabilirsiniz.</p>
+        <div class="scroll" tabindex="0" role="group" aria-label="Önce şeması, yana kaydırılabilir" id="d-once"></div>
+      </article>
+
+      <article class="panel" id="p-sonra" aria-labelledby="h-sonra">
+        <div class="panel-head"><h3 id="h-sonra">Sonra</h3><span>Bugün · 3–5 kullanıcı</span></div>
+        <p>Aynı omurga korunuyor. Çok kullanıcılı yapı, arkadaşlar, ilk kurulum ve güvenlik katmanları eklendi. Kırmızı kesikli kutular dağıtımdan önce kapatılacak eksikler.</p>
+        <p class="hint">Şemayı yana kaydırabilirsiniz.</p>
+        <div class="scroll" tabindex="0" role="group" aria-label="Sonra şeması, yana kaydırılabilir" id="d-sonra"></div>
+      </article>
+    </div>
+
+    <p class="verdict"><b>Özet:</b> ilk plandaki 15 parçanın tamamı bitti. Üzerine planda olmayan 8 parça eklendi; bunlardan biri (görev dashboard'u) kısmen çalışıyor. Henüz yapılmamış 5 parça var.</p>
+  </section>
+
+  <section class="sec" aria-labelledby="h-faz">
+    <div class="sec-head">
+      <h2 id="h-faz">Fazlar</h2>
+      <p>Yapılış sırasıyla. Dört geliştirme fazının ardından iki bağımsız inceleme yapıldı ve bulunan 12 sorunun hepsi kapatıldı.</p>
+    </div>
+    <ol class="phases">
+      <li><b>Faz 2<small>Omurga</small></b><p>Kokpit, Operasyon (görev, sabit, not), rutinler, Sağlık, raporlar, Supabase + RLS, Gemini ile AI hızlı giriş.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Faz 3<small>Görünüm</small></b><p>Açık/koyu tema, cam alt bar, bento kartlar, bildirim planlaması.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Faz 4A–4B<small>Çok kullanıcı</small></b><p>Çok kullanıcılı yapı, davet kapısı, arkadaşlar, ilk kurulum, Google Health, Pusholder'a özel her şeyin kaldırılması, besin listesi.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Faz 4C<small>Günlük kullanım</small></b><p>Öğün seçici, görev kategorileri ve taslaklar, arkadaş sıralaması, ilk kurulumda sağlık kaynağı seçimi, görev dashboard'u.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>İnceleme 1<small>7 bulgu</small></b><p>Rutin sahipliği, geç sağlık yazımı, Google bağlantısının kullanıcıya bağlanması, çıkışta bildirim temizliği, tek işlemli ilk kurulum, sağlık kaynağı kolonu, geç veriyle rapor yenileme.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>7/7 kapatıldı</span></li>
+      <li><b>İnceleme 2<small>5 bulgu</small></b><p>Arkadaş paylaşım kapsamı, kullanıcıya bağlı Apple Sağlık onayı, AI giriş bildirimleri, kira tabanlı rapor yenileme, sunucuda seçili kaynak.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>5/5 kapatıldı</span></li>
+    </ol>
+  </section>
+
+  <section class="sec" aria-labelledby="h-kalan">
+    <div class="sec-head">
+      <h2 id="h-kalan">Kalan işler</h2>
+      <p>Öncelik sırasıyla sekiz iş. İlk grup bitmeden uygulama arkadaşlara dağıtılamaz.</p>
+    </div>
+    <div class="todo">
+      <div class="grp k1">
+        <header><div><h3>Şart</h3><span class="cnt">4</span></div><p>Dağıtımdan önce bitmeli</p></header>
+        <ul>
+          <li><b>Hesap ve veri silme</b><span>Uygulama içinden yapılabilmeli; App Store kuralı.</span></li>
+          <li><b>Gizlilik metni</b><span>Hangi sağlık verisi toplanıyor, kim görüyor, nasıl silinir.</span></li>
+          <li><b>Apple inceleyici hesabı</b><span>İnceleme için kalıcı bir demo hesabı.</span></li>
+          <li><b>Uygulama ikonu</b><span>Logo seçimi bekliyor.</span></li>
+        </ul>
+      </div>
+      <div class="grp k2">
+        <header><div><h3>Düzelt</h3><span class="cnt">2</span></div><p>Çalışıyor ama tutarsız</p></header>
+        <ul>
+          <li><b>Varsayılan hedefler uyuşmuyor</b><span>Uygulama 10000 adım / 170 g protein diyor, sunucu 8000 / 120.</span></li>
+          <li><b>Dashboard ve besin verisi</b><span>Dashboard tarihsiz tamamlanan görevleri saymıyor; bazı besinlerde makro yok.</span></li>
+        </ul>
+      </div>
+      <div class="grp k3">
+        <header><div><h3>Sonra</h3><span class="cnt">2</span></div><p>Dağıtımdan sonra</p></header>
+        <ul>
+          <li><b>Hata takibi</b><span>Hata kaydı ve uygulama içi "sorun bildir".</span></li>
+          <li><b>Yeni özellikler</b><span>Ana ekran widget'ı, haftalık meydan okuma, rutin serileri.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var W=680,H=894,cw=120,cg=8,px=24;
+  function col(i){return px+i*(cw+cg);}
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+
+  var bands=[[0,84,"KULLANICI"],[112,84,"GİRİŞ VE KURULUM"],[224,394,"UYGULAMA"],[662,84,"SUNUCU"],[790,104,"DIŞ SERVİSLER"]];
+
+  // b: ilk plandaki hâli (yoksa planda yoktu), a: bugünkü hâli [başlık, alt satır(lar), durum]
+  var N=[
+    {x:250,y:26,w:180,h:46,b:["Sahip","tek kullanıcı"],a:["3–5 kullanıcı","sahip + davetli arkadaşlar","new"]},
+    {x:24,y:138,w:184,h:46,a:["Davet kapısı","yalnızca davet edilenler girer","new"]},
+    {x:248,y:138,w:184,h:46,b:["Google ile giriş",""],a:["Giriş","Google veya e-posta","done"]},
+    {x:472,y:138,w:184,h:46,a:["İlk kurulum","tek işlem · Apple/Google seçimi","new"]},
+    {x:456,y:260,w:200,h:46,a:["Arkadaşlar","sıralama · ayrı ayrıntı onayı","new"]},
+    {x:col(0),y:316,w:cw,h:58,b:["Kokpit","günün özeti"],a:["Kokpit","günün özeti","done"]},
+    {x:col(1),y:316,w:cw,h:58,b:["Operasyon",["görev · sabit","not"]],a:["Operasyon",["kategoriler","taslaklar"],"done"]},
+    {x:col(2),y:316,w:cw,h:58,b:["+ AI giriş","hızlı giriş"],a:["+ AI giriş",["hızlı giriş","aktif kategoriler"],"done"]},
+    {x:col(3),y:316,w:cw,h:58,b:["Sağlık",["adım · uyku","kilo · öğün"]],a:["Sağlık",["adım · uyku","kilo · öğün"],"done"]},
+    {x:col(4),y:316,w:cw,h:58,b:["Raporlar",["günlük","haftalık"]],a:["Raporlar",["günlük","haftalık"],"done"]},
+    {x:col(1),y:414,w:cw,h:46,b:["Rutinler","aylık döngü"],a:["Rutinler","sahiplik güvencesi","done"]},
+    {x:col(2),y:414,w:cw,h:46,a:["Bildirim kuyruğu","oturuma bağlı","new"]},
+    {x:col(3),y:414,w:cw,h:46,a:["Öğün seçici","9 kategori · porsiyon","new"]},
+    {x:col(1),y:476,w:cw,h:46,a:["Dashboard","görev özeti","part"]},
+    {x:col(3),y:476,w:cw,h:46,a:["Kaynak ve onay","Apple · Google","new"]},
+    {x:col(0),y:560,w:cw,h:46,a:["Hesap silme","uygulama içinden","todo"]},
+    {x:col(1),y:560,w:cw,h:46,a:["Gizlilik metni","veri ve paylaşım","todo"]},
+    {x:col(2),y:560,w:cw,h:46,a:["İnceleyici hesabı","Apple için demo","todo"]},
+    {x:col(3),y:560,w:cw,h:46,a:["Uygulama ikonu","logo seçimi bekliyor","todo"]},
+    {x:col(4),y:560,w:cw,h:46,a:["Hata takibi","sorun bildir","todo"]},
+    {x:24,y:688,w:140,h:46,b:["ai-proxy","AI isteklerini taşır"],a:["ai-proxy","AI isteklerini taşır","done"]},
+    {x:188,y:688,w:140,h:46,b:["pg_cron","her gece 23:45"],a:["pg_cron","00:15 + saatlik yenileme","done"]},
+    {x:352,y:688,w:140,h:46,b:["generate-reports","raporları üretir"],a:["generate-reports","kira tabanlı yenileme","done"]},
+    {x:516,y:688,w:140,h:46,b:["Supabase","veritabanı · RLS"],a:["Supabase","veritabanı · RLS","done"]},
+    {x:188,y:836,w:140,h:46,b:["Gemini","yapay zekâ"],a:["Gemini","yapay zekâ","done"]},
+    {x:352,y:836,w:140,h:46,b:["Apple Sağlık","telefondaki sağlık verisi"],a:["Apple Sağlık","telefondaki sağlık verisi","done"]},
+    {x:516,y:836,w:140,h:46,a:["Google Health","Faz 4A–4B'de eklendi","new"]}
+  ];
+
+  var glyph={
+    done:'<path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/>',
+    "new":'<path class="g" d="M-3.2 0h6.4M0-3.2v6.4"/>',
+    part:'<circle r="3.4" class="g"/><path class="gf" d="M0-3.4a3.4 3.4 0 0 1 0 6.8z"/>',
+    todo:'<circle r="3.2" class="g"/>'
+  };
+
+  function node(n,after){
+    var d=after?n.a:n.b;
+    if(!d) return '<rect class="n n-ghost" x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="9"/>';
+    var st=after?d[2]:"plan";
+    var subs=d[1]?(Array.isArray(d[1])?d[1]:[d[1]]):[];
+    var block=13+subs.length*13.5, top=n.y+(n.h-block)/2, cx=n.x+n.w/2;
+    var s='<rect class="n n-'+st+'" x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="9"/>';
+    s+='<text class="nt" text-anchor="middle" x="'+cx+'" y="'+(top+11)+'">'+esc(d[0])+'</text>';
+    subs.forEach(function(t,i){s+='<text class="ns" text-anchor="middle" x="'+cx+'" y="'+(top+25.5+i*13)+'">'+esc(t)+'</text>';});
+    if(after) s+='<g transform="translate('+(n.x+n.w-11)+' '+n.y+')"><circle r="7.5" class="b-'+st+'"/>'+glyph[st]+'</g>';
+    return s;
+  }
+
+  function build(id,after){
+    var m="ah-"+id;
+    function e(d,both){return '<path class="e" d="'+d+'" marker-end="url(#'+m+')"'+(both?' marker-start="url(#'+m+'s)"':'')+'/>';}
+    function t(d){return '<path class="tree" d="'+d+'"/>';}
+    var s='<svg class="dg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+(after?
+      "Bugünkü durum: 3 ila 5 kullanıcı davet kapısından geçer, giriş yapar, ilk kurulumu bitirir ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık ve Google Health'ten okunur. Hesap silme, gizlilik metni, inceleyici hesabı, uygulama ikonu ve hata takibi eksik.":
+      "İlk plan: tek kullanıcı Google ile giriş yapar ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık'tan okunur.")+'">';
+    s+='<defs><marker id="'+m+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 .5L8 4L0 7.5z"/></marker>'+
+       '<marker id="'+m+'s" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M8 .5L0 4L8 7.5z"/></marker></defs>';
+    bands.forEach(function(b){
+      s+='<rect class="band" x="0" y="'+b[0]+'" width="'+W+'" height="'+b[1]+'" rx="12"/>';
+      s+='<text class="lane" x="14" y="'+(b[0]+17)+'">'+b[2]+'</text>';
+    });
+    // uygulama kabuğu
+    s+='<rect class="shell" x="14" y="250" width="652" height="134" rx="14"/>';
+    s+='<text class="cap" x="28" y="287">Alt bar · 5 sekme</text>';
+    if(after) s+='<text class="cap" x="24" y="550">Henüz yapılmadı</text>';
+
+    // giriş akışı
+    if(after){
+      s+=e("M340 72V98H170V137")+e("M208 161H247")+e("M432 161H471")+e("M564 184V249");
+    }else{
+      s+=e("M340 72V137")+e("M340 184V249");
+    }
+    // sekmelerin alt parçaları
+    s+=t("M212 374V414");
+    if(after) s+=t("M340 374V414")+t("M448 374V414")+t("M212 460V476")+t("M468 460V476");
+    // sağlık verisi: Sağlık sekmesi -> dış servisler
+    s+=e("M498 374V399H673V820H422V835");
+    if(after) s+=e("M586 820V835");
+    s+='<text class="ns" text-anchor="middle" x="596" y="414">sağlık verisi</text>';
+    // uygulama -> sunucu
+    s+=e("M94 620V687")+'<text class="ns" x="106" y="645">AI giriş metni</text>';
+    s+=e("M586 621V687",true)+'<text class="ns" text-anchor="end" x="574" y="645">tüm sekmeler veriyi buradan okur ve buraya yazar</text>';
+    // sunucu içi
+    s+=e("M328 711H351")+e("M492 711H515");
+    // sunucu -> Gemini
+    s+=e("M94 734V768H236V835")+e("M422 734V768H280V835");
+
+    N.forEach(function(n){s+=node(n,after);});
+    return s+'</svg>';
+  }
+
+  document.getElementById("d-once").innerHTML=build("once",false);
+  document.getElementById("d-sonra").innerHTML=build("sonra",true);
+
+  var views=document.getElementById("views"),btns=[].slice.call(document.querySelectorAll(".seg button"));
+  function show(v){
+    views.setAttribute("data-view",v);
+    btns.forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===v?"true":"false");});
+  }
+  btns.forEach(function(b){b.addEventListener("click",function(){show(b.getAttribute("data-v"));});});
+  var wide=true;try{wide=window.matchMedia("(min-width:1200px)").matches;}catch(_){}
+  show(wide?"ikili":"sonra");
+})();
+</script>
