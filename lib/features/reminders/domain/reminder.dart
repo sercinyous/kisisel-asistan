@@ -15,8 +15,9 @@ enum ReminderRepeat {
   final String dbValue;
   final String label;
 
-  static ReminderRepeat fromDb(Object? value) => ReminderRepeat.values
-      .firstWhere((r) => r.dbValue == value, orElse: () => ReminderRepeat.daily);
+  static ReminderRepeat fromDb(Object? value) =>
+      ReminderRepeat.values.firstWhere((r) => r.dbValue == value,
+          orElse: () => ReminderRepeat.daily);
 }
 
 /// Tarih saatsiz (yerel gün).
@@ -199,7 +200,8 @@ class Reminder {
     final days = isoDays;
     if (days.isEmpty) return null;
     for (var i = 0; i <= 7; i++) {
-      final at = DateTime(now.year, now.month, now.day + i, time.hour, time.minute);
+      final at =
+          DateTime(now.year, now.month, now.day + i, time.hour, time.minute);
       if (days.contains(at.weekday) && at.isAfter(now)) return at;
     }
     return null;

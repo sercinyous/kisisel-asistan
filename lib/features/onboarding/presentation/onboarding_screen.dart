@@ -211,7 +211,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   String get _nextLabel => switch (_step) {
-        OnboardingStep.intro when _introPage == onboardingIntroCards.length - 1 =>
+        OnboardingStep.intro
+            when _introPage == onboardingIntroCards.length - 1 =>
           widget.replay ? 'Bitti' : 'Başlayalım',
         OnboardingStep.routines => 'Başla',
         _ => 'İleri',
@@ -379,8 +380,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       granted = false;
     }
     if (!mounted) return;
-    setState(() => _health =
-        granted ? OnboardingHealthAccess.granted : OnboardingHealthAccess.denied);
+    setState(() => _health = granted
+        ? OnboardingHealthAccess.granted
+        : OnboardingHealthAccess.denied);
   }
 
   Future<void> _pickQuietTime({required bool start}) async {
@@ -412,8 +414,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final targets = _targets;
     if (answers == null || targets == null || _saving) return;
     final container = ProviderScope.containerOf(context, listen: false);
-    final base =
-        ref.read(userSettingsProvider).valueOrNull ?? const UserSettings.defaults();
+    final base = ref.read(userSettingsProvider).valueOrNull ??
+        const UserSettings.defaults();
     final result = buildOnboardingResult(
       base: base,
       answers: answers,
@@ -646,8 +648,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 _error!,
                 key: const Key('onboarding-error'),
                 textAlign: TextAlign.center,
-                style:
-                    theme.textTheme.bodySmall?.copyWith(color: AppColors.danger),
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: AppColors.danger),
               ),
             ),
           Row(

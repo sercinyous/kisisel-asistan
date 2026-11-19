@@ -244,7 +244,8 @@ class LeaderboardEntry {
   final num? kcalWeek;
 
   /// Seçilen metrik ve dönemin değeri; paylaşılmıyorsa null.
-  num? value(GoalMetric metric, RankPeriod period) => switch ((metric, period)) {
+  num? value(GoalMetric metric, RankPeriod period) =>
+      switch ((metric, period)) {
         (GoalMetric.steps, RankPeriod.today) => stepsToday,
         (GoalMetric.steps, RankPeriod.week) => stepsWeek,
         (GoalMetric.sleep, RankPeriod.today) => sleepToday,
@@ -255,13 +256,10 @@ class LeaderboardEntry {
 
   /// Ad soyadın baş harfleri (fotoğraf yoksa).
   String get initials {
-    final source = displayName.contains('@')
-        ? displayName.split('@').first
-        : displayName;
-    final parts = source
-        .split(RegExp(r'[\s._-]+'))
-        .where((p) => p.isNotEmpty)
-        .toList();
+    final source =
+        displayName.contains('@') ? displayName.split('@').first : displayName;
+    final parts =
+        source.split(RegExp(r'[\s._-]+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     final first = parts.first.substring(0, 1);
     final last = parts.length > 1 ? parts.last.substring(0, 1) : '';

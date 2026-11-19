@@ -175,8 +175,10 @@ abstract final class RoutineTemplates {
   ];
 
   /// İlk kurulumda önerilenler.
-  static List<RoutineTemplate> get starters =>
-      [for (final t in all) if (t.starter) t];
+  static List<RoutineTemplate> get starters => [
+        for (final t in all)
+          if (t.starter) t
+      ];
 
   /// Kimliğe göre şablon; yoksa `null`.
   static RoutineTemplate? byId(String id) {

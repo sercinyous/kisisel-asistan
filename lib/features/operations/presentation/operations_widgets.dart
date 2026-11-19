@@ -121,9 +121,7 @@ class OpsGroupCard extends StatelessWidget {
           if (onHeaderTap != null) ...[
             const SizedBox(width: 4),
             Icon(
-              collapsed
-                  ? Icons.expand_more_rounded
-                  : Icons.expand_less_rounded,
+              collapsed ? Icons.expand_more_rounded : Icons.expand_less_rounded,
               size: 20,
               color: AppColors.textMuted,
             ),

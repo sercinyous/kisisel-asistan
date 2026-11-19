@@ -39,8 +39,11 @@ class NotesRepository {
       category: category,
       isPinned: isPinned,
     );
-    final row =
-        await _client.from('notes').insert(draft.toWriteMap()).select().single();
+    final row = await _client
+        .from('notes')
+        .insert(draft.toWriteMap())
+        .select()
+        .single();
     return NoteItem.fromMap(row);
   }
 

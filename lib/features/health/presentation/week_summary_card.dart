@@ -63,7 +63,10 @@ class WeekSummaryCard extends ConsumerWidget {
             key: const Key('week-row-steps'),
             label: 'Adım',
             color: AppColors.fitness,
-            values: [for (final d in days ?? const <DailyHealthMetric>[]) d.steps.toDouble()],
+            values: [
+              for (final d in days ?? const <DailyHealthMetric>[])
+                d.steps.toDouble()
+            ],
             valueKey: const Key('week-steps'),
             value: metricValue(
               avgSteps == null ? null : HealthFormat.count(avgSteps),
@@ -76,7 +79,8 @@ class WeekSummaryCard extends ConsumerWidget {
             label: 'Uyku',
             color: AppColors.sleep,
             values: [
-              for (final d in days ?? const <DailyHealthMetric>[]) d.sleepMinutes.toDouble(),
+              for (final d in days ?? const <DailyHealthMetric>[])
+                d.sleepMinutes.toDouble(),
             ],
             valueKey: const Key('week-sleep'),
             value: metricValue(

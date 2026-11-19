@@ -28,7 +28,6 @@ abstract final class SettingsLimits {
   static const int teamNameMaxLength = 24;
 }
 
-
 /// Alt sayfaların ortak iskeleti: ayarlar yüklenene kadar bekler, hata olursa
 /// yeniden deneme gösterir; yüklenince [builder] ile içeriği çizer.
 class SettingsPageScaffold extends ConsumerWidget {
@@ -192,7 +191,8 @@ class SettingsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BentoLabel(icon: icon, label: title, color: color, trailing: trailing),
+          BentoLabel(
+              icon: icon, label: title, color: color, trailing: trailing),
           const SizedBox(height: 12),
           ...children,
         ],
@@ -238,9 +238,8 @@ String? validateSettingsNumber(
   final raw = (text ?? '').trim();
   final range = '${_showNumber(min)}–${_showNumber(max)} arası olmalı';
   if (raw.isEmpty) return optional ? null : range;
-  final num? value = decimal
-      ? double.tryParse(raw.replaceAll(',', '.'))
-      : int.tryParse(raw);
+  final num? value =
+      decimal ? double.tryParse(raw.replaceAll(',', '.')) : int.tryParse(raw);
   if (value == null || value.isNaN || value < min || value > max) {
     return range;
   }
@@ -412,8 +411,8 @@ class SettingsStatusRow extends StatelessWidget {
                   Text(title, style: theme.textTheme.bodyLarge),
                   Text(
                     status,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: statusColor),
+                    style:
+                        theme.textTheme.bodySmall?.copyWith(color: statusColor),
                   ),
                 ],
               ),
@@ -448,4 +447,3 @@ class SettingsHint extends StatelessWidget {
     );
   }
 }
-

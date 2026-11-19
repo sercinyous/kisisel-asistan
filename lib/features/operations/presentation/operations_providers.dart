@@ -14,8 +14,7 @@ import '../domain/task_item.dart';
 
 enum OpsSegment { tasks, routines, notes }
 
-final opsSegmentProvider =
-    StateProvider<OpsSegment>((ref) => OpsSegment.tasks);
+final opsSegmentProvider = StateProvider<OpsSegment>((ref) => OpsSegment.tasks);
 
 /// Filtreler: `null` = Tümü.
 final taskCategoryFilterProvider = StateProvider<String?>((ref) => null);

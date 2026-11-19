@@ -123,9 +123,7 @@ typedef _Window = ({DateTime from, DateTime to});
 // ile protein özeti aynı sorguyu paylaşır, sunucuya tek istek gider.
 final _metricsWindowProvider =
     FutureProvider.family<List<DailyHealthMetric>, _Window>(
-  (ref, window) => ref
-      .watch(healthRepositoryProvider)
-      .fetchDailyMetrics(
+  (ref, window) => ref.watch(healthRepositoryProvider).fetchDailyMetrics(
         window.from,
         window.to,
         source: ref.watch(healthSourceProvider),

@@ -75,7 +75,8 @@ class _TaskCategoriesCardState extends ConsumerState<TaskCategoriesCard> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         const SnackBar(
-          content: Text('En çok ${TaskCategory.maxCount} kategori eklenebilir.'),
+          content:
+              Text('En çok ${TaskCategory.maxCount} kategori eklenebilir.'),
         ),
       );
   }
@@ -175,8 +176,8 @@ class _TaskCategoriesCardState extends ConsumerState<TaskCategoriesCard> {
           Text(
             'Kapalı kategoriler seçicide, filtrede ve AI önerilerinde görünmez; '
             'mevcut görevler kategorisini korur.',
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: AppColors.textMuted),
+            style:
+                theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
           ),
           const SizedBox(height: 8),
           for (var i = 0; i < list.length; i++)
@@ -352,7 +353,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AlertDialog(
-      title: Text(widget.initial == null ? 'Yeni kategori' : 'Kategoriyi düzenle'),
+      title:
+          Text(widget.initial == null ? 'Yeni kategori' : 'Kategoriyi düzenle'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,

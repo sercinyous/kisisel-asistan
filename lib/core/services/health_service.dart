@@ -115,8 +115,7 @@ BodyMeasurements latestBodyMeasurements(
   }
   return BodyMeasurements(
     heightCm: height?.value.round(),
-    weightKg:
-        weight == null ? null : (weight.value * 10).roundToDouble() / 10,
+    weightKg: weight == null ? null : (weight.value * 10).roundToDouble() / 10,
   );
 }
 

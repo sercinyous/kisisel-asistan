@@ -95,14 +95,16 @@ class TaskItem {
       TaskItem(
         id: id,
         title: title ?? this.title,
-        description: clearDescription ? null : (description ?? this.description),
+        description:
+            clearDescription ? null : (description ?? this.description),
         category: category ?? this.category,
         priority: priority ?? this.priority,
         status: status ?? this.status,
         assignee: clearAssignee ? null : (assignee ?? this.assignee),
         dueAt: clearDueAt ? null : (dueAt ?? this.dueAt),
         remindAt: clearRemindAt ? null : (remindAt ?? this.remindAt),
-        completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+        completedAt:
+            clearCompletedAt ? null : (completedAt ?? this.completedAt),
         notify: notify ?? this.notify,
       );
 

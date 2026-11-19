@@ -109,8 +109,7 @@ class OperationsScreen extends ConsumerWidget {
                         selected: filter,
                       );
                       if (picked == null) return;
-                      ref.read(filterProvider.notifier).state =
-                          picked.value;
+                      ref.read(filterProvider.notifier).state = picked.value;
                     },
                   ),
                   IconButton(

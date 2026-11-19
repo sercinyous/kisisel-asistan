@@ -43,9 +43,7 @@ abstract final class _HealthSourceActions {
             'Bu hesap için onayla',
             _CardAction.approveApple,
           ),
-        HealthStatus.reconnect ||
-        HealthStatus.failed =>
-          (
+        HealthStatus.reconnect || HealthStatus.failed => (
             data.message ?? 'HealthKit verisi okunamadı.',
             'Tekrar dene',
             _CardAction.resync,

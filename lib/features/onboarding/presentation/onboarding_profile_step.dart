@@ -56,7 +56,8 @@ class OnboardingProfileStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final zones = [
-      if (!onboardingTimezones.any((z) => z.$1 == timezone)) (timezone, timezone),
+      if (!onboardingTimezones.any((z) => z.$1 == timezone))
+        (timezone, timezone),
       ...onboardingTimezones,
     ];
     return Column(

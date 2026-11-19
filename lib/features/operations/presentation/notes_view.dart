@@ -174,8 +174,7 @@ class _NoteCard extends StatelessWidget {
                       ? Icons.push_pin_rounded
                       : Icons.push_pin_outlined,
                   size: 20,
-                  color:
-                      note.isPinned ? AppColors.ops : AppColors.textMuted,
+                  color: note.isPinned ? AppColors.ops : AppColors.textMuted,
                 ),
               ),
               const SizedBox(width: 4),

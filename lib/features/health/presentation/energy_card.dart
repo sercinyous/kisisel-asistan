@@ -131,9 +131,8 @@ class EnergyNetCard extends ConsumerWidget {
         data: (value) {
           if (value == null) return const _ProfileMissing();
           final net = value.net;
-          final label = net == null
-              ? 'Enerji · bugün yakılan'
-              : 'Enerji · bugün net';
+          final label =
+              net == null ? 'Enerji · bugün yakılan' : 'Enerji · bugün net';
           final number = net == null
               ? HealthFormat.count(value.burned)
               : formatEnergyNet(net);

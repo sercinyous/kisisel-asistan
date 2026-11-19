@@ -166,8 +166,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               _error!,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: AppColors.danger),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: AppColors.danger),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),

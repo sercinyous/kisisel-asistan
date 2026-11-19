@@ -103,7 +103,8 @@ class _TeamCardState extends ConsumerState<TeamCard> {
       trailing: '${team.length}/${SettingsLimits.teamMax}',
       children: [
         if (team.isEmpty)
-          const SettingsHint('Henüz kimse yok. Görevlerde seçmek için isim ekle.')
+          const SettingsHint(
+              'Henüz kimse yok. Görevlerde seçmek için isim ekle.')
         else
           Wrap(
             spacing: 8,

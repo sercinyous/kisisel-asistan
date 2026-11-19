@@ -54,8 +54,8 @@ class RitimTop extends StatefulWidget {
 
 class _RitimTopState extends State<RitimTop>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller =
-      AnimationController(vsync: this)..addStatusListener(_onStatus);
+  late final AnimationController _controller = AnimationController(vsync: this)
+    ..addStatusListener(_onStatus);
   bool? _reduced;
   bool _doneReported = false;
 
@@ -292,9 +292,8 @@ class _RitimTopPainter extends CustomPainter {
   /// Halka boyunca dolaşan açık renkli dilim; dönüş izlenimini verir.
   void _paintHighlight(Canvas canvas, RitimTopPose pose) {
     final hsl = HSLColor.fromColor(color);
-    final light = hsl
-        .withLightness(hsl.lightness + (1 - hsl.lightness) * 0.6)
-        .toColor();
+    final light =
+        hsl.withLightness(hsl.lightness + (1 - hsl.lightness) * 0.6).toColor();
     final center = RitimTopGeometry.ringCenter;
     canvas
       ..save()

@@ -26,7 +26,8 @@ class NutritionDayCard extends ConsumerWidget {
             icon: Icons.restaurant_rounded,
             label: 'Bugün',
             color: AppColors.nutrition,
-            trailing: 'hedef ${HealthFormat.count(settings.dailyCalories)} kcal',
+            trailing:
+                'hedef ${HealthFormat.count(settings.dailyCalories)} kcal',
           ),
           const SizedBox(height: 8),
           nutrition.when(

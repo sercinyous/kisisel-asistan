@@ -128,8 +128,8 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
     _focusNode.requestFocus();
   }
 
-  void _close() =>
-      Navigator.of(context).pop(_savedBeforeSwitch > 0 ? _savedBeforeSwitch : null);
+  void _close() => Navigator.of(context)
+      .pop(_savedBeforeSwitch > 0 ? _savedBeforeSwitch : null);
 
   @override
   Widget build(BuildContext context) {
@@ -145,16 +145,16 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
     final Widget? otherDomainBanner =
         !state.otherDomain || _savedModes.contains(_mode.other)
             ? null
-        : _OtherDomainBanner(
-            target: _mode.other,
-            mixed: inPreview,
-            summary: state.otherDomainSummary,
-            onSwitch: state.isBusy
-                ? null
-                : inPreview
-                    ? () => _save(thenSwitch: true)
-                    : _switchMode,
-          );
+            : _OtherDomainBanner(
+                target: _mode.other,
+                mixed: inPreview,
+                summary: state.otherDomainSummary,
+                onSwitch: state.isBusy
+                    ? null
+                    : inPreview
+                        ? () => _save(thenSwitch: true)
+                        : _switchMode,
+              );
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -259,10 +259,10 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                       const SizedBox(height: 12),
                     ],
                     FilledButton.icon(
-                      onPressed: state.isBusy ||
-                              _textController.text.trim().isEmpty
-                          ? null
-                          : _parse,
+                      onPressed:
+                          state.isBusy || _textController.text.trim().isEmpty
+                              ? null
+                              : _parse,
                       icon: const Icon(Icons.auto_awesome_rounded),
                       label: Text(
                         state.status == QuickAddStatus.parsing
@@ -757,8 +757,7 @@ class _ErrorBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline_rounded,
-              size: 18, color: AppColors.danger),
+          Icon(Icons.error_outline_rounded, size: 18, color: AppColors.danger),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

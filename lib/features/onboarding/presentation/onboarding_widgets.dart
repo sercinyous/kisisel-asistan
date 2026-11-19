@@ -125,7 +125,8 @@ class OnboardingField extends StatelessWidget {
 
 /// Yan yana iki alan (hata metinleri hizayı bozmasın diye üstten hizalı).
 class OnboardingFieldRow extends StatelessWidget {
-  const OnboardingFieldRow({super.key, required this.left, required this.right});
+  const OnboardingFieldRow(
+      {super.key, required this.left, required this.right});
 
   final Widget left;
   final Widget right;

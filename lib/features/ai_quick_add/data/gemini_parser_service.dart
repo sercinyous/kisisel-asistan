@@ -314,21 +314,21 @@ $_commonRules''';
   static const Map<String, dynamic> _otherDomainFlag = {'type': 'BOOLEAN'};
 
   static Map<String, dynamic> _taskSchema(List<String> categories) => {
-    'type': 'ARRAY',
-    'items': {
-      'type': 'OBJECT',
-      'properties': {
-        'title': {'type': 'STRING'},
-        'description': _nullableString,
-        'category': {'type': 'STRING', 'enum': categories},
-        'priority': {'type': 'STRING', 'enum': ParsedTask.priorities},
-        'assignee': _nullableString,
-        'due_at': _nullableString,
-        'remind_at': _nullableString,
-      },
-      'required': ['title', 'category', 'priority'],
-    },
-  };
+        'type': 'ARRAY',
+        'items': {
+          'type': 'OBJECT',
+          'properties': {
+            'title': {'type': 'STRING'},
+            'description': _nullableString,
+            'category': {'type': 'STRING', 'enum': categories},
+            'priority': {'type': 'STRING', 'enum': ParsedTask.priorities},
+            'assignee': _nullableString,
+            'due_at': _nullableString,
+            'remind_at': _nullableString,
+          },
+          'required': ['title', 'category', 'priority'],
+        },
+      };
 
   static const Map<String, dynamic> _noteSchema = {
     'type': 'ARRAY',
@@ -440,17 +440,17 @@ $_commonRules''';
   };
 
   static Map<String, dynamic> _workSchema(List<String> taskCategories) => {
-    'type': 'OBJECT',
-    'properties': {
-      'tasks': _taskSchema(taskCategories),
-      'notes': _noteSchema,
-      'routines': _routineSchema,
-      'reminders': _reminderSchema,
-      'other_domain': _otherDomainFlag,
-      'other_domain_summary': _nullableString,
-    },
-    'required': ['tasks', 'notes', 'routines', 'other_domain'],
-  };
+        'type': 'OBJECT',
+        'properties': {
+          'tasks': _taskSchema(taskCategories),
+          'notes': _noteSchema,
+          'routines': _routineSchema,
+          'reminders': _reminderSchema,
+          'other_domain': _otherDomainFlag,
+          'other_domain_summary': _nullableString,
+        },
+        'required': ['tasks', 'notes', 'routines', 'other_domain'],
+      };
 
   static const Map<String, dynamic> _healthSchema = {
     'type': 'OBJECT',

@@ -173,7 +173,8 @@ final monthOverviewProvider =
     lastDay,
     source: ref.watch(healthSourceProvider),
   );
-  final nutritionFuture = healthRepository.fetchNutritionTotals(month, nextMonth);
+  final nutritionFuture =
+      healthRepository.fetchNutritionTotals(month, nextMonth);
   final weightsFuture = healthRepository.fetchWeights(month, nextMonth);
   // Paralel okuma. Future.wait ilk hatayı özgün türüyle iletir (ekranlar
   // PostgrestException'ı ayırt edebilsin) ve diğer hataları sahipsiz bırakmaz.

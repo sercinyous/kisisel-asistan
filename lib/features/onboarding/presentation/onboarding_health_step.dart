@@ -125,9 +125,8 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
   String? _confirmation() {
     final kind = _confirmedFor;
     if (kind == null) return null;
-    final name = kind == HealthSourceKind.appleHealth
-        ? 'Apple Sağlık'
-        : 'Google Health';
+    final name =
+        kind == HealthSourceKind.appleHealth ? 'Apple Sağlık' : 'Google Health';
     final steps = _todaySteps;
     return steps == null
         ? '$name bağlandı.'

@@ -472,7 +472,8 @@ class _HealthStatusMessage extends ConsumerWidget {
             actionLabel: 'Bağlan',
             onAction: resync,
           ),
-        HealthStatus.notConnected || HealthStatus.reconnect =>
+        HealthStatus.notConnected ||
+        HealthStatus.reconnect =>
           KokpitInlineMessage(
             icon: snapshot.status == HealthStatus.reconnect
                 ? Icons.sync_problem_rounded

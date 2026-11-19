@@ -5,8 +5,8 @@ enum ActivityLevel {
   light('light', 'Az hareketli', 'Haftada 1–3 gün hafif egzersiz', 1.375),
   moderate('moderate', 'Orta', 'Haftada 3–5 gün egzersiz', 1.55),
   active('active', 'Hareketli', 'Haftada 6–7 gün egzersiz', 1.725),
-  veryActive('very_active', 'Çok hareketli', 'Ağır iş ya da günde iki antrenman',
-      1.9);
+  veryActive(
+      'very_active', 'Çok hareketli', 'Ağır iş ya da günde iki antrenman', 1.9);
 
   const ActivityLevel(this.dbValue, this.label, this.description, this.factor);
 

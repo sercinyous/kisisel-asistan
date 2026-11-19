@@ -6,6 +6,8 @@ import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_day_view.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
+import 'package:kisisel_asistan/demo/demo_backend.dart';
+import 'package:kisisel_asistan/features/operations/presentation/operations_providers.dart';
 import 'package:kisisel_asistan/features/operations/presentation/routine_form_sheet.dart';
 import 'package:kisisel_asistan/features/settings/presentation/hesap_screen.dart';
 
@@ -22,6 +24,31 @@ Routine daily(String id, String title, {String? time}) => Routine.fromMap({
       'category': 'operasyon',
       'time_of_day': time,
     });
+
+TaskItem dueToday(String id) => TaskItem(
+      id: id,
+      title: 'Görev $id',
+      category: 'Ekip',
+      priority: 'medium',
+      status: 'todo',
+      dueAt: today().add(const Duration(hours: 23)),
+    );
+
+/// Yazma başarılı döner ama okunan durum değişmez (gecikmeli eşitleme).
+class _StaleRoutines extends FakeRoutinesRepository {
+  _StaleRoutines({super.routines});
+
+  @override
+  Future<void> setCompleted({
+    required String routineId,
+    required DateTime periodKey,
+    required bool completed,
+  }) async {
+    toggles.add(
+      (routineId: routineId, periodKey: periodKey, completed: completed),
+    );
+  }
+}
 
 Routine monthly(String id, String title, int day, {int? hour}) => Routine(
       id: id,
@@ -147,6 +174,41 @@ void main() {
       expect(find.text('Tümünü gör (7)'), findsOneWidget);
     });
 
+    testWidgets('Tümünü gör: gizlilerin çoğu görevse Görevler, filtreler sıfır',
+        (tester) async {
+      harness.routines.routines = [
+        for (var i = 0; i < 4; i++) daily('r$i', 'Rutin $i', time: '00:0$i:00'),
+      ];
+      harness.tasks.tasks = [for (var i = 0; i < 4; i++) dueToday('t$i')];
+      final container = await harness.pump(tester);
+      container.read(routineScopeFilterProvider.notifier).state = 'is';
+      container.read(taskCategoryFilterProvider.notifier).state = 'Ekip';
+      container.read(opsSegmentProvider.notifier).state = OpsSegment.notes;
+      await tester
+          .ensureVisible(find.byKey(const ValueKey('kokpit-today-all')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('kokpit-today-all')));
+      await tester.pumpAndSettle();
+      expect(container.read(opsSegmentProvider), OpsSegment.tasks);
+      expect(container.read(routineScopeFilterProvider), isNull);
+      expect(container.read(taskCategoryFilterProvider), isNull);
+    });
+
+    testWidgets('Tümünü gör: gizliler rutinse Rutinler açılır', (tester) async {
+      harness.routines.routines = [
+        for (var i = 0; i < 7; i++) daily('r$i', 'Rutin $i'),
+      ];
+      final container = await harness.pump(tester);
+      container.read(routineScopeFilterProvider.notifier).state = 'is';
+      await tester
+          .ensureVisible(find.byKey(const ValueKey('kokpit-today-all')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('kokpit-today-all')));
+      await tester.pumpAndSettle();
+      expect(container.read(opsSegmentProvider), OpsSegment.routines);
+      expect(container.read(routineScopeFilterProvider), isNull);
+    });
+
     testWidgets('rutin işaretlenince sayaç güncellenir', (tester) async {
       await harness.pump(tester);
       await harness.tapRow(tester, 'Gelen kutusu kontrolü');
@@ -206,6 +268,20 @@ void main() {
       await tapCheck(tester, 'm1');
       expect(checked(tester, 'm1'), isFalse);
       expect(harness.routines.toggles.last.completed, isFalse);
+    });
+
+    testWidgets(
+        'aylık iş yazımı başarılı ama durum değişmese de kutu kilitlenmez',
+        (tester) async {
+      harness.routines = _StaleRoutines(routines: harness.routines.routines);
+      await harness.pump(tester);
+      await harness.showView(tester, 'Rutinler');
+      await tapCheck(tester, 'm1');
+      expect(harness.routines.toggles, hasLength(1));
+      expect(checked(tester, 'm1'), isFalse);
+      await tapCheck(tester, 'm1');
+      expect(harness.routines.toggles, hasLength(2),
+          reason: 'bekleyen durum temizlenmeli, ikinci dokunuş işlenmeli');
     });
 
     testWidgets('satıra dokunmak formu açar, kutu tamamlamaz', (tester) async {

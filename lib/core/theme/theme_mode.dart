@@ -84,8 +84,7 @@ class ThemeModeController extends Notifier<AppThemeMode> {
   }
 }
 
-final themeModeProvider =
-    NotifierProvider<ThemeModeController, AppThemeMode>(
+final themeModeProvider = NotifierProvider<ThemeModeController, AppThemeMode>(
   ThemeModeController.new,
 );
 

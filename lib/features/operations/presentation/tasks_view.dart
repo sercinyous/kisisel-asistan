@@ -143,8 +143,7 @@ class TasksView extends ConsumerWidget {
     final categories = ref.watch(taskCategoriesProvider);
     final selectedFilter = ref.watch(taskCategoryFilterProvider);
     // Kapatılan kategori filtrede kalmışsa Tümü'ye düşülür.
-    final filter =
-        active.contains(selectedFilter) ? selectedFilter : null;
+    final filter = active.contains(selectedFilter) ? selectedFilter : null;
     final tasks = ref.watch(opsTasksProvider);
     final laterChoice = ref.watch(opsLaterExpandedProvider);
 
@@ -199,8 +198,8 @@ class TasksView extends ConsumerWidget {
                 ];
               }
               final groups = groupTasks(visible, DateTime.now());
-              final laterOpen = laterChoice ??
-                  (groups.today.isEmpty && groups.week.isEmpty);
+              final laterOpen =
+                  laterChoice ?? (groups.today.isEmpty && groups.week.isEmpty);
               return [
                 if (groups.today.isNotEmpty)
                   OpsGroupCard(
@@ -291,9 +290,10 @@ class _TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final when = task.scheduledAt;
-    final overdue = !task.isDone && when != null && when.isBefore(DateTime.now());
-    final muted = theme.textTheme.labelMedium
-        ?.copyWith(color: AppColors.textSecondary);
+    final overdue =
+        !task.isDone && when != null && when.isBefore(DateTime.now());
+    final muted =
+        theme.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary);
 
     return InkWell(
       onTap: onEdit,

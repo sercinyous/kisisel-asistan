@@ -52,7 +52,7 @@ class KokpitHarness {
         ),
         notifications = FakeNotificationService();
 
-  final FakeRoutinesRepository routines;
+  FakeRoutinesRepository routines;
   final FakeTasksRepository tasks;
   final FakeKokpitRepository kokpit;
   final FakeHealthRepository healthStore;

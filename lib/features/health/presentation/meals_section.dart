@@ -171,9 +171,8 @@ class _MealGroupTileState extends State<_MealGroupTile> {
           key: ValueKey('meal-group-${group.mealType}'),
           icon: _mealIcon(group.mealType),
           color: AppColors.nutrition,
-          title: empty
-              ? label
-              : '$label · ${HealthFormat.kcal(group.calories)}',
+          title:
+              empty ? label : '$label · ${HealthFormat.kcal(group.calories)}',
           subtitle: empty
               ? 'Henüz kayıt yok'
               : '${group.logs.length} kalem · '
@@ -201,25 +200,25 @@ class _MealGroupTileState extends State<_MealGroupTile> {
         ),
         if (expanded)
           for (final log in group.logs)
-          ItemRowActions(
-            key: ValueKey('meal-actions-${log.id}'),
-            itemKey: ValueKey('swipe-meal-${log.id}'),
-            title: log.foodName,
-            confirmTitle: _deleteTitle,
-            confirmMessage: _deleteMessage(log),
-            onEdit: () => onEdit(log),
-            onDelete: () => onRemove(log),
-            child: HealthListRow(
-              key: ValueKey('meal-${log.id}'),
+            ItemRowActions(
+              key: ValueKey('meal-actions-${log.id}'),
+              itemKey: ValueKey('swipe-meal-${log.id}'),
               title: log.foodName,
-              subtitle: widget._logDetail(log),
-              onTap: () => onEdit(log),
-              trailing: OpsItemMenu(
-                onEdit: () => onEdit(log),
-                onDelete: () => onDelete(log),
+              confirmTitle: _deleteTitle,
+              confirmMessage: _deleteMessage(log),
+              onEdit: () => onEdit(log),
+              onDelete: () => onRemove(log),
+              child: HealthListRow(
+                key: ValueKey('meal-${log.id}'),
+                title: log.foodName,
+                subtitle: widget._logDetail(log),
+                onTap: () => onEdit(log),
+                trailing: OpsItemMenu(
+                  onEdit: () => onEdit(log),
+                  onDelete: () => onDelete(log),
+                ),
               ),
             ),
-          ),
         if (expanded)
           Align(
             alignment: Alignment.centerLeft,

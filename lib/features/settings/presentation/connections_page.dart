@@ -64,8 +64,8 @@ class ConnectionsPage extends ConsumerWidget {
                 ('Okunamadı', AppColors.warning),
             },
           );
-    final healthUnavailable = !appleActive ||
-        health.valueOrNull?.status == HealthStatus.unavailable;
+    final healthUnavailable =
+        !appleActive || health.valueOrNull?.status == HealthStatus.unavailable;
 
     return Scaffold(
       backgroundColor: AppColors.background,

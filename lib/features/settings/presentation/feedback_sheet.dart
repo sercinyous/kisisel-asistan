@@ -8,8 +8,7 @@ import '../data/account_repository.dart';
 class FeedbackSheet extends ConsumerStatefulWidget {
   const FeedbackSheet({super.key});
 
-  static Future<void> show(BuildContext context) =>
-      showModalBottomSheet<void>(
+  static Future<void> show(BuildContext context) => showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
@@ -95,9 +94,8 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
                 ButtonSegment(value: c, label: Text(c.label)),
             ],
             selected: {_category},
-            onSelectionChanged: _sending
-                ? null
-                : (s) => setState(() => _category = s.first),
+            onSelectionChanged:
+                _sending ? null : (s) => setState(() => _category = s.first),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
@@ -123,8 +121,7 @@ class _FeedbackSheetState extends ConsumerState<FeedbackSheet> {
             ),
           FilledButton(
             key: const Key('feedback-send'),
-            onPressed:
-                _sending || _text.text.trim().isEmpty ? null : _send,
+            onPressed: _sending || _text.text.trim().isEmpty ? null : _send,
             child: Text(_sending ? 'Gönderiliyor…' : 'Gönder'),
           ),
         ],

@@ -88,7 +88,8 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
     final email = ref.watch(
       authSessionProvider.select((s) => s.valueOrNull?.user.email),
     );
-    final pending = ref.watch(pendingFriendRequestCountProvider).valueOrNull ?? 0;
+    final pending =
+        ref.watch(pendingFriendRequestCountProvider).valueOrNull ?? 0;
     final themeMode = ref.watch(themeModeProvider);
     final source = ref.watch(healthSourceProvider);
 
