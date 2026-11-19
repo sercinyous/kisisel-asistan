@@ -42,7 +42,8 @@ class ConnectionsPage extends ConsumerWidget {
         ref.watch(healthSourceProvider) == HealthSourceKind.appleHealth;
 
     final (healthText, healthColor) = !appleActive
-        ? ('Kaynak olarak seçili değil', AppColors.textMuted)
+        ? ('Pasif: Google Health seçili, Apple Sağlık\'tan veri okunmuyor.',
+            AppColors.textMuted)
         : health.when(
             skipLoadingOnRefresh: false,
             loading: () => ('Kontrol ediliyor…', AppColors.textMuted),
@@ -80,15 +81,22 @@ class ConnectionsPage extends ConsumerWidget {
             children: [
               const HealthSourcePicker(),
               const Divider(height: 24),
-              SettingsStatusRow(
-                icon: Icons.favorite_rounded,
-                title: 'Apple Sağlık',
-                status: healthText,
-                statusColor: healthColor,
-                actionLabel: 'Yeniden bağlan',
-                onAction: health.isLoading || healthUnavailable
-                    ? null
-                    : () => _reconnectHealth(context, ref),
+              HealthSourceDim(
+                active: appleActive,
+                child: SettingsStatusRow(
+                  icon: Icons.favorite_rounded,
+                  title: 'Apple Sağlık',
+                  trailing: HealthSourceStateBadge(
+                    key: const Key('apple-source-state'),
+                    active: appleActive,
+                  ),
+                  status: healthText,
+                  statusColor: healthColor,
+                  actionLabel: 'Yeniden bağlan',
+                  onAction: health.isLoading || healthUnavailable
+                      ? null
+                      : () => _reconnectHealth(context, ref),
+                ),
               ),
               const Divider(height: 16),
               const GoogleHealthRow(),

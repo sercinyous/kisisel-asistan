@@ -146,10 +146,13 @@ void main() {
         GoogleLinkStatus.connected);
     expect(inGoogleRow('ayse.ornek@gmail.com'), findsOneWidget);
     expect(
-      inGoogleRow('Kaynak olarak seçilince'),
+      inGoogleRow('Şu an okunmuyor'),
       findsOneWidget,
       reason: 'Apple seçiliyken Google verisi kullanılmaz',
     );
+    expect(find.byKey(const Key('google-source-passive-note')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('google-source-state')), matching: find.text('Pasif')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('apple-source-state')), matching: find.text('Etkin')), findsOneWidget);
     expect(
       tester
           .widget<TextButton>(find.byKey(const Key('settings-google-sync')))
@@ -176,8 +179,12 @@ void main() {
     expect(inGoogleRow('ayse.ornek@gmail.com'), findsOneWidget);
     expect(inGoogleRow('Son eşitleme: Bugün'), findsOneWidget);
     expect(picker(tester).selected, {HealthSourceKind.googleHealth});
-    expect(find.text('Kaynak olarak seçili değil'), findsOneWidget,
+    expect(
+        find.text('Pasif: Google Health seçili, Apple Sağlık\'tan veri okunmuyor.'),
+        findsOneWidget,
         reason: 'Apple satırı Google okumasını yorumlamaz');
+    expect(find.descendant(of: find.byKey(const Key('apple-source-state')), matching: find.text('Pasif')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('google-source-state')), matching: find.text('Etkin')), findsOneWidget);
 
     final sync = find.byKey(const Key('settings-google-sync'));
     await tester.ensureVisible(sync);

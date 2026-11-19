@@ -177,3 +177,4 @@ Ayrıntı: `docs/superpowers/specs/2026-11-17-faz4b-cok-kullanicili-design.md` (
 - Uygulama ikonu: mint topaç (ios_setup/AppIcon.appiconset, tek 1024 px); configure_ios.sh derlemede kopyalar.
 - Topaç animasyonu: lib/core/widgets/ritim_top (spin/settle/idle, hareket azaltmada durağan); açılış, AI hızlı giriş ve ilk kurulum karşılamasında.
 - Sadeleştirme: sekmeler Kokpit / İşler / + / Sağlık / İçgörü. Kokpit yalnızca bugün (kalori, işler/adım/uyku, su, en çok 5 satırlık "Bugünün işleri"); Ay görünümü İşler › Takvim'e, ay özeti İçgörü › Ay'a taşındı. Ayarlar yerine profil ikonundan açılan Hesap menüsü ve 5 alt sayfa (her sayfa yalnızca kendi alanlarını kaydeder). Sağlık Özet/Beslenme/Hareket; İşler Görevler/Rutinler/Notlar, günlük ve aylık rutinler Rutinler'den işaretlenir. Kart iç boşluğu 20; yeni renk rolleri sleep, water.
+- Sağlık kaynağı: aynı anda yalnızca biri etkin; Bağlantılar'da seçili olmayan kaynak "Pasif" etiketiyle soluk görünür ve okunmadığı yazılır.

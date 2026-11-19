@@ -381,10 +381,12 @@ class SettingsStatusRow extends StatelessWidget {
     required this.statusColor,
     required this.actionLabel,
     required this.onAction,
+    this.trailing,
   });
 
   final IconData icon;
   final String title;
+  final Widget? trailing;
   final String status;
   final Color statusColor;
   final String actionLabel;
@@ -408,7 +410,17 @@ class SettingsStatusRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: theme.textTheme.bodyLarge),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(title, style: theme.textTheme.bodyLarge),
+                      ),
+                      if (trailing != null) ...[
+                        const SizedBox(width: 8),
+                        trailing!,
+                      ],
+                    ],
+                  ),
                   Text(
                     status,
                     style:
