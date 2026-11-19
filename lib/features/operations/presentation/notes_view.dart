@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/config/app_targets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/item_actions.dart';
@@ -17,21 +16,22 @@ const String _deleteTitle = 'Not silinsin mi?';
 String _deleteMessage(NoteItem note) =>
     '"${note.title}" kalıcı olarak silinecek.';
 
+/// Not formunu açar (yeni ya da düzenleme) ve sonucu bildirir.
+Future<void> openNoteForm(BuildContext context, [NoteItem? note]) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final saved = await NoteFormSheet.show(context, note: note);
+  if (!saved) return;
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(note == null ? 'Not eklendi.' : 'Not güncellendi.'),
+      ),
+    );
+}
+
 class NotesView extends ConsumerWidget {
   const NotesView({super.key});
-
-  Future<void> _openForm(BuildContext context, [NoteItem? note]) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final saved = await NoteFormSheet.show(context, note: note);
-    if (!saved) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(note == null ? 'Not eklendi.' : 'Not güncellendi.'),
-        ),
-      );
-  }
 
   Future<void> _togglePin(BuildContext context, NoteItem note) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -48,23 +48,11 @@ class NotesView extends ConsumerWidget {
     }
   }
 
-  /// Notu siler; başarılıysa `true`. [confirm] doğruysa önce onay sorulur
-  /// (üç nokta menüsü); uzun basış ve kaydırma onayı kendisi sorar.
-  Future<bool> _delete(
-    BuildContext context,
-    NoteItem note, {
-    bool confirm = false,
-  }) async {
+  /// Notu siler; başarılıysa `true`. Uzun basış ve kaydırma onayı kendisi
+  /// sorar.
+  Future<bool> _delete(BuildContext context, NoteItem note) async {
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
-    if (confirm) {
-      final confirmed = await confirmDelete(
-        context,
-        title: _deleteTitle,
-        message: _deleteMessage(note),
-      );
-      if (!confirmed) return false;
-    }
     try {
       await container.read(notesRepositoryProvider).delete(note.id);
       container.invalidate(opsNotesProvider);
@@ -94,17 +82,6 @@ class NotesView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: opsListPadding,
         children: [
-          OpsSectionHeader(title: 'Notlar', onAdd: () => _openForm(context)),
-          OpsFilterChips<String?>(
-            options: [
-              (null, 'Tümü'),
-              for (final c in AppTargets.noteCategories) (c, c),
-            ],
-            selected: filter,
-            onSelected: (value) =>
-                ref.read(noteCategoryFilterProvider.notifier).state = value,
-          ),
-          const SizedBox(height: 12),
           ...notes.when(
             loading: () => const [OpsLoading()],
             error: (_, __) => [
@@ -124,7 +101,7 @@ class NotesView extends ConsumerWidget {
                   OpsMessage(
                     icon: Icons.sticky_note_2_outlined,
                     text: filter == null
-                        ? 'Henüz not yok. "Ekle" ile ilk notunu yaz.'
+                        ? 'Henüz not yok. + ile ilk notunu yaz.'
                         : '$filter kategorisinde not yok.',
                   ),
                 ];
@@ -139,13 +116,12 @@ class NotesView extends ConsumerWidget {
                     confirmTitle: _deleteTitle,
                     confirmMessage: _deleteMessage(note),
                     borderRadius: BorderRadius.circular(AppRadii.card),
-                    onEdit: () => _openForm(context, note),
+                    onEdit: () => openNoteForm(context, note),
                     onDelete: () => _delete(context, note),
                     child: _NoteCard(
                       note: note,
-                      onEdit: () => _openForm(context, note),
+                      onEdit: () => openNoteForm(context, note),
                       onTogglePin: () => _togglePin(context, note),
-                      onDelete: () => _delete(context, note, confirm: true),
                     ),
                   ),
                 ],
@@ -163,20 +139,18 @@ class _NoteCard extends StatelessWidget {
     required this.note,
     required this.onEdit,
     required this.onTogglePin,
-    required this.onDelete,
   });
 
   final NoteItem note;
   final VoidCallback onEdit;
   final VoidCallback onTogglePin;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return BentoCard(
       onTap: onEdit,
-      tint: note.isPinned ? AppColors.accent : null,
+      tint: note.isPinned ? AppColors.ops : null,
       padding: const EdgeInsets.fromLTRB(AppSpacing.cardPadding, 8, 0, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,11 +174,10 @@ class _NoteCard extends StatelessWidget {
                       ? Icons.push_pin_rounded
                       : Icons.push_pin_outlined,
                   size: 20,
-                  color:
-                      note.isPinned ? AppColors.accent : AppColors.textMuted,
+                  color: note.isPinned ? AppColors.ops : AppColors.textMuted,
                 ),
               ),
-              OpsItemMenu(onEdit: onEdit, onDelete: onDelete),
+              const SizedBox(width: 4),
             ],
           ),
           Padding(

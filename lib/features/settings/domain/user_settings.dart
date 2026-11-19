@@ -191,7 +191,8 @@ class UserSettings {
           (map['start_weight_kg'] as num?)?.toDouble() ?? d.startWeightKg,
       targetWeightKg:
           (map['target_weight_kg'] as num?)?.toDouble() ?? d.targetWeightKg,
-      dailyCalories: (map['daily_calories'] as num?)?.toInt() ?? d.dailyCalories,
+      dailyCalories:
+          (map['daily_calories'] as num?)?.toInt() ?? d.dailyCalories,
       dailyProteinG:
           (map['daily_protein_g'] as num?)?.toInt() ?? d.dailyProteinG,
       dailyCarbsG: (map['daily_carbs_g'] as num?)?.toInt() ?? d.dailyCarbsG,

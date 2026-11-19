@@ -105,6 +105,12 @@ class _HomeShellState extends ConsumerState<HomeShell>
     ref.watch(notificationSyncProvider);
     // Bildirimdeki "Yaptım" eylemleri (oturum sahibi denetimiyle).
     ref.watch(reminderActionProcessorProvider);
+    // Kokpit kartlarından gelen sekme geçişi isteği.
+    ref.listen<int?>(homeTabRequestProvider, (_, next) {
+      if (next == null) return;
+      setState(() => _index = next);
+      ref.read(homeTabRequestProvider.notifier).state = null;
+    });
 
     return Scaffold(
       extendBody: true,

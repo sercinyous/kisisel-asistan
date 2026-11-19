@@ -107,7 +107,8 @@ class Routine {
       notify: map['notify'] as bool? ?? true,
       isActive: map['is_active'] as bool? ?? true,
       sortOrder: (map['sort_order'] as num?)?.toInt() ?? 0,
-      createdAt: created is String ? DateTime.tryParse(created)?.toLocal() : null,
+      createdAt:
+          created is String ? DateTime.tryParse(created)?.toLocal() : null,
     );
   }
 

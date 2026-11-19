@@ -11,8 +11,7 @@ final userSettingsProvider =
 
 class UserSettingsNotifier extends AsyncNotifier<UserSettings> {
   @override
-  Future<UserSettings> build() =>
-      ref.watch(settingsRepositoryProvider).fetch();
+  Future<UserSettings> build() => ref.watch(settingsRepositoryProvider).fetch();
 
   /// Veritabanına yazar ve sunucunun döndürdüğü satırı yayınlar.
   /// Hata çağırana iletilir; mevcut değer korunur.

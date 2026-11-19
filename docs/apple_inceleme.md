@@ -39,11 +39,12 @@ Dashboard'dan da kapatılamaz. Bu yüzden önce o e-posta için bekleyen bir dav
 
 ## 3. Uygulamada kontrol
 
-- iPhone'da `DEMO_EPOSTA` / `DEMO_SIFRE` ile giriş yap; Kokpit, Operasyon,
-  Sağlık ve Raporlar dolu görünmeli.
-- Ayarlar > Gizlilik, Sorun bildir ve Hesabımı sil satırları görünmeli
+- iPhone'da `DEMO_EPOSTA` / `DEMO_SIFRE` ile giriş yap; Kokpit, İşler,
+  Sağlık ve İçgörü dolu görünmeli.
+- Sağ üstteki profil ikonu > Hesap: Yardım ve gizlilik ile Sorun bildir satırları;
+  Hesabımı sil, Profil ve hedefler sayfasının en altında görünmeli
   (demo hesabında **Hesabımı sil**'i deneme; denersen 1–2. adımları tekrarla).
-- Raporlar sekmesinde "Raporu yeniden oluştur" bir kez denenebilir.
+- İçgörü sekmesinde "Raporu yeniden oluştur" bir kez denenebilir.
 
 ## 4. App Store Connect
 

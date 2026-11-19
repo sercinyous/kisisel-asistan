@@ -21,8 +21,6 @@ import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_providers.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../helpers/fakes.dart';
@@ -102,30 +100,6 @@ void main() {
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
   }
 
-  Future<ProviderContainer> pumpCard(
-    WidgetTester tester, {
-    double textScale = 1.0,
-  }) async {
-    phoneView(tester, textScale);
-    final container = makeContainer();
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp(
-          theme: AppTheme.dark,
-          home: const Scaffold(
-            body: SingleChildScrollView(
-              padding: EdgeInsets.all(AppSpacing.page),
-              child: EnergyCard(),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    return container;
-  }
-
   Future<ProviderContainer> pumpDetail(
     WidgetTester tester, {
     double textScale = 1.0,
@@ -163,309 +137,6 @@ void main() {
       tester.widget<IconButton>(find.byKey(const Key('energy-next'))).onPressed !=
       null;
 
-  group('EnergyCard yorumları', () {
-    // 12:00'de bazal 890 + aktif 520 = yakılan 1410; net = alınan − 1410.
-    Future<void> pumpVerdict(WidgetTester tester, double intake) async {
-      health
-        ..metrics = [active(_tue, 520)]
-        ..nutrition = [meals(_tue, intake)];
-      await pumpCard(tester);
-    }
-
-    testWidgets('yağ yaktın: net −410, bugün için "Şu ana kadar"', (tester) async {
-      await pumpVerdict(tester, 1000);
-
-      expect(find.text('Enerji dengesi'), findsOneWidget);
-      expect(find.text('Şu ana kadar'), findsOneWidget);
-      expect(text(tester, 'energy-intake'), '1.000');
-      expect(text(tester, 'energy-burned'), '1.410');
-      expect(text(tester, 'energy-net'), '−410');
-      expect(find.text('Bugün yağ yaktın'), findsOneWidget);
-      expect(find.text('Yakılan = bazal 890 + aktif 520 kcal'), findsOneWidget);
-      expect(find.byKey(const Key('energy-compensation')), findsNothing);
-      expect(find.byKey(const Key('energy-active-missing')), findsNothing);
-    });
-
-    testWidgets('yerinde saydın: net −10', (tester) async {
-      await pumpVerdict(tester, 1400);
-      expect(text(tester, 'energy-net'), '−10');
-      expect(find.text('Bugün yerinde saydın, yağ almadın'), findsOneWidget);
-    });
-
-    testWidgets('biraz kaçırdın: net +300, telafi 62 dk ya da yarın 300 kcal',
-        (tester) async {
-      await pumpVerdict(tester, 1710);
-      expect(text(tester, 'energy-net'), '+300');
-      expect(
-        find.text('Bugün biraz kaçırdın, telafi edebilirsin'),
-        findsOneWidget,
-      );
-      expect(
-        find.text(
-          'Telafi: yaklaşık 62 dk tempolu yürüyüş ya da yarın 300 kcal daha az ye',
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('fazla geçti: net +590, telafi satırı yok', (tester) async {
-      await pumpVerdict(tester, 2000);
-      expect(text(tester, 'energy-net'), '+590');
-      expect(
-        find.text('Bugün fazla geçti; bir günle bozulmaz, yarın toparla'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('energy-compensation')), findsNothing);
-    });
-
-    testWidgets('çok yüksek açık: uyarı, övgü yok', (tester) async {
-      health
-        ..metrics = [active(_tue, 1200)]
-        ..nutrition = [meals(_tue, 300)];
-      await pumpCard(tester);
-
-      expect(text(tester, 'energy-net'), '−1.790');
-      expect(
-        find.text('Çok yüksek kalori açığı: yeterince yediğinden emin ol'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('yaktın'), findsNothing);
-      expect(find.textContaining('yağ'), findsNothing);
-    });
-
-    testWidgets('öğün yoksa yorum yok: "Henüz öğün girilmedi", net boş',
-        (tester) async {
-      health.metrics = [active(_tue, 520)];
-      await pumpCard(tester);
-
-      expect(find.text('Henüz öğün girilmedi'), findsOneWidget);
-      expect(text(tester, 'energy-intake'), '—');
-      expect(text(tester, 'energy-net'), '—');
-      // Yakılan yine gösterilir.
-      expect(text(tester, 'energy-burned'), '1.410');
-      expect(find.textContaining('yaktın'), findsNothing);
-      expect(find.textContaining('kaçırdın'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('aktif kalori verisi yoksa not çıkar ve antrenman yedek olur',
-        (tester) async {
-      health
-        ..nutrition = [meals(_tue, 1500)]
-        ..workouts = [
-          WorkoutLog(
-            id: 'k1',
-            workoutType: 'kickboxing',
-            caloriesBurned: 300,
-            loggedAt: _tue.add(const Duration(hours: 9)),
-          ),
-        ];
-      await pumpCard(tester);
-
-      expect(
-        find.text('aktif kalori verisi yok, tahmin bazala dayanıyor'),
-        findsOneWidget,
-      );
-      // 890 + 300 (antrenman yedeği).
-      expect(text(tester, 'energy-burned'), '1.190');
-      expect(find.text('Yakılan = bazal 890 + aktif 300 kcal'), findsOneWidget);
-      expect(text(tester, 'energy-net'), '+310');
-    });
-
-    testWidgets('aktif kalori varsa antrenman kalorisi çift sayılmaz',
-        (tester) async {
-      health
-        ..metrics = [active(_tue, 600)]
-        ..nutrition = [meals(_tue, 1500)]
-        ..workouts = [
-          WorkoutLog(
-            id: 'k1',
-            workoutType: 'kickboxing',
-            caloriesBurned: 300,
-            loggedAt: _tue.add(const Duration(hours: 9)),
-          ),
-        ];
-      await pumpCard(tester);
-
-      expect(text(tester, 'energy-burned'), '1.490');
-      expect(find.byKey(const Key('energy-active-missing')), findsNothing);
-    });
-
-    testWidgets('son tartı kullanılır; tartı yoksa başlangıç kilosu',
-        (tester) async {
-      health
-        ..weights = [
-          WeightEntry(id: 'w1', weightKg: 80, loggedAt: DateTime(2026, 11, 1)),
-          // Bugünden sonraki tartı bugünün bazalını etkilemez.
-          WeightEntry(id: 'w2', weightKg: 70, loggedAt: DateTime(2026, 11, 18)),
-        ]
-        ..nutrition = [meals(_tue, 1000)];
-      await pumpCard(tester);
-      // 80 kg: 890.
-      expect(find.text('Yakılan = bazal 890 + aktif 0 kcal'), findsOneWidget);
-    });
-
-    testWidgets('18 yaş altı: yalnızca sayılar, yorum ve telafi yok',
-        (tester) async {
-      settings = FakeSettingsRepository(
-        settings: _complete.copyWith(birthYear: 2012),
-      );
-      health
-        ..metrics = [active(_tue, 520)]
-        ..nutrition = [meals(_tue, 1710)];
-      await pumpCard(tester);
-
-      expect(text(tester, 'energy-intake'), '1.710');
-      expect(find.byKey(const Key('energy-verdict')), findsNothing);
-      expect(find.byKey(const Key('energy-compensation')), findsNothing);
-      expect(find.textContaining('kaçırdın'), findsNothing);
-      expect(find.textContaining('yağ'), findsNothing);
-    });
-
-    testWidgets('öğün eklenip sağlayıcılar tazelenince kart güncellenir',
-        (tester) async {
-      health.metrics = [active(_tue, 520)];
-      final container = await pumpCard(tester);
-      expect(find.text('Henüz öğün girilmedi'), findsOneWidget);
-
-      health.nutrition = [meals(_tue, 1000)];
-      invalidateHealthData(container);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Henüz öğün girilmedi'), findsNothing);
-      expect(find.text('Bugün yağ yaktın'), findsOneWidget);
-    });
-  });
-
-  group('EnergyCard profil ve durumlar', () {
-    testWidgets('profil eksikse açıklama ve Ayarlar düğmesi görünür',
-        (tester) async {
-      settings = FakeSettingsRepository();
-      health.nutrition = [meals(_tue, 1000)];
-      await pumpCard(tester);
-
-      expect(
-        find.text('Dengeyi hesaplamak için boy, yaş ve cinsiyet gerekli'),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('energy-net')), findsNothing);
-      expect(find.text('Şu ana kadar'), findsNothing);
-
-      await tester.tap(find.byKey(const Key('energy-open-settings')));
-      await tester.pumpAndSettle();
-      expect(find.byType(SettingsScreen), findsOneWidget);
-    });
-
-    testWidgets('profil doldurulunca kart hesaplamaya başlar', (tester) async {
-      settings = FakeSettingsRepository();
-      health
-        ..metrics = [active(_tue, 520)]
-        ..nutrition = [meals(_tue, 1000)];
-      final container = await pumpCard(tester);
-      expect(find.byKey(const Key('energy-net')), findsNothing);
-
-      await container.read(userSettingsProvider.notifier).save(_complete);
-      await tester.pumpAndSettle();
-
-      expect(text(tester, 'energy-net'), '−410');
-      expect(find.text('Bugün yağ yaktın'), findsOneWidget);
-    });
-
-    testWidgets('okuma hatasında hata metni ve Tekrar dene çıkar',
-        (tester) async {
-      health.fetchError = Exception('ağ yok');
-      await pumpCard(tester);
-      expect(find.text('Enerji dengesi yüklenemedi.'), findsOneWidget);
-
-      health.fetchError = null;
-      health.nutrition = [meals(_tue, 1000)];
-      await tester.tap(find.text('Tekrar dene'));
-      await tester.pumpAndSettle();
-      expect(find.text('Enerji dengesi yüklenemedi.'), findsNothing);
-      expect(find.byKey(const Key('energy-net')), findsOneWidget);
-    });
-
-    testWidgets('gece yarısı geçince bugün, dün ve bazal oranı yeniden hesaplanır',
-        (tester) async {
-      _now = DateTime(2026, 11, 17, 23, 30);
-      health.nutrition = [meals(_tue, 1500)];
-      final container = await pumpCard(tester);
-
-      // 1780 · (23:30 / 24:00) = 1742,9; aktif kalori yok.
-      expect(text(tester, 'energy-burned'), '1.743');
-      expect(find.text('Bugün yağ yaktın'), findsOneWidget);
-
-      // Gece yarısı geçti, uygulama 06:00'da öne geldi.
-      _now = DateTime(2026, 11, 18, 6);
-      invalidateHealthData(container);
-      await tester.pumpAndSettle();
-
-      // Yeni gün: dünün öğünleri sayılmaz, bazal günün dörtte biri.
-      expect(find.text('Henüz öğün girilmedi'), findsOneWidget);
-      expect(text(tester, 'energy-intake'), '—');
-      expect(text(tester, 'energy-burned'), '445');
-      expect(find.text('Bugün yağ yaktın'), findsNothing);
-    });
-
-    testWidgets('karta dokununca detay ekranı açılır', (tester) async {
-      health
-        ..metrics = [active(_tue, 520)]
-        ..nutrition = [meals(_tue, 1000)];
-      await pumpCard(tester);
-
-      await tester.tap(find.byKey(const Key('energy-net')));
-      await tester.pumpAndSettle();
-      expect(find.byType(EnergyDetailScreen), findsOneWidget);
-    });
-
-    testWidgets('profil eksikken kart detaya götürmez', (tester) async {
-      settings = FakeSettingsRepository();
-      await pumpCard(tester);
-      await tester.tap(find.text('Enerji dengesi'));
-      await tester.pumpAndSettle();
-      expect(find.byType(EnergyDetailScreen), findsNothing);
-    });
-  });
-
-  group('EnergyCard 375x667, metin ölçeği 1,3', () {
-    testWidgets('fazla gün ve aktif kalori notuyla taşmaz', (tester) async {
-      health.nutrition = [meals(_tue, 2000)];
-      await pumpCard(tester, textScale: 1.3);
-      expect(find.byKey(const Key('energy-active-missing')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('biraz kaçırdın + telafi satırıyla taşmaz', (tester) async {
-      health
-        ..metrics = [active(_tue, 520)]
-        ..nutrition = [meals(_tue, 1710)];
-      await pumpCard(tester, textScale: 1.3);
-      expect(find.byKey(const Key('energy-compensation')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('çok yüksek açık uyarısı ve büyük sayılarla taşmaz',
-        (tester) async {
-      health
-        ..metrics = [active(_tue, 1200)]
-        ..nutrition = [meals(_tue, 300)];
-      await pumpCard(tester, textScale: 1.3);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('öğünsüz gün ve profil eksik durumlarında taşmaz',
-        (tester) async {
-      await pumpCard(tester, textScale: 1.3);
-      expect(find.text('Henüz öğün girilmedi'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-
-      settings = FakeSettingsRepository();
-      await pumpCard(tester, textScale: 1.3);
-      expect(find.byKey(const Key('energy-open-settings')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
   group('Sağlık sekmesinde', () {
     Future<ProviderContainer> pumpHealth(WidgetTester tester) async {
       phoneView(tester, 1.0);
@@ -483,19 +154,23 @@ void main() {
       return container;
     }
 
-    testWidgets('Enerji dengesi kartı Kilo kartının hemen altında durur',
+    testWidgets('Enerji net kartı Kilo kartının hemen altında durur ve detayı açar',
         (tester) async {
       health
         ..metrics = [active(_tue, 520)]
         ..nutrition = [meals(_tue, 1000)];
       await pumpHealth(tester);
 
-      expect(find.byType(EnergyCard), findsOneWidget);
+      expect(find.byType(EnergyNetCard), findsOneWidget);
       expect(
-        tester.getTopLeft(find.byType(EnergyCard)).dy,
+        tester.getTopLeft(find.byType(EnergyNetCard)).dy,
         greaterThan(tester.getBottomLeft(find.byType(WeightCard)).dy),
       );
-      expect(text(tester, 'energy-net'), '−410');
+      expect(bigValue(tester, 'energy-net-today'), '−410');
+
+      await tester.tap(find.byType(EnergyNetCard));
+      await tester.pumpAndSettle();
+      expect(find.byType(EnergyDetailScreen), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

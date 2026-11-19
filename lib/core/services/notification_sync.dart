@@ -145,7 +145,8 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
   final habitSlots = habits.fold<int>(0, (sum, h) => sum + h.slots);
   final routineSlots = routineSchedules.fold<int>(
     0,
-    (sum, r) => sum +
+    (sum, r) =>
+        sum +
         (r.daysOfWeek.toSet().length == 7 ? 1 : r.daysOfWeek.toSet().length),
   );
   final taskRoom = maxPendingNotifications - routineSlots - habitSlots;

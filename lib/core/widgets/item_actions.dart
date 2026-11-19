@@ -112,12 +112,14 @@ class _ItemActionsSheet extends StatelessWidget {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.edit_outlined, color: AppColors.textSecondary),
+              leading:
+                  Icon(Icons.edit_outlined, color: AppColors.textSecondary),
               title: const Text('Düzenle'),
               onTap: () => Navigator.of(context).pop(_ItemChoice.edit),
             ),
             ListTile(
-              leading: Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+              leading:
+                  Icon(Icons.delete_outline_rounded, color: AppColors.danger),
               title: Text('Sil', style: TextStyle(color: AppColors.danger)),
               onTap: () => Navigator.of(context).pop(_ItemChoice.delete),
             ),

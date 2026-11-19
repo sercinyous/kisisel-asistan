@@ -70,7 +70,8 @@ class RemindersController {
 /// Bildirimdeki "Yaptım" eylemlerini işler: açılışta, ön plana dönüşte ve
 /// ön plandaki yeni eylemde kutuyu boşaltır. Eylemin sahibi oturumdaki
 /// kullanıcı değilse (çıkış ya da hesap değişimi) kayıt YAZILMAZ ve atılır.
-final reminderActionProcessorProvider = Provider<ReminderActionProcessor>((ref) {
+final reminderActionProcessorProvider =
+    Provider<ReminderActionProcessor>((ref) {
   final userId =
       ref.watch(authSessionProvider.select((s) => s.valueOrNull?.user.id));
   final processor = ReminderActionProcessor(

@@ -64,8 +64,7 @@ class GoogleLinkStore {
         ownerId: userId,
         email: email == null || email.isEmpty ? null : email,
         lastSyncAt: _time(prefs.getString(keyFor(lastSyncKey, userId))),
-        exerciseWatermark:
-            _time(prefs.getString(keyFor(watermarkKey, userId))),
+        exerciseWatermark: _time(prefs.getString(keyFor(watermarkKey, userId))),
       );
     } catch (_) {
       return GoogleLinkPrefs(ownerId: userId);

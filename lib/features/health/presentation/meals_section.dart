@@ -63,10 +63,32 @@ class MealsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        HealthSectionHeader(
-          title: 'Bugünün öğünleri',
-          actionLabel: 'Öğün ekle',
-          onAction: () => FoodPickerSheet.show(context),
+        Padding(
+          padding: const EdgeInsets.only(top: 14, bottom: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Öğünler',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              FilledButton.icon(
+                key: const Key('meal-add'),
+                onPressed: () => FoodPickerSheet.show(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.nutrition,
+                  foregroundColor: AppColors.onAccent,
+                  minimumSize: const Size(healthMinTouch, healthMinTouch),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: const Text('Öğün ekle'),
+              ),
+            ],
+          ),
         ),
         logs.when(
           skipLoadingOnRefresh: true,
@@ -96,7 +118,9 @@ class MealsSection extends ConsumerWidget {
   }
 }
 
-class _MealGroupTile extends StatelessWidget {
+/// Öğün grubu: kapalıyken tek satır ("Kahvaltı · 420 kcal"); dokununca
+/// kalemler açılır. Boş öğüne dokunmak o öğüne kalem ekler.
+class _MealGroupTile extends StatefulWidget {
   const _MealGroupTile({
     required this.group,
     required this.onAdd,
@@ -125,41 +149,89 @@ class _MealGroupTile extends StatelessWidget {
   }
 
   @override
+  State<_MealGroupTile> createState() => _MealGroupTileState();
+}
+
+class _MealGroupTileState extends State<_MealGroupTile> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final group = widget.group;
+    final onEdit = widget.onEdit;
+    final onDelete = widget.onDelete;
+    final onRemove = widget.onRemove;
     final empty = group.logs.isEmpty;
+    final label = HealthFormat.mealLabel(group.mealType);
+    final expanded = _expanded && !empty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HealthListRow(
+          key: ValueKey('meal-group-${group.mealType}'),
           icon: _mealIcon(group.mealType),
           color: AppColors.nutrition,
-          title: HealthFormat.mealLabel(group.mealType),
+          title:
+              empty ? label : '$label · ${HealthFormat.kcal(group.calories)}',
           subtitle: empty
               ? 'Henüz kayıt yok'
               : '${group.logs.length} kalem · '
                   'P ${HealthFormat.grams(group.proteinG)}',
-          value: empty ? '—' : HealthFormat.kcal(group.calories),
-          valueMuted: empty,
-          // Öğün satırına dokunmak o öğüne kalem ekler.
-          onTap: onAdd,
+          onTap: empty
+              ? widget.onAdd
+              : () => setState(() => _expanded = !_expanded),
+          trailing: empty
+              ? IconButton(
+                  tooltip: '$label ekle',
+                  onPressed: widget.onAdd,
+                  icon: const Icon(Icons.add_rounded),
+                  color: AppColors.nutrition,
+                )
+              : IconButton(
+                  tooltip: expanded ? 'Öğünü daralt' : 'Öğünü genişlet',
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  icon: Icon(
+                    expanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                  ),
+                  color: AppColors.textSecondary,
+                ),
         ),
-        for (final log in group.logs)
-          ItemRowActions(
-            key: ValueKey('meal-actions-${log.id}'),
-            itemKey: ValueKey('swipe-meal-${log.id}'),
-            title: log.foodName,
-            confirmTitle: _deleteTitle,
-            confirmMessage: _deleteMessage(log),
-            onEdit: () => onEdit(log),
-            onDelete: () => onRemove(log),
-            child: HealthListRow(
-              key: ValueKey('meal-${log.id}'),
+        if (expanded)
+          for (final log in group.logs)
+            ItemRowActions(
+              key: ValueKey('meal-actions-${log.id}'),
+              itemKey: ValueKey('swipe-meal-${log.id}'),
               title: log.foodName,
-              subtitle: _logDetail(log),
-              onTap: () => onEdit(log),
-              trailing: OpsItemMenu(
-                onEdit: () => onEdit(log),
-                onDelete: () => onDelete(log),
+              confirmTitle: _deleteTitle,
+              confirmMessage: _deleteMessage(log),
+              onEdit: () => onEdit(log),
+              onDelete: () => onRemove(log),
+              child: HealthListRow(
+                key: ValueKey('meal-${log.id}'),
+                title: log.foodName,
+                subtitle: widget._logDetail(log),
+                onTap: () => onEdit(log),
+                trailing: OpsItemMenu(
+                  onEdit: () => onEdit(log),
+                  onDelete: () => onDelete(log),
+                ),
+              ),
+            ),
+        if (expanded)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 52),
+              child: TextButton.icon(
+                onPressed: widget.onAdd,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(healthMinTouch, healthMinTouch),
+                  foregroundColor: AppColors.nutrition,
+                ),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text('$label için kalem ekle'),
               ),
             ),
           ),

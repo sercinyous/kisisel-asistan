@@ -13,10 +13,13 @@ import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/domain/kokpit_models.dart';
+import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_month_view.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
+import 'package:kisisel_asistan/features/operations/presentation/calendar_screen.dart';
+import 'package:kisisel_asistan/features/operations/presentation/routines_view.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 
@@ -49,7 +52,7 @@ class KokpitHarness {
         ),
         notifications = FakeNotificationService();
 
-  final FakeRoutinesRepository routines;
+  FakeRoutinesRepository routines;
   final FakeTasksRepository tasks;
   final FakeKokpitRepository kokpit;
   final FakeHealthRepository healthStore;
@@ -105,7 +108,7 @@ class KokpitHarness {
     );
     addTearDown(container.dispose);
     if (month != null) {
-      container.read(kokpitViewProvider.notifier).state = KokpitView.month;
+      container.read(kokpitHarnessViewProvider.notifier).state = 'Ay';
       container.read(kokpitMonthProvider.notifier).state =
           DateTime(month.year, month.month);
     }
@@ -115,7 +118,7 @@ class KokpitHarness {
         container: container,
         child: MaterialApp(
           theme: AppTheme.dark,
-          home: const Scaffold(body: KokpitScreen()),
+          home: const Scaffold(body: KokpitHarnessBody()),
         ),
       ),
     );
@@ -123,20 +126,13 @@ class KokpitHarness {
     return container;
   }
 
-  /// Gün | Ay seçicisinden görünüm değiştirir.
+  /// Kokpit ('Gün'), takvim ('Ay') ve Rutinler listesi ('Rutinler') arasında
+  /// geçer.
   Future<void> showView(WidgetTester tester, String label) async {
-    final segment = find.descendant(
-      of: find.byType(SegmentedButton<KokpitView>),
-      matching: find.text(label),
-    );
-    // Liste tembel kurulur: aşağı kaydırılmışsa seçici ağaçta olmaz, önce başa dön.
-    if (segment.evaluate().isEmpty) {
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, 5000));
-      await tester.pumpAndSettle();
-    }
-    await tester.ensureVisible(segment);
-    await tester.pumpAndSettle();
-    await tester.tap(segment);
+    final element = tester.element(find.byType(KokpitHarnessBody));
+    ProviderScope.containerOf(element)
+        .read(kokpitHarnessViewProvider.notifier)
+        .state = label;
     await tester.pumpAndSettle();
   }
 
@@ -188,5 +184,27 @@ class KokpitHarness {
           ),
         )
         .checked;
+  }
+}
+
+/// Harness'ın çizdiği görünüm: 'Gün' (Kokpit), 'Ay' (takvim) ya da
+/// 'Rutinler' (İşler › Rutinler listesi) ya da 'Takvim' (İşler › Takvim).
+final kokpitHarnessViewProvider = StateProvider<String>((ref) => 'Gün');
+
+/// Testlerde Kokpit ekranını ya da tek başına Ay görünümünü çizer.
+class KokpitHarnessBody extends ConsumerWidget {
+  const KokpitHarnessBody({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return switch (ref.watch(kokpitHarnessViewProvider)) {
+      'Ay' => ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+          children: const [KokpitMonthView()],
+        ),
+      'Rutinler' => const RoutinesView(),
+      'Takvim' => const OpsCalendarScreen(),
+      _ => const KokpitScreen(),
+    };
   }
 }

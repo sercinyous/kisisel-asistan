@@ -11,7 +11,9 @@ import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/hesap_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/notifications_page.dart';
+import 'package:kisisel_asistan/features/settings/presentation/profile_goals_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../helpers/fakes.dart';
@@ -28,6 +30,7 @@ void main() {
   Future<void> pumpSettings(
     WidgetTester tester, {
     double textScale = 1.0,
+    Widget home = const ProfileGoalsPage(),
   }) async {
     tester.view.devicePixelRatio = 2;
     tester.view.physicalSize = const Size(750, 1334);
@@ -51,46 +54,58 @@ void main() {
           notificationServiceProvider.overrideWithValue(notifications),
           authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
         ],
-        child: MaterialApp(theme: AppTheme.dark, home: const SettingsScreen()),
+        child: MaterialApp(theme: AppTheme.dark, home: home),
       ),
     );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('varsayılanlar 375x667 ve 1.3 metin ölçeğinde taşmadan çizilir',
+  testWidgets('Ayarlar Hesap menüsünü açar; altı satır ve küçük grup taşmaz',
+      (tester) async {
+    await pumpSettings(tester, textScale: 1.3, home: const HesapScreen());
+    expect(tester.takeException(), isNull);
+    expect(find.byType(HesapScreen), findsOneWidget);
+    for (final title in [
+      'Profil ve hedefler',
+      'Arkadaşlar',
+      'Bildirimler',
+      'Görünüm',
+      'Kategoriler ve ekip',
+      'Bağlantılar',
+      'Sorun bildir',
+      'Çıkış yap',
+    ]) {
+      expect(find.text(title), findsOneWidget, reason: title);
+    }
+    expect(find.text('Hatırlatıcılar'), findsNothing);
+    expect(find.text('Kaydet'), findsNothing);
+    expect(find.text('Koyu'), findsOneWidget);
+  });
+
+  testWidgets('Profil ve hedefler satırı alt sayfayı açar', (tester) async {
+    await pumpSettings(tester, home: const HesapScreen());
+    await tester.tap(find.text('Profil ve hedefler'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileGoalsPage), findsOneWidget);
+    expect(find.text('Hedefler'), findsOneWidget);
+  });
+
+  testWidgets('Profil ve hedefler 375x667 ve 1.3 ölçekte taşmaz; Hesabımı sil en altta',
       (tester) async {
     await pumpSettings(tester, textScale: 1.3);
     expect(tester.takeException(), isNull);
-    expect(find.text('Hedefler'), findsOneWidget);
     expect(
       tester.widget<TextFormField>(find.byKey(const Key('settings-calories'))).controller!.text,
       '2000',
     );
-
-    // Tembel liste: tüm bölümler ekrana gelsin diye sona kadar kaydırılır.
-    final seen = <String>{};
-    for (var i = 0; i < 18; i++) {
-      for (final title in [
-        'Bildirimler',
-        'Ekip',
-        'Görev kategorileri',
-        'Bağlantılar',
-        'Hesap',
-      ]) {
-        if (find.text(title).evaluate().isNotEmpty) seen.add(title);
-      }
-      await tester.drag(find.byType(ListView), const Offset(0, -300));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-    }
-    expect(seen, {
-      'Bildirimler',
-      'Ekip',
-      'Görev kategorileri',
-      'Bağlantılar',
-      'Hesap',
-    });
-    expect(find.text('Çıkış yap'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-delete-account')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Hesabımı sil'), findsOneWidget);
   });
 
   testWidgets('Kaydet düzenlenen kalori değerini depoya yazar', (tester) async {
@@ -108,7 +123,7 @@ void main() {
 
     expect(settings.saved.single.dailyCalories, 2300);
     expect(settings.saved.single.dailyProteinG, 120);
-    expect(find.text('Ayarlar kaydedildi.'), findsOneWidget);
+    expect(find.text('Kaydedildi.'), findsOneWidget);
   });
 
   testWidgets('sınır dışı değer kaydedilmez', (tester) async {
@@ -134,16 +149,16 @@ void main() {
   testWidgets('ekranı açmak bildirim izni istemez, yalnızca durumu gösterir',
       (tester) async {
     notifications.permissionGranted = false;
-    await pumpSettings(tester);
+    await pumpSettings(tester, home: const NotificationsPage());
     await scrollToPermission(tester);
 
-    expect(find.textContaining('Kapalı'), findsOneWidget);
+    expect(find.textContaining('Kapalı ·'), findsOneWidget);
     expect(notifications.permissionRequests, 0);
   });
 
   testWidgets('"İzin iste" butonu izni ister ve durumu yeniler', (tester) async {
     notifications.permissionGranted = false;
-    await pumpSettings(tester);
+    await pumpSettings(tester, home: const NotificationsPage());
     await scrollToPermission(tester);
 
     // Kullanıcı sistem penceresinde izin verir.

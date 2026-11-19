@@ -162,8 +162,7 @@ class KokpitCheckBox extends StatelessWidget {
         ),
       ),
       child: checked
-          ? Icon(Icons.check_rounded,
-              size: 18, color: AppColors.onAccent)
+          ? Icon(Icons.check_rounded, size: 18, color: AppColors.onAccent)
           : null,
     );
   }

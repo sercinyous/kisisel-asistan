@@ -72,8 +72,7 @@ String _foldTr(String text) => text
 /// 'İş'e eşlenir (geçiş uyumu); diğer değerler olduğu gibi döner.
 Object? _legacyWork(Object? value) {
   final text = _parseText(value);
-  if (text != null &&
-      _foldTr(text) == _foldTr(AppTargets.legacyWorkCategory)) {
+  if (text != null && _foldTr(text) == _foldTr(AppTargets.legacyWorkCategory)) {
     return AppTargets.workCategory;
   }
   return value;
@@ -299,8 +298,9 @@ class ParsedWorkout {
     final ParsedWorkout workout = ParsedWorkout(
       workoutType: type,
       title: _truncate(_parseText(json['title']) ?? 'Antrenman', 200),
-      durationMin:
-          duration != null && duration >= 1 && duration <= 600 ? duration : null,
+      durationMin: duration != null && duration >= 1 && duration <= 600
+          ? duration
+          : null,
       distanceKm: distance > 0 && distance <= 1000 ? distance : null,
       caloriesBurned: kcal != null && kcal >= 0 && kcal <= 20000 ? kcal : null,
       notes: _parseText(json['notes']),
@@ -314,8 +314,9 @@ class ParsedWorkout {
         'title': title,
         'duration_min': durationMin,
         'distance_km': distanceKm,
-        'calories_burned':
-            caloriesBurned != null && caloriesBurned! >= 0 ? caloriesBurned : null,
+        'calories_burned': caloriesBurned != null && caloriesBurned! >= 0
+            ? caloriesBurned
+            : null,
         'notes': notes,
         'performed_at': _utcIso(performedAt),
       };
@@ -634,7 +635,8 @@ class ParsedEntry {
       );
 
   static bool _parseFlag(Object? value) =>
-      value == true || (value is String && value.trim().toLowerCase() == 'true');
+      value == true ||
+      (value is String && value.trim().toLowerCase() == 'true');
 
   static String? _parseSummary(Object? value) {
     final text = _parseText(value);

@@ -217,7 +217,8 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
           minLines: 2,
           maxLines: 4,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Açıklama (isteğe bağlı)'),
+          decoration:
+              const InputDecoration(labelText: 'Açıklama (isteğe bağlı)'),
         ),
         const OpsFieldLabel('Kategori'),
         OpsChoiceWrap<String>(

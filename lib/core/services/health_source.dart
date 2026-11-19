@@ -36,8 +36,7 @@ class HealthSourceStore {
   final Future<SharedPreferences> Function() open;
 
   /// [userId] kullanıcısına ait anahtar.
-  static String keyFor(String? userId) =>
-      userId == null ? key : '$key:$userId';
+  static String keyFor(String? userId) => userId == null ? key : '$key:$userId';
 
   Future<HealthSourceKind> load({String? userId}) async {
     try {

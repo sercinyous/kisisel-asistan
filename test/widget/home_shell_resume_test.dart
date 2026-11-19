@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/features/health/presentation/health_segment.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/demo/demo_health_extras.dart';
 import 'package:kisisel_asistan/features/health/data/water_repository.dart';
@@ -13,12 +14,10 @@ import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
-import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_providers.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
-import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/shell/presentation/home_shell.dart';
 
@@ -192,22 +191,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Ay görünümünde [title] satırındaki durum rozeti.
-  OccurrenceStatus chipOf(WidgetTester tester, String title) {
-    final row = find.ancestor(
-      of: find.text(title),
-      matching: find.byType(InkWell),
-    );
-    return tester
-        .widget<KokpitStatusChip>(
-          find.descendant(
-            of: row.first,
-            matching: find.byType(KokpitStatusChip),
-          ),
-        )
-        .status;
-  }
-
   HealthDayReading reading(DateTime day, {int steps = 0}) => (
         day: day,
         snapshot: HealthSnapshot(
@@ -220,58 +203,11 @@ void main() {
   int stepsOn(Iterable<DailyHealthMetric> days, DateTime day) =>
       days.firstWhere((m) => m.day == day).steps;
 
-  testWidgets('öne gelince Ay özeti yeniden okunur, rozetler güncellenir',
-      (tester) async {
-    final now = DateTime.now();
-    routines.routines = [
-      const Routine(
-        id: 'm1',
-        title: 'Maaş ödemeleri',
-        scope: Routine.scopeWork,
-        category: 'finans',
-        frequency: RoutineFrequency.monthly,
-        dayOfMonth: 15,
-      ),
-    ];
-    await pumpShell(tester);
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SegmentedButton<KokpitView>),
-        matching: find.text('Ay'),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // fetchInRange'i yalnızca Ay özeti çağırır.
-    final before = tasks.fetchInRangeCount;
-    expect(before, greaterThan(0), reason: 'Ay özeti okundu');
-    expect(chipOf(tester, 'Maaş ödemeleri'), isNot(OccurrenceStatus.done));
-
-    routines.completions.add(
-      RoutineCompletionKey(
-        'm1',
-        DateTime(now.year, now.month),
-        completedAt: now,
-      ),
-    );
-    await backgroundAndResume(tester);
-
-    expect(
-      tasks.fetchInRangeCount,
-      greaterThan(before),
-      reason: 'öne gelince yeniden okundu',
-    );
-    expect(chipOf(tester, 'Maaş ödemeleri'), OccurrenceStatus.done);
-  });
-
   testWidgets(
       'öne gelince Sağlık sekmesinin verisi yeniden okunur; adım grafiği '
       'HealthKit yedeklendikten sonra', (tester) async {
-    await pumpShell(tester);
-    expect(
-      find.byKey(const ValueKey('meal-gece'), skipOffstage: false),
-      findsNothing,
-    );
+    final container = await pumpShell(tester);
+    await selectTab(tester, 'Sağlık');
 
     health.nutritionLogs = [
       NutritionLog(id: 'gece', foodName: 'Yoğurt', eatenAt: DateTime.now()),
@@ -282,8 +218,9 @@ void main() {
     int reads(String name) => health.log.where((e) => e == name).length;
     expect(reads('weights'), 2,
         reason: 'kilo serisi (grafik) + 8 haftalık seri (hedefe varış)');
-    expect(reads('workouts'), 2, reason: 'antrenman günlüğü + haftalık plan');
-    expect(reads('meals'), 1, reason: 'bugünün öğünleri');
+    // Özet görünümü: antrenman günlüğü ve öğün listesi başka görünümlerde.
+    expect(reads('workouts'), 1, reason: 'haftalık plan');
+    expect(reads('meals'), 0, reason: 'öğün listesi Beslenme görünümünde');
     expect(reads('metrics'), 1, reason: '7 günlük adım');
     expect(reads('upsert'), 1, reason: 'HealthKit yeniden okundu');
     expect(reads('upsert-days'), 1, reason: 'geçmiş günler yeniden yazıldı');
@@ -292,11 +229,13 @@ void main() {
       lessThan(health.log.indexOf('metrics')),
       reason: 'adım grafiği, HealthKit yedeği yazıldıktan sonra okunmalı',
     );
-    // Sağlık sekmesi (arka planda kurulu) yeni kaydı gösteriyor.
-    expect(
-      find.byKey(const ValueKey('meal-gece'), skipOffstage: false),
-      findsOneWidget,
-    );
+    // Beslenme görünümü yeni kaydı gösteriyor (öğün grubu açılınca).
+    container.read(healthSegmentProvider.notifier).state =
+        HealthSegment.nutrition;
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('meal-group-snack')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('meal-gece')), findsOneWidget);
   });
 
   testWidgets(
@@ -336,8 +275,8 @@ void main() {
   testWidgets('öne gelince sunucuda oluşan günlük rapor görünür',
       (tester) async {
     await pumpShell(tester);
-    await selectTab(tester, 'Raporlar');
-    await tester.tap(find.text('Günlük'));
+    await selectTab(tester, 'İçgörü');
+    await tester.tap(find.text('Gün'));
     await tester.pumpAndSettle();
     expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
 
@@ -360,16 +299,16 @@ void main() {
       tester,
       clock: lastWeek.add(const Duration(days: 5, hours: 20)),
     );
-    expect(container.read(weeklyReportListProvider).requireValue, isEmpty);
+    expect(await container.read(weeklyReportListProvider.future), isEmpty);
 
     // Pazartesi 07:00 zamanlayıcısı biten haftanın raporunu yazdı.
     reports.weekly = [weeklyReport(lastWeek)];
     await backgroundAndResume(tester);
-    await selectTab(tester, 'Raporlar');
+    await selectTab(tester, 'İçgörü');
 
     expect(
       [
-        for (final r in container.read(weeklyReportListProvider).requireValue)
+        for (final r in await container.read(weeklyReportListProvider.future))
           r.weekStart,
       ],
       [lastWeek],

@@ -12,7 +12,7 @@ import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/profile_goals_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../helpers/fakes.dart';
@@ -49,19 +49,23 @@ void main() {
       ProviderScope(
         overrides: [
           settingsRepositoryProvider.overrideWithValue(settings),
-          routinesRepositoryProvider.overrideWithValue(FakeRoutinesRepository()),
+          routinesRepositoryProvider
+              .overrideWithValue(FakeRoutinesRepository()),
           tasksRepositoryProvider.overrideWithValue(FakeTasksRepository()),
           healthRepositoryProvider.overrideWithValue(FakeHealthRepository()),
           appleHealthConsentStoreProvider.overrideWithValue(
             MemoryAppleHealthConsentStore(grantAll: true),
           ),
           healthServiceProvider.overrideWithValue(
-            FakeHealthService(const HealthSnapshot(status: HealthStatus.denied)),
+            FakeHealthService(
+                const HealthSnapshot(status: HealthStatus.denied)),
           ),
           notificationServiceProvider.overrideWithValue(notifications),
-          authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
+          authSessionProvider
+              .overrideWith((ref) => Stream<Session?>.value(null)),
         ],
-        child: MaterialApp(theme: AppTheme.dark, home: const SettingsScreen()),
+        child:
+            MaterialApp(theme: AppTheme.dark, home: const ProfileGoalsPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -104,7 +108,8 @@ void main() {
   bool selected(WidgetTester tester, Key key) =>
       tester.widget<ChoiceChip>(find.byKey(key)).selected;
 
-  testWidgets('boy 180, doğum yılı 1990, Erkek girilip kaydedilince depoya gider',
+  testWidgets(
+      'boy 180, doğum yılı 1990, Erkek girilip kaydedilince depoya gider',
       (tester) async {
     await pumpSettings(tester);
     await showProfile(tester);
@@ -121,7 +126,7 @@ void main() {
     expect(map['birth_year'], 1990);
     expect(map['sex'], 'male');
     expect(settings.saved.single.profileComplete, isTrue);
-    expect(find.text('Ayarlar kaydedildi.'), findsOneWidget);
+    expect(find.text('Kaydedildi.'), findsOneWidget);
   });
 
   testWidgets('üç cinsiyet seçeneği doğru değerle yazılır', (tester) async {
@@ -207,9 +212,12 @@ void main() {
     await showProfile(tester);
     await enter(tester, heightKey, '99');
 
-    // Tembel liste alanı bellekten atana kadar aşağı kaydırılır.
+    // Kısa ekranda tembel liste alanı bellekten atana kadar yukarı kaydırılır
+    // (profil, hedeflerin altındadır).
+    tester.view.physicalSize = const Size(750, 500);
+    await tester.pumpAndSettle();
     for (var i = 0; i < 12; i++) {
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
       await tester.pumpAndSettle();
     }
     expect(find.byKey(heightKey), findsNothing);
@@ -220,6 +228,27 @@ void main() {
       find.text('Profil kaydedilemedi. Boy 100–250 arası olmalı.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('geçersiz hedef ekranda görünmüyorken de kayıt engellenir',
+      (tester) async {
+    await pumpSettings(tester);
+    await enter(tester, const Key('settings-calories'), '10');
+
+    // Hedefler listenin üstündedir; alan bellekten atılana kadar aşağı inilir.
+    tester.view.physicalSize = const Size(750, 500);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 12; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('settings-calories')), findsNothing);
+
+    await save(tester);
+    expect(settings.saved, isEmpty);
+    expect(
+        find.textContaining('Hedefler kaydedilemedi. Kalori'), findsOneWidget);
+    expect(find.textContaining('Bağlantını kontrol'), findsNothing);
   });
 
   testWidgets('boş bırakmak profili null bırakır', (tester) async {
@@ -239,7 +268,8 @@ void main() {
     expect(s.toMap()['sex'], isNull);
   });
 
-  testWidgets('dolu profil temizlenebilir: alanlar boşaltılır, seçim kaldırılır',
+  testWidgets(
+      'dolu profil temizlenebilir: alanlar boşaltılır, seçim kaldırılır',
       (tester) async {
     settings = FakeSettingsRepository(
       settings: const UserSettings.defaults()

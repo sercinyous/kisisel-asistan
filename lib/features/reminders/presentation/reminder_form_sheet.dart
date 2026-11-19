@@ -69,7 +69,8 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
     final today = reminderDay(DateTime.now());
     final picked = await showDatePicker(
       context: context,
-      initialDate: _onDate != null && !_onDate!.isBefore(today) ? _onDate! : today,
+      initialDate:
+          _onDate != null && !_onDate!.isBefore(today) ? _onDate! : today,
       firstDate: today,
       lastDate: DateTime(today.year + 2, today.month, today.day),
     );
@@ -136,7 +137,9 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
   Widget build(BuildContext context) {
     final onDate = _onDate;
     return OpsSheetFrame(
-      title: widget.reminder == null ? 'Yeni hatırlatıcı' : 'Hatırlatıcıyı düzenle',
+      title: widget.reminder == null
+          ? 'Yeni hatırlatıcı'
+          : 'Hatırlatıcıyı düzenle',
       formKey: _formKey,
       saving: _saving,
       error: _error,

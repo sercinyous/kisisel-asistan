@@ -125,9 +125,8 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
   String? _confirmation() {
     final kind = _confirmedFor;
     if (kind == null) return null;
-    final name = kind == HealthSourceKind.appleHealth
-        ? 'Apple Sağlık'
-        : 'Google Health';
+    final name =
+        kind == HealthSourceKind.appleHealth ? 'Apple Sağlık' : 'Google Health';
     final steps = _todaySteps;
     return steps == null
         ? '$name bağlandı.'
@@ -251,7 +250,7 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
           ),
         ),
         const OnboardingHint(
-          'Aynı anda tek kaynak veri yazar. Kaynağı sonra Ayarlar > '
+          'Aynı anda tek kaynak veri yazar. Kaynağı sonra Hesap > '
           'Bağlantılar\'dan değiştirebilirsin.',
         ),
       ],

@@ -12,7 +12,7 @@ import 'package:kisisel_asistan/features/health/presentation/health_providers.da
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/connections_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -89,7 +89,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(theme: AppTheme.dark, home: const SettingsScreen()),
+        child: MaterialApp(theme: AppTheme.dark, home: const ConnectionsPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -146,10 +146,13 @@ void main() {
         GoogleLinkStatus.connected);
     expect(inGoogleRow('ayse.ornek@gmail.com'), findsOneWidget);
     expect(
-      inGoogleRow('Kaynak olarak seçilince'),
+      inGoogleRow('Şu an okunmuyor'),
       findsOneWidget,
       reason: 'Apple seçiliyken Google verisi kullanılmaz',
     );
+    expect(find.byKey(const Key('google-source-passive-note')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('google-source-state')), matching: find.text('Pasif')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('apple-source-state')), matching: find.text('Etkin')), findsOneWidget);
     expect(
       tester
           .widget<TextButton>(find.byKey(const Key('settings-google-sync')))
@@ -176,8 +179,12 @@ void main() {
     expect(inGoogleRow('ayse.ornek@gmail.com'), findsOneWidget);
     expect(inGoogleRow('Son eşitleme: Bugün'), findsOneWidget);
     expect(picker(tester).selected, {HealthSourceKind.googleHealth});
-    expect(find.text('Kaynak olarak seçili değil'), findsOneWidget,
+    expect(
+        find.text('Pasif: Google Health seçili, Apple Sağlık\'tan veri okunmuyor.'),
+        findsOneWidget,
         reason: 'Apple satırı Google okumasını yorumlamaz');
+    expect(find.descendant(of: find.byKey(const Key('apple-source-state')), matching: find.text('Pasif')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('google-source-state')), matching: find.text('Etkin')), findsOneWidget);
 
     final sync = find.byKey(const Key('settings-google-sync'));
     await tester.ensureVisible(sync);

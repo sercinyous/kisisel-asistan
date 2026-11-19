@@ -11,38 +11,6 @@ import '../../../../core/widgets/bento.dart';
 import 'task_dashboard_providers.dart';
 import 'task_dashboard_stats.dart';
 
-/// Görevlerin grafiksel panosu (Operasyon > Görevler > Pano).
-class TaskDashboardView extends ConsumerWidget {
-  const TaskDashboardView({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(taskDashboardProvider);
-    return RefreshIndicator(
-      onRefresh: () => ref.refresh(taskDashboardProvider.future),
-      child: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ListView(
-          padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page, AppSpacing.xl, AppSpacing.page, 120),
-          children: [
-            Text(
-              'Pano yüklenemedi',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-        data: (stats) => ListView(
-          padding: const EdgeInsets.fromLTRB(
-              AppSpacing.page, 0, AppSpacing.page, 120),
-          children: [TaskDashboardGrid(stats: stats)],
-        ),
-      ),
-    );
-  }
-}
-
 /// Panonun Bento ızgarası (veriden bağımsız test edilebilir).
 class TaskDashboardGrid extends StatelessWidget {
   const TaskDashboardGrid({super.key, required this.stats});
@@ -447,6 +415,39 @@ class _CategoryBars extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Kaydırma kabı olmadan gömülebilen pano (İçgörü > Ayrıntılar > İş ayrıntısı).
+class TaskDashboardSection extends ConsumerWidget {
+  const TaskDashboardSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(taskDashboardProvider);
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(AppSpacing.xl),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => BentoCard(
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Pano yüklenemedi',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            TextButton(
+              onPressed: () => ref.invalidate(taskDashboardProvider),
+              child: const Text('Tekrar dene'),
+            ),
+          ],
+        ),
+      ),
+      data: (stats) => TaskDashboardGrid(stats: stats),
     );
   }
 }

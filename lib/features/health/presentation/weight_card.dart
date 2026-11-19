@@ -13,15 +13,156 @@ import '../../settings/presentation/settings_providers.dart';
 import 'health_format.dart';
 import 'health_providers.dart';
 import 'health_widgets.dart';
+import '../domain/weight_eta.dart';
+import 'weight_detail_screen.dart';
 import 'weight_sheets.dart';
 
 /// Kilo grafiğinde seçili pencere (gün). Sekme değişse de korunur.
 final weightWindowProvider =
     StateProvider<int>((ref) => weightSeriesWindows.first);
 
-/// Kilo kartı: son ölçüm, aylık değişim, hedefe kalan ve hedef çizgili grafik.
+/// Özet kartında hedefe varış için kısa ifade.
+String weightEtaShort(
+  WeightEta eta, {
+  required double remainingKg,
+  required DateTime now,
+}) {
+  switch (eta.status) {
+    case WeightEtaStatus.onTrack:
+      final d = eta.eta!;
+      final pattern = d.year == now.year ? 'd MMMM' : 'd MMMM y';
+      return 'hedefe ~${DateFormat(pattern, AppDates.locale).format(d)}';
+    case WeightEtaStatus.reached:
+      return 'hedefe ulaşıldı';
+    case WeightEtaStatus.notTowards:
+      return 'trend hedefe doğru değil';
+    case WeightEtaStatus.insufficient:
+      return remainingKg <= 0
+          ? 'hedefe ulaşıldı'
+          : 'hedefe ${HealthFormat.kg(remainingKg)} kg';
+  }
+}
+
+/// Özet sekmesinin kilo kartı: tek büyük sayı, tek satır özet (aylık değişim
+/// ve hedefe tahmini varış) ve sade çizgi. Dokununca kilo ayrıntısı açılır.
 class WeightCard extends ConsumerWidget {
   const WeightCard({super.key});
+
+  static const int _window = 30;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final series = ref.watch(weightSeriesProvider(_window));
+    final etaSeries = ref.watch(weightSeriesProvider(weightEtaWindowDays));
+    final settings = ref.watch(settingsOrDefaultProvider);
+    final theme = Theme.of(context);
+
+    return BentoCard(
+      onTap: () => WeightDetailScreen.open(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Kilo',
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: AppColors.accent),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.textMuted,
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          series.when(
+            skipLoadingOnRefresh: true,
+            loading: () => const HealthCardLoading(height: 120),
+            error: (_, __) => HealthCompactMessage(
+              text: 'Kilo ölçümleri yüklenemedi.',
+              onRetry: () => ref.invalidate(weightSeriesProvider),
+            ),
+            data: (entries) {
+              final now = DateTime.now();
+              final trend = WeightTrend.from(
+                entries,
+                startKg: settings.startWeightKg,
+                targetKg: settings.targetWeightKg,
+                now: now,
+              );
+              if (trend == null) {
+                return Text(
+                  'Son $_window günde kilo ölçümü yok. İlk ölçümünü ekle.',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: AppColors.textSecondary),
+                );
+              }
+              final monthChange = trend.monthChangeKg;
+              final etaEntries = etaSeries.valueOrNull;
+              final etaText = trend.reached
+                  ? 'hedefe ulaşıldı'
+                  : etaEntries == null
+                      ? 'hedefe ${HealthFormat.kg(trend.remainingKg)} kg'
+                      : weightEtaShort(
+                          estimateWeightEta(
+                            etaEntries,
+                            targetKg: settings.targetWeightKg,
+                            now: now,
+                          ),
+                          remainingKg: trend.remainingKg,
+                          now: now,
+                        );
+              final summary = [
+                if (monthChange != null)
+                  '${KokpitFormat.weightChange(monthChange)} bu ay',
+                etaText,
+              ].join(' · ');
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  HealthBigValue(
+                    key: const Key('weight-latest'),
+                    value: HealthFormat.kg(trend.latestKg),
+                    unit: 'kg',
+                    large: true,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    summary,
+                    key: const Key('weight-summary'),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 24),
+                  // Grafik dokunuşu yutmasın: karta dokunmak ayrıntıyı açar.
+                  IgnorePointer(
+                    child: _WeightChart(
+                      entries: entries,
+                      window: _window,
+                      targetKg: settings.targetWeightKg,
+                      now: now,
+                      height: 72,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kilo ayrıntı ekranının kartı: son ölçüm, aylık değişim, hedefe kalan,
+/// 30/90 gün seçimi, hedef çizgili grafik, ölçümler ve kilo ekle.
+class WeightHistoryCard extends ConsumerWidget {
+  const WeightHistoryCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -191,9 +332,10 @@ class _WeightChart extends StatelessWidget {
     required this.window,
     required this.targetKg,
     required this.now,
+    this.height = 132,
   });
 
-  static const double _height = 132;
+  final double height;
 
   final List<WeightEntry> entries;
   final int window;
@@ -297,12 +439,12 @@ class _WeightChart extends StatelessWidget {
       container: true,
       child: ExcludeSemantics(
         child: SizedBox(
-          height: _height,
+          height: height,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               double px(DateTime at) => xOf(at) / maxX * width;
-              double py(double kg) => (maxY - kg) / (maxY - minY) * _height;
+              double py(double kg) => (maxY - kg) / (maxY - minY) * height;
 
               final lastX = px(last.loggedAt);
               final firstX = px(first.loggedAt);
@@ -315,7 +457,7 @@ class _WeightChart extends StatelessWidget {
                   if (lastX - firstX > 96)
                     Positioned(
                       left: firstX,
-                      bottom: _height - py(first.weightKg) + 6,
+                      bottom: height - py(first.weightKg) + 6,
                       child: Text(
                         HealthFormat.kg(first.weightKg),
                         style: labelStyle,
@@ -323,7 +465,7 @@ class _WeightChart extends StatelessWidget {
                     ),
                   Positioned(
                     right: math.max(0, width - lastX - 4),
-                    bottom: _height - py(last.weightKg) + 8,
+                    bottom: height - py(last.weightKg) + 8,
                     child: Text(
                       HealthFormat.kg(last.weightKg),
                       key: const Key('weight-last-label'),
@@ -336,7 +478,7 @@ class _WeightChart extends StatelessWidget {
                   Positioned(
                     right: 0,
                     top: targetBelow ? py(targetKg) + 3 : null,
-                    bottom: targetBelow ? null : _height - py(targetKg) + 3,
+                    bottom: targetBelow ? null : height - py(targetKg) + 3,
                     child: Text(
                       'Hedef ${HealthFormat.plain(targetKg)} kg',
                       style: labelStyle?.copyWith(color: AppColors.warning),

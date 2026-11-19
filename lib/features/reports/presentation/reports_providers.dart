@@ -12,8 +12,7 @@ typedef ReportRange = ({DateTime from, DateTime to});
 /// Bir haftanın raporu; üretilmemişse `null`. Anahtar haftanın Pazartesi'si
 /// olmalıdır (`AppDates.weekStart`); başka gün verilirse o haftaya indirgenir
 /// ama ayrı önbellek girdisi açılır.
-final weeklyReportProvider =
-    FutureProvider.family<WeeklyReport?, DateTime>(
+final weeklyReportProvider = FutureProvider.family<WeeklyReport?, DateTime>(
   (ref, weekStart) => ref
       .watch(reportsRepositoryProvider)
       .fetchWeekly(AppDates.weekStart(weekStart)),
@@ -26,9 +25,8 @@ final weeklyReportListProvider = FutureProvider<List<WeeklyReport>>(
 
 /// Bir günün raporu; üretilmemişse `null`. Anahtar yerel gün başı olmalıdır.
 final dailyReportProvider = FutureProvider.family<DailyReport?, DateTime>(
-  (ref, day) => ref
-      .watch(reportsRepositoryProvider)
-      .fetchDaily(AppDates.startOfDay(day)),
+  (ref, day) =>
+      ref.watch(reportsRepositoryProvider).fetchDaily(AppDates.startOfDay(day)),
 );
 
 /// Aralıktaki günlük raporlar, yeniden eskiye.

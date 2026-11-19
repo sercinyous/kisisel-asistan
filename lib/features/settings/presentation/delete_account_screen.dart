@@ -8,7 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
 import '../data/account_repository.dart';
 
-/// Ayarlar > Hesabımı sil: neyin silineceğini anlatır, "SİL" yazılınca
+/// Hesap > Profil ve hedefler > Hesabımı sil: neyin silineceğini anlatır, "SİL" yazılınca
 /// sunucuda hesabı ve tüm verisini siler, cihazı temizler, oturumu kapatır.
 class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({super.key});
@@ -166,8 +166,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               _error!,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: AppColors.danger),
+              style:
+                  theme.textTheme.bodySmall?.copyWith(color: AppColors.danger),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),

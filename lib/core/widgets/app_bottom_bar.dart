@@ -33,12 +33,12 @@ class AppBottomBar extends StatelessWidget {
   static const List<_BarItem> _items = [
     _BarItem('Kokpit', Icons.grid_view_outlined, Icons.grid_view_rounded),
     _BarItem(
-      'Operasyon',
+      'İşler',
       Icons.check_circle_outline_rounded,
       Icons.check_circle_rounded,
     ),
     _BarItem('Sağlık', Icons.favorite_border_rounded, Icons.favorite_rounded),
-    _BarItem('Raporlar', Icons.bar_chart_outlined, Icons.bar_chart_rounded),
+    _BarItem('İçgörü', Icons.bar_chart_outlined, Icons.bar_chart_rounded),
   ];
 
   void _select(int index) {

@@ -114,8 +114,11 @@ class TasksRepository {
       remindAt: remindAt,
       notify: notify,
     );
-    final row =
-        await _client.from('tasks').insert(draft.toWriteMap()).select().single();
+    final row = await _client
+        .from('tasks')
+        .insert(draft.toWriteMap())
+        .select()
+        .single();
     return TaskItem.fromMap(row);
   }
 

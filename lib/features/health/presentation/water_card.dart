@@ -40,7 +40,7 @@ class WaterCard extends ConsumerWidget {
           BentoLabel(
             icon: Icons.water_drop_rounded,
             label: 'Su',
-            color: AppColors.accent,
+            color: AppColors.water,
             trailing: 'bugün',
           ),
           const SizedBox(height: 8),
@@ -113,74 +113,12 @@ class WaterCard extends ConsumerWidget {
   }
 }
 
-/// Kokpit: tek satırlık su özeti ve +250 düğmesi.
-class WaterSummaryCard extends ConsumerWidget {
-  const WaterSummaryCard({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final water = ref.watch(waterTodayProvider);
-    final theme = Theme.of(context);
-    final today = water.valueOrNull;
-
-    return BentoCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.cardPadding,
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.water_drop_rounded, size: 18, color: AppColors.accent),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  today == null
-                      ? (water.hasError ? 'Su yüklenemedi' : 'Su')
-                      : 'Su  ${formatWaterMl(today.totalMl)} / '
-                          '${formatWaterMl(today.targetMl)}',
-                  style: theme.textTheme.labelLarge,
-                ),
-                const SizedBox(height: 6),
-                _WaterBar(progress: today?.progress ?? 0, height: 6),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: '250 ml ekle',
-            onPressed: today == null
-                ? (water.hasError
-                    ? () => ref.invalidate(waterTodayProvider)
-                    : null)
-                : () => _run(
-                      context,
-                      () => ref
-                          .read(waterTodayProvider.notifier)
-                          .add(waterQuickAddMl.first),
-                      'Su kaydı eklenemedi.',
-                    ),
-            icon: Icon(
-              water.hasError && today == null
-                  ? Icons.refresh_rounded
-                  : Icons.add_circle_rounded,
-            ),
-            color: AppColors.accent,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _WaterBar extends StatelessWidget {
-  const _WaterBar({required this.progress, this.height = 8});
+  const _WaterBar({required this.progress});
+
+  static const double height = 8;
 
   final double progress;
-  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +128,7 @@ class _WaterBar extends StatelessWidget {
         value: progress,
         minHeight: height,
         backgroundColor: AppColors.surfaceHigh,
-        color: AppColors.accent,
+        color: AppColors.water,
       ),
     );
   }

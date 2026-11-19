@@ -18,7 +18,7 @@ const Map<String, String> _categoryLabels = {
   'finans': 'Finans',
 };
 
-/// Sabit (tekrarlayan iş) ekleme / düzenleme formu.
+/// Rutin (tekrarlayan iş) ekleme / düzenleme formu.
 class RoutineFormSheet extends ConsumerStatefulWidget {
   const RoutineFormSheet({super.key, this.routine, this.nextSortOrder = 0});
 
@@ -181,7 +181,7 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
     final time = _time;
 
     return OpsSheetFrame(
-      title: widget.routine == null ? 'Yeni sabit' : 'Sabiti düzenle',
+      title: widget.routine == null ? 'Yeni rutin' : 'Rutini düzenle',
       formKey: _formKey,
       saving: _saving,
       error: _error,
@@ -312,7 +312,7 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Aktif'),
-            subtitle: const Text('Pasif sabit Gün ve Ay ekranında görünmez.'),
+            subtitle: const Text('Pasif rutin Gün ve Ay ekranında görünmez.'),
             value: _isActive,
             onChanged: (value) => setState(() => _isActive = value),
           ),

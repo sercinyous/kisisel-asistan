@@ -15,6 +15,8 @@ import 'package:kisisel_asistan/features/health/presentation/health_screen.dart'
 import 'package:kisisel_asistan/features/health/presentation/health_widgets.dart';
 import 'package:kisisel_asistan/features/health/presentation/trend_providers.dart';
 import 'package:kisisel_asistan/features/health/presentation/trend_screen.dart';
+import 'package:kisisel_asistan/features/health/presentation/weight_card.dart';
+import 'package:kisisel_asistan/features/health/presentation/weight_detail_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
@@ -186,41 +188,97 @@ void main() {
 
   Future<void> save(WidgetTester tester) => tapVisible(tester, find.text('Kaydet'));
 
+  Future<void> segment(WidgetTester tester, HealthSegment value) async {
+    await tester.tap(find.byKey(Key('health-segment-${value.name}')));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> expandMeal(WidgetTester tester, String mealType) =>
+      tapVisible(tester, find.byKey(ValueKey('meal-group-$mealType')));
+
+  Future<void> openWeightDetail(WidgetTester tester) async {
+    await tapVisible(tester, find.byType(WeightCard));
+    expect(find.byType(WeightDetailScreen), findsOneWidget);
+  }
+
   String bigValue(WidgetTester tester, String key) =>
       tester.widget<HealthBigValue>(find.byKey(Key(key))).value;
+
+  String text(WidgetTester tester, String key) =>
+      tester.widget<Text>(find.byKey(Key(key))).data!;
 
   testWidgets('dolu veriyle 375x667 ve 1.3 metin ölçeğinde taşmadan çizilir',
       (tester) async {
     await pumpScreen(tester, textScale: 1.3);
 
+    // Özet: kilo, enerji, bu hafta.
     expect(find.text('Sağlık'), findsOneWidget);
-    expect(find.text('84,5 kg → 78 kg'), findsOneWidget);
-    expect(find.textContaining('kas kütlesi'), findsNothing);
+    expect(find.text('Özet'), findsOneWidget);
+    expect(find.text('Beslenme'), findsOneWidget);
+    expect(find.text('Hareket'), findsOneWidget);
     expect(bigValue(tester, 'weight-latest'), '83,6');
-    expect(
-      tester.widget<Text>(find.byKey(const Key('weight-last-label'))).data,
-      '83,6',
-    );
+    expect(text(tester, 'weight-last-label'), '83,6');
     expect(find.text('Hedef 78 kg'), findsOneWidget);
-    expect(find.text('Hedefe 5,6 kg'), findsOneWidget);
-    expect(find.text('Kahvaltı'), findsOneWidget);
-    expect(find.text('Yulaf ezmesi'), findsOneWidget);
-    expect(find.text('Kickboks'), findsOneWidget);
-    expect(find.text('Uyku'), findsOneWidget);
-    expect(find.text('Kalori'), findsOneWidget);
-    expect(find.text('HealthKit'), findsOneWidget);
-    expect(find.text('son eşitleme 15:34'), findsOneWidget);
+    expect(text(tester, 'weight-summary'), contains('hedefe'));
+    expect(find.text('Bu hafta'), findsOneWidget);
+    expect(text(tester, 'week-steps'), '9.300');
+    expect(text(tester, 'week-sleep'), '7 sa 10 dk');
+    expect(text(tester, 'week-workouts'), '1 / 7');
+    // Kaynak sorunsuz: uyarı yok, kaynak kartı da yok.
+    expect(find.byKey(const Key('health-source-banner')), findsNothing);
+    expect(find.text('HealthKit'), findsNothing);
     expect(tester.takeException(), isNull);
 
-    // Sayfanın sonuna kadar kaydır: alttaki kartlar da taşmamalı.
-    await tester.ensureVisible(find.text('HealthKit'));
+    await segment(tester, HealthSegment.nutrition);
+    expect(bigValue(tester, 'nutrition-day-calories'), '420');
+    expect(find.text('Kahvaltı · 420 kcal'), findsOneWidget);
+    expect(find.text('Yulaf ezmesi'), findsNothing);
+    await expandMeal(tester, 'breakfast');
+    expect(find.text('Yulaf ezmesi'), findsOneWidget);
+    expect(find.text('Kalori'), findsOneWidget);
+    await tester.ensureVisible(find.text('Kalori'));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    await segment(tester, HealthSegment.movement);
+    expect(find.text('Kickboks'), findsOneWidget);
+    expect(find.text('Uyku'), findsOneWidget);
+    await tester.ensureVisible(find.text('Kickboks'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('öğün ekle düğmesi en az 44 pt', (tester) async {
+    await pumpScreen(tester);
+    await segment(tester, HealthSegment.nutrition);
+    final size = tester.getSize(find.byKey(const Key('meal-add')));
+    expect(size.height, greaterThanOrEqualTo(44));
+  });
+
+  testWidgets('healthSegmentProvider Beslenme görünümünü doğrudan açar',
+      (tester) async {
+    final container = await pumpScreen(tester);
+    container.read(healthSegmentProvider.notifier).state =
+        HealthSegment.nutrition;
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('meal-group-breakfast')), findsOneWidget);
+    expect(find.byType(WeightCard), findsNothing);
+  });
+
+  testWidgets('kaynak sorunluyken tek satır uyarı görünür', (tester) async {
+    await pumpScreen(
+      tester,
+      snapshot: const HealthSnapshot(status: HealthStatus.denied),
+    );
+    expect(find.byKey(const Key('health-source-banner')), findsOneWidget);
+    expect(find.text('Yeniden bağlan'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('haftalık antrenman ve adım kartları plan ve ortalamayı gösterir',
       (tester) async {
     await pumpScreen(tester);
+    await segment(tester, HealthSegment.movement);
 
     // Bu hafta: bugünkü kickboks sayılır; 8 gün önceki sayılmaz. Plan 7 gün.
     expect(bigValue(tester, 'workout-week-count'), '1');
@@ -229,19 +287,49 @@ void main() {
     expect(bigValue(tester, 'steps-average'), '9.300');
     // Yedi gün de 430 dk uyku: 7 sa 10 dk.
     expect(bigValue(tester, 'sleep-average'), '7 sa 10 dk');
+
+    await segment(tester, HealthSegment.nutrition);
     // Yalnızca bugünün öğünü var (300 + 120); öğünsüz günler ortalamayı çekmez.
     expect(bigValue(tester, 'calories-average'), '420');
+  });
+
+  testWidgets('Bu hafta satırları trend ekranını ve Hareket görünümünü açar',
+      (tester) async {
+    await pumpScreen(tester);
+
+    for (final (key, metric) in [
+      ('week-row-steps', TrendMetric.steps),
+      ('week-row-sleep', TrendMetric.sleep),
+    ]) {
+      await tapVisible(tester, find.byKey(Key(key)));
+      expect(find.byType(TrendScreen), findsOneWidget, reason: key);
+      expect(
+        tester
+            .widget<SegmentedButton<TrendMetric>>(
+              find.byKey(const Key('trend-metric')),
+            )
+            .selected,
+        {metric},
+        reason: key,
+      );
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+    }
+
+    await tapVisible(tester, find.byKey(const Key('week-row-workouts')));
+    expect(find.byKey(const Key('workout-week-count')), findsOneWidget);
   });
 
   testWidgets('Adım, Uyku ve Kalori kartlarına dokununca ilgili trend açılır',
       (tester) async {
     await pumpScreen(tester);
 
-    for (final (label, metric) in [
-      ('Adım', TrendMetric.steps),
-      ('Uyku', TrendMetric.sleep),
-      ('Kalori', TrendMetric.calories),
+    for (final (label, metric, view) in [
+      ('Adım', TrendMetric.steps, HealthSegment.movement),
+      ('Uyku', TrendMetric.sleep, HealthSegment.movement),
+      ('Kalori', TrendMetric.calories, HealthSegment.nutrition),
     ]) {
+      await segment(tester, view);
       await tapVisible(tester, find.text(label));
       expect(find.byType(TrendScreen), findsOneWidget, reason: label);
       expect(
@@ -285,8 +373,8 @@ void main() {
   testWidgets(
       'büyük metinde ortalama değeri tek satır ölçülür: kartlarda ölü boşluk yok',
       (tester) async {
-    // "7 sa 22 dk ort." ve "1.824 kcal ort." yarım genişlikte sığmaz; değer
-    // küçülür, ama içsel yükseklik iki satır ölçerse satır bir satır uzar.
+    // "7 sa 22 dk ort." yarım genişlikte sığmaz; değer küçülür, ama içsel
+    // yükseklik iki satır ölçerse satır bir satır uzar.
     health.metrics = [
       for (var i = 0; i < 7; i++)
         DailyHealthMetric(
@@ -307,10 +395,10 @@ void main() {
       ),
     ];
     await pumpScreen(tester, textScale: 1.3);
+    await segment(tester, HealthSegment.movement);
 
     expect(bigValue(tester, 'sleep-average'), '7 sa 22 dk');
-    expect(bigValue(tester, 'calories-average'), '1.824');
-    for (final label in ['Adım', 'Uyku', 'Kalori']) {
+    for (final label in ['Adım', 'Uyku']) {
       final card = find.ancestor(
         of: find.text(label),
         matching: find.byType(BentoCard),
@@ -318,6 +406,8 @@ void main() {
       // Tek satırlı değerle ~186; iki satır ölçümüyle ~227 çıkıyordu.
       expect(tester.getSize(card).height, lessThan(196), reason: label);
     }
+    await segment(tester, HealthSegment.nutrition);
+    expect(bigValue(tester, 'calories-average'), '1.824');
     expect(tester.takeException(), isNull);
   });
 
@@ -334,14 +424,20 @@ void main() {
       find.text('Son 30 günde kilo ölçümü yok. İlk ölçümünü ekle.'),
       findsOneWidget,
     );
+    // Bu cihazda kaynak yok: sorun sayılmaz, uyarı çıkmaz.
+    expect(find.byKey(const Key('health-source-banner')), findsNothing);
+    expect(tester.takeException(), isNull);
+
+    await segment(tester, HealthSegment.nutrition);
+    expect(find.text('Son 7 günde öğün kaydı yok.'), findsOneWidget);
+    expect(find.text('Henüz kayıt yok'), findsNWidgets(3));
+    expect(tester.takeException(), isNull);
+
+    await segment(tester, HealthSegment.movement);
     expect(find.text('Planlı antrenman yok.'), findsOneWidget);
     expect(find.text('Son 7 günde adım verisi yok.'), findsOneWidget);
     expect(find.text('Son 7 günde uyku verisi yok.'), findsOneWidget);
-    expect(find.text('Son 7 günde öğün kaydı yok.'), findsOneWidget);
-    expect(find.text('Henüz kayıt yok'), findsNWidgets(3));
     expect(find.text('Son 30 günde antrenman kaydı yok.'), findsOneWidget);
-    expect(find.textContaining('yalnızca iPhone'), findsOneWidget);
-    expect(find.text('Yeniden bağlan'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -351,12 +447,16 @@ void main() {
     await pumpScreen(tester, textScale: 1.3);
 
     expect(find.text('Kilo ölçümleri yüklenemedi.'), findsOneWidget);
+
+    await segment(tester, HealthSegment.movement);
     expect(find.text('Antrenman planı yüklenemedi.'), findsOneWidget);
     expect(find.text('Adım verisi yüklenemedi.'), findsOneWidget);
     expect(find.text('Uyku verisi yüklenemedi.'), findsOneWidget);
+    expect(find.text('Antrenmanlar yüklenemedi.'), findsOneWidget);
+
+    await segment(tester, HealthSegment.nutrition);
     expect(find.text('Kalori verisi yüklenemedi.'), findsOneWidget);
     expect(find.text('Öğünler yüklenemedi.'), findsOneWidget);
-    expect(find.text('Antrenmanlar yüklenemedi.'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     health.fetchError = null;
@@ -371,12 +471,14 @@ void main() {
       ),
     );
     expect(find.text('Öğünler yüklenemedi.'), findsNothing);
+    await expandMeal(tester, 'breakfast');
     expect(find.text('Yulaf ezmesi'), findsOneWidget);
   });
 
   testWidgets('kilo eklemek depoyu çağırır ve grafik yeni son değeri gösterir',
       (tester) async {
     await pumpScreen(tester);
+    await openWeightDetail(tester);
 
     await tapVisible(tester, find.text('Kilo ekle'));
     await tester.enterText(find.byKey(const Key('weight-kg')), '82,9');
@@ -386,15 +488,18 @@ void main() {
     expect(health.weights.last.weightKg, 82.9);
     expect(find.byKey(const Key('weight-kg')), findsNothing);
     expect(bigValue(tester, 'weight-latest'), '82,9');
-    expect(
-      tester.widget<Text>(find.byKey(const Key('weight-last-label'))).data,
-      '82,9',
-    );
+    expect(text(tester, 'weight-last-label'), '82,9');
+
+    // Özet kartı da yeni değeri gösterir.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(bigValue(tester, 'weight-latest'), '82,9');
   });
 
   testWidgets('sınır dışı kilo doğrulama iletisi verir ve kaydedilmez',
       (tester) async {
     await pumpScreen(tester);
+    await openWeightDetail(tester);
 
     await tapVisible(tester, find.text('Kilo ekle'));
     await tester.enterText(find.byKey(const Key('weight-kg')), '20');
@@ -410,6 +515,7 @@ void main() {
   testWidgets('öğün eklemek depoya doğru değerleri yazar ve Kokpit özetini tazeler',
       (tester) async {
     final container = await pumpScreen(tester);
+    await segment(tester, HealthSegment.nutrition);
     expect(container.read(todayNutritionProvider).requireValue.calories, 420);
 
     await tapVisible(tester, find.text('Öğün ekle'));
@@ -432,6 +538,7 @@ void main() {
     expect(created.fatG, 5);
     expect(AppDates.startOfDay(created.eatenAt), today);
 
+    await expandMeal(tester, 'lunch');
     expect(find.text('Tavuk göğsü'), findsOneWidget);
     final summary = container.read(todayNutritionProvider).requireValue;
     expect(summary.calories, 670);
@@ -443,6 +550,8 @@ void main() {
   testWidgets('öğün düzenlemek aynı kaydı günceller ve Kokpit özetini tazeler',
       (tester) async {
     final container = await pumpScreen(tester);
+    await segment(tester, HealthSegment.nutrition);
+    await expandMeal(tester, 'breakfast');
 
     await tapVisible(tester, find.text('Yulaf ezmesi'));
     expect(find.text('Öğünü düzenle'), findsOneWidget);
@@ -463,6 +572,8 @@ void main() {
   testWidgets('öğün silmek onaydan sonra depodan kaldırır ve özeti tazeler',
       (tester) async {
     final container = await pumpScreen(tester);
+    await segment(tester, HealthSegment.nutrition);
+    await expandMeal(tester, 'breakfast');
 
     await tapVisible(
       tester,
@@ -486,6 +597,7 @@ void main() {
   testWidgets('öğün formu boş adı ve sınır dışı değerleri reddeder',
       (tester) async {
     await pumpScreen(tester);
+    await segment(tester, HealthSegment.nutrition);
 
     await tapVisible(tester, find.text('Öğün ekle'));
     await tapVisible(tester, find.text('Elle gir'));
@@ -504,6 +616,7 @@ void main() {
   testWidgets('antrenman eklemek depoya yazar ve haftalık sayıyı artırır',
       (tester) async {
     await pumpScreen(tester);
+    await segment(tester, HealthSegment.movement);
 
     await tapVisible(tester, find.text('Ekle'));
     await tapVisible(tester, find.widgetWithText(ChoiceChip, 'Koşu'));
@@ -529,6 +642,7 @@ void main() {
   testWidgets('antrenman formu sınır dışı süre ve mesafeyi reddeder',
       (tester) async {
     await pumpScreen(tester);
+    await segment(tester, HealthSegment.movement);
 
     await tapVisible(tester, find.text('Ekle'));
     await tester.enterText(find.byKey(const Key('workout-duration')), '700');
@@ -542,6 +656,7 @@ void main() {
 
   testWidgets('yazma hatasında form açık kalır ve hata gösterir', (tester) async {
     await pumpScreen(tester);
+    await openWeightDetail(tester);
     health.writeError = Exception('ağ yok');
 
     await tapVisible(tester, find.text('Kilo ekle'));

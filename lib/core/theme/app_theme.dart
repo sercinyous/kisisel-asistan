@@ -17,6 +17,8 @@ class AppPalette {
     required this.ops,
     required this.fitness,
     required this.nutrition,
+    required this.sleep,
+    required this.water,
     required this.warning,
     required this.danger,
     required this.onAccent,
@@ -58,6 +60,8 @@ class AppPalette {
   final Color ops; // operasyon
   final Color fitness; // spor
   final Color nutrition; // beslenme
+  final Color sleep; // uyku
+  final Color water; // su
   final Color warning;
   final Color danger;
 
@@ -126,6 +130,8 @@ class AppPalette {
     ops: Color(0xFF7AA7FF),
     fitness: Color(0xFFFF8A65),
     nutrition: Color(0xFFB9F27C),
+    sleep: Color(0xFFB39DFF),
+    water: Color(0xFF5AC8FA),
     warning: Color(0xFFFBBF24),
     danger: Color(0xFFFF6B6B),
     onAccent: Color(0xFF000000),
@@ -176,6 +182,8 @@ class AppPalette {
     ops: Color(0xFF1D5BD6),
     fitness: Color(0xFFB83D00),
     nutrition: Color(0xFF41740E),
+    sleep: Color(0xFF5B3FC4),
+    water: Color(0xFF0B6FA4),
     warning: Color(0xFF985700),
     danger: Color(0xFFC81E28),
     onAccent: Color(0xFFFFFFFF),
@@ -216,6 +224,8 @@ abstract final class AppColors {
   static Color get ops => palette.ops; // operasyon
   static Color get fitness => palette.fitness; // spor
   static Color get nutrition => palette.nutrition; // beslenme
+  static Color get sleep => palette.sleep; // uyku
+  static Color get water => palette.water; // su
   static Color get warning => palette.warning;
   static Color get danger => palette.danger;
 
@@ -261,12 +271,19 @@ abstract final class AppRadii {
 abstract final class AppSpacing {
   static const double page = 16;
   static const double grid = 10;
-  static const double cardPadding = 16;
+  static const double cardPadding = 20;
+
+  // Boşluk ölçeği: 4 / 8 / 16 / 24 / 32.
   static const double xs = 4;
+  static const double s = 8;
+  static const double m = 16;
+  static const double l = 24;
+  static const double xl = 32;
+
+  // Eski ara değerler (mevcut ekranlar kullanır).
   static const double sm = 6;
   static const double md = 12;
   static const double lg = 20;
-  static const double xl = 32;
   static const double section = 18;
 }
 

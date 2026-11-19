@@ -189,53 +189,6 @@ void main() {
   });
 
   group('KokpitFormat', () {
-    final today = DateTime(2026, 11, 16);
-    RoutineOccurrence at(DateTime due, OccurrenceStatus status) => occurrence(
-          monthlyRoutine('m', due.day),
-          due,
-          status: status,
-          completed: status == OccurrenceStatus.done,
-        );
-
-    test('countdown: kaldı / bugün / gecikti / yapıldı', () {
-      expect(
-        KokpitFormat.countdown(
-          at(DateTime(2026, 11, 19), OccurrenceStatus.upcoming),
-          today,
-        ),
-        '3 gün kaldı',
-      );
-      expect(
-        KokpitFormat.countdown(
-          at(DateTime(2026, 11, 16), OccurrenceStatus.dueToday),
-          today,
-        ),
-        'Bugün',
-      );
-      expect(
-        KokpitFormat.countdown(
-          at(DateTime(2026, 11, 14), OccurrenceStatus.overdue),
-          today,
-        ),
-        '2 gün gecikti',
-      );
-      expect(
-        KokpitFormat.countdown(
-          at(DateTime(2026, 11, 14), OccurrenceStatus.done),
-          today,
-        ),
-        'Yapıldı',
-      );
-      // Ay sınırını aşan pencere: gelecek ayın 1'i.
-      expect(
-        KokpitFormat.countdown(
-          at(DateTime(2026, 12, 1), OccurrenceStatus.upcoming),
-          DateTime(2026, 11, 29),
-        ),
-        '2 gün kaldı',
-      );
-    });
-
     test('durum rozetleri ve renkleri', () {
       expect(
         OccurrenceStatus.values.map(KokpitFormat.statusLabel),

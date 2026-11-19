@@ -26,7 +26,8 @@ import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/reports/data/reports_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
+import 'package:kisisel_asistan/features/settings/presentation/appearance_page.dart';
+import 'package:kisisel_asistan/features/settings/presentation/profile_goals_page.dart';
 import 'package:kisisel_asistan/features/shell/presentation/home_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -266,17 +267,17 @@ void main() {
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));
       unawaited(
         navigator.push(
-          MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+          MaterialPageRoute<void>(builder: (_) => const ProfileGoalsPage()),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.byType(ProfileGoalsPage), findsOneWidget);
 
       // Kaydedilmemiş bir düzenleme ve kaydırılmış bir liste.
       await tester.enterText(find.byKey(const Key('settings-calories')), '2345');
       await tester.pump();
       final settingsList = find.descendant(
-        of: find.byType(SettingsScreen),
+        of: find.byType(ProfileGoalsPage),
         matching: find.byType(Scrollable),
       );
       await tester.drag(settingsList.first, const Offset(0, -180));
@@ -284,16 +285,16 @@ void main() {
       final settingsOffset =
           tester.state<ScrollableState>(settingsList.first).position.pixels;
       expect(settingsOffset, greaterThan(100));
-      final settingsElement = tester.element(find.byType(SettingsScreen));
+      final settingsElement = tester.element(find.byType(ProfileGoalsPage));
       final shellElement =
           tester.element(find.byType(HomeShell, skipOffstage: false));
 
       await select(tester, AppThemeMode.light);
 
       // Gezinme yığını yerinde: Ayarlar hâlâ üstte, kabuk altında.
-      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.byType(ProfileGoalsPage), findsOneWidget);
       expect(
-        tester.element(find.byType(SettingsScreen)),
+        tester.element(find.byType(ProfileGoalsPage)),
         same(settingsElement),
       );
       expect(
@@ -360,7 +361,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Vazgeç ve çık'));
       await tester.pumpAndSettle();
-      expect(find.byType(SettingsScreen), findsNothing);
+      expect(find.byType(ProfileGoalsPage), findsNothing);
       expect(
         tester.state<ScrollableState>(kokpitList.first).position.pixels,
         kokpitOffset,
@@ -474,7 +475,7 @@ void main() {
         (tester) async {
       await pumpApp(
         tester,
-        home: const SettingsScreen(),
+        home: const AppearancePage(),
         overrides: demoOverrides(),
       );
 
@@ -502,13 +503,8 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(ThemeModeStore.key), 'light');
 
-      // Cihaz tercihidir: kaydedilmemiş form değişikliği sayılmaz.
-      expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Kaydet'))
-            .onPressed,
-        isNull,
-      );
+      // Cihaz tercihidir: anında uygulanır, Kaydet düğmesi yoktur.
+      expect(find.text('Kaydet'), findsNothing);
 
       await tester.tap(find.text('Sistem'));
       await tester.pumpAndSettle();

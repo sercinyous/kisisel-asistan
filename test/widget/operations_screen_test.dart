@@ -4,12 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
+import 'package:kisisel_asistan/demo/demo_reminders.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/operations/data/notes_repository.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/operations/domain/note_item.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
+import 'package:kisisel_asistan/features/operations/presentation/calendar_screen.dart';
 import 'package:kisisel_asistan/features/operations/presentation/operations_screen.dart';
+import 'package:kisisel_asistan/features/reminders/data/reminders_repository.dart';
 import 'package:kisisel_asistan/features/operations/presentation/routine_form_sheet.dart';
 import 'package:kisisel_asistan/features/operations/presentation/task_form_sheet.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
@@ -117,6 +120,8 @@ void main() {
           notesRepositoryProvider.overrideWithValue(notes),
           healthRepositoryProvider.overrideWithValue(FakeHealthRepository()),
           settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+          remindersRepositoryProvider
+              .overrideWithValue(MemoryRemindersRepository(userId: 'u1')),
         ],
         child: MaterialApp(
           theme: AppTheme.dark,
@@ -137,14 +142,17 @@ void main() {
       (tester) async {
     await pumpScreen(tester, textScale: 1.3);
     expect(find.text('Fatura ödemesi'), findsOneWidget);
-    expect(find.text('Ekle'), findsOneWidget);
+    expect(find.text('İşler'), findsOneWidget);
+    expect(find.byTooltip('Ekle'), findsOneWidget);
+    expect(find.text('Görevler'), findsOneWidget, reason: 'ikinci başlık yok');
     expect(tester.takeException(), isNull);
 
-    await tester.tap(find.text('Sabitler').first);
+    await tester.tap(find.text('Rutinler').first);
     await tester.pumpAndSettle();
-    expect(find.text('Günlük ve haftalık'), findsOneWidget);
+    expect(find.text('Bugün'), findsOneWidget);
     expect(find.text('Aylık'), findsOneWidget);
     expect(find.text('Maaş ödemeleri'), findsOneWidget);
+    expect(find.text('Hatırlatıcılar'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('Notlar').first);
@@ -153,12 +161,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('formdan aylık sabit eklenir: frequency monthly + seçilen gün',
+  testWidgets('formdan aylık rutin eklenir: frequency monthly + seçilen gün',
       (tester) async {
     await pumpScreen(tester, textScale: 1.3);
-    await tester.tap(find.text('Sabitler').first);
+    await tester.tap(find.text('Rutinler').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Ekle'));
+    await tester.tap(find.byTooltip('Ekle'));
     await tester.pumpAndSettle();
 
     final sheet = find.byType(RoutineFormSheet);
@@ -239,7 +247,7 @@ void main() {
   });
 
   testWidgets(
-      'spor sabiti eklenip silinince haftalık antrenman planı tazelenir',
+      'spor rutini eklenip silinince haftalık antrenman planı tazelenir',
       (tester) async {
     await pumpScreen(tester);
     final container = ProviderScope.containerOf(
@@ -254,9 +262,9 @@ void main() {
       3,
     );
 
-    await tester.tap(find.text('Sabitler').first);
+    await tester.tap(find.text('Rutinler').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Ekle'));
+    await tester.tap(find.byTooltip('Ekle'));
     await tester.pumpAndSettle();
     final sheet = find.byType(RoutineFormSheet);
     await tester.enterText(
@@ -271,7 +279,7 @@ void main() {
     await tester.tap(find.text('Kaydet'));
     await tester.pumpAndSettle();
     expect(routines.routines.last.category, 'spor');
-    // Her gün planlı yeni spor sabiti: 3 + 7.
+    // Her gün planlı yeni spor rutini: 3 + 7.
     expect(
       container.read(weekWorkoutPlanProvider).requireValue.plannedCount,
       10,
@@ -279,13 +287,7 @@ void main() {
     await drainSnackBar(tester);
 
     // Silme de aynı sağlayıcıyı tazeler.
-    final row = find.ancestor(
-      of: find.text('Ağırlık antrenmanı'),
-      matching: find.byType(InkWell),
-    );
-    await tester.tap(
-      find.descendant(of: row.first, matching: find.byTooltip('Seçenekler')),
-    );
+    await tester.longPress(find.text('Ağırlık antrenmanı'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sil').last);
     await tester.pumpAndSettle();
@@ -345,5 +347,57 @@ void main() {
           .text,
       'Fatura ödemesi (Kasım)',
     );
+  });
+
+  testWidgets('Sonra grubu kapalı başlar; dokununca açılır', (tester) async {
+    tasks.tasks = [
+      ...tasks.tasks,
+      TaskItem(
+        id: 't3',
+        title: 'Bugünkü toplantı',
+        category: 'İş',
+        priority: 'medium',
+        status: 'todo',
+        dueAt: DateTime.now().subtract(const Duration(days: 1)),
+      ),
+    ];
+    await pumpScreen(tester);
+    expect(find.text('Bugün'), findsOneWidget);
+    expect(find.text('Bugünkü toplantı'), findsOneWidget);
+    expect(find.text('Sonra'), findsOneWidget);
+    expect(find.text('Fatura ödemesi'), findsNothing);
+    expect(find.byTooltip('Seçenekler'), findsNothing);
+
+    await tester.tap(find.text('Sonra'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fatura ödemesi'), findsOneWidget);
+  });
+
+  testWidgets('filtre seçilince tek çip görünür ve kaldırılabilir',
+      (tester) async {
+    await pumpScreen(tester);
+    await tester.tap(find.byTooltip('Filtre'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('ops-filter-option-Finans')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ops-filter-chip')), findsOneWidget);
+    expect(find.text('Fatura ödemesi'), findsOneWidget);
+    expect(
+      find.text('Haftalık vardiya çizelgesini yayınla ve ekibe duyur'),
+      findsNothing,
+    );
+
+    await tester.tap(find.byTooltip('Filtreyi kaldır'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('ops-filter-chip')), findsNothing);
+  });
+
+  testWidgets('takvim ikonu ay takvimini ayrı ekranda açar', (tester) async {
+    await pumpScreen(tester);
+    await tester.tap(find.byTooltip('Takvim'));
+    await tester.pumpAndSettle();
+    expect(find.byType(OpsCalendarScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('kokpit-selected-day')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

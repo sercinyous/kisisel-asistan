@@ -71,7 +71,8 @@ class AccountRepository {
       final prefs = await _openPrefs().timeout(const Duration(seconds: 2));
       final keys = prefs
           .getKeys()
-          .where((k) => k.endsWith(':$userId') || sharedPersonalKeys.contains(k))
+          .where(
+              (k) => k.endsWith(':$userId') || sharedPersonalKeys.contains(k))
           .toList();
       for (final key in keys) {
         await prefs.remove(key);

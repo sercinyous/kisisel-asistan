@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/features/health/presentation/weight_card.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
@@ -181,35 +182,39 @@ void main() {
   }
 
   void expectShellAlive() {
-    expect(find.byType(HomeShell), findsOneWidget);
-    expect(find.byTooltip('Yeni giriş'), findsOneWidget);
+    // Kilo formu ayrıntı ekranından açılır; kabuk altında (sahne dışı) kalır.
+    expect(find.byType(HomeShell, skipOffstage: false), findsOneWidget);
+    expect(
+      find.byTooltip('Yeni giriş', skipOffstage: false),
+      findsOneWidget,
+    );
   }
 
   final forms = <String, (String, Future<void> Function(WidgetTester), int Function())>{
     'görev': (
-      'Operasyon',
+      'İşler',
       (tester) async {
-        await tapVisible(tester, find.text('Ekle'));
+        await tapVisible(tester, find.byTooltip('Ekle'));
         await tester.enterText(
             find.widgetWithText(TextFormField, 'Başlık'), 'Yeni iş');
       },
       () => tasks.tasks.length,
     ),
-    'sabit': (
-      'Operasyon',
+    'rutin': (
+      'İşler',
       (tester) async {
-        await tapVisible(tester, find.text('Sabitler'));
-        await tapVisible(tester, find.text('Ekle'));
+        await tapVisible(tester, find.text('Rutinler'));
+        await tapVisible(tester, find.byTooltip('Ekle'));
         await tester.enterText(
             find.widgetWithText(TextFormField, 'Başlık'), 'Rapor');
       },
       () => routines.routines.length,
     ),
     'not': (
-      'Operasyon',
+      'İşler',
       (tester) async {
         await tapVisible(tester, find.text('Notlar'));
-        await tapVisible(tester, find.text('Ekle'));
+        await tapVisible(tester, find.byTooltip('Ekle'));
         await tester.enterText(
             find.widgetWithText(TextFormField, 'Başlık'), 'Not');
       },
@@ -218,6 +223,7 @@ void main() {
     'öğün': (
       'Sağlık',
       (tester) async {
+        await tapVisible(tester, find.text('Beslenme'));
         await tapVisible(tester, find.text('Öğün ekle'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Elle gir'));
@@ -229,6 +235,7 @@ void main() {
     'antrenman': (
       'Sağlık',
       (tester) async {
+        await tapVisible(tester, find.text('Hareket'));
         await tapVisible(tester, find.widgetWithText(TextButton, 'Ekle').last);
         await tester.enterText(
             find.byKey(const Key('workout-duration')), '30');
@@ -238,6 +245,7 @@ void main() {
     'kilo': (
       'Sağlık',
       (tester) async {
+        await tapVisible(tester, find.byType(WeightCard));
         await tapVisible(tester, find.text('Kilo ekle'));
         await tester.enterText(find.byKey(const Key('weight-kg')), '82,9');
       },
@@ -291,7 +299,7 @@ void main() {
 
   testWidgets('not formu kayıt sürerken dışına dokunularak kapatılırsa ana kabuk kapanmaz',
       (tester) async {
-    await pumpShell(tester, 'Operasyon');
+    await pumpShell(tester, 'İşler');
     await forms['not']!.$2(tester);
     await startSave(tester);
 
@@ -310,7 +318,7 @@ void main() {
   testWidgets(
       'AI giriş: kayıt, sayfa kapanırken biterse ana kabuk kapanmaz',
       (tester) async {
-    await pumpShell(tester, 'Operasyon');
+    await pumpShell(tester, 'İşler');
     harness.repository.gate = gate;
     await tester.tap(find.byTooltip('Yeni giriş'));
     await tester.pumpAndSettle();
@@ -334,7 +342,7 @@ void main() {
 
   testWidgets('kapatılmayan form kayıt bitince kendisi kapanır (kontrol)',
       (tester) async {
-    await pumpShell(tester, 'Operasyon');
+    await pumpShell(tester, 'İşler');
     await forms['görev']!.$2(tester);
     await startSave(tester);
 

@@ -8,7 +8,12 @@ import '../domain/friends_models.dart';
 import 'friends_providers.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
-  const FriendsScreen({super.key});
+  const FriendsScreen({super.key}) : sharingOnly = false;
+
+  /// Arkadaşlar › Paylaşım ayarları: yalnızca paylaşım anahtarları.
+  const FriendsScreen.sharing({super.key}) : sharingOnly = true;
+
+  final bool sharingOnly;
 
   @override
   ConsumerState<FriendsScreen> createState() => _FriendsScreenState();
@@ -94,7 +99,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Arkadaşlar')),
+      appBar: AppBar(
+        title: Text(widget.sharingOnly ? 'Paylaşım ayarları' : 'Arkadaşlar'),
+      ),
       body: RefreshIndicator(
         color: AppColors.accent,
         onRefresh: () async => refreshFriends(ref),
@@ -106,40 +113,73 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
             AppSpacing.page,
             120,
           ),
-          children: [
-            title('Davetler'),
-            _incoming(theme),
-            title('Arkadaşlar'),
-            _friendList(theme),
-            title('Arkadaş ekle'),
-            BentoCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                    decoration: const InputDecoration(
-                      labelText: 'E-posta',
-                      hintText: 'ornek@gmail.com',
+          children: widget.sharingOnly
+              ? [
+                  const SizedBox(height: AppSpacing.grid),
+                  _sharing(theme),
+                ]
+              : [
+                  title('Davetler'),
+                  _incoming(theme),
+                  title('Arkadaşlar'),
+                  _friendList(theme),
+                  title('Arkadaş ekle'),
+                  BentoCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          autocorrect: false,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          decoration: const InputDecoration(
+                            labelText: 'E-posta',
+                            hintText: 'ornek@gmail.com',
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        FilledButton.icon(
+                          onPressed: _sending ? null : _send,
+                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                          label:
+                              Text(_sending ? 'Gönderiliyor…' : 'İstek gönder'),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  FilledButton.icon(
-                    onPressed: _sending ? null : _send,
-                    icon: const Icon(Icons.person_add_alt_1_rounded),
-                    label: Text(_sending ? 'Gönderiliyor…' : 'İstek gönder'),
+                  _outgoing(theme),
+                  const SizedBox(height: AppSpacing.section),
+                  BentoCard(
+                    key: const Key('friends-sharing-settings'),
+                    onTap: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => const FriendsScreen.sharing(),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.visibility_rounded,
+                          size: 20,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Text(
+                            'Paylaşım ayarları',
+                            style: theme.textTheme.bodyLarge,
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.textMuted,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
-              ),
-            ),
-            _outgoing(theme),
-            title('Paylaşım anahtarları'),
-            _sharing(theme),
-          ],
         ),
       ),
     );
@@ -260,17 +300,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   ChoiceChip(
                     label: Text(m.label),
                     selected: m == metric,
-                    onSelected: (_) => ref
-                        .read(leaderboardMetricProvider.notifier)
-                        .state = m,
+                    onSelected: (_) =>
+                        ref.read(leaderboardMetricProvider.notifier).state = m,
                   ),
                 for (final p in RankPeriod.values)
                   ChoiceChip(
                     label: Text(p.label),
                     selected: p == period,
-                    onSelected: (_) => ref
-                        .read(leaderboardPeriodProvider.notifier)
-                        .state = p,
+                    onSelected: (_) =>
+                        ref.read(leaderboardPeriodProvider.notifier).state = p,
                   ),
               ],
             ),
@@ -461,7 +499,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   Expanded(child: Text(r.targetEmail)),
                   TextButton(
                     onPressed: () => _run(
-                      () => ref.read(friendsRepositoryProvider).cancelRequest(r.id),
+                      () => ref
+                          .read(friendsRepositoryProvider)
+                          .cancelRequest(r.id),
                     ),
                     child: const Text('İptal'),
                   ),

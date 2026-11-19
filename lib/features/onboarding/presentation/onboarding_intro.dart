@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_top/ritim_top.dart';
 
 /// Tanıtım kartı içeriği (renk, çizim sırasında etkin paletten okunur).
 class OnboardingIntroCard {
@@ -18,16 +19,17 @@ class OnboardingIntroCard {
   final List<String> bullets;
 }
 
-/// Kılavuzun 5 kartı: Kokpit, + ile iki ayrı giriş, Operasyon ve aylık sabit
-/// mantığı, Sağlık (trend ve denge), Raporlar ve Arkadaşlar.
+/// Kılavuzun 5 kartı: Kokpit, + ile iki ayrı giriş, İşler (rutinler ve
+/// takvim), Sağlık (trend ve denge), İçgörü ve Arkadaşlar.
 const List<OnboardingIntroCard> onboardingIntroCards = [
   OnboardingIntroCard(
     icon: Icons.dashboard_rounded,
     title: 'Kokpit: günün tek bakışta',
-    body: 'Bugünün görevleri, rutinlerin, yaklaşan aylık sabitler ve beslenme '
-        'özetin burada toplanır.',
+    body: 'Kalori, günlük işler, adım, uyku, su ve bugünün işleri tek '
+        'ekranda toplanır.',
     bullets: [
-      'Gün görünümü bugünü, Ay görünümü ayın tamamını gösterir.',
+      'Bugünün işlerinde kutuya dokunarak rutini ya da görevi tamamla.',
+      'Kartlara dokununca ilgili sekme açılır.',
       'Satırı sola kaydırarak sil, uzun basarak düzenle.',
     ],
   ),
@@ -43,12 +45,15 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
   ),
   OnboardingIntroCard(
     icon: Icons.checklist_rounded,
-    title: 'Operasyon ve aylık sabitler',
-    body: 'Operasyon sekmesinde görevler, notlar ve sabitler (tekrarlayan '
-        'işler) durur. Aylık sabitler ayın belirli günü bir iştir.',
+    title: 'İşler ve aylık rutinler',
+    body: 'İşler sekmesinde görevler, notlar ve rutinler (tekrarlayan '
+        'işler) durur. Aylık rutinler ayın belirli günü bir iştir; '
+        'Rutinler listesinde kutuya dokunarak tamamlanır.',
     bullets: [
-      'Ayın 15\'i ödeme gibi sabitler gününden birkaç gün önce görünür '
-          '(Ayarlar\'dan değişir).',
+      'İşler › Takvim ayın tamamını gösterir; bir güne dokununca o günün '
+          'görev ve aylık işleri açılır.',
+      'Aylık rutinin hatırlatması gününden birkaç gün önce gelir '
+          '(Hesap > Bildirimler\'den değişir).',
       'Gün geçince "gecikti" olur, ay sonunda "yapılmadı" diye kapanır.',
       'Tarih hafta sonuna denk gelse de kaymaz.',
     ],
@@ -65,10 +70,11 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
   ),
   OnboardingIntroCard(
     icon: Icons.groups_rounded,
-    title: 'Raporlar ve Arkadaşlar',
+    title: 'İçgörü ve Arkadaşlar',
     body: 'Günlük ve haftalık raporlar sunucuda otomatik hazırlanır. '
-        'Arkadaşlarını Kokpit\'in üstündeki kişi simgesinden e-postayla '
-        'ekleyebilirsin.',
+        'Kokpit\'in sağ üstündeki Hesap simgesinden profilini, '
+        'bildirimleri ve bağlantıları yönetir, Arkadaşlar\'dan '
+        'e-postayla arkadaş ekleyebilirsin.',
     bullets: [
       'Arkadaşların yalnızca senin açtığın sağlık hedefi özetini görür '
           '(adım, uyku, kalori).',
@@ -79,9 +85,17 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
 
 /// Tek tanıtım kartının sayfası.
 class OnboardingIntroPage extends StatelessWidget {
-  const OnboardingIntroPage({super.key, required this.card, this.accent});
+  const OnboardingIntroPage({
+    super.key,
+    required this.card,
+    this.accent,
+    this.showMark = false,
+  });
 
   final OnboardingIntroCard card;
+
+  /// Kartın üstünde uygulama topacı bir kez dönüp yerine oturur (karşılama).
+  final bool showMark;
 
   /// Simge rengi; verilmezse ana vurgu.
   final Color? accent;
@@ -95,6 +109,12 @@ class OnboardingIntroPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (showMark) ...[
+            const Center(
+              child: RitimTop(mode: RitimTopMode.settle, size: 96),
+            ),
+            const SizedBox(height: 12),
+          ],
           DecoratedBox(
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.14),

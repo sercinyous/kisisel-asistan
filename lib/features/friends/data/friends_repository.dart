@@ -40,8 +40,8 @@ class SupabaseFriendsRepository implements FriendsRepository {
 
   @override
   Future<String> sendRequest(String targetEmail) async {
-    final res = await _client
-        .rpc('send_friend_request', params: {'target_email': targetEmail.trim()});
+    final res = await _client.rpc('send_friend_request',
+        params: {'target_email': targetEmail.trim()});
     return res as String? ?? 'İstek gönderildi';
   }
 
@@ -78,13 +78,17 @@ class SupabaseFriendsRepository implements FriendsRepository {
       _rows(await _client.rpc('friend_goal_summary', params: {
         'friend': friendId,
         'week_start': isoDate(weekStart),
-      })).map(GoalSummary.fromMap).toList();
+      }))
+          .map(GoalSummary.fromMap)
+          .toList();
 
   @override
   Future<List<LeaderboardEntry>> leaderboard(DateTime weekStart) async =>
       _rows(await _client.rpc('friend_leaderboard', params: {
         'week_start': isoDate(weekStart),
-      })).map(LeaderboardEntry.fromMap).toList();
+      }))
+          .map(LeaderboardEntry.fromMap)
+          .toList();
 
   @override
   Future<void> leave(String friendId) =>

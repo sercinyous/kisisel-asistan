@@ -47,7 +47,9 @@ int? _rate(Object? value) => _intOrNull(value)?.clamp(0, 100);
 DateTime? _date(Object? value) {
   if (value is! String) return null;
   final parsed = DateTime.tryParse(value);
-  return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
+  return parsed == null
+      ? null
+      : DateTime(parsed.year, parsed.month, parsed.day);
 }
 
 Map<String, dynamic> _map(Object? value) => value is Map

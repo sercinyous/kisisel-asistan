@@ -62,8 +62,8 @@ class HealthSourcePicker extends ConsumerWidget {
         const SizedBox(height: 6),
         Text(
           configured
-              ? 'Adım, uyku ve aktif kalori yalnızca seçili kaynaktan okunur; '
-                  'ikisi birlikte sayılmaz.'
+              ? 'Aynı anda yalnızca biri çalışır: adım, uyku ve aktif kalori '
+                  'seçili kaynaktan okunur, diğeri pasif kalır.'
               : 'Google Health için derlemeye GOOGLE_IOS_CLIENT_ID verilmeli '
                   '(README > Google Health ile bağlantı).',
           style:
@@ -181,10 +181,8 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
         ),
       GoogleLinkStatus.connected => (
           link.email ?? 'Bağlı',
-          AppColors.accent,
-          googleSelected
-              ? syncText
-              : '$syncText · Kaynak olarak seçilince veriler buradan okunur.',
+          googleSelected ? AppColors.accent : AppColors.textMuted,
+          googleSelected ? syncText : '$syncText · Şu an okunmuyor.',
         ),
       GoogleLinkStatus.reconnect => (
           link.message ?? 'Google\'a yeniden bağlanman gerekiyor.',
@@ -223,7 +221,9 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
         ),
     ];
 
-    return Column(
+    return HealthSourceDim(
+      active: googleSelected,
+      child: Column(
       key: const Key('settings-google-row'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -243,8 +243,26 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Google Health (Fitbit)',
-                      style: theme.textTheme.bodyLarge),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text('Google Health (Fitbit)',
+                            style: theme.textTheme.bodyLarge),
+                      ),
+                      const SizedBox(width: 8),
+                      HealthSourceStateBadge(
+                        key: const Key('google-source-state'),
+                        active: googleSelected,
+                      ),
+                    ],
+                  ),
+                  if (!googleSelected)
+                    Text(
+                      'Pasif: Apple Sağlık seçili, Google Health\'tan veri okunmuyor.',
+                      key: const Key('google-source-passive-note'),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textMuted),
+                    ),
                   Text(
                     status,
                     maxLines: 3,
@@ -273,6 +291,52 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
             ),
           ),
       ],
+    ),
     );
   }
+}
+
+/// Bağlantılar'daki kaynak satırının sağındaki "Etkin" / "Pasif" etiketi.
+/// Aynı anda yalnızca seçili kaynak etkindir.
+class HealthSourceStateBadge extends StatelessWidget {
+  const HealthSourceStateBadge({super.key, required this.active});
+
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? AppColors.accent : AppColors.textMuted;
+    return Semantics(
+      label: active ? 'Etkin kaynak' : 'Pasif kaynak',
+      excludeSemantics: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(AppRadii.chip),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          child: Text(
+            active ? 'Etkin' : 'Pasif',
+            style: Theme.of(context)
+                .textTheme
+                .labelSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Seçili olmayan kaynağın satırını soluklaştırır.
+class HealthSourceDim extends StatelessWidget {
+  const HealthSourceDim({super.key, required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      Opacity(opacity: active ? 1 : 0.55, child: child);
 }

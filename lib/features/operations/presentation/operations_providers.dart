@@ -14,13 +14,16 @@ import '../domain/task_item.dart';
 
 enum OpsSegment { tasks, routines, notes }
 
-final opsSegmentProvider =
-    StateProvider<OpsSegment>((ref) => OpsSegment.tasks);
+final opsSegmentProvider = StateProvider<OpsSegment>((ref) => OpsSegment.tasks);
 
 /// Filtreler: `null` = Tümü.
 final taskCategoryFilterProvider = StateProvider<String?>((ref) => null);
 final routineScopeFilterProvider = StateProvider<String?>((ref) => null);
 final noteCategoryFilterProvider = StateProvider<String?>((ref) => null);
+
+/// Görevlerdeki "Sonra" grubu açık mı. `null`: kullanıcı seçmedi; grup
+/// kapalı başlar, yalnızca Bugün ve Bu hafta boşsa açık gösterilir.
+final opsLaterExpandedProvider = StateProvider<bool?>((ref) => null);
 
 /// `ref.invalidate` ya da `container.invalidate`.
 typedef OpsInvalidate = void Function(ProviderOrFamily provider);
@@ -147,7 +150,7 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
   }
 }
 
-/// Pasifler dahil tüm sabitler (yönetim listesi).
+/// Pasifler dahil tüm rutinler (yönetim listesi).
 final opsRoutinesProvider = FutureProvider<List<Routine>>((ref) {
   // AI girişi rutin eklediğinde aktif listeyi tazeler; bu liste de izler.
   ref.listen(activeRoutinesProvider, (previous, next) {

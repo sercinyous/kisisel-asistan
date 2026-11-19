@@ -115,7 +115,8 @@ class ReportsRepository {
     }
     final data = response.data;
     if (data is Map && data['ok'] == false) {
-      throw ReportGenerationException(reportErrorMessage(response.status, data));
+      throw ReportGenerationException(
+          reportErrorMessage(response.status, data));
     }
   }
 }

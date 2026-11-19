@@ -169,8 +169,8 @@ ErrorReporter supabaseErrorReporter(SupabaseClient client) {
       if (client.auth.currentUser == null) return;
       await client
           .from('app_errors')
-          .insert([for (final r in reports) r.toRow()])
-          .timeout(const Duration(seconds: 10));
+          .insert([for (final r in reports) r.toRow()]).timeout(
+              const Duration(seconds: 10));
     },
   );
 }

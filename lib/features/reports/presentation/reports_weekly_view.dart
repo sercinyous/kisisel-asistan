@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
-import '../../../core/widgets/bento.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import 'reports_chart.dart';
+import 'reports_friends_row.dart';
+import 'reports_week_details_screen.dart';
 import 'reports_format.dart';
 import 'reports_providers.dart';
 import 'reports_state.dart';
@@ -25,8 +26,9 @@ import 'reports_widgets.dart';
   );
 }
 
-/// Haftalık görünüm: hafta seçici, İş/Form, günlük tamamlama grafiği,
-/// ortalamalar, yapay zekâ değerlendirmesi ve geçmiş haftalar.
+/// Haftalık görünüm: hafta seçici, İş/Form puanları + yapay zekâ
+/// değerlendirmesi, günlük tamamlama grafiği, "Ayrıntılar" bağlantısı ve
+/// arkadaşlar satırı.
 class ReportsWeeklyView extends ConsumerWidget {
   const ReportsWeeklyView({super.key});
 
@@ -37,7 +39,6 @@ class ReportsWeeklyView extends ConsumerWidget {
       ref.watch(reportsWeekProvider),
     );
     final report = ref.watch(weeklyReportProvider(selected));
-    final history = ref.watch(weeklyReportListProvider);
 
     void show(DateTime week) =>
         ref.read(reportsWeekProvider.notifier).state = week;
@@ -53,6 +54,12 @@ class ReportsWeeklyView extends ConsumerWidget {
           status: value?.aiStatus ?? ReportAiStatus.pending,
           summary: value?.aiSummary,
           generatedAt: value?.generatedAt,
+          header: value == null
+              ? null
+              : ReportScorePair(
+                  workRate: value.metrics.workRate,
+                  formRate: value.metrics.formRate,
+                ),
         );
 
     return Column(
@@ -77,109 +84,36 @@ class ReportsWeeklyView extends ConsumerWidget {
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(weeklyReportProvider(selected)),
           ),
-          data: (value) => value == null
-              ? aiCard(null)
-              : _WeeklyReportGrid(report: value, aiCard: aiCard(value)),
-        ),
-        const SizedBox(height: 24),
-        const KokpitSectionHeader(title: 'Geçmiş haftalar'),
-        history.when(
-          loading: () => const KokpitSkeletonCard(height: 120),
-          error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
-            message: 'Geçmiş haftalar yüklenemedi.',
-            actionLabel: 'Tekrar dene',
-            onAction: () => ref.invalidate(weeklyReportListProvider),
-          ),
-          data: (reports) {
-            final others = [
-              for (final item in reports)
-                if (item.weekStart != selected) item,
-            ];
-            if (others.isEmpty) {
-              return const KokpitInlineMessage(
-                icon: Icons.history_rounded,
-                message: 'Henüz başka haftalık rapor yok.',
-              );
-            }
-            return ReportListCard(
-              icon: Icons.insights_rounded,
-              entries: [
-                for (final item in others)
-                  ReportListEntry(
-                    key: ValueKey(
-                      'reports-week-${AppDates.ymd(item.weekStart)}',
-                    ),
-                    title: ReportsFormat.weekRange(item.weekStart),
-                    subtitle: [
-                      'İş ${ReportsFormat.rate(item.metrics.workRate)}',
-                      'Form ${ReportsFormat.rate(item.metrics.formRate)}',
-                      if (item.metrics.weightChangeKg case final change?)
-                        KokpitFormat.weightChange(change),
-                    ].join(' · '),
-                    onTap: () => show(item.weekStart),
-                  ),
+          data: (value) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              aiCard(value),
+              if (value != null) ...[
+                const SizedBox(height: AppSpacing.grid),
+                ReportDailyCompletionCard(days: value.metrics.days),
               ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _WeeklyReportGrid extends StatelessWidget {
-  const _WeeklyReportGrid({required this.report, required this.aiCard});
-
-  final WeeklyReport report;
-  final Widget aiCard;
-
-  @override
-  Widget build(BuildContext context) {
-    final m = report.metrics;
-    return BentoGrid(
-      children: [
-        BentoCell(
-          span: 1,
-          child: ReportRateCard(
-            icon: Icons.task_alt_rounded,
-            label: 'İş',
-            color: AppColors.ops,
-            rate: m.workRate,
-            caption: 'Görev ${m.tasksDone} / ${m.tasksTotal} · '
-                'Rutin ${ReportsFormat.rate(m.routineRate)}',
+            ],
           ),
         ),
-        BentoCell(
-          span: 1,
-          child: ReportRateCard(
-            icon: Icons.fitness_center_rounded,
-            label: 'Form',
-            color: AppColors.fitness,
-            rate: m.formRate,
-            caption: 'Antrenman ${m.workoutsDone} / ${m.workoutsPlanned} · '
-                'Protein ${m.proteinDaysHit} gün',
-          ),
-        ),
-        BentoCell(child: ReportDailyCompletionCard(days: m.days)),
-        BentoCell(
-          child: BentoCard(
-            child: ReportStatGrid(
-              stats: [
-                for (final stat in _weeklyAverages(m))
-                  ReportStat(label: stat.label, value: stat.value),
-              ],
+        const SizedBox(height: AppSpacing.grid),
+        ReportLinkRow(
+          key: const ValueKey('reports-details'),
+          icon: Icons.table_chart_rounded,
+          label: 'Ayrıntılar',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ReportsWeekDetailsScreen(week: selected),
             ),
           ),
         ),
-        BentoCell(child: aiCard),
+        const ReportsFriendsRow(),
       ],
     );
   }
 }
 
 /// Haftalık ortalamalar ızgarası için değerler (veri yoksa "—").
-List<({String label, String value})> _weeklyAverages(ReportMetrics m) => [
+List<({String label, String value})> weeklyAverages(ReportMetrics m) => [
       (
         label: 'Ort. kalori',
         value: m.hasNutrition

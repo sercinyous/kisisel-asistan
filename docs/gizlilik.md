@@ -56,12 +56,12 @@ Hata kayıtları ve geri bildirimler, hesabın silinince birlikte silinir. Sunuc
 
 ## Hesabını ve verilerini silme
 
-Ayarlar > Hesabımı sil ekranında SİL yazıp onayladığında hesabın ve sunucudaki tüm verin hemen ve kalıcı olarak silinir: profil, sağlık özetleri, öğünler, görevler, notlar, rutinler, hatırlatıcılar, raporlar, arkadaşlıklar (iki taraftan da), davetler, paylaşım ayarları, hata kayıtları ve geri bildirimler.
+Hesap > Profil ve hedefler sayfasının en altındaki Hesabımı sil ekranında SİL yazıp onayladığında hesabın ve sunucudaki tüm verin hemen ve kalıcı olarak silinir: profil, sağlık özetleri, öğünler, görevler, notlar, rutinler, hatırlatıcılar, raporlar, arkadaşlıklar (iki taraftan da), davetler, paylaşım ayarları, hata kayıtları ve geri bildirimler.
 
 Apple Sağlık ya da Google Health'teki kendi kayıtların bu uygulamaya ait değildir ve silinmez.
 
 ## İletişim
 
-Soru, düzeltme ya da silme talebin için uygulama sahibine uygulama içinden Ayarlar > "Sorun bildir" ile yazabilirsin.
+Soru, düzeltme ya da silme talebin için uygulama sahibine uygulama içinden Hesap > "Sorun bildir" ile yazabilirsin.
 
 Bu metin değişirse uygulamanın yeni sürümüyle birlikte güncellenir.

@@ -151,9 +151,9 @@ class GoogleSignInHost {
     }
     return _initialization ??= signIn
         .initialize(
-          clientId: clientId,
-          serverClientId: serverClientId.isEmpty ? null : serverClientId,
-        )
+      clientId: clientId,
+      serverClientId: serverClientId.isEmpty ? null : serverClientId,
+    )
         .catchError((Object error, StackTrace stack) {
       _initialization = null;
       Error.throwWithStackTrace(

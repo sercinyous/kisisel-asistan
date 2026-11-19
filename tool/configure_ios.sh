@@ -72,6 +72,14 @@ if ! grep -q "CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;" "$PBXPROJ"; 
 fi
 echo "✓ HealthKit entitlement bağlandı"
 
+# --- 2b) Uygulama ikonu ----------------------------------------------------
+# Tek 1024 px ikon (Xcode 14+ "single size"); diğer boyutları Xcode üretir.
+ICONSET="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+rm -rf "$ICONSET"
+mkdir -p "$ICONSET"
+cp ios_setup/AppIcon.appiconset/* "$ICONSET/"
+echo "✓ Uygulama ikonu (Ritim topaç)"
+
 # --- 3) En düşük iOS sürümü ------------------------------------------------
 perl -pi -e "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = ${MIN_IOS};/" "$PBXPROJ"
 if [[ -f "$PODFILE" ]]; then

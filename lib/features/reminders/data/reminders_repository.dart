@@ -28,11 +28,8 @@ class RemindersRepository {
   }
 
   Future<Reminder> create(ReminderDraft draft) async {
-    final row = await _client
-        .from('reminders')
-        .insert(draft.toRow())
-        .select()
-        .single();
+    final row =
+        await _client.from('reminders').insert(draft.toRow()).select().single();
     return Reminder.fromMap(row);
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/bento.dart';
 
 const String opsSaveError =
     'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.';
@@ -13,62 +14,135 @@ String? validateTitle(String? value, int max) {
   return null;
 }
 
-/// Bölüm başlığı + "Ekle" eylemi.
-class OpsSectionHeader extends StatelessWidget {
-  const OpsSectionHeader({super.key, required this.title, required this.onAdd});
+/// Filtre sayfasının sonucu; [value] `null` ise filtre kaldırılır.
+class OpsFilterPick {
+  const OpsFilterPick(this.value);
 
-  final String title;
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-        TextButton.icon(
-          onPressed: onAdd,
-          icon: const Icon(Icons.add_rounded, size: 20),
-          label: const Text('Ekle'),
-        ),
-      ],
-    );
-  }
+  final String? value;
 }
 
-/// Yatay kaydırılan tek seçimli filtre çipleri.
-class OpsFilterChips<T> extends StatelessWidget {
-  const OpsFilterChips({
+/// Tek seçimli filtre alt sayfası. Sayfa seçim yapılmadan kapanırsa `null`.
+Future<OpsFilterPick?> showOpsFilterSheet(
+  BuildContext context, {
+  required List<String> options,
+  required String? selected,
+}) {
+  return showModalBottomSheet<OpsFilterPick>(
+    context: context,
+    useSafeArea: true,
+    showDragHandle: true,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.card)),
+    ),
+    builder: (context) {
+      Widget tile(String? value, String label) {
+        final isSelected = value == selected;
+        return ListTile(
+          key: ValueKey('ops-filter-option-${value ?? 'all'}'),
+          title: Text(label),
+          trailing: isSelected
+              ? Icon(Icons.check_rounded, color: AppColors.ops)
+              : null,
+          onTap: () => Navigator.of(context).pop(OpsFilterPick(value)),
+        );
+      }
+
+      return SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(
+                  'Filtre',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              tile(null, 'Tümü'),
+              for (final option in options) tile(option, option),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Liste grubu: başlık satırı (ad, sayı, isteğe bağlı eylem) ve satırlar tek
+/// kartın içinde. [collapsed] doğruysa yalnızca başlık görünür.
+class OpsGroupCard extends StatelessWidget {
+  const OpsGroupCard({
     super.key,
-    required this.options,
-    required this.selected,
-    required this.onSelected,
+    required this.title,
+    required this.count,
+    required this.children,
+    this.collapsed = false,
+    this.onHeaderTap,
+    this.action,
   });
 
-  final List<(T, String)> options;
-  final T selected;
-  final ValueChanged<T> onSelected;
+  final String title;
+  final int count;
+  final List<Widget> children;
+  final bool collapsed;
+  final VoidCallback? onHeaderTap;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    final theme = Theme.of(context);
+    final header = Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.cardPadding,
+        action == null ? 12 : 4,
+        action == null ? AppSpacing.cardPadding : 8,
+        action == null ? 12 : 4,
+      ),
       child: Row(
         children: [
-          for (final (index, (value, label)) in options.indexed) ...[
-            if (index > 0) const SizedBox(width: 8),
-            ChoiceChip(
-              label: Text(label),
-              showCheckmark: false,
-              selected: value == selected,
-              onSelected: (_) => onSelected(value),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall,
             ),
+          ),
+          Text(
+            '$count',
+            style: theme.textTheme.labelMedium
+                ?.copyWith(color: AppColors.textMuted),
+          ),
+          if (onHeaderTap != null) ...[
+            const SizedBox(width: 4),
+            Icon(
+              collapsed ? Icons.expand_more_rounded : Icons.expand_less_rounded,
+              size: 20,
+              color: AppColors.textMuted,
+            ),
+          ],
+          if (action != null) action!,
+        ],
+      ),
+    );
+    return BentoCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (onHeaderTap == null)
+            header
+          else
+            InkWell(onTap: onHeaderTap, child: header),
+          if (!collapsed && children.isNotEmpty) ...[
+            const Divider(height: 1),
+            ...children,
+            const SizedBox(height: 4),
           ],
         ],
       ),

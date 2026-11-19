@@ -48,8 +48,7 @@ class WeightEtaCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    weightEtaMessage(eta,
-                        targetKg: targetKg, now: now),
+                    weightEtaMessage(eta, targetKg: targetKg, now: now),
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: eta.status == WeightEtaStatus.notTowards
                           ? AppColors.warning

@@ -12,7 +12,8 @@ import '../../features/reminders/data/reminder_action_inbox.dart';
 import '../../features/reminders/domain/reminder.dart';
 import 'notification_plan.dart';
 
-export '../../features/reminders/domain/reminder.dart' show HabitReminderSchedule;
+export '../../features/reminders/domain/reminder.dart'
+    show HabitReminderSchedule;
 
 /// Hatırlatıcı bildirimlerinin iOS kategorisi ve "Yaptım" eylemi.
 const String reminderCategoryId = 'hatirlatici';
@@ -105,7 +106,7 @@ class NotificationService {
     android: AndroidNotificationDetails(
       'asistan_hatirlatma',
       'Hatırlatmalar',
-      channelDescription: 'Saatli hatırlatmalar ve sabit rutin bildirimleri',
+      channelDescription: 'Saatli hatırlatmalar ve rutin bildirimleri',
       importance: Importance.high,
       priority: Priority.high,
     ),
@@ -285,7 +286,8 @@ class NotificationService {
     android: AndroidNotificationDetails(
       'asistan_hatirlatici',
       'Hatırlatıcılar',
-      channelDescription: 'Kendi kurduğun hatırlatıcılar (su, ilaç, yürüyüş...)',
+      channelDescription:
+          'Kendi kurduğun hatırlatıcılar (su, ilaç, yürüyüş...)',
       importance: Importance.high,
       priority: Priority.high,
       actions: [

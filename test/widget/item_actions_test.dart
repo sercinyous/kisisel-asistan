@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kisisel_asistan/demo/demo_reminders.dart';
+import 'package:kisisel_asistan/features/reminders/data/reminders_repository.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/notification_sync.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
@@ -548,7 +550,7 @@ void main() {
       await longPressRow(tester, 'Gelen kutusu kontrolü');
       await tester.tap(find.text('Sil'));
       await tester.pumpAndSettle();
-      expect(find.text('Sabit silinsin mi?'), findsOneWidget);
+      expect(find.text('Rutin silinsin mi?'), findsOneWidget);
       expect(
         find.text('"Gelen kutusu kontrolü" ve tamamlanma geçmişi kalıcı '
             'olarak silinecek.'),
@@ -558,7 +560,7 @@ void main() {
 
       expect(harness.routines.routines.map((r) => r.id), ['r1', 'm1']);
       expect(find.text('Gelen kutusu kontrolü'), findsNothing);
-      expect(find.text('Sabit silindi.'), findsOneWidget);
+      expect(find.text('Rutin silindi.'), findsOneWidget);
       expect(harness.notifications.resyncCount, greaterThan(resyncBefore),
           reason: 'bildirim planı yeniden kurulmalı');
       expect(
@@ -596,32 +598,13 @@ void main() {
       final resyncBefore = harness.notifications.resyncCount;
 
       await swipeRow(tester, 'Sabah görev kontrolü');
-      expect(find.text('Sabit silinsin mi?'), findsOneWidget);
+      expect(find.text('Rutin silinsin mi?'), findsOneWidget);
       await confirmInDialog(tester);
 
       expect(harness.routines.routines.map((r) => r.id), ['r2', 'm1']);
       expect(find.text('Sabah görev kontrolü'), findsNothing);
       expect(harness.notifications.resyncCount, greaterThan(resyncBefore));
       expect(tester.takeException(), isNull);
-      await drain(tester);
-    });
-
-    testWidgets('aylık iş satırı (Gün görünümü): uzun basış menüsü ve silme',
-        (tester) async {
-      final container = await harness.pump(tester);
-      container.listen(notificationSyncProvider, (_, __) {});
-      await tester.pumpAndSettle();
-      final resyncBefore = harness.notifications.resyncCount;
-
-      await longPressRow(tester, 'Maaş ödemeleri');
-      expect(find.text('Düzenle'), findsOneWidget);
-      await tester.tap(find.text('Sil'));
-      await tester.pumpAndSettle();
-      await confirmInDialog(tester);
-
-      expect(harness.routines.routines.map((r) => r.id), ['r1', 'r2']);
-      expect(find.text('Maaş ödemeleri'), findsNothing);
-      expect(harness.notifications.resyncCount, greaterThan(resyncBefore));
       await drain(tester);
     });
 
@@ -634,7 +617,7 @@ void main() {
           category: 'Ekip',
           priority: 'medium',
           status: 'todo',
-          dueAt: DateTime.now().add(const Duration(hours: 1)),
+          dueAt: DateTime(today().year, today().month, today().day, 23, 59),
         ),
       ];
       final container = await harness.pump(tester);
@@ -671,7 +654,7 @@ void main() {
           category: 'Ekip',
           priority: 'medium',
           status: 'todo',
-          dueAt: DateTime.now().add(const Duration(hours: 1)),
+          dueAt: DateTime(today().year, today().month, today().day, 23, 59),
         ),
       ];
       await harness.pump(tester);
@@ -697,7 +680,7 @@ void main() {
           category: 'Ekip',
           priority: 'medium',
           status: 'todo',
-          dueAt: DateTime.now().add(const Duration(hours: 1)),
+          dueAt: DateTime(today().year, today().month, today().day, 23, 59),
         ),
       ];
       await harness.pump(tester);
@@ -707,37 +690,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TaskFormSheet), findsOneWidget);
-    });
-
-    testWidgets('Ay görünümü: aylık sabit ve randevu satırlarında menü',
-        (tester) async {
-      harness.tasks.tasks = [
-        TaskItem(
-          id: 't9',
-          title: 'Muhasebe randevusu',
-          category: 'Finans',
-          priority: 'medium',
-          status: 'todo',
-          dueAt: DateTime(today().year, today().month, today().day, 12),
-        ),
-      ];
-      await harness.pump(tester, month: DateTime.now());
-
-      await longPressRow(tester, 'Maaş ödemeleri');
-      expect(find.text('Düzenle'), findsOneWidget);
-      await tester.tap(find.text('Düzenle'));
-      await tester.pumpAndSettle();
-      expect(find.byType(RoutineFormSheet), findsOneWidget);
-      await tester.tap(find.byTooltip('Kapat'));
-      await tester.pumpAndSettle();
-
-      await longPressRow(tester, 'Muhasebe randevusu');
-      await tester.tap(find.text('Sil'));
-      await tester.pumpAndSettle();
-      expect(find.text('Görev silinsin mi?'), findsOneWidget);
-      await confirmInDialog(tester);
-      expect(harness.tasks.deletedIds, ['t9']);
-      await drain(tester);
     });
 
     testWidgets('Ay görünümü: seçili gün listesindeki satırlar da menü açar',
@@ -784,12 +736,12 @@ void main() {
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Sil'));
         await tester.pumpAndSettle();
-        expect(find.text('Sabit silinsin mi?'), findsOneWidget);
+        expect(find.text('Rutin silinsin mi?'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await cancelInDialog(tester);
 
         await swipeRow(tester, 'Sabah görev kontrolü');
-        expect(find.text('Sabit silinsin mi?'), findsOneWidget);
+        expect(find.text('Rutin silinsin mi?'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await cancelInDialog(tester);
         expect(tester.takeException(), isNull);
@@ -858,6 +810,8 @@ void main() {
           healthRepositoryProvider.overrideWithValue(FakeHealthRepository()),
           settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
           notificationServiceProvider.overrideWithValue(notifications),
+          remindersRepositoryProvider
+              .overrideWithValue(MemoryRemindersRepository(userId: 'u1')),
         ],
       );
       addTearDown(container.dispose);
@@ -879,14 +833,14 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('görev: üç nokta menüsü kalır, uzun basış ve kaydırma da '
+    testWidgets('görev: üç nokta menüsü yok; uzun basış ve kaydırma '
         'çalışır', (tester) async {
       final container = await pumpOps(tester);
       container.listen(notificationSyncProvider, (_, __) {});
       await tester.pumpAndSettle();
       final resyncBefore = notifications.resyncCount;
 
-      expect(find.byTooltip('Seçenekler'), findsOneWidget);
+      expect(find.byTooltip('Seçenekler'), findsNothing);
 
       await longPressRow(tester, 'Fatura ödemesi');
       expect(find.text('Düzenle'), findsOneWidget);
@@ -991,31 +945,14 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('görev: üç nokta menüsünden silme tek onay sorar',
-        (tester) async {
-      await pumpOps(tester);
-
-      await tester.tap(find.byTooltip('Seçenekler'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Sil').last);
-      await tester.pumpAndSettle();
-      expect(find.text('Görev silinsin mi?'), findsOneWidget);
-      await confirmInDialog(tester);
-
-      expect(find.byType(AlertDialog), findsNothing,
-          reason: 'ikinci onay çıkmamalı');
-      expect(tasks.deletedIds, ['t2']);
-      await drain(tester);
-    });
-
-    testWidgets('sabit: uzun basışla silinince tamamlama geçmişi de gider',
+    testWidgets('rutin: uzun basışla silinince tamamlama geçmişi de gider',
         (tester) async {
       routines.completions = {
         RoutineCompletionKey('r2', today()),
       };
       final container = await pumpOps(tester);
       container.listen(notificationSyncProvider, (_, __) {});
-      await openSegment(tester, 'Sabitler');
+      await openSegment(tester, 'Rutinler');
       final resyncBefore = notifications.resyncCount;
 
       await longPressRow(tester, 'Ağırlık antrenmanı');
@@ -1035,11 +972,11 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('not: uzun basış ve kaydırma, üç nokta menüsü de kalır',
+    testWidgets('not: uzun basış ve kaydırma; üç nokta menüsü yok',
         (tester) async {
       await pumpOps(tester);
       await openSegment(tester, 'Notlar');
-      expect(find.byTooltip('Seçenekler'), findsOneWidget);
+      expect(find.byTooltip('Seçenekler'), findsNothing);
 
       await longPressRow(tester, 'Yeni kampanya fikri');
       expect(find.text('Düzenle'), findsOneWidget);
@@ -1068,7 +1005,7 @@ void main() {
         expect(tester.takeException(), isNull);
         await cancelInDialog(tester);
 
-        await openSegment(tester, 'Sabitler');
+        await openSegment(tester, 'Rutinler');
         await longPressRow(tester, 'Ağırlık antrenmanı');
         expect(tester.takeException(), isNull);
         await tester.tapAt(const Offset(187, 20));
@@ -1134,6 +1071,9 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      // Öğün grupları kapalı gelir; kalemler için kahvaltı açılır.
+      await tester.tap(find.byKey(const ValueKey('meal-group-breakfast')));
       await tester.pumpAndSettle();
     }
 

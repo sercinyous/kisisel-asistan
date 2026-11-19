@@ -84,7 +84,8 @@ class TaskCategory {
       color: 'warning',
       custom: true,
     ),
-    TaskCategory(name: 'Aile', icon: 'family', color: 'nutrition', custom: true),
+    TaskCategory(
+        name: 'Aile', icon: 'family', color: 'nutrition', custom: true),
     TaskCategory(
       name: 'Kişisel gelişim',
       icon: 'growth',
@@ -162,8 +163,10 @@ class TaskCategory {
       [for (final c in list) c.toMap()];
 
   /// Açık kategorilerin adları (seçici, filtre, AI).
-  static List<String> activeNames(List<TaskCategory> list) =>
-      [for (final c in list) if (c.enabled) c.name];
+  static List<String> activeNames(List<TaskCategory> list) => [
+        for (final c in list)
+          if (c.enabled) c.name
+      ];
 
   /// [name]'in tanımı; listede yoksa `null` (silinmiş özel kategori).
   static TaskCategory? find(List<TaskCategory> list, String name) {

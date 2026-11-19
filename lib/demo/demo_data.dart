@@ -245,14 +245,16 @@ class DemoData {
         NoteItem(
           id: 'n1',
           title: 'Form hedefi',
-          content: 'Haftalık ortalama kiloyu takip et, hedefe acele etmeden yaklaş.',
+          content:
+              'Haftalık ortalama kiloyu takip et, hedefe acele etmeden yaklaş.',
           isPinned: true,
           createdAt: now,
         ),
         NoteItem(
           id: 'n2',
           title: 'Fikir: haftalık gözden geçirme şablonu',
-          content: 'Her pazar tekrar kullanılabilecek kısa bir kontrol listesi.',
+          content:
+              'Her pazar tekrar kullanılabilecek kısa bir kontrol listesi.',
           category: 'Fikir',
           createdAt: now,
         ),
@@ -284,7 +286,8 @@ class DemoData {
           for (var back = 7; back >= 1; back--)
             demoDailyReport(AppDates.addDays(today, -back), now),
         ],
-        weeklyBuilder: (weekStart) => demoWeeklyReport(weekStart, DateTime.now()),
+        weeklyBuilder: (weekStart) =>
+            demoWeeklyReport(weekStart, DateTime.now()),
         dailyBuilder: (day) => demoDailyReport(day, DateTime.now()),
         regenerateDelay: regenerateDelay,
       ),
@@ -463,7 +466,8 @@ WeeklyReport demoWeeklyReport(DateTime weekStart, DateTime now) {
   int avg(String key) => n == 0 ? 0 : (sum(key) / n).round();
 
   final workouts = sum('workouts');
-  final proteinDays = elapsed.where((d) => (d['protein_g'] as num) >= 153).length;
+  final proteinDays =
+      elapsed.where((d) => (d['protein_g'] as num) >= 153).length;
   final calorieDays = elapsed
       .where((d) =>
           (d['calories'] as num) >= 1700 && (d['calories'] as num) <= 2200)
@@ -493,7 +497,8 @@ WeeklyReport demoWeeklyReport(DateTime weekStart, DateTime now) {
       'workouts_done': workouts,
       'protein_days_hit': proteinDays,
       'calorie_days_in_range': calorieDays,
-      'rate': n == 0 ? null : (100 * (workouts + proteinDays) / (2 * n)).round(),
+      'rate':
+          n == 0 ? null : (100 * (workouts + proteinDays) / (2 * n)).round(),
     },
     'nutrition': {
       'calories': avg('calories'),
@@ -848,10 +853,10 @@ ParsedEntry demoParse(String input, QuickAddMode mode, {DateTime? now}) {
         : trimmed[0].toUpperCase() + trimmed.substring(1);
   }
 
-  final scope = RegExp(r'maaş|toplantı|vardiya|müşteri|rapor|ekip|proje|ofis')
-          .hasMatch(s)
-      ? AppTargets.workCategory
-      : 'Kişisel';
+  final scope =
+      RegExp(r'maaş|toplantı|vardiya|müşteri|rapor|ekip|proje|ofis').hasMatch(s)
+          ? AppTargets.workCategory
+          : 'Kişisel';
   final category = RegExp(r'maaş|ödeme|fatura|kira|bütçe').hasMatch(s)
       ? 'finans'
       : (scope == AppTargets.workCategory ? 'operasyon' : 'kisisel');

@@ -4,7 +4,8 @@ import '../features/reports/data/weekly_checkin_repository.dart';
 
 /// Bellekte su kayıtları (demo ve testler).
 class FakeWaterRepository implements WaterRepository {
-  FakeWaterRepository({List<WaterLog>? logs, this.targetMl = defaultDailyWaterMl})
+  FakeWaterRepository(
+      {List<WaterLog>? logs, this.targetMl = defaultDailyWaterMl})
       : logs = logs ?? [];
 
   final List<WaterLog> logs;

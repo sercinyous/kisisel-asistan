@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import 'friends_providers.dart';
-import 'friends_screen.dart';
+import '../../settings/presentation/hesap_screen.dart';
 
-/// Kokpit başlığındaki kişi ikonu + bekleyen davet rozeti. Uygulama açılınca
+/// Kokpit başlığındaki profil ikonu (Hesap ekranını açar) + bekleyen arkadaş
+/// daveti rozeti. Uygulama açılınca
 /// ve öne gelince davet sayısı yenilenir.
 class FriendsButton extends ConsumerStatefulWidget {
   const FriendsButton({super.key});
@@ -39,11 +40,11 @@ class _FriendsButtonState extends ConsumerState<FriendsButton>
   Widget build(BuildContext context) {
     final count = ref.watch(pendingFriendRequestCountProvider).valueOrNull ?? 0;
     return IconButton(
-      tooltip: count > 0 ? 'Arkadaşlar ($count davet)' : 'Arkadaşlar',
+      tooltip: count > 0 ? 'Hesap ($count davet)' : 'Hesap',
       color: AppColors.textSecondary,
       onPressed: () async {
         await Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const FriendsScreen()),
+          MaterialPageRoute<void>(builder: (_) => const HesapScreen()),
         );
         ref.invalidate(pendingFriendRequestCountProvider);
       },
@@ -52,7 +53,7 @@ class _FriendsButtonState extends ConsumerState<FriendsButton>
         label: Text('$count'),
         backgroundColor: AppColors.danger,
         textColor: AppColors.onAccent,
-        child: const Icon(Icons.people_outline_rounded),
+        child: const Icon(Icons.account_circle_outlined),
       ),
     );
   }

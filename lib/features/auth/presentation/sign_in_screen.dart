@@ -90,8 +90,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     if (!_emailOpen)
                       OutlinedButton(
                         key: const Key('sign-in-email-toggle'),
-                        onPressed:
-                            busy ? null : () => setState(() => _emailOpen = true),
+                        onPressed: busy
+                            ? null
+                            : () => setState(() => _emailOpen = true),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textPrimary,
                           side: BorderSide(color: AppColors.border),

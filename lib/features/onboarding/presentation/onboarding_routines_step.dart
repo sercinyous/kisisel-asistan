@@ -60,7 +60,7 @@ class OnboardingRoutinesStep extends StatelessWidget {
           ),
         ),
         const OnboardingHint(
-          'Sonradan Operasyon > Sabitler\'den ekleyip düzenleyebilirsin.',
+          'Sonradan İşler > Rutinler\'den ekleyip düzenleyebilirsin.',
         ),
       ],
     );
