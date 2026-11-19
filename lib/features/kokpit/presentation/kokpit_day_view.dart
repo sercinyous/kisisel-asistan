@@ -176,9 +176,13 @@ void _openHealth(WidgetRef ref, HealthSegment segment) {
   _openTab(ref, _healthTab);
 }
 
-/// İşler sekmesini Rutinler görünümüyle açar.
-void _openRoutines(WidgetRef ref) {
-  ref.read(opsSegmentProvider.notifier).state = OpsSegment.routines;
+/// İşler sekmesini açar: gizli satırların çoğu görevse Görevler, değilse
+/// Rutinler görünümüyle. Filtreler sıfırlanır ki hiçbir kayıt gizlenmesin.
+void _openTodayAll(WidgetRef ref, {required bool tasksFirst}) {
+  ref.read(taskCategoryFilterProvider.notifier).state = null;
+  ref.read(routineScopeFilterProvider.notifier).state = null;
+  ref.read(opsSegmentProvider.notifier).state =
+      tasksFirst ? OpsSegment.tasks : OpsSegment.routines;
   _openTab(ref, _operationsTab);
 }
 
@@ -665,6 +669,9 @@ class _TodaySection extends ConsumerWidget {
         ...items.where((i) => i.done),
       ];
       final shown = ordered.take(kokpitTodayMaxRows).toList();
+      final hidden = ordered.skip(shown.length);
+      final hiddenTasks = hidden.whereType<KokpitTaskItem>().length;
+      final tasksFirst = hiddenTasks * 2 > hidden.length;
       body = BentoCard(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Column(
@@ -705,7 +712,7 @@ class _TodaySection extends ConsumerWidget {
               const Divider(height: 1),
               TextButton(
                 key: const ValueKey('kokpit-today-all'),
-                onPressed: () => _openRoutines(ref),
+                onPressed: () => _openTodayAll(ref, tasksFirst: tasksFirst),
                 style: TextButton.styleFrom(foregroundColor: AppColors.ops),
                 child: Text('Tümünü gör (${items.length})'),
               ),

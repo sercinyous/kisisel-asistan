@@ -126,7 +126,7 @@ void main() {
     expect(map['birth_year'], 1990);
     expect(map['sex'], 'male');
     expect(settings.saved.single.profileComplete, isTrue);
-    expect(find.text('Ayarlar kaydedildi.'), findsOneWidget);
+    expect(find.text('Kaydedildi.'), findsOneWidget);
   });
 
   testWidgets('üç cinsiyet seçeneği doğru değerle yazılır', (tester) async {

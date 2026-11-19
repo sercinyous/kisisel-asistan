@@ -123,7 +123,7 @@ void main() {
 
     expect(settings.saved.single.dailyCalories, 2300);
     expect(settings.saved.single.dailyProteinG, 120);
-    expect(find.text('Ayarlar kaydedildi.'), findsOneWidget);
+    expect(find.text('Kaydedildi.'), findsOneWidget);
   });
 
   testWidgets('sınır dışı değer kaydedilmez', (tester) async {

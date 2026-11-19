@@ -291,7 +291,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
           await ref.read(userSettingsProvider.notifier).save(_draft());
       ref.invalidate(notificationSyncProvider);
       if (mounted) setState(() => _load(saved));
-      showSettingsSnack(messenger, 'Ayarlar kaydedildi.');
+      showSettingsSnack(messenger, 'Kaydedildi.');
     } catch (_) {
       showSettingsSnack(
         messenger,

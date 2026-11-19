@@ -428,10 +428,11 @@ class _RoutineCheckState extends ConsumerState<_RoutineCheck> {
     try {
       await toggleMonthly(ref, occurrence);
     } catch (_) {
-      if (mounted) setState(() => _pending = null);
       messenger.showSnackBar(
         const SnackBar(content: Text('Aylık iş güncellenemedi. Tekrar dene.')),
       );
+    } finally {
+      if (mounted) setState(() => _pending = null);
     }
   }
 

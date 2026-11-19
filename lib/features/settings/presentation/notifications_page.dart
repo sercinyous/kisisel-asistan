@@ -117,7 +117,7 @@ class _NotificationsFormState extends ConsumerState<_NotificationsForm> {
       // Yeni tercihlerle bekleyen bildirimler baştan planlanır.
       ref.invalidate(notificationSyncProvider);
       if (mounted) setState(() => _load(saved));
-      showSettingsSnack(messenger, 'Ayarlar kaydedildi.');
+      showSettingsSnack(messenger, 'Kaydedildi.');
     } catch (_) {
       showSettingsSnack(
         messenger,
