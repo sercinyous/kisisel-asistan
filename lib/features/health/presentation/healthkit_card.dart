@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/health_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
@@ -13,71 +12,8 @@ import 'health_widgets.dart';
 /// Kartın düğmesinin yaptığı iş.
 enum _CardAction { resync, connectGoogle, approveApple }
 
-/// Sağlık verisi kaynağının durumu: etkin kaynak (HealthKit ya da Google
-/// Health), son eşitleme ve yeniden bağlanma.
-class HealthKitCard extends ConsumerWidget {
-  const HealthKitCard({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final health = ref.watch(healthTodayProvider);
-    final selected = ref.watch(healthSourceProvider);
-    final snapshot = health.valueOrNull;
-    final readAt = snapshot?.readAt;
-    // Yeni kaynağın okuması sürerken başlık seçili kaynağı gösterir.
-    final source = health.isLoading ? selected : snapshot?.source ?? selected;
-
-    final (String message, String? action, _CardAction kind) = health.when(
-      skipLoadingOnRefresh: true,
-      loading: () =>
-          ('${source.shortLabel} okunuyor…', null, _CardAction.resync),
-      error: (_, __) => (
-        '${source.shortLabel} verisi okunamadı.',
-        'Tekrar dene',
-        _CardAction.resync,
-      ),
-      data: (data) => data.source == HealthSourceKind.googleHealth
-          ? _googleMessage(data)
-          : _healthKitMessage(data),
-    );
-
-    return BentoCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BentoLabel(
-            icon: Icons.favorite_rounded,
-            label: source.shortLabel,
-            color: AppColors.danger,
-            trailing: health.isLoading || readAt == null
-                ? null
-                : 'son eşitleme ${AppDates.hourMinute(readAt)}',
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(color: AppColors.textSecondary),
-          ),
-          if (action != null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: health.isLoading ? null : () => _run(context, kind),
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(healthMinTouch, healthMinTouch),
-                  alignment: Alignment.centerLeft,
-                ),
-                child: Text(action),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
+/// Sağlık kaynağı başlığının (HealthSourceBanner) metin ve eylem yardımcıları.
+abstract final class _HealthSourceActions {
   static (String, String?, _CardAction) _healthKitMessage(
           HealthSnapshot data) =>
       switch (data.status) {
@@ -202,8 +138,8 @@ class HealthSourceBanner extends ConsumerWidget {
       );
     } else if (snapshot != null && _isProblem(snapshot.status)) {
       content = snapshot.source == HealthSourceKind.googleHealth
-          ? HealthKitCard._googleMessage(snapshot)
-          : HealthKitCard._healthKitMessage(snapshot);
+          ? _HealthSourceActions._googleMessage(snapshot)
+          : _HealthSourceActions._healthKitMessage(snapshot);
     } else {
       return const SizedBox.shrink();
     }
@@ -241,7 +177,7 @@ class HealthSourceBanner extends ConsumerWidget {
               TextButton(
                 onPressed: health.isLoading
                     ? null
-                    : () => HealthKitCard._run(context, kind),
+                    : () => _HealthSourceActions._run(context, kind),
                 style: TextButton.styleFrom(
                   minimumSize: const Size(healthMinTouch, healthMinTouch),
                 ),

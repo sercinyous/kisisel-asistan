@@ -25,6 +25,3 @@ final taskDashboardProvider =
     weekCount: weeks,
   );
 });
-
-/// Operasyon ekranında görev panosu açık mı (başlıktaki grafik düğmesi).
-final opsDashboardVisibleProvider = StateProvider<bool>((ref) => false);

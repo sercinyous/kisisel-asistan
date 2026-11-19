@@ -134,7 +134,7 @@ void main() {
         overrides: overrides(),
         child: MaterialApp(
           theme: AppTheme.dark,
-          home: const Scaffold(body: HealthKitCard()),
+          home: const Scaffold(body: HealthSourceBanner()),
         ),
       ),
     );

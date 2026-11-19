@@ -9,8 +9,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../health/presentation/health_segment.dart';
 import '../../health/presentation/water_providers.dart';
 import '../../operations/domain/task_item.dart';
+import '../../operations/presentation/operations_providers.dart';
 import '../../operations/presentation/routines_view.dart'
     show RoutineRowActions;
 import '../../operations/presentation/tasks_view.dart' show TaskRowActions;
@@ -27,7 +29,7 @@ import 'kokpit_widgets.dart';
 const int _operationsTab = 1;
 const int _healthTab = 2;
 
-/// "Bugünün rutinleri" kartında gösterilen en fazla satır.
+/// "Bugünün işleri" kartında gösterilen en fazla satır.
 const int kokpitTodayMaxRows = 5;
 
 /// Bugün: kalori, günlük işler / adım / uyku, su, bugünün rutinleri ve
@@ -168,6 +170,18 @@ Future<void> _toggleOccurrence(
 void _openTab(WidgetRef ref, int index) =>
     ref.read(homeTabRequestProvider.notifier).state = index;
 
+/// Sağlık sekmesini [segment] görünümüyle açar.
+void _openHealth(WidgetRef ref, HealthSegment segment) {
+  ref.read(healthSegmentProvider.notifier).state = segment;
+  _openTab(ref, _healthTab);
+}
+
+/// İşler sekmesini Rutinler görünümüyle açar.
+void _openRoutines(WidgetRef ref) {
+  ref.read(opsSegmentProvider.notifier).state = OpsSegment.routines;
+  _openTab(ref, _operationsTab);
+}
+
 // --------------------------------------------------------------------- kalori
 
 class _CalorieSection extends ConsumerWidget {
@@ -206,7 +220,7 @@ class _CalorieCard extends ConsumerWidget {
     final thousands = KokpitFormat.thousands;
 
     return BentoCard(
-      onTap: () => _openTab(ref, _healthTab),
+      onTap: () => _openHealth(ref, HealthSegment.nutrition),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -311,7 +325,7 @@ class _StatsRow extends ConsumerWidget {
               progress: steps == null || settings.dailySteps <= 0
                   ? null
                   : steps / settings.dailySteps,
-              onTap: () => _openTab(ref, _healthTab),
+              onTap: () => _openHealth(ref, HealthSegment.movement),
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -327,7 +341,7 @@ class _StatsRow extends ConsumerWidget {
               progress: sleep == null || sleepTarget <= 0
                   ? null
                   : sleep / sleepTarget,
-              onTap: () => _openTab(ref, _healthTab),
+              onTap: () => _openHealth(ref, HealthSegment.movement),
             ),
           ),
         ],
@@ -645,7 +659,12 @@ class _TodaySection extends ConsumerWidget {
             'tek cümleyle ekleyebilirsin.',
       );
     } else {
-      final shown = items.take(kokpitTodayMaxRows).toList();
+      // Açık kayıtlar önce: tamamlananlar ilk satırlarda açıkları gizlemesin.
+      final ordered = [
+        ...items.where((i) => !i.done),
+        ...items.where((i) => i.done),
+      ];
+      final shown = ordered.take(kokpitTodayMaxRows).toList();
       body = BentoCard(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Column(
@@ -682,12 +701,15 @@ class _TodaySection extends ConsumerWidget {
                   ),
               },
             ],
-            const Divider(height: 1),
-            TextButton(
-              onPressed: () => _openTab(ref, _operationsTab),
-              style: TextButton.styleFrom(foregroundColor: AppColors.ops),
-              child: Text('Tümünü gör (${items.length})'),
-            ),
+            if (items.length > shown.length) ...[
+              const Divider(height: 1),
+              TextButton(
+                key: const ValueKey('kokpit-today-all'),
+                onPressed: () => _openRoutines(ref),
+                style: TextButton.styleFrom(foregroundColor: AppColors.ops),
+                child: Text('Tümünü gör (${items.length})'),
+              ),
+            ],
           ],
         ),
       );
@@ -696,7 +718,7 @@ class _TodaySection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const KokpitSectionHeader(title: 'Bugünün rutinleri'),
+        const KokpitSectionHeader(title: 'Bugünün işleri'),
         body,
       ],
     );

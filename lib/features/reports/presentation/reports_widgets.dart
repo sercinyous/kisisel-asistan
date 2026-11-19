@@ -649,9 +649,9 @@ class _SummaryTextState extends State<_SummaryText> {
                 onPressed: () => setState(() => _expanded = !_expanded),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.accent,
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  minimumSize: const Size(44, 44),
+                  tapTargetSize: MaterialTapTargetSize.padded,
                 ),
                 child: Text(_expanded ? 'Daha az' : 'Devamı'),
               ),

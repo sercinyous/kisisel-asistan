@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/item_actions.dart';
+import '../../kokpit/presentation/kokpit_widgets.dart' show KokpitCheckBox;
 import '../../routines/data/routines_repository.dart';
 import '../../reminders/domain/reminder.dart';
 import '../../reminders/presentation/reminder_form_sheet.dart';
 import '../../reminders/presentation/reminders_providers.dart';
 import '../../reminders/presentation/reminders_screen.dart';
 import '../../routines/domain/routine.dart';
+import '../../routines/presentation/routines_providers.dart';
 import 'operations_providers.dart';
 import 'operations_screen.dart';
 import 'operations_widgets.dart';
@@ -150,7 +155,27 @@ class RoutinesView extends ConsumerWidget {
     final routines = ref.watch(opsRoutinesProvider);
     final reminders = ref.watch(remindersProvider);
 
-    List<Widget> rows(List<Routine> items) => [
+    // Tamamlama kutusu için Kokpit'in kullandığı veriler: bugünün günlük
+    // rutinleri ve bu ayın aylık işleri.
+    final now = DateTime.now();
+    final daily = ref.watch(todayOccurrencesProvider).valueOrNull?.daily;
+    final month = DateTime(now.year, now.month);
+    final monthly =
+        ref.watch(monthOverviewProvider(month)).valueOrNull?.monthly;
+    RoutineOccurrence? find(List<RoutineOccurrence>? list, Routine r) {
+      if (list == null) return null;
+      for (final o in list) {
+        if (o.routine.id == r.id) return o;
+      }
+      return null;
+    }
+
+    List<Widget> rows(
+      List<Routine> items, {
+      List<RoutineOccurrence>? occurrences,
+      bool monthlyGroup = false,
+    }) =>
+        [
           for (final (index, routine) in items.indexed) ...[
             if (index > 0)
               const Divider(indent: AppSpacing.cardPadding, height: 1),
@@ -160,6 +185,18 @@ class RoutinesView extends ConsumerWidget {
               child: _RoutineRow(
                 routine: routine,
                 onEdit: () => openRoutineForm(context, routine),
+                check: occurrences == null
+                    ? null
+                    : switch (find(occurrences, routine)) {
+                        final occurrence? => _RoutineCheck(
+                            key: ValueKey(
+                              'ops-routine-check-${routine.id}',
+                            ),
+                            occurrence: occurrence,
+                            monthly: monthlyGroup,
+                          ),
+                        null => null,
+                      },
               ),
             ),
           ],
@@ -236,6 +273,8 @@ class RoutinesView extends ConsumerWidget {
       onRefresh: () async {
         ref
           ..invalidate(opsRoutinesProvider)
+          ..invalidate(todayOccurrencesProvider)
+          ..invalidate(monthOverviewProvider)
           ..invalidate(remindersProvider);
         try {
           await ref.read(opsRoutinesProvider.future);
@@ -271,16 +310,24 @@ class RoutinesView extends ConsumerWidget {
                   ),
                 ];
               }
-              final weekday = DateTime.now().weekday;
-              final today = [
+              final weekday = now.weekday;
+              final active = [
                 for (final r in visible)
+                  if (r.isActive) r,
+              ];
+              final passive = [
+                for (final r in visible)
+                  if (!r.isActive) r,
+              ];
+              final today = [
+                for (final r in active)
                   if (!r.isMonthly && r.daysOfWeek.contains(weekday)) r,
               ];
               final otherDays = [
-                for (final r in visible)
+                for (final r in active)
                   if (!r.isMonthly && !r.daysOfWeek.contains(weekday)) r,
               ];
-              final monthly = visible.where((r) => r.isMonthly).toList()
+              final monthlyItems = active.where((r) => r.isMonthly).toList()
                 ..sort(
                   (a, b) => (a.dayOfMonth ?? 1).compareTo(b.dayOfMonth ?? 1),
                 );
@@ -290,7 +337,7 @@ class RoutinesView extends ConsumerWidget {
                     key: const ValueKey('ops-group-routines-today'),
                     title: 'Bugün',
                     count: today.length,
-                    children: rows(today),
+                    children: rows(today, occurrences: daily),
                   ),
                 if (otherDays.isNotEmpty)
                   OpsGroupCard(
@@ -299,12 +346,23 @@ class RoutinesView extends ConsumerWidget {
                     count: otherDays.length,
                     children: rows(otherDays),
                   ),
-                if (monthly.isNotEmpty)
+                if (monthlyItems.isNotEmpty)
                   OpsGroupCard(
                     key: const ValueKey('ops-group-routines-monthly'),
                     title: 'Aylık',
-                    count: monthly.length,
-                    children: rows(monthly),
+                    count: monthlyItems.length,
+                    children: rows(
+                      monthlyItems,
+                      occurrences: monthly,
+                      monthlyGroup: true,
+                    ),
+                  ),
+                if (passive.isNotEmpty)
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-routines-passive'),
+                    title: 'Pasif',
+                    count: passive.length,
+                    children: rows(passive),
                   ),
               ];
               return [
@@ -323,11 +381,102 @@ class RoutinesView extends ConsumerWidget {
   }
 }
 
+/// Rutin satırındaki tamamlama kutusu. Günlük rutin Kokpit ile aynı iyimser
+/// notifier'la, aylık iş [toggleMonthly] ile işaretlenir.
+class _RoutineCheck extends ConsumerStatefulWidget {
+  const _RoutineCheck({
+    super.key,
+    required this.occurrence,
+    required this.monthly,
+  });
+
+  final RoutineOccurrence occurrence;
+  final bool monthly;
+
+  @override
+  ConsumerState<_RoutineCheck> createState() => _RoutineCheckState();
+}
+
+class _RoutineCheckState extends ConsumerState<_RoutineCheck> {
+  /// Aylık işin yazması sürerken gösterilen hedef durum.
+  bool? _pending;
+
+  @override
+  void didUpdateWidget(covariant _RoutineCheck oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_pending != null && widget.occurrence.completed == _pending) {
+      _pending = null;
+    }
+  }
+
+  Future<void> _toggle() async {
+    final occurrence = widget.occurrence;
+    final messenger = ScaffoldMessenger.of(context);
+    unawaited(HapticFeedback.selectionClick());
+    if (!widget.monthly) {
+      try {
+        await ref.read(todayOccurrencesProvider.notifier).toggle(occurrence);
+      } catch (_) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Rutin güncellenemedi. Tekrar dene.')),
+        );
+      }
+      return;
+    }
+    if (_pending != null) return;
+    setState(() => _pending = !occurrence.completed);
+    try {
+      await toggleMonthly(ref, occurrence);
+    } catch (_) {
+      if (mounted) setState(() => _pending = null);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Aylık iş güncellenemedi. Tekrar dene.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final occurrence = widget.occurrence;
+    final checked = _pending ?? occurrence.completed;
+    final label = checked
+        ? '${occurrence.routine.title}: tamamlandı'
+        : '${occurrence.routine.title}: tamamla';
+    return Semantics(
+      button: true,
+      checked: checked,
+      label: label,
+      excludeSemantics: true,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: InkResponse(
+          onTap: _toggle,
+          radius: 22,
+          child: Center(
+            child: KokpitCheckBox(
+              checked: checked,
+              color: AppColors.forRoutineCategory(occurrence.routine.category),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RoutineRow extends StatelessWidget {
-  const _RoutineRow({required this.routine, required this.onEdit});
+  const _RoutineRow({
+    required this.routine,
+    required this.onEdit,
+    this.check,
+  });
 
   final Routine routine;
   final VoidCallback onEdit;
+
+  /// Tamamlama kutusu; yalnızca "Bugün" ve "Aylık" gruplarında.
+  final Widget? check;
 
   @override
   Widget build(BuildContext context) {
@@ -342,14 +491,19 @@ class _RoutineRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.circle,
-              size: 6,
-              color: active
-                  ? AppColors.forRoutineCategory(routine.category)
-                  : AppColors.textMuted,
-            ),
-            const SizedBox(width: 12),
+            if (check case final check?) ...[
+              check,
+              const SizedBox(width: 4),
+            ] else ...[
+              Icon(
+                Icons.circle,
+                size: 6,
+                color: active
+                    ? AppColors.forRoutineCategory(routine.category)
+                    : AppColors.textMuted,
+              ),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

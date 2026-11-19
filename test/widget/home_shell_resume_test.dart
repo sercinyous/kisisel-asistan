@@ -275,7 +275,7 @@ void main() {
   testWidgets('öne gelince sunucuda oluşan günlük rapor görünür',
       (tester) async {
     await pumpShell(tester);
-    await selectTab(tester, 'Raporlar');
+    await selectTab(tester, 'İçgörü');
     await tester.tap(find.text('Gün'));
     await tester.pumpAndSettle();
     expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
@@ -299,16 +299,16 @@ void main() {
       tester,
       clock: lastWeek.add(const Duration(days: 5, hours: 20)),
     );
-    expect(container.read(weeklyReportListProvider).requireValue, isEmpty);
+    expect(await container.read(weeklyReportListProvider.future), isEmpty);
 
     // Pazartesi 07:00 zamanlayıcısı biten haftanın raporunu yazdı.
     reports.weekly = [weeklyReport(lastWeek)];
     await backgroundAndResume(tester);
-    await selectTab(tester, 'Raporlar');
+    await selectTab(tester, 'İçgörü');
 
     expect(
       [
-        for (final r in container.read(weeklyReportListProvider).requireValue)
+        for (final r in await container.read(weeklyReportListProvider.future))
           r.weekStart,
       ],
       [lastWeek],

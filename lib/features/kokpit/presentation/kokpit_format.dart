@@ -72,20 +72,4 @@ abstract final class KokpitFormat {
         OccurrenceStatus.overdue => AppColors.danger,
         OccurrenceStatus.missed => AppColors.textMuted,
       };
-
-  /// Gün ekranındaki aylık iş satırı: "3 gün kaldı" / "Bugün" / "2 gün gecikti".
-  static String countdown(RoutineOccurrence occurrence, DateTime today) {
-    switch (occurrence.status) {
-      case OccurrenceStatus.done:
-      case OccurrenceStatus.missed:
-        return statusLabel(occurrence.status);
-      case OccurrenceStatus.dueToday:
-      case OccurrenceStatus.upcoming:
-      case OccurrenceStatus.overdue:
-        final days = occurrence.daysUntilDue(today);
-        if (days > 0) return '$days gün kaldı';
-        if (days == 0) return 'Bugün';
-        return '${-days} gün gecikti';
-    }
-  }
 }

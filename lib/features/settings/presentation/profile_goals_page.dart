@@ -168,6 +168,67 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
     return null;
   }
 
+  /// Hedef alanlarından ilk geçersizi; hepsi geçerliyse `null`. Tembel
+  /// listede ekran dışındaki alan Form tarafından doğrulanamaz.
+  String? _goalProblem() {
+    final fields = <(String, TextEditingController, num, num, bool)>[
+      (
+        'Başlangıç kilosu',
+        _startWeight,
+        SettingsLimits.weightMin,
+        SettingsLimits.weightMax,
+        true,
+      ),
+      (
+        'Hedef kilo',
+        _targetWeight,
+        SettingsLimits.weightMin,
+        SettingsLimits.weightMax,
+        true,
+      ),
+      (
+        'Kalori',
+        _calories,
+        SettingsLimits.caloriesMin,
+        SettingsLimits.caloriesMax,
+        false,
+      ),
+      (
+        'Protein',
+        _protein,
+        SettingsLimits.proteinMin,
+        SettingsLimits.proteinMax,
+        false,
+      ),
+      (
+        'Karbonhidrat',
+        _carbs,
+        SettingsLimits.carbsMin,
+        SettingsLimits.carbsMax,
+        false,
+      ),
+      ('Yağ', _fat, SettingsLimits.fatMin, SettingsLimits.fatMax, false),
+      ('Adım', _steps, SettingsLimits.stepsMin, SettingsLimits.stepsMax, false),
+      (
+        'Uyku',
+        _sleep,
+        SettingsLimits.sleepMin,
+        SettingsLimits.sleepMax,
+        false,
+      ),
+    ];
+    for (final (label, controller, min, max, decimal) in fields) {
+      final problem = validateSettingsNumber(
+        controller.text,
+        min: min,
+        max: max,
+        decimal: decimal,
+      );
+      if (problem != null) return '$label $problem.';
+    }
+    return null;
+  }
+
   /// En güncel ayarların üstüne yalnızca bu sayfanın alanları yazılır;
   /// böylece diğer alt sayfalarda kaydedilenler ezilmez.
   UserSettings _draft() {
@@ -212,10 +273,15 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
       return;
     }
     // Tembel liste ekran dışındaki alanı bellekten atar ve Form onu
-    // doğrulayamaz; profil alanları bu yüzden ayrıca denetlenir.
+    // doğrulayamaz; profil ve hedef alanları bu yüzden ayrıca denetlenir.
     final profileError = _profileProblem();
     if (profileError != null) {
       showSettingsSnack(messenger, 'Profil kaydedilemedi. $profileError');
+      return;
+    }
+    final goalError = _goalProblem();
+    if (goalError != null) {
+      showSettingsSnack(messenger, 'Hedefler kaydedilemedi. $goalError');
       return;
     }
 

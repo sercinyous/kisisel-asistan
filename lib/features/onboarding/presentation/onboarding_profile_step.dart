@@ -64,8 +64,8 @@ class OnboardingProfileStep extends StatelessWidget {
       children: [
         const OnboardingStepHeader(
           title: 'Seni tanıyalım',
-          subtitle: 'Birkaç kısa soru. Hepsini sonra Ayarlar\'dan '
-              'değiştirebilirsin.',
+          subtitle: 'Birkaç kısa soru. Hepsini sonra Hesap > Profil ve '
+              'hedefler\'den değiştirebilirsin.',
         ),
         OnboardingField(
           key: const Key('onboarding-name'),

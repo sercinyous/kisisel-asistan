@@ -7,7 +7,7 @@ import '../../kokpit/presentation/kokpit_month_view.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 
 /// İşler › Takvim: ay takvimi ve seçilen günün görev ve aylık işleri.
-/// Açılışta bir gün seçili değilse bugün seçilir.
+/// Her açılışta bugünün ayı gösterilir ve bugün seçilir.
 class OpsCalendarScreen extends ConsumerStatefulWidget {
   const OpsCalendarScreen({super.key});
 
@@ -21,12 +21,10 @@ class _OpsCalendarScreenState extends ConsumerState<OpsCalendarScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final selected = ref.read(kokpitSelectedDayProvider.notifier);
-      if (selected.state != null) return;
       final today = AppDates.startOfDay(ref.read(kokpitClockProvider));
       ref.read(kokpitMonthProvider.notifier).state =
           DateTime(today.year, today.month);
-      selected.state = today;
+      ref.read(kokpitSelectedDayProvider.notifier).state = today;
     });
   }
 
@@ -47,7 +45,7 @@ class _OpsCalendarScreenState extends ConsumerState<OpsCalendarScreen> {
             AppSpacing.page,
             120,
           ),
-          children: const [KokpitMonthView(calendarOnly: true)],
+          children: const [KokpitMonthView()],
         ),
       ),
     );

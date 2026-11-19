@@ -230,7 +230,7 @@ class _DetailBody extends ConsumerWidget {
       return const _NoticeCard(
         title: 'Profil eksik',
         text: 'Dengeyi hesaplamak için boy, yaş ve cinsiyet gerekli. '
-            'Ayarlar > Profil bölümünden doldurabilirsin.',
+            'Hesap > Profil ve hedefler bölümünden doldurabilirsin.',
       );
     }
     final energy =

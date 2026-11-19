@@ -78,7 +78,7 @@ class SettingsLoadError extends StatelessWidget {
             Icon(Icons.cloud_off_rounded, color: AppColors.textMuted),
             const SizedBox(height: 12),
             Text(
-              'Ayarlar yüklenemedi.',
+              'Hesap bilgileri yüklenemedi.',
               textAlign: TextAlign.center,
               style: Theme.of(context)
                   .textTheme

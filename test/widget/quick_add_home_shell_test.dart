@@ -94,7 +94,7 @@ void main() {
 
   test('quickAddModeForTab: sekme -> giriş alanı', () {
     expect(quickAddModeForTab(0), isNull, reason: 'Kokpit sorar');
-    expect(quickAddModeForTab(1), QuickAddMode.work, reason: 'Operasyon');
+    expect(quickAddModeForTab(1), QuickAddMode.work, reason: 'İşler');
     expect(quickAddModeForTab(2), QuickAddMode.health, reason: 'Sağlık');
     expect(quickAddModeForTab(3), isNull, reason: 'Raporlar sorar');
   });
@@ -102,7 +102,7 @@ void main() {
   testWidgets('Operasyon sekmesinde + doğrudan iş girişini açar',
       (tester) async {
     await pumpShell(tester);
-    await selectTab(tester, 'Operasyon');
+    await selectTab(tester, 'İşler');
     await tapPlus(tester);
 
     expect(find.byType(QuickAddModeSheet), findsNothing);
@@ -119,7 +119,7 @@ void main() {
     expect(openModalMode(tester), QuickAddMode.health);
   });
 
-  for (final tab in ['Kokpit', 'Raporlar']) {
+  for (final tab in ['Kokpit', 'İçgörü']) {
     testWidgets('$tab sekmesinde + seçim sayfasını açar', (tester) async {
       await pumpShell(tester);
       await selectTab(tester, tab);
@@ -147,7 +147,7 @@ void main() {
       'seçim sayfasında "Sağlık & beslenme girişi" sağlık girişini açar',
       (tester) async {
     await pumpShell(tester);
-    await selectTab(tester, 'Raporlar');
+    await selectTab(tester, 'İçgörü');
     await tapPlus(tester);
     await tester.tap(find.text('Sağlık & beslenme girişi'));
     await tester.pumpAndSettle();
@@ -169,7 +169,7 @@ void main() {
 
   testWidgets('kayıt sonrası kaydedilen sayı bildirilir', (tester) async {
     await pumpShell(tester);
-    await selectTab(tester, 'Operasyon');
+    await selectTab(tester, 'İşler');
     await tapPlus(tester);
 
     await tester.enterText(

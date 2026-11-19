@@ -14,17 +14,11 @@ import '../domain/kokpit_models.dart';
 final kokpitClockProvider = StateProvider<DateTime>((ref) => DateTime.now());
 
 /// Kokpit kartlarının alt bardaki bir sekmeye geçme isteği (sekme sırası:
-/// 0 Kokpit, 1 Operasyon, 2 Sağlık, 3 Raporlar). Kabuk dinler ve geçince
+/// 0 Kokpit, 1 İşler, 2 Sağlık, 3 İçgörü). Kabuk dinler ve geçince
 /// `null`'a döndürür.
 final homeTabRequestProvider = StateProvider<int?>((ref) => null);
 
-/// Kokpit'in iki görünümü.
-enum KokpitView { day, month }
-
-final kokpitViewProvider = StateProvider<KokpitView>((ref) => KokpitView.day);
-
-/// Ay görünümünde açık olan ay (ayın 1'i). Gün görünümüne geçip dönünce
-/// kullanıcının baktığı ay kaybolmasın diye ekran durumunda tutulmaz.
+/// Takvimde açık olan ay (ayın 1'i).
 final kokpitMonthProvider = StateProvider<DateTime>((ref) {
   final now = DateTime.now();
   return DateTime(now.year, now.month);

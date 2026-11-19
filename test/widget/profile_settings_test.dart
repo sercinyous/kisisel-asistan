@@ -49,19 +49,23 @@ void main() {
       ProviderScope(
         overrides: [
           settingsRepositoryProvider.overrideWithValue(settings),
-          routinesRepositoryProvider.overrideWithValue(FakeRoutinesRepository()),
+          routinesRepositoryProvider
+              .overrideWithValue(FakeRoutinesRepository()),
           tasksRepositoryProvider.overrideWithValue(FakeTasksRepository()),
           healthRepositoryProvider.overrideWithValue(FakeHealthRepository()),
           appleHealthConsentStoreProvider.overrideWithValue(
             MemoryAppleHealthConsentStore(grantAll: true),
           ),
           healthServiceProvider.overrideWithValue(
-            FakeHealthService(const HealthSnapshot(status: HealthStatus.denied)),
+            FakeHealthService(
+                const HealthSnapshot(status: HealthStatus.denied)),
           ),
           notificationServiceProvider.overrideWithValue(notifications),
-          authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
+          authSessionProvider
+              .overrideWith((ref) => Stream<Session?>.value(null)),
         ],
-        child: MaterialApp(theme: AppTheme.dark, home: const ProfileGoalsPage()),
+        child:
+            MaterialApp(theme: AppTheme.dark, home: const ProfileGoalsPage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -104,7 +108,8 @@ void main() {
   bool selected(WidgetTester tester, Key key) =>
       tester.widget<ChoiceChip>(find.byKey(key)).selected;
 
-  testWidgets('boy 180, doğum yılı 1990, Erkek girilip kaydedilince depoya gider',
+  testWidgets(
+      'boy 180, doğum yılı 1990, Erkek girilip kaydedilince depoya gider',
       (tester) async {
     await pumpSettings(tester);
     await showProfile(tester);
@@ -225,6 +230,27 @@ void main() {
     );
   });
 
+  testWidgets('geçersiz hedef ekranda görünmüyorken de kayıt engellenir',
+      (tester) async {
+    await pumpSettings(tester);
+    await enter(tester, const Key('settings-calories'), '10');
+
+    // Hedefler listenin üstündedir; alan bellekten atılana kadar aşağı inilir.
+    tester.view.physicalSize = const Size(750, 500);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 12; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('settings-calories')), findsNothing);
+
+    await save(tester);
+    expect(settings.saved, isEmpty);
+    expect(
+        find.textContaining('Hedefler kaydedilemedi. Kalori'), findsOneWidget);
+    expect(find.textContaining('Bağlantını kontrol'), findsNothing);
+  });
+
   testWidgets('boş bırakmak profili null bırakır', (tester) async {
     await pumpSettings(tester);
     // Yalnızca kalori değişir; profil alanlarına dokunulmaz.
@@ -242,7 +268,8 @@ void main() {
     expect(s.toMap()['sex'], isNull);
   });
 
-  testWidgets('dolu profil temizlenebilir: alanlar boşaltılır, seçim kaldırılır',
+  testWidgets(
+      'dolu profil temizlenebilir: alanlar boşaltılır, seçim kaldırılır',
       (tester) async {
     settings = FakeSettingsRepository(
       settings: const UserSettings.defaults()

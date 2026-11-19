@@ -608,26 +608,6 @@ void main() {
       await drain(tester);
     });
 
-    testWidgets('aylık iş satırı (Ay görünümü): uzun basış menüsü ve silme',
-        (tester) async {
-      final container = await harness.pump(tester);
-      await harness.showView(tester, 'Ay');
-      container.listen(notificationSyncProvider, (_, __) {});
-      await tester.pumpAndSettle();
-      final resyncBefore = harness.notifications.resyncCount;
-
-      await longPressRow(tester, 'Maaş ödemeleri');
-      expect(find.text('Düzenle'), findsOneWidget);
-      await tester.tap(find.text('Sil'));
-      await tester.pumpAndSettle();
-      await confirmInDialog(tester);
-
-      expect(harness.routines.routines.map((r) => r.id), ['r1', 'r2']);
-      expect(find.text('Maaş ödemeleri'), findsNothing);
-      expect(harness.notifications.resyncCount, greaterThan(resyncBefore));
-      await drain(tester);
-    });
-
     testWidgets('hatırlatma: görev silinince bildirim planı ve Kokpit '
         'listesi tazelenir', (tester) async {
       harness.tasks.tasks = [
@@ -710,37 +690,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TaskFormSheet), findsOneWidget);
-    });
-
-    testWidgets('Ay görünümü: aylık sabit ve randevu satırlarında menü',
-        (tester) async {
-      harness.tasks.tasks = [
-        TaskItem(
-          id: 't9',
-          title: 'Muhasebe randevusu',
-          category: 'Finans',
-          priority: 'medium',
-          status: 'todo',
-          dueAt: DateTime(today().year, today().month, today().day, 12),
-        ),
-      ];
-      await harness.pump(tester, month: DateTime.now());
-
-      await longPressRow(tester, 'Maaş ödemeleri');
-      expect(find.text('Düzenle'), findsOneWidget);
-      await tester.tap(find.text('Düzenle'));
-      await tester.pumpAndSettle();
-      expect(find.byType(RoutineFormSheet), findsOneWidget);
-      await tester.tap(find.byTooltip('Kapat'));
-      await tester.pumpAndSettle();
-
-      await longPressRow(tester, 'Muhasebe randevusu');
-      await tester.tap(find.text('Sil'));
-      await tester.pumpAndSettle();
-      expect(find.text('Görev silinsin mi?'), findsOneWidget);
-      await confirmInDialog(tester);
-      expect(harness.tasks.deletedIds, ['t9']);
-      await drain(tester);
     });
 
     testWidgets('Ay görünümü: seçili gün listesindeki satırlar da menü açar',

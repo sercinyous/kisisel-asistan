@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +7,6 @@ import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/health/domain/health_models.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_format.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
-import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 
@@ -296,293 +294,16 @@ void main() {
     });
   });
 
-  group('aylık sabitler', () {
-    testWidgets('geçmiş ay salt okunur: Yapıldı / Yapılmadı', (tester) async {
-      harness.routines.routines = [
-        monthly('m1', 'Maaş ödemeleri', 15, hour: 10),
-        monthly('m2', 'Aylık faaliyet raporu', 1),
-      ];
-      harness.routines.completions = {
-        RoutineCompletionKey('m2', DateTime(2026, 2)),
-      };
-      await harness.pump(tester, month: DateTime(2026, 2));
+  group('İşler › Takvim ekranı', () {
+    testWidgets('her açılışta bugünün ayı ve bugün seçilir', (tester) async {
+      final container = await harness.pump(tester, month: DateTime(2026, 2));
+      container.read(kokpitSelectedDayProvider.notifier).state =
+          DateTime(2026, 2, 10);
+      await harness.showView(tester, 'Takvim');
 
-      expect(find.text('Aylık sabitler'), findsOneWidget);
-      expect(find.text('1 / 2'), findsOneWidget);
-      expect(find.text('Yapıldı'), findsOneWidget);
-      expect(find.text('Yapılmadı'), findsOneWidget);
-      expect(find.text('15 Şubat · 10:00 · İş'), findsOneWidget);
-      expect(harness.isChecked(tester, 'Aylık faaliyet raporu'), isTrue);
-
-      await harness.tapRow(tester, 'Maaş ödemeleri');
-      await harness.tapRow(tester, 'Aylık faaliyet raporu');
-      expect(harness.routines.toggles, isEmpty);
-      expect(find.text('1 / 2'), findsOneWidget);
-    });
-
-    testWidgets('31\'i olan iş Şubat\'ta ayın son gününe düşer',
-        (tester) async {
-      harness.routines.routines = [monthly('m1', 'Ay sonu kapanışı', 31)];
-      await harness.pump(tester, month: DateTime(2026, 2));
-      expect(
-          find.byKey(const ValueKey('kokpit-dot-monthly-28')), findsOneWidget);
-      expect(find.text('28 Şubat · İş'), findsOneWidget);
-    });
-
-    testWidgets('içinde bulunulan ayın durum rozetleri', (tester) async {
-      final now = today();
-      final lastDay = DateTime(now.year, now.month + 1, 0).day;
-      harness.routines.routines = [
-        monthly('m1', 'Bugünkü iş', now.day),
-        if (now.day > 1) monthly('m2', 'Geciken iş', now.day - 1),
-        if (now.day < lastDay) monthly('m3', 'Bekleyen iş', now.day + 1),
-      ];
-      await harness.pump(tester, month: thisMonth());
-
-      Finder chipIn(String title) => find.descendant(
-            of: find
-                .ancestor(of: find.text(title), matching: find.byType(InkWell))
-                .first,
-            matching: find.byType(KokpitStatusChip),
-          );
-      expect(tester.widget<KokpitStatusChip>(chipIn('Bugünkü iş')).status,
-          OccurrenceStatus.dueToday);
-      expect(
-        find.descendant(of: chipIn('Bugünkü iş'), matching: find.text('Bugün')),
-        findsOneWidget,
-      );
-      if (now.day > 1) {
-        expect(
-          find.descendant(
-              of: chipIn('Geciken iş'), matching: find.text('Gecikti')),
-          findsOneWidget,
-        );
-      }
-      if (now.day < lastDay) {
-        expect(
-          find.descendant(
-            of: chipIn('Bekleyen iş'),
-            matching: find.text('Bekliyor'),
-          ),
-          findsOneWidget,
-        );
-      }
-    });
-
-    testWidgets(
-        'Ay görünümünden işaretleme: iyimser, sonra Gün görünümünde de '
-        'işaretli', (tester) async {
-      harness.routines.routines = [
-        monthly('m1', 'Maaş ödemeleri', today().day)
-      ];
-      harness.routines.toggleGate = Completer<void>();
-      await harness.pump(tester, month: thisMonth());
-      expect(find.text('0 / 1'), findsOneWidget);
-
-      await tester.ensureVisible(find.text('Maaş ödemeleri'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Maaş ödemeleri'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(harness.routines.toggles, [
-        (routineId: 'm1', periodKey: thisMonth(), completed: true),
-      ]);
-      expect(harness.isChecked(tester, 'Maaş ödemeleri'), isTrue,
-          reason: 'sunucu onayı beklenmeden');
-      expect(find.text('1 / 1'), findsOneWidget);
-      expect(find.text('Yapıldı'), findsOneWidget);
-
-      // Yazma sürerken ikinci dokunuş yok sayılır.
-      await tester.tap(find.text('Maaş ödemeleri'));
-      await tester.pump();
-      expect(harness.routines.toggles, hasLength(1));
-
-      harness.routines.toggleGate!.complete();
-      await tester.pumpAndSettle();
-      expect(harness.isChecked(tester, 'Maaş ödemeleri'), isTrue);
-      expect(find.byType(SnackBar), findsNothing);
-
-      // İkinci dokunuş geri alır.
-      harness.routines.toggleGate = null;
-      await harness.tapRow(tester, 'Maaş ödemeleri');
-      expect(find.text('0 / 1'), findsOneWidget);
-      expect(harness.isChecked(tester, 'Maaş ödemeleri'), isFalse);
-    });
-
-    testWidgets('sunucu hatasında geri alınır ve kullanıcı uyarılır',
-        (tester) async {
-      harness.routines.routines = [
-        monthly('m1', 'Maaş ödemeleri', today().day)
-      ];
-      harness.routines.toggleGate = Completer<void>();
-      await harness.pump(tester, month: thisMonth());
-
-      await tester.ensureVisible(find.text('Maaş ödemeleri'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Maaş ödemeleri'));
-      await tester.pump();
-      expect(harness.isChecked(tester, 'Maaş ödemeleri'), isTrue);
-
-      harness.routines.toggleGate!.completeError(Exception('ağ yok'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-
-      expect(harness.isChecked(tester, 'Maaş ödemeleri'), isFalse);
-      expect(find.text('0 / 1'), findsOneWidget);
-      expect(
-          find.text('Aylık iş güncellenemedi. Tekrar dene.'), findsOneWidget);
-    });
-
-    testWidgets('aylık sabit yoksa boş durum', (tester) async {
-      await harness.pump(tester, month: DateTime(2026, 2));
-      expect(find.text('Bu ay için aylık sabit yok.'), findsOneWidget);
-      expect(
-          find.text('Bu ay için randevu ya da görev yok.', skipOffstage: false),
-          findsOneWidget);
-    });
-  });
-
-  group('bu ayın randevuları', () {
-    testWidgets('liste, tamamlananlar üstü çizili; geçmiş ayda tamamla yok',
-        (tester) async {
-      harness.tasks.tasks = [
-        task('t1', 'Bayi toplantısı', DateTime(2026, 2, 18, 14, 30),
-            assignee: 'Ayşe'),
-        task('t2', 'Rapor teslimi', DateTime(2026, 2, 5, 9), done: true),
-        task('t3', 'Mart işi', DateTime(2026, 3, 1, 9)),
-      ];
-      await harness.pump(tester, month: DateTime(2026, 2));
-      await harness.scrollThrough(tester);
-
-      expect(find.text('Bu ayın randevuları'), findsOneWidget);
-      expect(find.text('1 / 2'), findsOneWidget);
-      expect(find.text('Bayi toplantısı'), findsOneWidget);
-      expect(find.text('14:30 · Ekip · Ayşe'), findsOneWidget);
-      expect(find.text('Mart işi'), findsNothing);
-      expect(
-        tester.widget<Text>(find.text('Rapor teslimi')).style!.decoration,
-        TextDecoration.lineThrough,
-      );
-      expect(find.byTooltip('Tamamlandı olarak işaretle'), findsNothing);
-    });
-
-    testWidgets('içinde bulunulan ayda görev tamamlanır', (tester) async {
-      final now = today();
-      harness.tasks.tasks = [
-        task('t1', 'Bayi toplantısı',
-            DateTime(now.year, now.month, now.day, 23, 59)),
-      ];
-      await harness.pump(tester, month: thisMonth());
-      expect(find.text('0 / 1', skipOffstage: false), findsOneWidget);
-
-      final button = find.byTooltip('Tamamlandı olarak işaretle');
-      await tester.ensureVisible(button);
-      await tester.pumpAndSettle();
-      await tester.tap(button);
-      await tester.pumpAndSettle();
-
-      expect(harness.tasks.completedIds, ['t1']);
-      expect(find.text('Tamamlandı: Bayi toplantısı'), findsOneWidget);
-      expect(find.text('1 / 1', skipOffstage: false), findsWidgets);
-      expect(find.byTooltip('Tamamlandı olarak işaretle'), findsNothing);
-    });
-  });
-
-  group('ay özeti', () {
-    testWidgets('sağlık verisiyle', (tester) async {
-      harness.routines.routines = [
-        Routine.fromMap(const {'id': 'r1', 'title': 'Günlük kontrol'}),
-      ];
-      harness.routines.completions = {
-        for (var d = 1; d <= 14; d++)
-          RoutineCompletionKey('r1', DateTime(2026, 2, d)),
-      };
-      harness.tasks.tasks = [
-        task('t1', 'Bayi toplantısı', DateTime(2026, 2, 18, 14)),
-        task('t2', 'Rapor teslimi', DateTime(2026, 2, 5, 9), done: true),
-      ];
-      harness.healthStore
-        ..metrics = [
-          DailyHealthMetric(
-            day: DateTime(2026, 2, 3),
-            steps: 8000,
-            sleepMinutes: 420,
-          ),
-          DailyHealthMetric(
-            day: DateTime(2026, 2, 4),
-            steps: 10000,
-            sleepMinutes: 480,
-          ),
-        ]
-        ..nutrition = [
-          DailyNutritionTotal(
-            day: DateTime(2026, 2, 3),
-            calories: 1800,
-            proteinG: 150,
-            entryCount: 3,
-          ),
-          DailyNutritionTotal(
-            day: DateTime(2026, 2, 4),
-            calories: 2000,
-            proteinG: 170,
-            entryCount: 4,
-          ),
-        ]
-        ..weights = [
-          WeightEntry(
-            id: 'w1',
-            weightKg: 84.5,
-            loggedAt: DateTime(2026, 2, 1, 8),
-          ),
-          WeightEntry(
-            id: 'w2',
-            weightKg: 83.3,
-            loggedAt: DateTime(2026, 2, 27, 8),
-          ),
-        ];
-      await harness.pump(tester, month: DateTime(2026, 2));
-      await harness.scrollThrough(tester);
-
-      expect(find.text('Ay özeti'), findsOneWidget);
-      expect(find.text('Rutinler'), findsOneWidget);
-      // Rutinler 14/28, görevler 1/2: ikisi de %50.
-      expect(find.text('%50'), findsNWidgets(2));
-      expect(find.text('14 / 28 tamamlandı'), findsOneWidget);
-      expect(find.text('Görevler'), findsOneWidget);
-      expect(find.text('1 / 2 tamamlandı'), findsOneWidget);
-      expect(find.text('Ort. adım'), findsOneWidget);
-      expect(find.text('9.000'), findsOneWidget);
-      expect(find.text('Hedef 8.000'), findsOneWidget);
-      expect(find.text('Ort. uyku'), findsOneWidget);
-      expect(find.text('7 sa 30 dk'), findsOneWidget);
-      expect(find.text('Hedef 7 sa 30 dk'), findsOneWidget);
-      expect(find.text('Ort. kalori'), findsOneWidget);
-      expect(find.text('1.900 kcal'), findsOneWidget);
-      expect(find.text('Hedef 2.000 kcal'), findsOneWidget);
-      expect(find.text('Kilo değişimi'), findsOneWidget);
-      expect(find.text('−1,2 kg'), findsOneWidget);
-      expect(find.text('84,5 → 83,3 kg'), findsOneWidget);
-      expect(
-          find.text('Bu ay için sağlık ve beslenme verisi yok.'), findsNothing);
-      expect(find.text('—'), findsNothing);
-    });
-
-    testWidgets('sağlık verisi olmadan: tire ve açıklama', (tester) async {
-      await harness.pump(tester, month: DateTime(2026, 2));
-      await harness.scrollThrough(tester);
-
-      expect(find.text('Ay özeti'), findsOneWidget);
-      // Rutin, görev, adım, uyku, kalori, kilo: altısı da veri yok.
-      expect(find.text('—'), findsNWidgets(6));
-      expect(find.text('Planlanan rutin yok'), findsOneWidget);
-      expect(find.text('Görev yok'), findsOneWidget);
-      expect(find.text('Ölçüm yok'), findsOneWidget);
-      expect(find.text('Hedef 8.000'), findsOneWidget);
-      expect(
-        find.text('Bu ay için sağlık ve beslenme verisi yok.'),
-        findsOneWidget,
-      );
+      expect(container.read(kokpitMonthProvider), thisMonth());
+      expect(container.read(kokpitSelectedDayProvider), today());
+      expect(find.byKey(const ValueKey('kokpit-selected-day')), findsOneWidget);
     });
   });
 
@@ -599,7 +320,7 @@ void main() {
       await tester.tap(find.text('Tekrar dene'));
       await tester.pumpAndSettle();
       expect(find.text('Ay verisi yüklenemedi.'), findsNothing);
-      expect(find.text('Aylık sabitler'), findsOneWidget);
+      expect(dayCells(), findsNWidgets(28));
     });
   });
 

@@ -182,7 +182,7 @@ void main() {
     await tester.tap(find.byTooltip('Kapat').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Operasyon'));
+    await tester.tap(find.byTooltip('İşler'));
     await shot('06_operasyon_gorevler');
     await tester.tap(find.text('Rutinler'));
     await shot('07_operasyon_rutinler');
@@ -205,7 +205,7 @@ void main() {
     await tester.tap(find.text('Hareket'));
     await shot('11_saglik_antrenman');
 
-    await tester.tap(find.byTooltip('Raporlar'));
+    await tester.tap(find.byTooltip('İçgörü'));
     // Biten son hafta: içinde bulunulan hafta Pazartesi günü neredeyse boştur.
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Önceki hafta'));

@@ -18,6 +18,8 @@ import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.da
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
+import 'package:kisisel_asistan/features/operations/presentation/calendar_screen.dart';
+import 'package:kisisel_asistan/features/operations/presentation/routines_view.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 
@@ -106,7 +108,7 @@ class KokpitHarness {
     );
     addTearDown(container.dispose);
     if (month != null) {
-      container.read(kokpitViewProvider.notifier).state = KokpitView.month;
+      container.read(kokpitHarnessViewProvider.notifier).state = 'Ay';
       container.read(kokpitMonthProvider.notifier).state =
           DateTime(month.year, month.month);
     }
@@ -124,13 +126,13 @@ class KokpitHarness {
     return container;
   }
 
-  /// Kokpit (Gün) ile Ay görünümü arasında geçer. Kokpit artık Ay
-  /// görünümünü göstermez; parçaları başka ekranlarda yeniden kullanılır.
+  /// Kokpit ('Gün'), takvim ('Ay') ve Rutinler listesi ('Rutinler') arasında
+  /// geçer.
   Future<void> showView(WidgetTester tester, String label) async {
     final element = tester.element(find.byType(KokpitHarnessBody));
     ProviderScope.containerOf(element)
-        .read(kokpitViewProvider.notifier)
-        .state = label == 'Ay' ? KokpitView.month : KokpitView.day;
+        .read(kokpitHarnessViewProvider.notifier)
+        .state = label;
     await tester.pumpAndSettle();
   }
 
@@ -185,18 +187,24 @@ class KokpitHarness {
   }
 }
 
+/// Harness'ın çizdiği görünüm: 'Gün' (Kokpit), 'Ay' (takvim) ya da
+/// 'Rutinler' (İşler › Rutinler listesi) ya da 'Takvim' (İşler › Takvim).
+final kokpitHarnessViewProvider = StateProvider<String>((ref) => 'Gün');
+
 /// Testlerde Kokpit ekranını ya da tek başına Ay görünümünü çizer.
 class KokpitHarnessBody extends ConsumerWidget {
   const KokpitHarnessBody({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return switch (ref.watch(kokpitViewProvider)) {
-      KokpitView.day => const KokpitScreen(),
-      KokpitView.month => ListView(
+    return switch (ref.watch(kokpitHarnessViewProvider)) {
+      'Ay' => ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
           children: const [KokpitMonthView()],
         ),
+      'Rutinler' => const RoutinesView(),
+      'Takvim' => const OpsCalendarScreen(),
+      _ => const KokpitScreen(),
     };
   }
 }

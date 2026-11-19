@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
-import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_format.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_day_view.dart';
+import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_widgets.dart';
+import 'package:kisisel_asistan/features/operations/presentation/routine_form_sheet.dart';
 import 'package:kisisel_asistan/features/settings/presentation/hesap_screen.dart';
 
 import '../helpers/kokpit_fakes.dart';
@@ -51,19 +52,20 @@ void main() {
     ];
   });
 
-  group('Bugünün rutinleri', () {
+  group('Bugünün işleri', () {
     testWidgets('aylık işler listelenmez ve sayaca girmez', (tester) async {
       await harness.pump(tester);
 
       expect(find.text('0 / 2'), findsOneWidget,
           reason: 'aylık iş günlük sayaca girmez');
       await harness.scrollThrough(tester);
-      expect(find.text('Bugünün rutinleri'), findsOneWidget);
+      expect(find.text('Bugünün işleri'), findsOneWidget);
       expect(find.text('Sabah görev kontrolü'), findsOneWidget);
       expect(find.text('Gelen kutusu kontrolü'), findsOneWidget);
       expect(find.text('Maaş ödemeleri'), findsNothing);
       expect(find.text('Yaklaşan aylık işler'), findsNothing);
-      expect(find.text('Tümünü gör (2)'), findsOneWidget);
+      expect(find.textContaining('Tümünü gör'), findsNothing,
+          reason: 'tüm satırlar görünüyorsa kısayol yok');
     });
 
     testWidgets('bugünün gecikmiş görevi önce, yarınki ve dünkü yok',
@@ -156,15 +158,87 @@ void main() {
     });
   });
 
-  group('Ay görünümü (Kokpit dışında yeniden kullanılır)', () {
-    testWidgets('aylık iş Ay görünümünden işaretlenir', (tester) async {
+  group('İşler › Rutinler tamamlama kutusu', () {
+    Finder check(String id) => find.byKey(ValueKey('ops-routine-check-$id'));
+
+    Future<void> tapCheck(WidgetTester tester, String id) async {
+      await tester.ensureVisible(check(id));
+      await tester.pumpAndSettle();
+      await tester.tap(check(id));
+      await tester.pumpAndSettle();
+    }
+
+    bool checked(WidgetTester tester, String id) => tester
+        .widget<KokpitCheckBox>(
+          find.descendant(of: check(id), matching: find.byType(KokpitCheckBox)),
+        )
+        .checked;
+
+    testWidgets('Bugün grubundaki rutin kutudan tamamlanır', (tester) async {
       await harness.pump(tester);
-      await harness.showView(tester, 'Ay');
-      expect(find.text('Aylık sabitler'), findsOneWidget);
-      expect(find.text(KokpitFormat.monthTitle(thisMonth())), findsOneWidget);
-      await harness.tapRow(tester, 'Maaş ödemeleri');
-      expect(harness.isChecked(tester, 'Maaş ödemeleri'), isTrue);
+      await harness.showView(tester, 'Rutinler');
+      expect(check('r1'), findsOneWidget);
+      expect(checked(tester, 'r1'), isFalse);
+
+      await tapCheck(tester, 'r1');
+      expect(checked(tester, 'r1'), isTrue);
+      final toggle = harness.routines.toggles.single;
+      expect(toggle.routineId, 'r1');
+      expect(toggle.periodKey, today());
+      expect(toggle.completed, isTrue);
+    });
+
+    testWidgets('Aylık iş kutudan tamamlanır ve geri alınır', (tester) async {
+      await harness.pump(tester);
+      await harness.showView(tester, 'Rutinler');
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('ops-group-routines-monthly')),
+          matching: check('m1'),
+        ),
+        findsOneWidget,
+      );
+
+      await tapCheck(tester, 'm1');
+      expect(checked(tester, 'm1'), isTrue);
       expect(harness.routines.toggles.single.periodKey, thisMonth());
+
+      await tapCheck(tester, 'm1');
+      expect(checked(tester, 'm1'), isFalse);
+      expect(harness.routines.toggles.last.completed, isFalse);
+    });
+
+    testWidgets('satıra dokunmak formu açar, kutu tamamlamaz', (tester) async {
+      await harness.pump(tester);
+      await harness.showView(tester, 'Rutinler');
+      await tester.tap(find.text('Gelen kutusu kontrolü'));
+      await tester.pumpAndSettle();
+      expect(harness.routines.toggles, isEmpty);
+      expect(find.byType(RoutineFormSheet), findsOneWidget);
+    });
+
+    testWidgets('pasif rutin Bugün yerine Pasif grubunda, kutusuz',
+        (tester) async {
+      harness.routines.routines = [
+        ...harness.routines.routines,
+        daily('r3', 'Eski rutin').copyWith(isActive: false),
+      ];
+      await harness.pump(tester);
+      await harness.showView(tester, 'Rutinler');
+      final passive = find.byKey(const ValueKey('ops-group-routines-passive'));
+      await tester.ensureVisible(passive);
+      expect(
+        find.descendant(of: passive, matching: find.text('Eski rutin')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('ops-group-routines-today')),
+          matching: find.text('Eski rutin'),
+        ),
+        findsNothing,
+      );
+      expect(check('r3'), findsNothing);
     });
   });
 

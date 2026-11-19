@@ -192,7 +192,7 @@ void main() {
 
   final forms = <String, (String, Future<void> Function(WidgetTester), int Function())>{
     'görev': (
-      'Operasyon',
+      'İşler',
       (tester) async {
         await tapVisible(tester, find.byTooltip('Ekle'));
         await tester.enterText(
@@ -200,8 +200,8 @@ void main() {
       },
       () => tasks.tasks.length,
     ),
-    'sabit': (
-      'Operasyon',
+    'rutin': (
+      'İşler',
       (tester) async {
         await tapVisible(tester, find.text('Rutinler'));
         await tapVisible(tester, find.byTooltip('Ekle'));
@@ -211,7 +211,7 @@ void main() {
       () => routines.routines.length,
     ),
     'not': (
-      'Operasyon',
+      'İşler',
       (tester) async {
         await tapVisible(tester, find.text('Notlar'));
         await tapVisible(tester, find.byTooltip('Ekle'));
@@ -299,7 +299,7 @@ void main() {
 
   testWidgets('not formu kayıt sürerken dışına dokunularak kapatılırsa ana kabuk kapanmaz',
       (tester) async {
-    await pumpShell(tester, 'Operasyon');
+    await pumpShell(tester, 'İşler');
     await forms['not']!.$2(tester);
     await startSave(tester);
 
@@ -318,7 +318,7 @@ void main() {
   testWidgets(
       'AI giriş: kayıt, sayfa kapanırken biterse ana kabuk kapanmaz',
       (tester) async {
-    await pumpShell(tester, 'Operasyon');
+    await pumpShell(tester, 'İşler');
     harness.repository.gate = gate;
     await tester.tap(find.byTooltip('Yeni giriş'));
     await tester.pumpAndSettle();
@@ -342,7 +342,7 @@ void main() {
 
   testWidgets('kapatılmayan form kayıt bitince kendisi kapanır (kontrol)',
       (tester) async {
-    await pumpShell(tester, 'Operasyon');
+    await pumpShell(tester, 'İşler');
     await forms['görev']!.$2(tester);
     await startSave(tester);
 

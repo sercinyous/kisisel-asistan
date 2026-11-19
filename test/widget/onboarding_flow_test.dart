@@ -169,7 +169,7 @@ void main() {
         '+ ile iki ayrı giriş',
         'İşler ve aylık rutinler',
         'Sağlık: trend ve denge',
-        'Raporlar ve Arkadaşlar',
+        'İçgörü ve Arkadaşlar',
       ];
       expect(find.byKey(const Key('onboarding-back')), findsNothing);
       for (final (index, title) in titles.indexed) {

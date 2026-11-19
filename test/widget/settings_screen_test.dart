@@ -14,7 +14,6 @@ import 'package:kisisel_asistan/features/settings/data/settings_repository.dart'
 import 'package:kisisel_asistan/features/settings/presentation/hesap_screen.dart';
 import 'package:kisisel_asistan/features/settings/presentation/notifications_page.dart';
 import 'package:kisisel_asistan/features/settings/presentation/profile_goals_page.dart';
-import 'package:kisisel_asistan/features/settings/presentation/settings_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../helpers/fakes.dart';
@@ -63,7 +62,7 @@ void main() {
 
   testWidgets('Ayarlar Hesap menüsünü açar; altı satır ve küçük grup taşmaz',
       (tester) async {
-    await pumpSettings(tester, textScale: 1.3, home: const SettingsScreen());
+    await pumpSettings(tester, textScale: 1.3, home: const HesapScreen());
     expect(tester.takeException(), isNull);
     expect(find.byType(HesapScreen), findsOneWidget);
     for (final title in [

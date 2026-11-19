@@ -54,7 +54,7 @@ class OnboardingPreferencesStep extends StatelessWidget {
         const OnboardingStepHeader(
           title: 'Bildirimler',
           subtitle: 'Görev, rutin ve aylık iş hatırlatmaları. İstersen '
-              'kapalı bırak, sonra Ayarlar\'dan açabilirsin.',
+              'kapalı bırak, sonra Hesap > Bildirimler\'den açabilirsin.',
         ),
         BentoCard(
           child: Column(

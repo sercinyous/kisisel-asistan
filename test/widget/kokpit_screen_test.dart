@@ -17,6 +17,7 @@ import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.da
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_screen.dart';
 import 'package:kisisel_asistan/features/operations/data/tasks_repository.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
+import 'package:kisisel_asistan/features/operations/presentation/operations_providers.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/routines/presentation/routines_providers.dart';
@@ -232,10 +233,11 @@ void main() {
       expect(find.byTooltip('Hesap'), findsOneWidget);
 
       await scrollThrough(tester);
-      expect(find.text('Bugünün rutinleri'), findsOneWidget);
+      expect(find.text('Bugünün işleri'), findsOneWidget);
       expect(find.text('Sabah tartı ve kilo kaydı'), findsOneWidget);
       expect(find.text('08:00'), findsOneWidget);
-      expect(find.text('Tümünü gör (5)'), findsOneWidget);
+      expect(find.textContaining('Tümünü gör'), findsNothing,
+          reason: '5 kayıt sığar; kısayol yalnızca gizli satır varken');
       // Yarına ve sonrasına düşen görevler Kokpit'te listelenmez.
       expect(find.text('Haftalık vardiya çizelgesini yayınla'), findsNothing);
       expect(find.text('Bugün ve yaklaşanlar'), findsNothing);
@@ -333,12 +335,26 @@ void main() {
       expect(find.text('Bağlan'), findsOneWidget);
     });
 
-    testWidgets('Tümünü gör Operasyon sekmesini ister', (tester) async {
+    testWidgets('Tümünü gör İşler sekmesini Rutinler görünümüyle ister',
+        (tester) async {
+      final now = DateTime.now();
+      tasks.tasks = [
+        ...sampleReminders(),
+        TaskItem(
+          id: 'today',
+          title: 'Bugünkü görev',
+          category: 'İş',
+          priority: 'medium',
+          status: 'todo',
+          dueAt: DateTime(now.year, now.month, now.day, 23, 59),
+        ),
+      ];
       final container = await pumpKokpit(tester);
       await scrollThrough(tester);
-      await tester.tap(find.text('Tümünü gör (5)'));
+      await tester.tap(find.text('Tümünü gör (6)'));
       await tester.pump();
       expect(container.read(homeTabRequestProvider), 1);
+      expect(container.read(opsSegmentProvider), OpsSegment.routines);
     });
   });
 

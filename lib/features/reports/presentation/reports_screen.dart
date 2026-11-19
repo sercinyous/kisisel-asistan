@@ -48,7 +48,6 @@ class ReportsScreen extends ConsumerWidget {
                   .future,
             ),
           ),
-          settle(ref.read(weeklyReportListProvider.future)),
         ],
       ReportsView.daily => [
           settle(

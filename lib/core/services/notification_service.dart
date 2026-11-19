@@ -105,7 +105,7 @@ class NotificationService {
     android: AndroidNotificationDetails(
       'asistan_hatirlatma',
       'Hatırlatmalar',
-      channelDescription: 'Saatli hatırlatmalar ve sabit rutin bildirimleri',
+      channelDescription: 'Saatli hatırlatmalar ve rutin bildirimleri',
       importance: Importance.high,
       priority: Priority.high,
     ),

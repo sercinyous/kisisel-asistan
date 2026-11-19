@@ -251,7 +251,7 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
           ),
         ),
         const OnboardingHint(
-          'Aynı anda tek kaynak veri yazar. Kaynağı sonra Ayarlar > '
+          'Aynı anda tek kaynak veri yazar. Kaynağı sonra Hesap > '
           'Bağlantılar\'dan değiştirebilirsin.',
         ),
       ],
