@@ -10,7 +10,7 @@ class PrivacySection {
 /// Uygulama içi gizlilik metni (Ayarlar > Gizlilik).
 const List<PrivacySection> privacySections = [
   PrivacySection('Kısaca', [
-    'Bu uygulama, sahibinin ve davet ettiği birkaç arkadaşının kullandığı kişisel bir asistandır. Reklam yok, verin satılmaz, üçüncü taraf analiz ya da izleme aracı kullanılmaz.',
+    'Bu uygulama, küçük bir arkadaş grubunun kullandığı kişisel bir asistandır; herkes hesap açabilir. Reklam yok, verin satılmaz, üçüncü taraf analiz ya da izleme aracı kullanılmaz.',
     'Verin Supabase üzerinde saklanır. Her kullanıcının satırları veritabanı kurallarıyla (satır düzeyi güvenlik) ayrıdır; başka bir kullanıcı senin kayıtlarını okuyamaz.',
   ]),
   PrivacySection('Topladığımız veriler', [

@@ -212,7 +212,7 @@ p{margin:0}
     <ol class="phases">
       <li><b>Faz 2<small>Omurga</small></b><p>Kokpit, Operasyon (görev, sabit, not), rutinler, Sağlık, raporlar, Supabase + RLS, Gemini ile AI hızlı giriş.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>Faz 3<small>Görünüm</small></b><p>Açık/koyu tema, cam alt bar, bento kartlar, bildirim planlaması.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
-      <li><b>Faz 4A–4B<small>Çok kullanıcı</small></b><p>Çok kullanıcılı yapı, davet kapısı, arkadaşlar, ilk kurulum, Google Health, Pusholder'a özel her şeyin kaldırılması, besin listesi.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Faz 4A–4B<small>Çok kullanıcı</small></b><p>Çok kullanıcılı yapı, açık kayıt (davet kapısı kaldırıldı), arkadaşlar, ilk kurulum, Google Health, Pusholder'a özel her şeyin kaldırılması, besin listesi.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>Faz 4C<small>Günlük kullanım</small></b><p>Öğün seçici, görev kategorileri ve taslaklar, arkadaş sıralaması, ilk kurulumda sağlık kaynağı seçimi, görev dashboard'u.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>İnceleme 1<small>7 bulgu</small></b><p>Rutin sahipliği, geç sağlık yazımı, Google bağlantısının kullanıcıya bağlanması, çıkışta bildirim temizliği, tek işlemli ilk kurulum, sağlık kaynağı kolonu, geç veriyle rapor yenileme.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>7/7 kapatıldı</span></li>
       <li><b>Faz 5<small>Dağıtım hazırlığı</small></b><p>Yeni ilk kurulum (profil → sağlık kaynağı → boy/kilo → hedefler), hatırlatıcılar ve "Yaptım", hesap silme, gizlilik metni, inceleyici hesabı, hata takibi ve sorun bildir, su takibi, kilo hedefine varış tahmini, haftalık check-in, varsayılan hedef düzeltmesi, topaç uygulama ikonu ve uygulama içi topaç animasyonu.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
@@ -245,8 +245,8 @@ p{margin:0}
 
   // b: ilk plandaki hâli (yoksa planda yoktu), a: bugünkü hâli [başlık, alt satır(lar), durum]
   var N=[
-    {x:250,y:26,w:180,h:46,b:["Sahip","tek kullanıcı"],a:["3–5 kullanıcı","sahip + davetli arkadaşlar","new"]},
-    {x:24,y:138,w:184,h:46,a:["Davet kapısı","yalnızca davet edilenler girer","new"]},
+    {x:250,y:26,w:180,h:46,b:["Sahip","tek kullanıcı"],a:["Çok kullanıcı","sahip + arkadaşlar","new"]},
+    {x:24,y:138,w:184,h:46,a:["Açık kayıt","herkes Google/e-postayla kaydolur","new"]},
     {x:248,y:138,w:184,h:46,b:["Google ile giriş",""],a:["Giriş","Google veya e-posta","done"]},
     {x:472,y:138,w:184,h:46,a:["İlk kurulum","tek işlem · Apple/Google seçimi","new"]},
     {x:456,y:260,w:200,h:46,a:["Arkadaşlar","sıralama · ayrı ayrıntı onayı","new"]},
@@ -299,7 +299,7 @@ p{margin:0}
     function e(d,both){return '<path class="e" d="'+d+'" marker-end="url(#'+m+')"'+(both?' marker-start="url(#'+m+'s)"':'')+'/>';}
     function t(d){return '<path class="tree" d="'+d+'"/>';}
     var s='<svg class="dg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+(after?
-      "Bugünkü durum: 3 ila 5 kullanıcı davet kapısından geçer, giriş yapar, ilk kurulumu bitirir ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık ve Google Health'ten okunur. Hesap silme, gizlilik metni, inceleyici hesabı, uygulama ikonu ve hata takibi hazır; sekmeler Kokpit, İşler, Sağlık ve İçgörü.":
+      "Bugünkü durum: herkes kaydolabilir, giriş yapar, ilk kurulumu bitirir ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık ve Google Health'ten okunur. Hesap silme, gizlilik metni, inceleyici hesabı, uygulama ikonu ve hata takibi hazır; sekmeler Kokpit, İşler, Sağlık ve İçgörü.":
       "İlk plan: tek kullanıcı Google ile giriş yapar ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık'tan okunur.")+'">';
     s+='<defs><marker id="'+m+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 .5L8 4L0 7.5z"/></marker>'+
        '<marker id="'+m+'s" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M8 .5L0 4L8 7.5z"/></marker></defs>';

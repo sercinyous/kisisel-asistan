@@ -6,7 +6,8 @@ import 'sign_in_controller.dart';
 
 /// Giriş ekranı: "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
 /// Google yapılandırılmamışsa (ya da tarayıcı demosunda) yalnızca e-posta
-/// formu görünür. Yeni hesap yalnızca davet alan e-postalara açılır.
+/// formu görünür. Kayıt herkese açıktır: Google ilk girişte hesap açar, e-posta
+/// formunda "Kayıt ol" ile yeni hesap oluşturulur.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -19,6 +20,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _emailOpen = false;
+  bool _signUp = false;
 
   @override
   void dispose() {
@@ -32,9 +34,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         !(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    await ref
-        .read(signInControllerProvider.notifier)
-        .signInWithPassword(email: _email.text, password: _password.text);
+    final controller = ref.read(signInControllerProvider.notifier);
+    if (_signUp) {
+      await controller.signUpWithPassword(
+          email: _email.text, password: _password.text);
+    } else {
+      await controller.signInWithPassword(
+          email: _email.text, password: _password.text);
+    }
   }
 
   @override
@@ -44,6 +51,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final googleAvailable = ref.watch(googleLoginAvailableProvider);
     final busy = state.isBusy;
     final showForm = !googleAvailable || _emailOpen;
+    final submitLabel = state.busy == SignInMethod.password
+        ? (_signUp ? 'Hesap oluşturuluyor…' : 'Giriş yapılıyor…')
+        : (_signUp ? 'Hesap oluştur' : 'Giriş yap');
 
     return Scaffold(
       body: SafeArea(
@@ -137,14 +147,23 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               enabled: !busy,
                               obscureText: true,
                               textInputAction: TextInputAction.done,
-                              autofillHints: const [AutofillHints.password],
+                              autofillHints: [
+                                _signUp
+                                    ? AutofillHints.newPassword
+                                    : AutofillHints.password,
+                              ],
                               decoration:
                                   const InputDecoration(hintText: 'Şifre'),
                               onFieldSubmitted: (_) => _submit(),
-                              validator: (value) =>
-                                  value == null || value.isEmpty
-                                      ? 'Şifreni gir.'
-                                      : null,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Şifreni gir.';
+                                }
+                                if (_signUp && value.length < 6) {
+                                  return 'Şifre en az 6 karakter olmalı.';
+                                }
+                                return null;
+                              },
                             ),
                           ],
                         ),
@@ -160,6 +179,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           ?.copyWith(color: AppColors.danger),
                     ),
                   ],
+                  if (state.info != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      state.info!,
+                      key: const Key('sign-in-info'),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ],
                   if (showForm) ...[
                     const SizedBox(height: AppSpacing.lg),
                     googleAvailable
@@ -170,30 +198,28 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               foregroundColor: AppColors.textPrimary,
                               side: BorderSide(color: AppColors.border),
                             ),
-                            child: Text(
-                              state.busy == SignInMethod.password
-                                  ? 'Giriş yapılıyor…'
-                                  : 'Giriş yap',
-                            ),
+                            child: Text(submitLabel),
                           )
                         : FilledButton(
                             key: const Key('sign-in-submit'),
                             onPressed: busy ? null : _submit,
-                            child: Text(
-                              state.busy == SignInMethod.password
-                                  ? 'Giriş yapılıyor…'
-                                  : 'Giriş yap',
-                            ),
+                            child: Text(submitLabel),
                           ),
                   ],
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    'Hesabın yoksa Ritim kullanan bir arkadaşının seni '
-                    'davet etmesi gerekir.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: AppColors.textMuted),
-                  ),
+                  if (showForm) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    TextButton(
+                      key: const Key('sign-in-mode-toggle'),
+                      onPressed: busy
+                          ? null
+                          : () => setState(() => _signUp = !_signUp),
+                      child: Text(
+                        _signUp
+                            ? 'Hesabın var mı? Giriş yap'
+                            : 'Hesabın yok mu? Kayıt ol',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

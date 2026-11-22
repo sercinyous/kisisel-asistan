@@ -5,10 +5,8 @@
 set client_min_messages = notice;
 \ir helpers_faz4b.sql
 
-alter table auth.users disable trigger signup_invite_gate;
 select tf.mkuser('fb500000-0000-0000-0000-000000000001', 'faz5-hata1@example.com');
 select tf.mkuser('fb500000-0000-0000-0000-000000000002', 'faz5-hata2@example.com');
-alter table auth.users enable trigger signup_invite_gate;
 
 select tf.run('authenticated', 'fb500000-0000-0000-0000-000000000001',
   $q$ with i as (insert into public.app_errors (message, stack, app_version, platform)

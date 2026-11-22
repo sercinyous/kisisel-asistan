@@ -7,7 +7,6 @@ set client_min_messages = notice;
 \ir helpers_faz4b.sql
 
 -- Fikstür kullanıcıları kapı kapalıyken açılır (kapı signup_gate_test.sql'de).
-alter table auth.users disable trigger signup_invite_gate;
 select tf.mkuser('a1000000-0000-0000-0000-000000000001', 'ali@example.com');
 select tf.mkuser('a2000000-0000-0000-0000-000000000002', 'veli@example.com');
 select tf.mkuser('a3000000-0000-0000-0000-000000000003', 'ayse@example.com');
@@ -46,7 +45,7 @@ begin
     'public.friend_mask_email(text)', 'public.verified_email_of(uuid)',
     'public.friend_display_name(uuid)', 'public.safe_timezone(text)',
     'public.goal_steps_hit(bigint, integer)', 'public.goal_sleep_hit(bigint, integer)',
-    'public.goal_calories_hit(numeric, integer)', 'public.has_pending_invite(text)',
+    'public.goal_calories_hit(numeric, integer)',
     'public.consume_ai_quota(uuid, text, integer)']
   loop
     if has_function_privilege('anon', f, 'execute')

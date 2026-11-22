@@ -10,12 +10,10 @@
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
 
-alter table auth.users disable trigger signup_invite_gate;
 insert into auth.users (id, email) values
   ('f5f5f5f5-0000-0000-0000-000000000001', 'faz5-a@test'),
   ('f5f5f5f5-0000-0000-0000-000000000002', 'faz5-b@test')
 on conflict (id) do nothing;
-alter table auth.users enable trigger signup_invite_gate;
 
 -- Şema: sütunlar ve check'ler.
 do $$

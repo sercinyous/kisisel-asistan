@@ -8,11 +8,9 @@ set client_min_messages = notice;
 -- Yerel taklitte yoksa Supabase'teki meta sütunu eklenir.
 alter table auth.users add column if not exists raw_user_meta_data jsonb;
 
-alter table auth.users disable trigger signup_invite_gate;
 select tf.mkuser('f7100000-0000-0000-0000-000000000001', 'lb-sercan@example.com');
 select tf.mkuser('f7200000-0000-0000-0000-000000000002', 'lb-deniz@example.com');
 select tf.mkuser('f7300000-0000-0000-0000-000000000003', 'lb-yabanci@example.com');
-alter table auth.users enable trigger signup_invite_gate;
 update auth.users set raw_user_meta_data =
   '{"full_name": "Sercan Kılıç", "avatar_url": "https://example.com/s.png"}'
   where id = 'f7100000-0000-0000-0000-000000000001';

@@ -2,10 +2,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/google_auth.dart';
 
-/// Kayıt kapısı (davet almamış e-posta) reddi.
-const String noInviteMessage =
-    'Bu e-posta için davet yok. Ritim kullanan bir arkadaşından seni '
-    'e-posta adresinle arkadaş olarak eklemesini iste, sonra tekrar dene.';
+/// Sunucu yeni hesabı kaydedemediğinde (GoTrue "Database error saving new
+/// user") gösterilen genel metin.
+const String signUpFailedMessage =
+    'Hesap oluşturulamadı. Biraz sonra tekrar dene.';
+
+/// E-posta onayı gerektiren kayıttan sonra gösterilen bilgi.
+const String confirmationSentMessage =
+    'Onay e-postası gönderildi, gelen kutunu (ve spam) kontrol et.';
 
 const String connectionFailedMessage = 'Bağlantı kurulamadı. Tekrar deneyin.';
 
@@ -20,18 +24,21 @@ String? signInErrorMessage(Object error) {
   return connectionFailedMessage;
 }
 
-/// Kayıt kapısı `before insert` tetikleyicisiyse GoTrue tetikleyicinin metnini
-/// göstermez, genel "Database error saving new user" döner; "Before User
-/// Created" kancasıysa metin olduğu gibi gelir. İkisi de aynı anlama gelir.
-bool isNoInviteRejection(AuthException error) {
-  final message = error.message.toLowerCase();
-  return message.contains('davet yok') || message.contains('saving new user');
-}
-
 String _authMessage(AuthException error) {
-  if (isNoInviteRejection(error)) return noInviteMessage;
   final message = error.message.toLowerCase();
   final code = error.code;
+  if (message.contains('saving new user')) return signUpFailedMessage;
+  if (code == 'user_already_exists' ||
+      code == 'email_exists' ||
+      message.contains('already registered')) {
+    return 'Bu e-postayla zaten bir hesap var. Giriş yap.';
+  }
+  if (code == 'weak_password' || message.contains('password should be')) {
+    return 'Şifre çok zayıf. En az 6 karakter kullan.';
+  }
+  if (code == 'signup_disabled' || message.contains('signups not allowed')) {
+    return 'Yeni kayıtlar şu an kapalı. Biraz sonra tekrar dene.';
+  }
   if (code == 'invalid_credentials' || message.contains('invalid login')) {
     return 'E-posta ya da şifre hatalı.';
   }

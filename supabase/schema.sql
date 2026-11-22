@@ -1920,35 +1920,17 @@ grant execute on function public.friend_goal_summary(uuid, date) to authenticate
 grant execute on function public.leave_friendship(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------
--- Kayıt kapısı. Yalnızca en az bir kullanıcıdan BEKLEYEN arkadaş isteği
--- almış e-posta hesap açabilir; diğerleri "Bu e-posta için davet yok"
--- hatası alır. Mevcut hesaplar etkilenmez (yalnızca insert). Davet hem
--- arkadaşlık hem kayıt izni olur; ayrı izin listesi tutulmaz.
+-- Açık kayıt. Herkes (Google ya da e-posta) hesap açabilir; eski davet
+-- kapısı kaldırıldı. Arkadaşlık istekleri değişmedi: henüz kaydolmamış bir
+-- e-postaya gönderilen istek, o kişi kaydolunca gelen kutusunda görünür.
 --
--- Not: GoTrue bir tetikleyici hatasını genel "Database error saving new
--- user" olarak gösterebilir. Daha okunur bir 403 mesajı için aşağıdaki
--- hook_before_user_created işlevi Dashboard > Authentication > Hooks >
--- "Before User Created" olarak seçilebilir (isteğe bağlı; tetikleyici her
--- durumda ikinci kapı olarak kalır).
--- Supabase'de auth.users sahibi olunmadığı için tetikleyici kapatılamaz
--- ("must be owner of table users"). Dashboard'dan elle hesap açmak için önce
--- o e-postaya bekleyen bir davet ekle, sonra Add user (Auto Confirm) kullan:
---   insert into public.friend_requests (from_user, target_email)
---   select id, 'yeni@ornek.com' from auth.users where email = 'SAHIP_EPOSTASI';
+-- Supabase'de auth.users sahibi olunmadığı için signup_invite_gate
+-- tetikleyicisi silinemez ("must be owner of table users"); bu yüzden
+-- tetikleyici yerinde kalır ama işlevi her satırı olduğu gibi geçirir.
+-- "Before User Created" kancası seçiliyse o da her zaman izin verir.
+-- Yeni kayıtların açık olması için Dashboard > Authentication > Sign In /
+-- Providers > "Allow new users to sign up" AÇIK olmalıdır.
 -- ---------------------------------------------------------------------
-create or replace function public.has_pending_invite(p_email text)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select exists (
-    select 1 from public.friend_requests r
-    where r.status = 'pending' and r.target_email = lower(btrim(p_email))
-  );
-$$;
-
 create or replace function public.enforce_signup_invite()
 returns trigger
 language plpgsql
@@ -1956,9 +1938,6 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if not public.has_pending_invite(new.email) then
-    raise exception 'Bu e-posta için davet yok' using errcode = 'P0001';
-  end if;
   return new;
 end;
 $$;
@@ -1971,15 +1950,12 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if public.has_pending_invite(event #>> '{user,email}') then
-    return '{}'::jsonb;
-  end if;
-  return jsonb_build_object('error', jsonb_build_object(
-    'message', 'Bu e-posta için davet yok', 'http_code', 403));
+  return '{}'::jsonb;
 end;
 $$;
 
-revoke all on function public.has_pending_invite(text) from public, anon, authenticated;
+drop function if exists public.has_pending_invite(text);
+
 revoke all on function public.enforce_signup_invite() from public, anon, authenticated;
 revoke all on function public.hook_before_user_created(jsonb) from public, anon, authenticated;
 

@@ -10,8 +10,14 @@ abstract interface class SignInBackend {
     required String password,
   });
 
-  /// Google kimlik belirteciyle giriş; ilk girişte hesap açılır ve kayıt kapısı
-  /// davetsiz e-postayı reddeder ([AuthException]).
+  /// Yeni e-posta/şifre hesabı açar. Oturum hemen açıldıysa `true`; e-posta
+  /// onayı gerekiyorsa (oturum yok) `false`.
+  Future<bool> signUpWithPassword({
+    required String email,
+    required String password,
+  });
+
+  /// Google kimlik belirteciyle giriş; ilk girişte hesap açılır.
   Future<void> signInWithGoogleIdToken({
     required String idToken,
     String? accessToken,
@@ -29,6 +35,15 @@ class SupabaseSignInBackend implements SignInBackend {
     required String password,
   }) async {
     await _auth.signInWithPassword(email: email, password: password);
+  }
+
+  @override
+  Future<bool> signUpWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _auth.signUp(email: email, password: password);
+    return response.session != null;
   }
 
   @override

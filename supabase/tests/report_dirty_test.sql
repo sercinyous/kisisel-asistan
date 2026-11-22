@@ -2,7 +2,6 @@
 -- Çalıştırma: supabase/tests/run_local.sh (auth_stub.sql + schema.sql sonrası).
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
-alter table auth.users disable trigger signup_invite_gate;
 
 create schema rd;
 create function rd.ok(p_label text, p_cond boolean) returns void
@@ -200,6 +199,5 @@ select rd.ok('failed raporda ai_basis null ve changed=true',
   and (public.refresh_report_metrics('daily', :U, '2026-11-13') ->> 'changed')::boolean);
 
 delete from auth.users where id in (:U, :V);
-alter table auth.users enable trigger signup_invite_gate;
 drop schema rd cascade;
 \echo RAPOR DIRTY TESTLERI GECTI

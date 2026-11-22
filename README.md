@@ -243,10 +243,10 @@ Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
    `ios/` klasörünü depoya koymak isteğe bağlıdır. Xcode'da elle değişiklik (ek yetki, uzantı,
    uygulama simgesi) yaptıysan koy: Codemagic depodaki klasörü kullanır, yeniden oluşturmaz.
 3. **Supabase**: yeni proje aç → SQL Editor'da `supabase/schema.sql` dosyasını çalıştır →
-   kendi hesabını Google ile ya da e-posta + şifreyle aç (ilk hesap için aşağıdaki kayıt kapısı notuna bak).
+   kendi hesabını Google ile ya da e-posta + şifreyle aç (kayıt herkese açıktır).
    Başlangıç satırı kullanıcı oluştuğu anda açılır. Authentication > Sign In / Providers altında
-   "Allow new users to sign up" seçeneği **açık** kalır (Google ile ilk giriş yeni kullanıcı oluşturur);
-   davet almamış e-postayı kayıt kapısı engeller ("Bu e-posta için davet yok"). Ayrıntı: "Google ile giriş".
+   "Allow new users to sign up" seçeneği **açık** olmalı (Google ile ilk giriş ve e-postayla "Kayıt ol"
+   yeni kullanıcı oluşturur). Ayrıntı: "Google ile giriş".
 4. **Anahtarlar**: `dart_defines.example.json` dosyasını `dart_defines.json` olarak kopyala ve doldur.
 5. **Çalıştır** (HealthKit gerçek cihaz ister):
    ```bash
@@ -257,9 +257,9 @@ Mac'te yerel çalıştırmak ya da Xcode'da elle değişiklik yapmak istersen:
 
 Sıra önemli: **önce yeni yapı TestFlight'a düşer, sonra SQL çalıştırılır** (eski yapı 'Pusholder' yazar; tetikleyici 'İş'e çevirir).
 
-1. **Supabase > Authentication > Sign In / Providers**: "Allow new users to sign up" **AÇIK** (eski "kapat" adımı kalktı; davetsizi kayıt kapısı engeller). "Confirm email" açık olsun: kapalıysa davet edilen adresle kayıt olan herkes daveti görür.
+1. **Supabase > Authentication > Sign In / Providers**: "Allow new users to sign up" **AÇIK** (kayıt herkese açık; davet kapısı kaldırıldı). "Confirm email" açık olsun: e-postayla kayıt olan onay e-postası alır; kapalıysa bir adrese gönderilmiş arkadaşlık isteğini o adresle doğrulamadan kayıt olan da görür.
 2. **Google sağlayıcısı**: Google Cloud'da Web OAuth istemcisi aç, Supabase > Providers > Google'a Web + iOS kimliklerini yaz ("Skip nonce checks" açık). Ayrıntı: "Google ile giriş". Testing modunda arkadaşların Gmail'lerini **Audience > Test users**'a ekle.
-3. **SQL**: `supabase/schema.sql` dosyasını çalıştır, sonra `supabase/cron.sql`. İsteğe bağlı: Authentication > Hooks > Before User Created = `public.hook_before_user_created` (okunur red mesajı). Dashboard'dan elle hesap açacaksan (tetikleyici kapatılamaz): önce `friend_requests` tablosuna o e-posta için bekleyen davet ekle, sonra Add user (Auto Confirm).
+3. **SQL**: `supabase/schema.sql` dosyasını çalıştır, sonra `supabase/cron.sql`. Dashboard'dan elle hesap açmak için doğrudan Add user (Auto Confirm) yeterli. Eski kurulumda Before User Created kancası seçildiyse artık her kaydı geçirir; istersen Hooks'tan kaldırabilirsin.
 4. **Fonksiyonlar ve secret'lar**:
    ```bash
    supabase secrets set GEMINI_API_KEY=... GEMINI_MODEL=gemini-3.8-flash AI_DAILY_LIMIT=100 CRON_SECRET=...
@@ -269,7 +269,7 @@ Sıra önemli: **önce yeni yapı TestFlight'a düşer, sonra SQL çalıştırı
    İsteğe bağlı: `REPORT_REGEN_DAILY_LIMIT` (varsayılan 10). Uygulama `GEMINI_API_KEY` dart-define'ı boşsa `ai-proxy` kullanır.
 5. **Codemagic `app_secrets`**: `GOOGLE_WEB_CLIENT_ID` (ve mevcut `GOOGLE_IOS_CLIENT_ID`). `GEMINI_API_KEY` artık gerekmez.
 6. **TestFlight daveti**: arkadaşları App Store Connect > Kullanıcılar ve Erişim'den ekle (dahili) ya da harici test grubuna e-postayla davet et.
-7. **Arkadaş ekleme**: uygulamada Kokpit > kişi ikonu > e-posta ile istek. İstek gönderilmeden arkadaş kayıt olamaz.
+7. **Arkadaş ekleme**: uygulamada Kokpit > kişi ikonu > e-posta ile istek. İstek henüz kaydolmamış bir e-postaya da gönderilebilir; kişi kaydolunca gelen kutusunda görür.
 
 **Sahibin kontrol listesi**: [ ] Sign up açık, Confirm email açık [ ] Google sağlayıcısı + Web istemcisi [ ] Test kullanıcıları eklendi [ ] Yeni yapı TestFlight'ta [ ] schema.sql + cron.sql çalıştı [ ] secret'lar + iki fonksiyon dağıtıldı [ ] Codemagic `GOOGLE_WEB_CLIENT_ID` [ ] TestFlight davetleri [ ] iki hesapla giriş ve arkadaşlık denemesi [ ] `flutter analyze` / `flutter test` temiz.
 
@@ -459,12 +459,12 @@ bağlanınca bağlı sayılır.
 
 **Hesap birleşmesi**: Supabase aynı doğrulanmış e-postayı aynı kullanıcıya bağlar. Hesabın Gmail adresiyle
 açıldıysa Google girişi aynı veriyi açar; başka bir e-postayla açıldıysa Google **yeni boş hesap** açar
-(davet gerekir) ve eski hesabına e-posta/şifreyle girmeye devam edersin.
+ve eski hesabına e-posta/şifreyle girmeye devam edersin.
 
-**Kayıt kapısı**: davet almamış e-posta Google ile de hesap açamaz; uygulama "Bu e-posta için davet yok. Ritim
-kullanan bir arkadaşından seni e-posta adresinle arkadaş olarak eklemesini iste" der. GoTrue tetikleyici
-hatasının metnini göstermediği için kapı reddi bazen genel "Database error saving new user" olarak döner;
-uygulama ikisini de aynı mesaja çevirir.
+**Açık kayıt**: herkes Google ile ya da e-posta formundaki "Hesabın yok mu? Kayıt ol" ile hesap açabilir.
+E-posta kaydında "Confirm email" açıksa uygulama "Onay e-postası gönderildi, gelen kutunu (ve spam) kontrol et."
+der. Eski davet kapısı kaldırıldı: `signup_invite_gate` tetikleyicisi Supabase'de silinemediği için yerinde
+durur ama her kaydı geçirir.
 
 **Doğrulama durumu**: giriş mantığı sahte Google ve Supabase ile sınandı; gerçek Google girişi gerçek projede
 iki hesapla denenmeden bitmiş sayılmaz.

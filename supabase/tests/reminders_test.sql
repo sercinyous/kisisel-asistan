@@ -4,7 +4,6 @@
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
 
-alter table auth.users disable trigger signup_invite_gate;
 
 create schema rt;
 
@@ -187,4 +186,3 @@ $$;
 rollback;
 
 drop schema rt cascade;
-alter table auth.users enable trigger signup_invite_gate;
