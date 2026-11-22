@@ -5,6 +5,8 @@
 #      şema/nötr seed/Pusholder→İş, arkadaşlar ve yetki sınırları, AI kotası
 #      (paralel oturumlarla atomiklik), SQL-Dart hedef eşliği (SQL tarafı;
 #      Dart tarafı test/friend_goal_parity_test.dart, aynı goal_vectors.json)
+#   1d) profil avatarı: Storage taklidiyle (storage_stub.sql) avatars kovası
+#      politikaları ve arkadaş RPC'lerindeki avatar alanları (avatar_test.sql)
 #   2) rapor fonksiyonları + yetkiler (reports_test.sql), Google antrenman
 #      içe aktarımı (fitness_import_test.sql), profil sütunları
 #      (profile_columns_test.sql)
@@ -100,6 +102,15 @@ if [ "$TRUES" != "10" ] || [ "$COUNT" != "10" ]; then
   exit 1
 fi
 echo "tamam: paralel kota atomik (true=$TRUES, sayaç=$COUNT)"
+
+echo "== 1d) profil avatarı: sütunlar, arkadaş RPC'leri, Storage politikaları =="
+run -d postgres -c "create database avatar"
+run -d avatar -f "$HERE/auth_stub.sql"
+run -d avatar -f "$HERE/storage_stub.sql"
+run -d avatar -f "$SCHEMA"
+run -d avatar -f "$SCHEMA"
+run -d avatar -f "$HERE/avatar_test.sql" >/dev/null
+echo "tamam: avatar (avatar_test)"
 
 echo "== 2) rapor fonksiyonları ve yetkiler =="
 run -d fresh -f "$HERE/reports_test.sql"

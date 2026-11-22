@@ -2,6 +2,8 @@
 /// `friend_goal_summary` RPC'sinden gelir: tarih ya da ham değer yoktur.
 library;
 
+import '../../../core/avatar/avatar_spec.dart';
+
 /// Haftanın Pazartesi'si (yalnızca tarih, saat 00:00).
 DateTime weekStartOf(DateTime day) {
   final d = DateTime(day.year, day.month, day.day);
@@ -55,9 +57,11 @@ class Friend {
     required this.shareSteps,
     required this.shareSleep,
     required this.shareCalories,
+    this.avatar = const AvatarChoice(),
   });
 
   factory Friend.fromMap(Map<String, dynamic> m) => Friend(
+        avatar: AvatarChoice.fromMap(m),
         friendId: m['friend_id'] as String,
         displayName: (m['display_name'] as String?) ?? '',
         shareSteps: (m['share_steps'] as bool?) ?? false,
@@ -70,6 +74,9 @@ class Friend {
   final bool shareSteps;
   final bool shareSleep;
   final bool shareCalories;
+
+  /// Arkadaşın avatar seçimi (`my_friends` RPC'si).
+  final AvatarChoice avatar;
 }
 
 enum GoalMetric {
@@ -204,6 +211,7 @@ class LeaderboardEntry {
     this.sleepWeekAvg,
     this.kcalToday,
     this.kcalWeek,
+    this.avatar = const AvatarChoice(),
   });
 
   factory LeaderboardEntry.fromMap(Map<String, dynamic> m) {
@@ -222,6 +230,7 @@ class LeaderboardEntry {
       sleepWeekAvg: _num(m['sleep_week_avg']),
       kcalToday: _num(m['kcal_today']),
       kcalWeek: _num(m['kcal_week']),
+      avatar: AvatarChoice.fromMap(m),
     );
   }
 
@@ -243,6 +252,10 @@ class LeaderboardEntry {
   final num? kcalToday;
   final num? kcalWeek;
 
+  /// Avatar seçimi (`friend_leaderboard` RPC'si). [avatarUrl] (Google profil
+  /// resmi) avatarda gösterilmez: kendi ve arkadaş görünümü aynı kalır.
+  final AvatarChoice avatar;
+
   /// Seçilen metrik ve dönemin değeri; paylaşılmıyorsa null.
   num? value(GoalMetric metric, RankPeriod period) =>
       switch ((metric, period)) {
@@ -255,16 +268,7 @@ class LeaderboardEntry {
       };
 
   /// Ad soyadın baş harfleri (fotoğraf yoksa).
-  String get initials {
-    final source =
-        displayName.contains('@') ? displayName.split('@').first : displayName;
-    final parts =
-        source.split(RegExp(r'[\s._-]+')).where((p) => p.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    final first = parts.first.substring(0, 1);
-    final last = parts.length > 1 ? parts.last.substring(0, 1) : '';
-    return (first + last).toUpperCase();
-  }
+  String get initials => initialsFor(displayName);
 }
 
 /// En iyi değer önce; paylaşılmayanlar sona, eşitlikte ada göre.

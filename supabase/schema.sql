@@ -433,6 +433,20 @@ alter table public.user_settings
   add column if not exists display_name text check (char_length(display_name) <= 60),
   add column if not exists work_description text check (char_length(work_description) <= 500);
 
+-- Profil avatarı (sürüm 8). avatar_kind: 'initials' (baş harfler, varsayılan),
+-- 'mascot' (assets/mascots/<avatar_mascot>.svg) ya da 'photo' (Storage
+-- avatars/<uid>/avatar.jpg). avatar_color AppColors rol adıdır (null =
+-- varsayılan). avatar_version her fotoğraf yüklemesinde artar (önbellek kırma).
+alter table public.user_settings
+  add column if not exists avatar_kind text not null default 'initials'
+    check (avatar_kind in ('initials', 'mascot', 'photo')),
+  add column if not exists avatar_mascot text
+    check (avatar_mascot ~ '^[a-z_]{1,32}$'),
+  add column if not exists avatar_color text
+    check (avatar_color ~ '^[A-Za-z]{1,32}$'),
+  add column if not exists avatar_version integer not null default 0
+    check (avatar_version >= 0);
+
 -- Nötr varsayılanlar: yalnızca YENİ satırlar etkilenir, mevcut satırlar durur.
 alter table public.user_settings
   alter column start_weight_kg set default 70,
@@ -1250,10 +1264,21 @@ $$;
 
 revoke all on function public.handle_new_user_seed() from public, anon, authenticated;
 
-drop trigger if exists on_auth_user_created_seed on auth.users;
-create trigger on_auth_user_created_seed
-  after insert on auth.users
-  for each row execute function public.handle_new_user_seed();
+-- auth.users Supabase'te supabase_auth_admin'e aittir; DROP TRIGGER "must be
+-- owner" hatası verebilir. Tetikleyici yalnızca yoksa oluşturulur, fonksiyon
+-- gövdesi yukarıda create or replace ile güncellenir (yeniden çalıştırma güvenli).
+do $$
+begin
+  if not exists (
+    select 1 from pg_trigger
+    where tgname = 'on_auth_user_created_seed' and tgrelid = 'auth.users'::regclass and not tgisinternal
+  ) then
+    create trigger on_auth_user_created_seed
+      after insert on auth.users
+      for each row execute function public.handle_new_user_seed();
+  end if;
+end;
+$$;
 
 -- Script çalıştığında zaten var olan kullanıcılar için ayar satırı
 do $$
@@ -1702,13 +1727,20 @@ $$;
 
 -- Arkadaşlarım. share_* arkadaşın bana AÇTIĞI anahtarlardır (kapalıysa
 -- arayüz "paylaşmıyor" der). display_name boşsa maskelenmiş e-posta.
+-- Dönüş tipi sürüm 8'de avatar alanlarıyla genişledi: tekrar çalıştırmada
+-- create or replace tip değiştiremediği için önce düşürülür (yetkiler aşağıda).
+drop function if exists public.my_friends();
 create or replace function public.my_friends()
 returns table (
   friend_id       uuid,
   display_name    text,
   share_steps     boolean,
   share_sleep     boolean,
-  share_calories  boolean
+  share_calories  boolean,
+  avatar_kind     text,
+  avatar_mascot   text,
+  avatar_color    text,
+  avatar_version  integer
 )
 language plpgsql
 stable
@@ -1734,9 +1766,14 @@ begin
   select n.fid, n.name,
          coalesce(sh.share_steps, false),
          coalesce(sh.share_sleep, false),
-         coalesce(sh.share_calories, false)
+         coalesce(sh.share_calories, false),
+         coalesce(us.avatar_kind, 'initials'),
+         us.avatar_mascot,
+         us.avatar_color,
+         coalesce(us.avatar_version, 0)
   from named n
   left join public.friend_sharing sh on sh.user_id = n.fid
+  left join public.user_settings us on us.user_id = n.fid
   order by lower(n.name), n.fid;
 end;
 $$;
@@ -1969,10 +2006,21 @@ begin
 end;
 $$;
 
-drop trigger if exists signup_invite_gate on auth.users;
-create trigger signup_invite_gate
-  before insert on auth.users
-  for each row execute function public.enforce_signup_invite();
+-- auth.users Supabase'te supabase_auth_admin'e aittir; DROP TRIGGER "must be
+-- owner" hatası verebilir. Tetikleyici yalnızca yoksa oluşturulur, fonksiyon
+-- gövdesi yukarıda create or replace ile güncellenir (yeniden çalıştırma güvenli).
+do $$
+begin
+  if not exists (
+    select 1 from pg_trigger
+    where tgname = 'signup_invite_gate' and tgrelid = 'auth.users'::regclass and not tgisinternal
+  ) then
+    create trigger signup_invite_gate
+      before insert on auth.users
+      for each row execute function public.enforce_signup_invite();
+  end if;
+end;
+$$;
 
 -- ---------------------------------------------------------------------
 -- AI kotası (yalnızca service_role)
@@ -2049,6 +2097,7 @@ grant execute on function public.refund_ai_quota(uuid, text) to service_role;
 -- Ad: user_settings.display_name, yoksa Google meta verisi (full_name/name),
 -- yoksa e-posta. Fotoğraf: avatar_url/picture. auth.users istemciye açılmaz.
 -- =====================================================================
+drop function if exists public.friend_leaderboard(date);
 create or replace function public.friend_leaderboard(week_start date)
 returns table (
   user_id         uuid,
@@ -3195,9 +3244,10 @@ revoke all on function public.report_period_metrics(uuid, date, date, boolean)
 grant execute on function public.report_period_metrics(uuid, date, date, boolean)
   to service_role;
 
--- Dönüş tipi değişmez (önceki blok tekrar çalıştırılabilsin). Arkadaşın
+-- Sürüm 8: dönüş tipi avatar alanlarıyla genişledi; her tanımdan önce düşürülür. Arkadaşın
 -- share_* sütunları hedef paylaşımıdır; ham değerler yalnızca hedef
 -- paylaşımı VE share_details açıkken doludur, aksi halde null.
+drop function if exists public.friend_leaderboard(date);
 create or replace function public.friend_leaderboard(week_start date)
 returns table (
   user_id         uuid,
@@ -3213,7 +3263,11 @@ returns table (
   sleep_today     integer,
   sleep_week_avg  integer,
   kcal_today      numeric,
-  kcal_week       numeric
+  kcal_week       numeric,
+  avatar_kind     text,
+  avatar_mascot   text,
+  avatar_color    text,
+  avatar_version  integer
 )
 language plpgsql
 stable
@@ -3247,6 +3301,10 @@ begin
            nullif(btrim(s.display_name), '') as dn,
            public.safe_timezone(s.timezone) as tz,
            coalesce(s.health_source, 'appleHealth') as src,
+           coalesce(s.avatar_kind, 'initials') as akind,
+           s.avatar_mascot as amascot,
+           s.avatar_color as acolor,
+           coalesce(s.avatar_version, 0) as aver,
            coalesce(sh.share_steps, false) as gst,
            coalesce(sh.share_sleep, false) as gsl,
            coalesce(sh.share_calories, false) as gca,
@@ -3277,7 +3335,8 @@ begin
          case when b.ssl then coalesce(h.sl_today, 0) end,
          case when b.ssl then coalesce(h.sl_avg, 0) end,
          case when b.sca then coalesce(n.k_today, 0) end,
-         case when b.sca then coalesce(n.k_week, 0) end
+         case when b.sca then coalesce(n.k_week, 0) end,
+         b.akind, b.amascot, b.acolor, b.aver
   from b
   left join lateral (
     select coalesce(sum(m.steps) filter (where m.metric_date = b.today), 0)::bigint as st_today,
@@ -4025,3 +4084,97 @@ grant execute on function public.complete_onboarding(jsonb, uuid) to authenticat
 revoke all on function public.complete_onboarding(jsonb, uuid) from public, anon;
 grant execute on function public.complete_onboarding(jsonb, uuid) to authenticated;
 -- END faz5_onboarding
+
+
+-- =====================================================================
+-- BEGIN avatar_storage (sürüm 8: profil fotoğrafı) — idempotent
+-- Özel kova `avatars`; nesne yolu <uid>/avatar.jpg. Sahip yalnızca kendi
+-- klasörüne yazar/okur/siler; kabul edilmiş arkadaşlar yalnızca okur.
+-- Storage şeması olmayan yerel PostgreSQL'de bu bölüm atlanır.
+-- =====================================================================
+-- Çağıran, klasör sahibi ya da onun kabul edilmiş arkadaşı mı?
+create or replace function public.avatar_can_read(p_owner text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select auth.uid() is not null and (
+    p_owner = auth.uid()::text
+    or exists (
+      select 1 from public.friendships f
+      where (f.user_a = auth.uid() and f.user_b::text = p_owner)
+         or (f.user_b = auth.uid() and f.user_a::text = p_owner)));
+$$;
+
+revoke all on function public.avatar_can_read(text) from public, anon;
+grant execute on function public.avatar_can_read(text) to authenticated;
+
+do $$
+begin
+  if to_regclass('storage.objects') is null or to_regclass('storage.buckets') is null then
+    raise notice 'storage şeması yok: avatars kovası ve politikaları atlandı';
+    return;
+  end if;
+
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('avatars', 'avatars', false, 1048576, array['image/jpeg'])
+  on conflict (id) do update
+    set public = false,
+        file_size_limit = excluded.file_size_limit,
+        allowed_mime_types = excluded.allowed_mime_types;
+
+  drop policy if exists avatars_select on storage.objects;
+  drop policy if exists avatars_insert on storage.objects;
+  drop policy if exists avatars_update on storage.objects;
+  drop policy if exists avatars_delete on storage.objects;
+
+  create policy avatars_select on storage.objects
+    for select to authenticated
+    using (bucket_id = 'avatars'
+           and public.avatar_can_read((storage.foldername(name))[1]));
+  create policy avatars_insert on storage.objects
+    for insert to authenticated
+    with check (bucket_id = 'avatars'
+                and name = (select auth.uid())::text || '/avatar.jpg');
+  create policy avatars_update on storage.objects
+    for update to authenticated
+    using (bucket_id = 'avatars'
+           and name = (select auth.uid())::text || '/avatar.jpg')
+    with check (bucket_id = 'avatars'
+                and name = (select auth.uid())::text || '/avatar.jpg');
+  create policy avatars_delete on storage.objects
+    for delete to authenticated
+    using (bucket_id = 'avatars'
+           and name = (select auth.uid())::text || '/avatar.jpg');
+end;
+$$;
+-- END avatar_storage
+
+-- BEGIN ensure_user_settings — idempotent
+-- Ayar satırı yoksa (ör. kayıt tetikleyicisi atlandıysa) varsayılanlarla
+-- oluşturur ve döndürür; varsa dokunmadan döndürür. İstemci fetch() yedeği.
+create or replace function public.ensure_user_settings()
+returns public.user_settings
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  uid uuid := auth.uid();
+  result public.user_settings;
+begin
+  if uid is null then
+    raise exception 'oturum yok' using errcode = '42501';
+  end if;
+  insert into public.user_settings (user_id) values (uid)
+  on conflict (user_id) do nothing;
+  select * into result from public.user_settings where user_id = uid;
+  return result;
+end;
+$$;
+
+revoke all on function public.ensure_user_settings() from public, anon;
+grant execute on function public.ensure_user_settings() to authenticated;
+-- END ensure_user_settings

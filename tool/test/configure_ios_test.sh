@@ -50,6 +50,10 @@ grep -q "GOOGLE_IOS_CLIENT_ID verilmedi" <<<"$out" || fail "atlama mesajı yok"
 [[ "$(value GIDClientID)" == "null" ]] || fail "GIDClientID yazılmamalıydı"
 [[ "$(value CFBundleURLTypes)" == "null" ]] || fail "URL şeması yazılmamalıydı"
 [[ "$(value CFBundleDisplayName)" == '"Ritim"' ]] || fail "diğer anahtarlar yazılmadı"
+[[ "$(value NSPhotoLibraryUsageDescription)" == *"Profil fotoğrafı"* ]] \
+  || fail "NSPhotoLibraryUsageDescription yazılmadı: $(value NSPhotoLibraryUsageDescription)"
+[[ "$(value NSCameraUsageDescription)" == *"kamera"* ]] \
+  || fail "NSCameraUsageDescription yazılmadı: $(value NSCameraUsageDescription)"
 echo "tamam"
 
 echo "== 2) istemci kimliği verilince GIDClientID + ters kimlikli URL şeması =="

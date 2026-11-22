@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/avatar/avatar_spec.dart';
 import '../../operations/domain/task_category.dart';
 import '../data/settings_repository.dart';
 import '../domain/user_settings.dart';
@@ -17,6 +18,13 @@ class UserSettingsNotifier extends AsyncNotifier<UserSettings> {
   /// Hata çağırana iletilir; mevcut değer korunur.
   Future<UserSettings> save(UserSettings settings) async {
     final saved = await ref.read(settingsRepositoryProvider).save(settings);
+    state = AsyncData(saved);
+    return saved;
+  }
+
+  /// Yalnızca avatar seçimini yazar ve dönen satırı yayınlar.
+  Future<UserSettings> saveAvatar(AvatarChoice avatar) async {
+    final saved = await ref.read(settingsRepositoryProvider).saveAvatar(avatar);
     state = AsyncData(saved);
     return saved;
   }

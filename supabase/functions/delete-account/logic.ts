@@ -40,13 +40,58 @@ export function normalizeEmail(email: string | null | undefined): string | null 
 }
 
 /** Silme adımları sırası: önce açık silmeler, en son auth kullanıcısı. */
-export type DeletionStep = "friendships" | "friend_requests" | "auth_user";
+export type DeletionStep = "friendships" | "friend_requests" | "avatars" | "auth_user";
 
 export const DELETION_STEPS: readonly DeletionStep[] = [
   "friendships",
   "friend_requests",
+  "avatars",
   "auth_user",
 ];
+
+/** Profil fotoğrafının Storage kovası; dosyalar `<uid>/` klasöründedir. */
+export const AVATAR_BUCKET = "avatars";
+
+/** Profil fotoğrafının sabit yolu (Storage politikası yalnızca bunu kabul eder). */
+export function avatarObjectPath(userId: string): string {
+  return `${userId}/avatar.jpg`;
+}
+
+/** Storage list() girdisi: klasörlerin `id`'si null'dır. */
+export interface StorageEntry {
+  name: string;
+  id?: string | null;
+}
+
+/** Klasördeki dosya girdilerinden silinecek tam yollar; klasör girdileri atlanır. */
+export function avatarPaths(userId: string, entries: readonly StorageEntry[]): string[] {
+  return entries
+    .filter((e) => e.name.length > 0 && !e.name.includes("/") && e.id !== null)
+    .map((e) => `${userId}/${e.name}`);
+}
+
+export interface AvatarBucket {
+  list(prefix: string): Promise<StorageEntry[]>;
+  remove(paths: string[]): Promise<number>;
+}
+
+/**
+ * Önce sabit yolu siler, sonra klasörde kalan dosyaları temizler. Bir tur hiçbir
+ * şey silmezse durur (sonsuz döngü olmaz); en fazla [maxPasses] tur.
+ */
+export async function purgeAvatars(
+  bucket: AvatarBucket,
+  userId: string,
+  maxPasses = 10,
+): Promise<void> {
+  await bucket.remove([avatarObjectPath(userId)]);
+  for (let pass = 0; pass < maxPasses; pass++) {
+    const paths = avatarPaths(userId, await bucket.list(userId));
+    if (paths.length === 0) return;
+    const removed = await bucket.remove(paths);
+    if (removed === 0) return;
+  }
+}
 
 export function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

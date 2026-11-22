@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../../core/theme/app_theme.dart';
 import '../domain/user_settings.dart';
+import 'avatar_picker_sheet.dart';
 import 'delete_account_screen.dart';
+import 'my_avatar.dart';
 import 'settings_providers.dart';
 import 'settings_widgets.dart';
 
@@ -333,6 +335,43 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: settingsListPadding,
                 children: [
+                  Center(
+                    child: Semantics(
+                      button: true,
+                      label: 'Profil resmini değiştir',
+                      child: InkWell(
+                        key: const Key('profile-avatar'),
+                        customBorder: const CircleBorder(),
+                        onTap: () => showAvatarPickerSheet(context),
+                        child: Stack(
+                          children: [
+                            const MyAvatar(size: 96),
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(AppSpacing.sm),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: AppColors.background,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.edit_rounded,
+                                  size: 16,
+                                  color: AppColors.onAccent,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.section),
                   _goalsCard(),
                   const SizedBox(height: AppSpacing.grid),
                   _profileCard(),

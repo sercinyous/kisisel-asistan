@@ -315,7 +315,9 @@ select tf.eq('Ali''nin listesi: Veli, maskelenmiş e-posta, anahtarlar kapalı',
   tf.run('authenticated', :U1, $q$select jsonb_agg(to_jsonb(f)) from public.my_friends() f$q$),
   jsonb_build_array(jsonb_build_object(
     'friend_id', 'a2000000-0000-0000-0000-000000000002', 'display_name', 'v***@example.com',
-    'share_steps', false, 'share_sleep', false, 'share_calories', false)));
+    'share_steps', false, 'share_sleep', false, 'share_calories', false,
+    'avatar_kind', 'initials', 'avatar_mascot', null, 'avatar_color', null,
+    'avatar_version', 0)));
 select tf.eq('Veli''nin listesi: Ali ve Ayşe (ada göre)',
   tf.run('authenticated', :U2, $q$select jsonb_agg(f.display_name order by f.display_name) from public.my_friends() f$q$),
   '["Ali", "Ayşe"]'::jsonb);
@@ -365,9 +367,9 @@ select tf.eq('üç anahtar açık: adım 2/3, uyku 2/3, kalori 1/2',
 select tf.eq('özet yalnızca bu alanları taşır (tarih/değer yok)',
   tf.run('authenticated', :U1, $q$select jsonb_agg(distinct k) from public.friend_goal_summary('a2000000-0000-0000-0000-000000000002', '2026-01-05') s, jsonb_object_keys(to_jsonb(s)) k$q$),
   '["data_days", "goal_days", "metric", "shared"]'::jsonb);
-select tf.eq('arkadaşın profili/ham verisi arkadaş listesinde de yok (yalnızca beş alan)',
+select tf.eq('arkadaşın profili/ham verisi arkadaş listesinde de yok (ad, anahtarlar, avatar)',
   tf.run('authenticated', :U1, $q$select jsonb_agg(distinct k) from public.my_friends() s, jsonb_object_keys(to_jsonb(s)) k$q$),
-  '["display_name", "friend_id", "share_calories", "share_sleep", "share_steps"]'::jsonb);
+  '["avatar_color", "avatar_kind", "avatar_mascot", "avatar_version", "display_name", "friend_id", "share_calories", "share_sleep", "share_steps"]'::jsonb);
 select tf.eq('arkadaşın anahtarları listede görünür',
   tf.run('authenticated', :U1, $q$select jsonb_agg(f.share_steps and f.share_sleep and f.share_calories) from public.my_friends() f$q$),
   '[true]'::jsonb);

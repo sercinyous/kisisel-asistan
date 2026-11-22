@@ -11,6 +11,7 @@ function setup(overrides = {}) {
     userFromJwt: async (t) => (t === "gecerli" ? { id: "u1", email: "Ali@Example.com" } : null),
     deleteFriendships: async (id) => calls.push(["friendships", id]),
     deleteFriendRequests: async (id, email) => calls.push(["requests", id, email]),
+    deleteAvatars: async (id) => calls.push(["avatars", id]),
     deleteAuthUser: async (id) => calls.push(["auth", id]),
     ...overrides,
   };
@@ -32,6 +33,7 @@ test("geçerli istek sırayla siler", async () => {
   assert.deepEqual(calls, [
     ["friendships", "u1"],
     ["requests", "u1", "ali@example.com"],
+    ["avatars", "u1"],
     ["auth", "u1"],
   ]);
 });
@@ -69,4 +71,18 @@ test("bir adım başarısızsa auth kullanıcısı silinmez ve 500", async () =>
   assert.deepEqual(calls, [["friendships", "u1"]]);
   assert.equal(log.length, 1);
   assert.ok(!log[0].includes("u1"));
+});
+
+test("avatar silme başarısızsa auth kullanıcısı silinmez", async () => {
+  const { calls, handler } = setup({
+    deleteAvatars: async () => {
+      throw new Error("storage");
+    },
+  });
+  const res = await handler(req({ confirm: "SİL" }));
+  assert.equal(res.status, 500);
+  assert.deepEqual(calls, [
+    ["friendships", "u1"],
+    ["requests", "u1", "ali@example.com"],
+  ]);
 });

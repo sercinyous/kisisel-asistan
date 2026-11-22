@@ -20,6 +20,7 @@ import '../data/onboarding_writer.dart';
 import '../domain/goal_suggestion.dart';
 import '../domain/onboarding_answers.dart';
 import '../domain/onboarding_result.dart';
+import 'onboarding_avatar_step.dart';
 import 'onboarding_body_step.dart';
 import 'onboarding_health_step.dart';
 import 'onboarding_intro.dart';
@@ -28,9 +29,10 @@ import 'onboarding_profile_step.dart';
 import 'onboarding_routines_step.dart';
 import 'onboarding_targets_step.dart';
 
-/// İlk kurulumun adımları: 5 kartlık tanıtım, profil, sağlık kaynağı, boy ve
-/// kilo (kaynaktan ön doldurulur), hedefler, rutinler + bildirimler.
-enum OnboardingStep { intro, profile, health, body, targets, routines }
+/// İlk kurulumun adımları: 5 kartlık tanıtım, profil, profil resmi (isteğe
+/// bağlı), sağlık kaynağı, boy ve kilo (kaynaktan ön doldurulur), hedefler,
+/// rutinler + bildirimler.
+enum OnboardingStep { intro, profile, avatar, health, body, targets, routines }
 
 /// İlk kurulum: kılavuz ve sorular. Giriş sonrası `onboarded_at` boşsa kapı
 /// bunu gösterir; sonuç tek `user_settings` kaydıyla yazılır, seçilen rutinler
@@ -312,6 +314,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           _goTo(OnboardingStep.profile);
         }
       case OnboardingStep.profile:
+        _goTo(OnboardingStep.avatar);
+      case OnboardingStep.avatar:
         _goTo(OnboardingStep.health);
       case OnboardingStep.health:
         _goTo(OnboardingStep.body);
@@ -503,6 +507,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           onTimezone: (value) => setState(() => _timezone = value),
           nowYear: _now().year,
         );
+      case OnboardingStep.avatar:
+        return OnboardingAvatarStep(name: _name.text, onSkip: _next);
       case OnboardingStep.health:
         return OnboardingHealthStep(
           access: _health,

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/health_source.dart'
     show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
+import 'package:kisisel_asistan/core/services/error_reporter.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/supabase_providers.dart';
@@ -20,6 +23,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../helpers/fakes.dart';
 
 class _Harness {
+  final reported = <(Object, StackTrace?)>[];
   final settings = FakeSettingsRepository();
   final routines = FakeRoutinesRepository();
   final health = FakeHealthRepository();
@@ -48,6 +52,7 @@ class _Harness {
         authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
         onboardingRepositoryProvider.overrideWithValue(onboarding),
         onboardingOpKeyStoreProvider.overrideWithValue(keys),
+        reportErrorProvider.overrideWithValue((e, s) => reported.add((e, s))),
       ];
 }
 
@@ -119,6 +124,8 @@ void main() {
     await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
     await tap(tester, 'onboarding-sex-male');
     await tap(tester, 'onboarding-next');
+    expect(find.text('Profilini seç'), findsOneWidget);
+    await tap(tester, 'onboarding-next');
     expect(find.text('Sağlık verisi'), findsOneWidget);
     await tap(tester, 'onboarding-next');
     expect(find.text('Boy ve kilo'), findsOneWidget);
@@ -129,11 +136,22 @@ void main() {
     await tap(tester, 'onboarding-goal-$goal');
   }
 
+  group('technicalErrorCode', () {
+    test('PostgREST kodu, ağ ve tür', () {
+      expect(
+        technicalErrorCode(const PostgrestException(message: 'x', code: '42501')),
+        'Kod: PG 42501',
+      );
+      expect(technicalErrorCode(TimeoutException('t')), 'Kod: NET Timeout');
+      expect(technicalErrorCode(StateError('s')), 'Kod: StateError');
+    });
+  });
+
   group('OnboardingGate', () {
     testWidgets('onboarded_at boşsa kılavuz, doluysa ana kabuk', (tester) async {
       await pumpGate(tester);
       expect(find.text('ana kabuk'), findsNothing);
-      expect(find.text('Adım 1 / 6'), findsOneWidget);
+      expect(find.text('Adım 1 / 7'), findsOneWidget);
       expect(find.text('Kokpit: günün tek bakışta'), findsOneWidget);
     });
 
@@ -151,6 +169,10 @@ void main() {
       await pumpGate(tester);
       expect(find.text('Hesabın yüklenemedi'), findsOneWidget);
       expect(find.text('ana kabuk'), findsNothing);
+      expect(find.text('Kod: StateError'), findsOneWidget);
+      expect(h.reported, hasLength(1));
+      expect(h.reported.single.$1, isA<StateError>());
+      expect(h.reported.single.$2, isNotNull);
 
       h.settings.fetchError = null;
       h.settings.settings =
@@ -188,7 +210,7 @@ void main() {
       await pumpGate(tester);
       await tap(tester, 'onboarding-skip-intro');
       expect(find.text('Seni tanıyalım'), findsOneWidget);
-      expect(find.text('Adım 2 / 6'), findsOneWidget);
+      expect(find.text('Adım 2 / 7'), findsOneWidget);
     });
 
     testWidgets('yeniden gösterim: yalnızca kartlar, Bitti kapatır, hiçbir şey '
@@ -242,7 +264,7 @@ void main() {
         (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
-      expect(find.text('Adım 2 / 6'), findsOneWidget);
+      expect(find.text('Adım 2 / 7'), findsOneWidget);
       expect(find.byKey(const Key('onboarding-timezone')), findsOneWidget);
       expect(find.text('Belirtmek istemiyorum'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
@@ -252,7 +274,10 @@ void main() {
       expect(nextEnabled(tester), isTrue, reason: 'cinsiyet isteğe bağlı');
 
       await tap(tester, 'onboarding-next');
-      expect(find.text('Adım 3 / 6'), findsOneWidget);
+      expect(find.text('Adım 3 / 7'), findsOneWidget);
+      expect(find.text('Profilini seç'), findsOneWidget);
+      await tap(tester, 'onboarding-avatar-skip');
+      expect(find.text('Adım 4 / 7'), findsOneWidget);
       expect(find.text('Sağlık verisi'), findsOneWidget);
       expect(find.text('İleri'), findsOneWidget);
     });
@@ -264,7 +289,8 @@ void main() {
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
-      expect(find.text('Adım 4 / 6'), findsOneWidget);
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Adım 5 / 7'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
       await type(tester, 'onboarding-height', '50');
       expect(find.text('100–250 arasında olmalı.'), findsOneWidget);
@@ -283,6 +309,7 @@ void main() {
       await skipIntro(tester);
       await type(tester, 'onboarding-name', 'Ayşe');
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-health-request');
       expect(find.text('İzin verildi.'), findsOneWidget);
@@ -304,6 +331,7 @@ void main() {
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
+      await tap(tester, 'onboarding-next');
       expect(fieldText(tester, 'onboarding-height'), '');
       expect(fieldText(tester, 'onboarding-weight'), '');
     });
@@ -313,7 +341,7 @@ void main() {
       await pumpGate(tester);
       await skipIntro(tester);
       await fillToTargets(tester);
-      expect(find.text('Adım 5 / 6'), findsOneWidget);
+      expect(find.text('Adım 6 / 7'), findsOneWidget);
       // 80 / 1,8² = 24,7 → Normal; hedef kilo = mevcut kilo.
       expect(find.text('24,7 · Normal'), findsOneWidget);
       expect(fieldText(tester, 'onboarding-target-weight'), '80');
@@ -360,6 +388,37 @@ void main() {
     });
   });
 
+  group('Profil resmi adımı', () {
+    testWidgets('Atla baş harflerle sağlık adımına geçer, hiçbir şey yazılmaz',
+        (tester) async {
+      await pumpGate(tester);
+      await skipIntro(tester);
+      await type(tester, 'onboarding-name', 'Ayşe Demir');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Profilini seç'), findsOneWidget);
+      expect(find.text('AD'), findsOneWidget, reason: 'baş harf önizlemesi');
+      expect(find.byKey(const Key('mascot-kaplumbaga')), findsOneWidget);
+      await tap(tester, 'onboarding-avatar-skip');
+      expect(find.text('Sağlık verisi'), findsOneWidget);
+      expect(h.settings.savedAvatars, isEmpty);
+    });
+
+    testWidgets('maskot seçimi hemen kaydedilir ve ilk kurulumla korunur',
+        (tester) async {
+      await pumpGate(tester);
+      await skipIntro(tester);
+      await type(tester, 'onboarding-name', 'Ayşe');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
+      await tap(tester, 'mascot-panda');
+      expect(h.settings.savedAvatars.single.mascotId, 'panda');
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Sağlık verisi'), findsOneWidget);
+      expect(h.settings.settings!.avatar.mascotId, 'panda');
+    });
+  });
+
   group('Tamamlama', () {
     testWidgets('tek ayar kaydı, seçilen rutinler ve tartı yazılır; ana kabuk '
         'açılır', (tester) async {
@@ -373,7 +432,7 @@ void main() {
       await tap(tester, 'onboarding-next');
 
       // Son adım: rutinler + bildirimler, Başla.
-      expect(find.text('Adım 6 / 6'), findsOneWidget);
+      expect(find.text('Adım 7 / 7'), findsOneWidget);
       expect(find.text('Başlangıç rutinleri'), findsOneWidget);
       expect(find.text('Bildirimler'), findsWidgets);
       expect(find.text('Başla'), findsOneWidget);
@@ -417,6 +476,7 @@ void main() {
       await skipIntro(tester);
       await type(tester, 'onboarding-name', 'Ayşe');
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
       await type(tester, 'onboarding-height', '170');

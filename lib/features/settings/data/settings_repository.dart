@@ -1,7 +1,12 @@
+import 'dart:async';
+import 'dart:io' show SocketException;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' show ClientException;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/supabase_providers.dart';
+import '../../../core/avatar/avatar_spec.dart';
 import '../domain/user_settings.dart';
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -34,8 +39,31 @@ class SettingsRepository {
     return id;
   }
 
-  /// Kullanıcının ayar satırı; yoksa varsayılanlarla oluşturulur.
-  Future<UserSettings> fetch() async {
+  /// Ağ hatası mı (bağlantı, istemci, zaman aşımı)? Yalnızca bunlar yinelenir.
+  static bool isNetworkError(Object error) =>
+      error is SocketException ||
+      error is ClientException ||
+      error is TimeoutException;
+
+  /// [op]'u çalıştırır; ağ hatasında [delay] sonra bir kez daha dener.
+  static Future<T> withNetworkRetry<T>(
+    Future<T> Function() op, {
+    Duration delay = const Duration(milliseconds: 600),
+  }) async {
+    try {
+      return await op();
+    } catch (error) {
+      if (!isNetworkError(error)) rethrow;
+      await Future<void>.delayed(delay);
+      return op();
+    }
+  }
+
+  /// Kullanıcının ayar satırı; yoksa varsayılanlarla oluşturulur
+  /// (`ensure_user_settings`, idempotent). Ağ hatasında bir kez yinelenir.
+  Future<UserSettings> fetch() => withNetworkRetry(_fetchOnce);
+
+  Future<UserSettings> _fetchOnce() async {
     final userId = _userId;
     final existing = await _client
         .from('user_settings')
@@ -44,20 +72,11 @@ class SettingsRepository {
         .maybeSingle();
     if (existing != null) return parseRow(existing);
 
-    // Yalnızca kullanıcı kimliği yazılır: sütun varsayılanlarını (nötr
-    // hedefler, boş `onboarded_at`) veritabanı verir; yeni hesap kılavuza düşer.
-    // ignoreDuplicates: aynı anda başka bir okuma satırı açtıysa onunki kalır.
-    await _client.from('user_settings').upsert(
-      {'user_id': userId},
-      onConflict: 'user_id',
-      ignoreDuplicates: true,
-    );
-    final created = await _client
-        .from('user_settings')
-        .select()
-        .eq('user_id', userId)
-        .single();
-    return parseRow(created);
+    // Satırı sunucu açar (yalnızca kimlik; diğer sütunlar varsayılan, boş
+    // `onboarded_at` → yeni hesap kılavuza düşer). Varsa dokunmaz.
+    final created = await _client.rpc('ensure_user_settings');
+    final row = created is List ? created.first : created;
+    return parseRow(Map<String, dynamic>.from(row as Map));
   }
 
   Future<UserSettings> save(UserSettings settings) async {
@@ -67,6 +86,17 @@ class SettingsRepository {
           {'user_id': _userId, ...settings.toMap()},
           onConflict: 'user_id',
         )
+        .select()
+        .single();
+    return parseRow(row);
+  }
+
+  /// Yalnızca avatar sütunlarını yazar; diğer ayarlara dokunmaz.
+  Future<UserSettings> saveAvatar(AvatarChoice avatar) async {
+    final row = await _client
+        .from('user_settings')
+        .update(avatar.toMap())
+        .eq('user_id', _userId)
         .select()
         .single();
     return parseRow(row);

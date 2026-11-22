@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Uygulama sürümü (Codemagic `--dart-define=APP_VERSION=...` ile verir).
@@ -61,6 +62,9 @@ class ErrorReporter {
   final List<ErrorReport> _pending = [];
   Timer? _timer;
 
+  /// [install] edilen etkin raporlayıcı; yoksa (test, hata ayıklama) null.
+  static ErrorReporter? current;
+
   /// Bekleyen kayıt sayısı (test için).
   int get pendingCount => _pending.length;
 
@@ -117,6 +121,7 @@ class ErrorReporter {
 
   /// Flutter, platform ve zone hatalarını bu raporlayıcıya bağlar.
   void install() {
+    current = this;
     final previous = FlutterError.onError;
     FlutterError.onError = (details) {
       report(details.exception, details.stack);
@@ -174,3 +179,11 @@ ErrorReporter supabaseErrorReporter(SupabaseClient client) {
     },
   );
 }
+
+/// Yakalanmış ama sessiz geçilmemesi gereken hataları bildirir. Varsayılan:
+/// etkin [ErrorReporter] (yoksa hiçbir şey yapmaz); testte değiştirilebilir.
+typedef ReportError = void Function(Object error, StackTrace? stack);
+
+final reportErrorProvider = Provider<ReportError>(
+  (ref) => (error, stack) => ErrorReporter.current?.report(error, stack),
+);

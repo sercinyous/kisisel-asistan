@@ -16,6 +16,7 @@ import 'appearance_page.dart';
 import 'categories_team_page.dart';
 import 'connections_page.dart';
 import 'feedback_sheet.dart';
+import 'my_avatar.dart';
 import 'notifications_page.dart';
 import 'privacy_screen.dart';
 import 'profile_goals_page.dart';
@@ -119,31 +120,37 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
           120,
         ),
         children: [
-          if ((name != null && name.isNotEmpty) ||
-              (email != null && email.isNotEmpty))
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xs,
-                0,
-                AppSpacing.xs,
-                AppSpacing.md,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (name != null && name.isNotEmpty)
-                    Text(name, style: theme.textTheme.titleMedium),
-                  if (email != null && email.isNotEmpty)
-                    Text(
-                      email,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: AppColors.textMuted),
-                    ),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xs,
+              0,
+              AppSpacing.xs,
+              AppSpacing.md,
             ),
+            child: Row(
+              children: [
+                const MyAvatar(key: Key('hesap-avatar'), size: 52),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (name != null && name.isNotEmpty)
+                        Text(name, style: theme.textTheme.titleMedium),
+                      if (email != null && email.isNotEmpty)
+                        Text(
+                          email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textMuted),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           BentoCard(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Column(

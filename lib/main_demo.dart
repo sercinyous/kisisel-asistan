@@ -11,6 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/avatar/avatar_photo_store.dart';
 import 'core/services/google_auth.dart';
 import 'core/services/health_service.dart';
 import 'core/services/notification_service.dart';
@@ -106,6 +107,10 @@ Future<void> main() async {
         notificationServiceProvider
             .overrideWithValue(FakeNotificationService()),
         friendsRepositoryProvider.overrideWithValue(DemoFriendsRepository()),
+        // Tarayıcıda fotoğraf seçilemez: yalnızca maskot ve baş harfler.
+        avatarPhotoSupportedProvider.overrideWithValue(false),
+        avatarPhotoStoreProvider
+            .overrideWithValue(const UnsupportedAvatarPhotoStore()),
         settingsRepositoryProvider.overrideWithValue(data.settings),
         onboardingRepositoryProvider.overrideWithValue(
           FakeOnboardingRepository(

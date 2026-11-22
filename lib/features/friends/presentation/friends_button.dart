@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import 'friends_providers.dart';
 import '../../settings/presentation/hesap_screen.dart';
+import '../../settings/presentation/my_avatar.dart';
 
 /// Kokpit başlığındaki profil ikonu (Hesap ekranını açar) + bekleyen arkadaş
 /// daveti rozeti. Uygulama açılınca
@@ -53,7 +54,7 @@ class _FriendsButtonState extends ConsumerState<FriendsButton>
         label: Text('$count'),
         backgroundColor: AppColors.danger,
         textColor: AppColors.onAccent,
-        child: const Icon(Icons.account_circle_outlined),
+        child: const MyAvatar(key: Key('kokpit-avatar'), size: 28),
       ),
     );
   }
