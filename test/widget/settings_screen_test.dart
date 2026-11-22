@@ -65,6 +65,7 @@ void main() {
     await pumpSettings(tester, textScale: 1.3, home: const HesapScreen());
     expect(tester.takeException(), isNull);
     expect(find.byType(HesapScreen), findsOneWidget);
+    expect(find.byKey(const Key('hesap-avatar')), findsOneWidget);
     for (final title in [
       'Profil ve hedefler',
       'Arkadaşlar',
@@ -80,7 +81,6 @@ void main() {
       expect(find.text(title), findsOneWidget, reason: title);
     }
     expect(tester.takeException(), isNull);
-    expect(find.byKey(const Key('hesap-avatar')), findsOneWidget);
     expect(find.text('Hatırlatıcılar'), findsNothing);
     expect(find.text('Kaydet'), findsNothing);
     expect(find.text('Koyu'), findsOneWidget);

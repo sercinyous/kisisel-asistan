@@ -271,6 +271,27 @@ Sıra önemli: **önce yeni yapı TestFlight'a düşer, sonra SQL çalıştırı
 6. **TestFlight daveti**: arkadaşları App Store Connect > Kullanıcılar ve Erişim'den ekle (dahili) ya da harici test grubuna e-postayla davet et.
 7. **Arkadaş ekleme**: uygulamada Kokpit > kişi ikonu > e-posta ile istek. İstek henüz kaydolmamış bir e-postaya da gönderilebilir; kişi kaydolunca gelen kutusunda görür.
 
+### Profil avatarı (maskot, fotoğraf, baş harfler)
+
+Hesap › Profil ve hedefler'in üstündeki büyük avatara dokununca maskot (16 hayvan), fotoğraf (kamera ya da
+galeri; telefonda ortadan kare kırpılıp 512 px JPEG'e küçültülür) ya da baş harf rengi seçilir. İlk kurulumda
+profil adımından sonra isteğe bağlı "Profilini seç" adımı vardır. Arkadaşlar listesinde, İçgörü arkadaş
+satırında ve Kokpit profil ikonunda görünür. Web demosunda fotoğraf seçenekleri gizlidir.
+
+Sahibin adımları (bir kez):
+
+1. **SQL**: SQL Editor'da `supabase/schema.sql` dosyasını yeniden çalıştır (idempotent). Sonda
+   `avatar_storage` bölümü özel `avatars` kovasını (1 MB, yalnızca `image/jpeg`) ve `storage.objects`
+   üzerindeki dört politikayı kurar: sahip yalnızca `<uid>/` klasörüne yazar/günceller/siler/okur, kabul
+   edilmiş arkadaşlar yalnızca okur. `user_settings.avatar_*` sütunları eklenir; `my_friends` ve
+   `friend_leaderboard` avatar alanlarını da döndürür.
+2. **Kontrol**: Dashboard > Storage'da `avatars` kovası "Private" görünmeli; Policies sekmesinde
+   `avatars_select/insert/update/delete` listelenmeli.
+3. **Fonksiyon**: hesap silme artık kişinin `avatars/<uid>/` dosyalarını da siler:
+   `supabase functions deploy delete-account --no-verify-jwt`.
+4. **iOS**: `tool/configure_ios.sh` Info.plist'e `NSPhotoLibraryUsageDescription` ve
+   `NSCameraUsageDescription` ekler (Codemagic derlemesi kendiliğinden çalıştırır).
+
 **Sahibin kontrol listesi**: [ ] Sign up açık, Confirm email açık [ ] Google sağlayıcısı + Web istemcisi [ ] Test kullanıcıları eklendi [ ] Yeni yapı TestFlight'ta [ ] schema.sql + cron.sql çalıştı [ ] secret'lar + iki fonksiyon dağıtıldı [ ] Codemagic `GOOGLE_WEB_CLIENT_ID` [ ] TestFlight davetleri [ ] iki hesapla giriş ve arkadaşlık denemesi [ ] `flutter analyze` / `flutter test` temiz.
 
 ## Otomatik raporlar

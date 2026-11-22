@@ -368,6 +368,37 @@ void main() {
     });
   });
 
+  group('Profil resmi adımı', () {
+    testWidgets('Atla baş harflerle sağlık adımına geçer, hiçbir şey yazılmaz',
+        (tester) async {
+      await pumpGate(tester);
+      await skipIntro(tester);
+      await type(tester, 'onboarding-name', 'Ayşe Demir');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Profilini seç'), findsOneWidget);
+      expect(find.text('AD'), findsOneWidget, reason: 'baş harf önizlemesi');
+      expect(find.byKey(const Key('mascot-kaplumbaga')), findsOneWidget);
+      await tap(tester, 'onboarding-avatar-skip');
+      expect(find.text('Sağlık verisi'), findsOneWidget);
+      expect(h.settings.savedAvatars, isEmpty);
+    });
+
+    testWidgets('maskot seçimi hemen kaydedilir ve ilk kurulumla korunur',
+        (tester) async {
+      await pumpGate(tester);
+      await skipIntro(tester);
+      await type(tester, 'onboarding-name', 'Ayşe');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
+      await tap(tester, 'mascot-panda');
+      expect(h.settings.savedAvatars.single.mascotId, 'panda');
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Sağlık verisi'), findsOneWidget);
+      expect(h.settings.settings!.avatar.mascotId, 'panda');
+    });
+  });
+
   group('Tamamlama', () {
     testWidgets('tek ayar kaydı, seçilen rutinler ve tartı yazılır; ana kabuk '
         'açılır', (tester) async {

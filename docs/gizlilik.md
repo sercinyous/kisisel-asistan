@@ -12,7 +12,7 @@ Verin Supabase üzerinde saklanır. Her kullanıcının satırları veritabanı 
 
 Hesap: e-posta adresin ve giriş bilgilerin (şifre ya da Google ile giriş). Şifren yalnızca kimlik doğrulama servisinde, şifrelenmiş olarak tutulur.
 
-Profil: görünen adın, boy, doğum yılı, cinsiyet, saat dilimi, hedeflerin (adım, uyku, kalori, su, kilo) ve uygulama ayarların.
+Profil: görünen adın, profil resmin (seçtiğin maskot ya da yüklediğin fotoğraf), boy, doğum yılı, cinsiyet, saat dilimi, hedeflerin (adım, uyku, kalori, su, kilo) ve uygulama ayarların. Profil fotoğrafı yüklemeden önce telefonunda kare kırpılıp küçültülür ve özel bir depolama alanında saklanır.
 
 Sağlık verileri: izin verirsen Apple Sağlık'tan (iPhone) ya da Google Health'ten adım, uyku, aktif enerji, boy ve kilo okunur. Uygulamada günlük özetler (günlük adım, uyku süresi, yakılan kalori) ve antrenman kayıtları saklanır; ham dakika dakika veri sunucuya gönderilmez. Apple Sağlık içe aktarımı her hesap için ayrıca onaylanır.
 
@@ -38,7 +38,7 @@ Gemini'ye giden içerik Google'ın Gemini API koşullarına tabidir. AI'ya gizli
 
 Sen: kendi verilerinin tamamını.
 
-Arkadaşların: yalnızca senin açtığın kadarını. Adım, uyku ve kalori anahtarları ayrı ayrıdır ve varsayılan kapalıdır; açarsan arkadaşların yalnızca hedefini tutturduğun gün sayısını ve sıralamayı görür. Gerçek değerler (ör. kaç adım attığın) ayrıca "ayrıntıları paylaş" onayı verirsen görünür. Görevlerin, notların, öğünlerin, rutinlerin ve hatırlatıcıların hiçbir arkadaşla paylaşılmaz. Arkadaşlar senin e-postanı maskeli görür.
+Arkadaşların: yalnızca senin açtığın kadarını. Adım, uyku ve kalori anahtarları ayrı ayrıdır ve varsayılan kapalıdır; açarsan arkadaşların yalnızca hedefini tutturduğun gün sayısını ve sıralamayı görür. Gerçek değerler (ör. kaç adım attığın) ayrıca "ayrıntıları paylaş" onayı verirsen görünür. Görevlerin, notların, öğünlerin, rutinlerin ve hatırlatıcıların hiçbir arkadaşla paylaşılmaz. Arkadaşlar senin e-postanı maskeli görür. Görünen adın ve profil resmin (maskot ya da fotoğraf) yalnızca kabul edilmiş arkadaşlarına görünür; fotoğrafın herkese açık bir adreste durmaz.
 
 Uygulama sahibi: sunucu yöneticisi olarak teknik olarak veritabanına erişebilir; bunu yalnızca hata ayıklama ve hesap desteği için kullanır. Hata kayıtlarını ve geri bildirimleri okur.
 
@@ -56,7 +56,7 @@ Hata kayıtları ve geri bildirimler, hesabın silinince birlikte silinir. Sunuc
 
 ## Hesabını ve verilerini silme
 
-Hesap > Profil ve hedefler sayfasının en altındaki Hesabımı sil ekranında SİL yazıp onayladığında hesabın ve sunucudaki tüm verin hemen ve kalıcı olarak silinir: profil, sağlık özetleri, öğünler, görevler, notlar, rutinler, hatırlatıcılar, raporlar, arkadaşlıklar (iki taraftan da), davetler, paylaşım ayarları, hata kayıtları ve geri bildirimler.
+Hesap > Profil ve hedefler sayfasının en altındaki Hesabımı sil ekranında SİL yazıp onayladığında hesabın ve sunucudaki tüm verin hemen ve kalıcı olarak silinir: profil, profil fotoğrafın, sağlık özetleri, öğünler, görevler, notlar, rutinler, hatırlatıcılar, raporlar, arkadaşlıklar (iki taraftan da), davetler, paylaşım ayarları, hata kayıtları ve geri bildirimler.
 
 Apple Sağlık ya da Google Health'teki kendi kayıtların bu uygulamaya ait değildir ve silinmez.
 
