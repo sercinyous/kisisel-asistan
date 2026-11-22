@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/health_source.dart'
     show MemoryAppleHealthConsentStore, appleHealthConsentStoreProvider;
+import 'package:kisisel_asistan/core/services/error_reporter.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/supabase_providers.dart';
@@ -20,6 +23,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../helpers/fakes.dart';
 
 class _Harness {
+  final reported = <(Object, StackTrace?)>[];
   final settings = FakeSettingsRepository();
   final routines = FakeRoutinesRepository();
   final health = FakeHealthRepository();
@@ -48,6 +52,7 @@ class _Harness {
         authSessionProvider.overrideWith((ref) => Stream<Session?>.value(null)),
         onboardingRepositoryProvider.overrideWithValue(onboarding),
         onboardingOpKeyStoreProvider.overrideWithValue(keys),
+        reportErrorProvider.overrideWithValue((e, s) => reported.add((e, s))),
       ];
 }
 
@@ -131,6 +136,17 @@ void main() {
     await tap(tester, 'onboarding-goal-$goal');
   }
 
+  group('technicalErrorCode', () {
+    test('PostgREST kodu, ağ ve tür', () {
+      expect(
+        technicalErrorCode(const PostgrestException(message: 'x', code: '42501')),
+        'Kod: PG 42501',
+      );
+      expect(technicalErrorCode(TimeoutException('t')), 'Kod: NET Timeout');
+      expect(technicalErrorCode(StateError('s')), 'Kod: StateError');
+    });
+  });
+
   group('OnboardingGate', () {
     testWidgets('onboarded_at boşsa kılavuz, doluysa ana kabuk', (tester) async {
       await pumpGate(tester);
@@ -153,6 +169,10 @@ void main() {
       await pumpGate(tester);
       expect(find.text('Hesabın yüklenemedi'), findsOneWidget);
       expect(find.text('ana kabuk'), findsNothing);
+      expect(find.text('Kod: StateError'), findsOneWidget);
+      expect(h.reported, hasLength(1));
+      expect(h.reported.single.$1, isA<StateError>());
+      expect(h.reported.single.$2, isNotNull);
 
       h.settings.fetchError = null;
       h.settings.settings =

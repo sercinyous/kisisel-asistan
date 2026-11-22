@@ -69,7 +69,6 @@ class FriendAvatarStack extends StatelessWidget {
                 name: shown[i].displayName,
                 email: shown[i].email,
                 userId: shown[i].userId,
-                fallbackUrl: shown[i].avatarUrl,
                 size: size,
               ),
             ),

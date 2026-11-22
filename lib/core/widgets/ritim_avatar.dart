@@ -8,8 +8,9 @@ import '../theme/app_theme.dart';
 
 /// Profil avatarı: baş harfler, maskot ya da fotoğraf; her boyutta yuvarlak.
 /// Fotoğraf imzalı adresle okunur ([avatarPhotoUrlProvider]); yüklenemezse
-/// ya da [userId] yoksa baş harfler görünür. Baş harf türünde [fallbackUrl]
-/// (ör. Google profil resmi) varsa o gösterilir.
+/// ya da [userId] yoksa baş harfler görünür. Kendi görünümün ve arkadaşların
+/// görünümü aynıdır (dış profil resmi kullanılmaz). Yükleme hatasında imzalı
+/// adres önbellekten atılır ve bir kez yeniden istenir.
 class RitimAvatar extends ConsumerWidget {
   const RitimAvatar({
     super.key,
@@ -18,7 +19,6 @@ class RitimAvatar extends ConsumerWidget {
     this.email,
     this.userId,
     this.size = 40,
-    this.fallbackUrl,
     this.semanticLabel,
   });
 
@@ -27,7 +27,6 @@ class RitimAvatar extends ConsumerWidget {
   final String? email;
   final String? userId;
   final double size;
-  final String? fallbackUrl;
 
   /// Boşsa addan ve türden üretilir.
   final String? semanticLabel;
@@ -52,7 +51,7 @@ class RitimAvatar extends ConsumerWidget {
           fit: BoxFit.cover,
         ),
       AvatarKind.photo when userId != null => _photo(ref),
-      _ => fallbackUrl == null ? _initials(context) : _network(context, fallbackUrl!),
+      _ => _initials(context),
     };
     return Semantics(
       label: _label(),
@@ -65,17 +64,27 @@ class RitimAvatar extends ConsumerWidget {
     );
   }
 
+  /// Yüklenemeyen imzalı adresler: aynı adres için tekrar tekrar yenileme
+  /// istenmez (sonsuz döngü olmaz).
+  static final Set<String> _failedUrls = {};
+
   Widget _photo(WidgetRef ref) {
-    final url = ref
-        .watch(avatarPhotoUrlProvider((userId!, choice.version)))
-        .valueOrNull;
+    final key = (userId!, choice.version);
+    final url = ref.watch(avatarPhotoUrlProvider(key)).valueOrNull;
     return Builder(
-      builder: (context) =>
-          url == null ? _initials(context) : _network(context, url),
+      builder: (context) => url == null
+          ? _initials(context)
+          : _network(context, url, onError: () {
+              if (!_failedUrls.add(url)) return;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) ref.invalidate(avatarPhotoUrlProvider(key));
+              });
+            }),
     );
   }
 
-  Widget _network(BuildContext context, String url) => Image.network(
+  Widget _network(BuildContext context, String url, {VoidCallback? onError}) =>
+      Image.network(
         url,
         width: size,
         height: size,
@@ -83,7 +92,10 @@ class RitimAvatar extends ConsumerWidget {
         gaplessPlayback: true,
         frameBuilder: (context, child, frame, sync) =>
             frame == null && !sync ? _initials(context) : child,
-        errorBuilder: (context, _, __) => _initials(context),
+        errorBuilder: (context, _, __) {
+          onError?.call();
+          return _initials(context);
+        },
       );
 
   Widget _initials(BuildContext context) {

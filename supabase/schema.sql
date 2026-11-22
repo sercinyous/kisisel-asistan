@@ -1264,10 +1264,21 @@ $$;
 
 revoke all on function public.handle_new_user_seed() from public, anon, authenticated;
 
-drop trigger if exists on_auth_user_created_seed on auth.users;
-create trigger on_auth_user_created_seed
-  after insert on auth.users
-  for each row execute function public.handle_new_user_seed();
+-- auth.users Supabase'te supabase_auth_admin'e aittir; DROP TRIGGER "must be
+-- owner" hatası verebilir. Tetikleyici yalnızca yoksa oluşturulur, fonksiyon
+-- gövdesi yukarıda create or replace ile güncellenir (yeniden çalıştırma güvenli).
+do $$
+begin
+  if not exists (
+    select 1 from pg_trigger
+    where tgname = 'on_auth_user_created_seed' and tgrelid = 'auth.users'::regclass and not tgisinternal
+  ) then
+    create trigger on_auth_user_created_seed
+      after insert on auth.users
+      for each row execute function public.handle_new_user_seed();
+  end if;
+end;
+$$;
 
 -- Script çalıştığında zaten var olan kullanıcılar için ayar satırı
 do $$
@@ -1995,10 +2006,21 @@ begin
 end;
 $$;
 
-drop trigger if exists signup_invite_gate on auth.users;
-create trigger signup_invite_gate
-  before insert on auth.users
-  for each row execute function public.enforce_signup_invite();
+-- auth.users Supabase'te supabase_auth_admin'e aittir; DROP TRIGGER "must be
+-- owner" hatası verebilir. Tetikleyici yalnızca yoksa oluşturulur, fonksiyon
+-- gövdesi yukarıda create or replace ile güncellenir (yeniden çalıştırma güvenli).
+do $$
+begin
+  if not exists (
+    select 1 from pg_trigger
+    where tgname = 'signup_invite_gate' and tgrelid = 'auth.users'::regclass and not tgisinternal
+  ) then
+    create trigger signup_invite_gate
+      before insert on auth.users
+      for each row execute function public.enforce_signup_invite();
+  end if;
+end;
+$$;
 
 -- ---------------------------------------------------------------------
 -- AI kotası (yalnızca service_role)
@@ -4115,17 +4137,44 @@ begin
   create policy avatars_insert on storage.objects
     for insert to authenticated
     with check (bucket_id = 'avatars'
-                and (storage.foldername(name))[1] = (select auth.uid())::text);
+                and name = (select auth.uid())::text || '/avatar.jpg');
   create policy avatars_update on storage.objects
     for update to authenticated
     using (bucket_id = 'avatars'
-           and (storage.foldername(name))[1] = (select auth.uid())::text)
+           and name = (select auth.uid())::text || '/avatar.jpg')
     with check (bucket_id = 'avatars'
-                and (storage.foldername(name))[1] = (select auth.uid())::text);
+                and name = (select auth.uid())::text || '/avatar.jpg');
   create policy avatars_delete on storage.objects
     for delete to authenticated
     using (bucket_id = 'avatars'
-           and (storage.foldername(name))[1] = (select auth.uid())::text);
+           and name = (select auth.uid())::text || '/avatar.jpg');
 end;
 $$;
 -- END avatar_storage
+
+-- BEGIN ensure_user_settings — idempotent
+-- Ayar satırı yoksa (ör. kayıt tetikleyicisi atlandıysa) varsayılanlarla
+-- oluşturur ve döndürür; varsa dokunmadan döndürür. İstemci fetch() yedeği.
+create or replace function public.ensure_user_settings()
+returns public.user_settings
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  uid uuid := auth.uid();
+  result public.user_settings;
+begin
+  if uid is null then
+    raise exception 'oturum yok' using errcode = '42501';
+  end if;
+  insert into public.user_settings (user_id) values (uid)
+  on conflict (user_id) do nothing;
+  select * into result from public.user_settings where user_id = uid;
+  return result;
+end;
+$$;
+
+revoke all on function public.ensure_user_settings() from public, anon;
+grant execute on function public.ensure_user_settings() to authenticated;
+-- END ensure_user_settings

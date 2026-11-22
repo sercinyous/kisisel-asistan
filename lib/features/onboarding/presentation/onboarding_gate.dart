@@ -1,5 +1,12 @@
+import 'dart:async';
+import 'dart:io' show SocketException;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' show ClientException;
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../../core/services/error_reporter.dart';
 
 import '../../../core/services/supabase_providers.dart';
 import '../../../core/theme/app_theme.dart';
@@ -31,12 +38,19 @@ class OnboardingGate extends ConsumerWidget {
           authSessionProvider.select((s) => s.valueOrNull?.user.id),
         ) ??
         '';
+    ref.listen<AsyncValue<bool>>(onboardedProvider(userId), (previous, next) {
+      if (next case AsyncError(:final error, :final stackTrace)
+          when previous is! AsyncError) {
+        ref.read(reportErrorProvider)(error, stackTrace);
+      }
+    });
     final onboarded = ref.watch(onboardedProvider(userId));
     // Yeniden okuma sürerken önceki değer kullanılır; ana kabuk sökülmez.
     final value = onboarded.valueOrNull;
     if (value != null) return value ? child : const OnboardingScreen();
     if (onboarded.hasError) {
       return _SettingsLoadError(
+        code: technicalErrorCode(onboarded.error!),
         onRetry: () => ref
           ..invalidate(userSettingsProvider)
           ..invalidate(onboardedProvider(userId)),
@@ -47,8 +61,9 @@ class OnboardingGate extends ConsumerWidget {
 }
 
 class _SettingsLoadError extends StatelessWidget {
-  const _SettingsLoadError({required this.onRetry});
+  const _SettingsLoadError({required this.code, required this.onRetry});
 
+  final String code;
   final VoidCallback onRetry;
 
   @override
@@ -77,6 +92,14 @@ class _SettingsLoadError extends StatelessWidget {
                   style: theme.textTheme.bodyMedium
                       ?.copyWith(color: AppColors.textSecondary),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  code,
+                  key: const Key('onboarding-error-code'),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: AppColors.textMuted),
+                ),
                 const SizedBox(height: 16),
                 FilledButton(
                   key: const Key('onboarding-retry'),
@@ -91,3 +114,20 @@ class _SettingsLoadError extends StatelessWidget {
     );
   }
 }
+
+/// Hata ekranında gösterilen kısa teknik kod (destek için): PostgREST kodu,
+/// HTTP durumu ya da istisna türü.
+String technicalErrorCode(Object error) => switch (error) {
+      PostgrestException(:final code) when code != null && code.isNotEmpty =>
+        'Kod: PG $code',
+      PostgrestException() => 'Kod: PostgrestException',
+      AuthException(:final statusCode) when statusCode != null =>
+        'Kod: AUTH $statusCode',
+      AuthException() => 'Kod: AuthException',
+      StorageException(:final statusCode) when statusCode != null =>
+        'Kod: HTTP $statusCode',
+      SocketException() => 'Kod: NET SocketException',
+      ClientException() => 'Kod: NET ClientException',
+      TimeoutException() => 'Kod: NET Timeout',
+      _ => 'Kod: ${error.runtimeType}',
+    };

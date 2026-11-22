@@ -37,11 +37,15 @@ class _OnboardingAvatarStepState extends ConsumerState<OnboardingAvatarStep> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
       await action();
-    } catch (_) {
+    } catch (error) {
       messenger
         ?..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(content: Text('Kaydedilemedi. Tekrar dene.')),
+          SnackBar(
+            content: Text(
+              avatarErrorMessage(error, 'Kaydedilemedi. Tekrar dene.'),
+            ),
+          ),
         );
     } finally {
       if (mounted) setState(() => _busy = false);

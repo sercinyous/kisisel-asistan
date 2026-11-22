@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -5,12 +6,35 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/avatar/avatar_image.dart';
 import '../../../core/avatar/avatar_photo_store.dart';
 import '../../../core/avatar/avatar_spec.dart';
+import '../../../core/services/error_reporter.dart';
 import '../../../core/theme/app_theme.dart';
 import 'my_avatar.dart';
 import 'settings_providers.dart';
 
+/// Kullanıcıya gösterilecek avatar hatası.
+class AvatarActionError implements Exception {
+  const AvatarActionError(this.message);
+
+  final String message;
+
+  static const unreadable = AvatarActionError('Bu fotoğraf okunamadı.');
+  static const saveFailed =
+      AvatarActionError('Fotoğraf yüklendi ama kaydedilemedi. Tekrar dene.');
+
+  @override
+  String toString() => 'AvatarActionError($message)';
+}
+
+/// Hata için gösterilecek metin; bilinmeyen hatada [fallback].
+String avatarErrorMessage(Object error, String fallback) => switch (error) {
+      AvatarActionError(:final message) => message,
+      AvatarPermissionDenied(:final message) => message,
+      _ => fallback,
+    };
+
 /// Avatar değişiklikleri: maskot, renk, fotoğraf, kaldır. Hepsi
 /// `user_settings` avatar sütunlarına yazar; fotoğraf önce Storage'a yüklenir.
+/// Tür fotoğraftan başka bir şeye geçince Storage'daki dosya silinir.
 class AvatarActions {
   const AvatarActions(this.ref);
 
@@ -22,35 +46,67 @@ class AvatarActions {
   Future<void> _save(AvatarChoice avatar) =>
       ref.read(userSettingsProvider.notifier).saveAvatar(avatar);
 
-  Future<void> chooseMascot(String id) => _save(_current.withMascot(id));
+  /// Önceki seçim fotoğrafsa ve yenisi değilse dosyayı siler: bir kez
+  /// yineler, yine olmazsa hatayı raporlar (seçim yine de geçerli kalır).
+  Future<void> _dropPhotoIfLeft(AvatarChoice previous, AvatarChoice next) async {
+    if (previous.kind != AvatarKind.photo || next.kind == AvatarKind.photo) {
+      return;
+    }
+    final store = ref.read(avatarPhotoStoreProvider);
+    try {
+      await store.remove();
+    } catch (_) {
+      try {
+        await store.remove();
+      } catch (error, stack) {
+        ref.read(reportErrorProvider)(error, stack);
+      }
+    }
+  }
+
+  Future<void> _change(AvatarChoice next) async {
+    final previous = _current;
+    await _save(next);
+    await _dropPhotoIfLeft(previous, next);
+  }
+
+  Future<void> chooseMascot(String id) => _change(_current.withMascot(id));
 
   Future<void> chooseColor(AvatarColorRole role) =>
       _save(_current.withColor(role));
 
   /// Fotoğraf seçer/çeker, kare kırpıp 512 piksel JPEG yükler. Vazgeçilirse
-  /// false döner.
+  /// false döner. İzin yoksa [AvatarPermissionDenied], görüntü çözülemezse
+  /// [AvatarActionError.unreadable]; yükleme olup kayıt (bir yinelemeyle)
+  /// olmazsa [AvatarActionError.saveFailed].
   Future<bool> pickPhoto(AvatarPhotoSource source) async {
     final bytes = await ref.read(avatarImagePickerProvider)(source);
     if (bytes == null) return false;
-    final jpeg = await prepareAvatarJpeg(bytes);
+    final Uint8List jpeg;
+    try {
+      jpeg = await prepareAvatarJpeg(bytes);
+    } catch (_) {
+      throw AvatarActionError.unreadable;
+    }
     await ref.read(avatarPhotoStoreProvider).upload(jpeg);
-    await _save(_current.withPhoto());
+    final next = _current.withPhoto();
+    try {
+      await _save(next);
+    } catch (_) {
+      try {
+        await _save(next);
+      } catch (error, stack) {
+        // Dosya eski sürüm anahtarıyla değişti: önbellekteki adresler atılır.
+        ref.invalidate(avatarPhotoUrlProvider);
+        ref.read(reportErrorProvider)(error, stack);
+        throw AvatarActionError.saveFailed;
+      }
+    }
     return true;
   }
 
   /// Baş harflere döner; fotoğraf varsa Storage'dan da silinir.
-  Future<void> remove() async {
-    final current = _current;
-    if (current.kind == AvatarKind.photo) {
-      try {
-        await ref.read(avatarPhotoStoreProvider).remove();
-      } catch (_) {
-        // Dosya silinemese de seçim baş harflere döner; hesap silinince
-        // klasör yine temizlenir.
-      }
-    }
-    await _save(current.cleared());
-  }
+  Future<void> remove() => _change(_current.cleared());
 }
 
 /// Avatar seçim sayfası (alt sayfa).
@@ -79,10 +135,12 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     try {
       await action();
-    } catch (_) {
+    } catch (error) {
       messenger
         ?..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failure)));
+        ..showSnackBar(
+          SnackBar(content: Text(avatarErrorMessage(error, failure))),
+        );
     } finally {
       if (mounted) setState(() => _busy = false);
     }

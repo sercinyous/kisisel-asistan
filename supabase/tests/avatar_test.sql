@@ -93,3 +93,41 @@ select tf.eq('sahip kendi dosyasını siler',
     $q$with x as (delete from storage.objects
        where bucket_id = 'avatars' returning 1) select to_jsonb(count(*)) from x$q$),
   '1');
+
+-- 4) Yalnızca tam yol <uid>/avatar.jpg ------------------------------------
+select tf.fails('iç içe yol reddedilir', 'authenticated', :U1,
+  $q$insert into storage.objects (bucket_id, name)
+     values ('avatars', 'b1000000-0000-0000-0000-000000000001/x/avatar.jpg')
+     returning to_jsonb(1)$q$, '42501');
+select tf.fails('başka dosya adı reddedilir', 'authenticated', :U1,
+  $q$insert into storage.objects (bucket_id, name)
+     values ('avatars', 'b1000000-0000-0000-0000-000000000001/other.png')
+     returning to_jsonb(1)$q$, '42501');
+select tf.eq('başka ada güncellenemez (0 satır)',
+  tf.run('authenticated', :U1,
+    $q$with i as (insert into storage.objects (bucket_id, name)
+         values ('avatars', 'b1000000-0000-0000-0000-000000000001/avatar.jpg') returning 1)
+       select to_jsonb(count(*)) from i$q$),
+  '1');
+select tf.fails('dosya başka ada taşınamaz', 'authenticated', :U1,
+  $q$update storage.objects set name = 'b1000000-0000-0000-0000-000000000001/b.jpg'
+     where bucket_id = 'avatars' returning to_jsonb(1)$q$, '42501');
+
+-- 5) ensure_user_settings: idempotent, satırı yeniden oluşturur ------------
+delete from public.user_settings where user_id = 'b3000000-0000-0000-0000-000000000003';
+select tf.eq('ensure_user_settings eksik satırı oluşturur',
+  tf.run('authenticated', :U3,
+    $q$select to_jsonb((public.ensure_user_settings()).user_id)$q$),
+  '"b3000000-0000-0000-0000-000000000003"');
+update public.user_settings set daily_steps = 12345
+  where user_id = 'b3000000-0000-0000-0000-000000000003';
+select tf.eq('ensure_user_settings mevcut satırı değiştirmez',
+  tf.run('authenticated', :U3,
+    $q$select to_jsonb((public.ensure_user_settings()).daily_steps)$q$),
+  '12345');
+select tf.eq('ensure_user_settings tek satır',
+  (select to_jsonb(count(*)) from public.user_settings
+   where user_id = 'b3000000-0000-0000-0000-000000000003'),
+  '1');
+select tf.fails('anon ensure_user_settings çağıramaz', 'anon', null,
+  $q$select to_jsonb((public.ensure_user_settings()).user_id)$q$, '42501');

@@ -252,8 +252,8 @@ class LeaderboardEntry {
   final num? kcalToday;
   final num? kcalWeek;
 
-  /// Avatar seçimi (`friend_leaderboard` RPC'si); [avatarUrl] yalnızca baş
-  /// harf türünde Google profil resmi olarak kullanılır.
+  /// Avatar seçimi (`friend_leaderboard` RPC'si). [avatarUrl] (Google profil
+  /// resmi) avatarda gösterilmez: kendi ve arkadaş görünümü aynı kalır.
   final AvatarChoice avatar;
 
   /// Seçilen metrik ve dönemin değeri; paylaşılmıyorsa null.

@@ -598,7 +598,6 @@ class _Avatar extends StatelessWidget {
         name: entry.displayName,
         email: entry.email,
         userId: entry.userId,
-        fallbackUrl: entry.avatarUrl,
         size: 40,
       );
 }

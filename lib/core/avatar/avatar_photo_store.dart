@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -30,8 +33,9 @@ class SupabaseAvatarPhotoStore implements AvatarPhotoStore {
 
   final SupabaseClient _client;
 
-  /// İmzalı adresin geçerlilik süresi (oturum boyunca önbellekte tutulur).
-  static const int signedUrlSeconds = 60 * 60 * 24;
+  /// İmzalı adresin geçerlilik süresi; önbellek [avatarUrlRefreshAfter]
+  /// dolunca (süre bitmeden) yenilenir.
+  static const int signedUrlSeconds = 60 * 60;
 
   String get _userId {
     final id = _client.auth.currentUser?.id;
@@ -99,12 +103,41 @@ final avatarPhotoStoreProvider = Provider<AvatarPhotoStore>((ref) {
   return SupabaseAvatarPhotoStore(ref.watch(supabaseClientProvider));
 });
 
-/// İmzalı adres önbelleği: (kullanıcı, sürüm) başına oturum boyunca bir kez
-/// istenir; oturum değişince depo yeniden kurulur ve önbellek boşalır.
+/// İmzalı adres önbellekte en çok bu kadar tutulur (adres 1 saat geçerli).
+const Duration avatarUrlRefreshAfter = Duration(minutes: 50);
+
+/// İmzalı adres önbelleği, (kullanıcı, sürüm) başına. Yalnızca başarılı adres
+/// tutulur ve [avatarUrlRefreshAfter] sonra yenilenir; null ya da hata
+/// önbelleğe alınmaz (dinleyen kalmayınca atılır, sonra yeniden istenir).
+/// Oturum değişince depo yeniden kurulur ve önbellek boşalır.
 final avatarPhotoUrlProvider =
-    FutureProvider.family<String?, (String, int)>((ref, key) {
-  return ref.watch(avatarPhotoStoreProvider).signedUrl(key.$1, key.$2);
+    FutureProvider.autoDispose.family<String?, (String, int)>((ref, key) async {
+  final store = ref.watch(avatarPhotoStoreProvider);
+  final url = await store.signedUrl(key.$1, key.$2);
+  if (url != null) {
+    final link = ref.keepAlive();
+    final timer = Timer(avatarUrlRefreshAfter, () {
+      link.close();
+      ref.invalidateSelf();
+    });
+    ref.onDispose(timer.cancel);
+  }
+  return url;
 });
+
+/// Seçici izin hatası (iOS `camera_access_denied` / `photo_access_denied`).
+class AvatarPermissionDenied implements Exception {
+  const AvatarPermissionDenied(this.source);
+
+  final AvatarPhotoSource source;
+
+  String get message => source == AvatarPhotoSource.camera
+      ? 'Kamera izni yok. iPhone Ayarlar > Ritim\'den açabilirsin.'
+      : 'Fotoğraf izni yok. iPhone Ayarlar > Ritim\'den açabilirsin.';
+
+  @override
+  String toString() => 'AvatarPermissionDenied($source)';
+}
 
 /// Fotoğraf kaynağı.
 enum AvatarPhotoSource { camera, gallery }
@@ -115,7 +148,9 @@ typedef AvatarImagePicker = Future<Uint8List?> Function(
 
 final avatarImagePickerProvider = Provider<AvatarImagePicker>(
   (ref) => (source) async {
-    final file = await ImagePicker().pickImage(
+    final XFile? file;
+    try {
+      file = await ImagePicker().pickImage(
       source: source == AvatarPhotoSource.camera
           ? ImageSource.camera
           : ImageSource.gallery,
@@ -123,7 +158,13 @@ final avatarImagePickerProvider = Provider<AvatarImagePicker>(
       maxWidth: 2048,
       maxHeight: 2048,
       imageQuality: 92,
-    );
+      );
+    } on PlatformException catch (e) {
+      if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {
+        throw AvatarPermissionDenied(source);
+      }
+      rethrow;
+    }
     return file?.readAsBytes();
   },
 );
