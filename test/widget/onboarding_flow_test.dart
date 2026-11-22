@@ -119,6 +119,8 @@ void main() {
     await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
     await tap(tester, 'onboarding-sex-male');
     await tap(tester, 'onboarding-next');
+    expect(find.text('Profilini seç'), findsOneWidget);
+    await tap(tester, 'onboarding-next');
     expect(find.text('Sağlık verisi'), findsOneWidget);
     await tap(tester, 'onboarding-next');
     expect(find.text('Boy ve kilo'), findsOneWidget);
@@ -133,7 +135,7 @@ void main() {
     testWidgets('onboarded_at boşsa kılavuz, doluysa ana kabuk', (tester) async {
       await pumpGate(tester);
       expect(find.text('ana kabuk'), findsNothing);
-      expect(find.text('Adım 1 / 6'), findsOneWidget);
+      expect(find.text('Adım 1 / 7'), findsOneWidget);
       expect(find.text('Kokpit: günün tek bakışta'), findsOneWidget);
     });
 
@@ -188,7 +190,7 @@ void main() {
       await pumpGate(tester);
       await tap(tester, 'onboarding-skip-intro');
       expect(find.text('Seni tanıyalım'), findsOneWidget);
-      expect(find.text('Adım 2 / 6'), findsOneWidget);
+      expect(find.text('Adım 2 / 7'), findsOneWidget);
     });
 
     testWidgets('yeniden gösterim: yalnızca kartlar, Bitti kapatır, hiçbir şey '
@@ -242,7 +244,7 @@ void main() {
         (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
-      expect(find.text('Adım 2 / 6'), findsOneWidget);
+      expect(find.text('Adım 2 / 7'), findsOneWidget);
       expect(find.byKey(const Key('onboarding-timezone')), findsOneWidget);
       expect(find.text('Belirtmek istemiyorum'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
@@ -252,7 +254,10 @@ void main() {
       expect(nextEnabled(tester), isTrue, reason: 'cinsiyet isteğe bağlı');
 
       await tap(tester, 'onboarding-next');
-      expect(find.text('Adım 3 / 6'), findsOneWidget);
+      expect(find.text('Adım 3 / 7'), findsOneWidget);
+      expect(find.text('Profilini seç'), findsOneWidget);
+      await tap(tester, 'onboarding-avatar-skip');
+      expect(find.text('Adım 4 / 7'), findsOneWidget);
       expect(find.text('Sağlık verisi'), findsOneWidget);
       expect(find.text('İleri'), findsOneWidget);
     });
@@ -264,7 +269,8 @@ void main() {
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
-      expect(find.text('Adım 4 / 6'), findsOneWidget);
+      await tap(tester, 'onboarding-next');
+      expect(find.text('Adım 5 / 7'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
       await type(tester, 'onboarding-height', '50');
       expect(find.text('100–250 arasında olmalı.'), findsOneWidget);
@@ -283,6 +289,7 @@ void main() {
       await skipIntro(tester);
       await type(tester, 'onboarding-name', 'Ayşe');
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-health-request');
       expect(find.text('İzin verildi.'), findsOneWidget);
@@ -304,6 +311,7 @@ void main() {
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
+      await tap(tester, 'onboarding-next');
       expect(fieldText(tester, 'onboarding-height'), '');
       expect(fieldText(tester, 'onboarding-weight'), '');
     });
@@ -313,7 +321,7 @@ void main() {
       await pumpGate(tester);
       await skipIntro(tester);
       await fillToTargets(tester);
-      expect(find.text('Adım 5 / 6'), findsOneWidget);
+      expect(find.text('Adım 6 / 7'), findsOneWidget);
       // 80 / 1,8² = 24,7 → Normal; hedef kilo = mevcut kilo.
       expect(find.text('24,7 · Normal'), findsOneWidget);
       expect(fieldText(tester, 'onboarding-target-weight'), '80');
@@ -373,7 +381,7 @@ void main() {
       await tap(tester, 'onboarding-next');
 
       // Son adım: rutinler + bildirimler, Başla.
-      expect(find.text('Adım 6 / 6'), findsOneWidget);
+      expect(find.text('Adım 7 / 7'), findsOneWidget);
       expect(find.text('Başlangıç rutinleri'), findsOneWidget);
       expect(find.text('Bildirimler'), findsWidgets);
       expect(find.text('Başla'), findsOneWidget);
@@ -417,6 +425,7 @@ void main() {
       await skipIntro(tester);
       await type(tester, 'onboarding-name', 'Ayşe');
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
+      await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
       await tap(tester, 'onboarding-next');
       await type(tester, 'onboarding-height', '170');

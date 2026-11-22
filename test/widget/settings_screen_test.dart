@@ -75,8 +75,12 @@ void main() {
       'Sorun bildir',
       'Çıkış yap',
     ]) {
+      // Başlıktaki avatar listeyi uzatır: alt grup kaydırılarak görünür.
+      await tester.scrollUntilVisible(find.text(title), 80);
       expect(find.text(title), findsOneWidget, reason: title);
     }
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('hesap-avatar')), findsOneWidget);
     expect(find.text('Hatırlatıcılar'), findsNothing);
     expect(find.text('Kaydet'), findsNothing);
     expect(find.text('Koyu'), findsOneWidget);
