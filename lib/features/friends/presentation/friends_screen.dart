@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_avatar.dart';
 import '../../../core/widgets/bento.dart';
 import '../data/friends_repository.dart';
 import '../domain/friends_models.dart';
@@ -591,21 +592,13 @@ class _Avatar extends StatelessWidget {
   final LeaderboardEntry entry;
 
   @override
-  Widget build(BuildContext context) {
-    final initials = Text(
-      entry.initials,
-      style: Theme.of(context)
-          .textTheme
-          .labelMedium
-          ?.copyWith(color: AppColors.onAccent, fontWeight: FontWeight.w700),
-    );
-    final url = entry.avatarUrl;
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: AppColors.accent,
-      foregroundImage: url == null ? null : NetworkImage(url),
-      onForegroundImageError: url == null ? null : (_, __) {},
-      child: initials,
-    );
-  }
+  Widget build(BuildContext context) => RitimAvatar(
+        key: ValueKey('friend-avatar-${entry.userId}'),
+        choice: entry.avatar,
+        name: entry.displayName,
+        email: entry.email,
+        userId: entry.userId,
+        fallbackUrl: entry.avatarUrl,
+        size: 40,
+      );
 }

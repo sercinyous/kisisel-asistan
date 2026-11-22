@@ -22,6 +22,7 @@ import 'package:kisisel_asistan/features/reports/data/reports_repository.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
 import 'package:kisisel_asistan/features/routines/domain/routine.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
+import 'package:kisisel_asistan/core/avatar/avatar_spec.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 
 /// Gemini yerine geçen sahte ayrıştırıcı: [handler] ne dönerse o.
@@ -1037,8 +1038,22 @@ class FakeSettingsRepository implements SettingsRepository {
     if (saveGate != null) await saveGate!.future;
     if (saveError != null) throw saveError!;
     saved.add(value);
-    settings = value;
-    return value;
+    // Gerçek depo gibi: kayıt avatar sütunlarına dokunmaz.
+    final merged = value.copyWith(avatar: settings?.avatar);
+    settings = merged;
+    return merged;
+  }
+
+  /// Yazılan avatar seçimleri (sırayla).
+  final List<AvatarChoice> savedAvatars = [];
+
+  @override
+  Future<UserSettings> saveAvatar(AvatarChoice avatar) async {
+    if (saveError != null) throw saveError!;
+    savedAvatars.add(avatar);
+    final next = (settings ?? const UserSettings.defaults()).copyWith(avatar: avatar);
+    settings = next;
+    return next;
   }
 }
 

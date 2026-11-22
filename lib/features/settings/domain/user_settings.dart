@@ -1,3 +1,4 @@
+import '../../../core/avatar/avatar_spec.dart';
 import '../../operations/domain/task_category.dart';
 import 'activity_level.dart';
 
@@ -76,6 +77,7 @@ class UserSettings {
     this.onboardedAt,
     this.taskCategoriesRaw,
     this.activityLevel,
+    this.avatar = const AvatarChoice(),
   });
 
   const UserSettings.defaults()
@@ -103,7 +105,8 @@ class UserSettings {
         workDescription = null,
         onboardedAt = null,
         taskCategoriesRaw = null,
-        activityLevel = null;
+        activityLevel = null,
+        avatar = const AvatarChoice();
 
   /// Profil alanlarının sınırları; supabase/schema.sql'deki check'lerle aynıdır.
   static const int heightCmMin = 100;
@@ -166,6 +169,11 @@ class UserSettings {
   /// Günlük hareket düzeyi (kalori önerisinin katsayısı); `null` = cevaplanmadı.
   final ActivityLevel? activityLevel;
 
+  /// Profil avatarı. [toMap] bunu YAZMAZ: avatar yalnızca
+  /// `SettingsRepository.saveAvatar` ile yazılır (sütunu henüz olmayan
+  /// şemada diğer ayarların kaydı bozulmasın).
+  final AvatarChoice avatar;
+
   /// Etkin görev kategorileri tanımı (kapalılar dahil).
   List<TaskCategory> get taskCategories =>
       taskCategoriesRaw ?? TaskCategory.defaults;
@@ -226,6 +234,7 @@ class UserSettings {
           ? TaskCategory.parseList(map['task_categories'])
           : null,
       activityLevel: ActivityLevel.tryParse(map['activity_level']),
+      avatar: AvatarChoice.fromMap(map),
     );
   }
 
@@ -320,6 +329,7 @@ class UserSettings {
     DateTime? onboardedAt,
     List<TaskCategory>? taskCategories,
     ActivityLevel? activityLevel,
+    AvatarChoice? avatar,
     bool clearHeightCm = false,
     bool clearBirthYear = false,
     bool clearSex = false,
@@ -357,5 +367,6 @@ class UserSettings {
             ? taskCategoriesRaw
             : TaskCategory.ensureActive(taskCategories),
         activityLevel: activityLevel ?? this.activityLevel,
+        avatar: avatar ?? this.avatar,
       );
 }

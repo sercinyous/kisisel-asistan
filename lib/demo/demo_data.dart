@@ -10,6 +10,7 @@ import '../features/operations/domain/note_item.dart';
 import '../features/operations/domain/task_item.dart';
 import '../features/reports/domain/report_models.dart';
 import '../features/routines/domain/routine.dart';
+import '../core/avatar/avatar_spec.dart';
 import '../features/settings/domain/user_settings.dart';
 import 'demo_backend.dart';
 
@@ -273,6 +274,10 @@ class DemoData {
           birthYear: demoBirthYear,
           sex: demoSex,
           teamMembers: _demoTeam,
+          avatar: const AvatarChoice(
+            kind: AvatarKind.mascot,
+            mascotId: 'bal_porsugu',
+          ),
         ),
       ),
       reports: FakeReportsRepository(

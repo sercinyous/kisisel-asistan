@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { DELETION_STEPS, extractBearer, isConfirmed, normalizeEmail } from "./logic.ts";
+import { avatarPaths, DELETION_STEPS, extractBearer, isConfirmed, normalizeEmail } from "./logic.ts";
 
 test("onay sözcüğü Türkçe büyük harfle eşleşir", () => {
   assert.equal(isConfirmed({ confirm: "SİL" }), true);
@@ -29,4 +29,9 @@ test("e-posta normalleşir", () => {
 
 test("auth kullanıcısı en son silinir", () => {
   assert.equal(DELETION_STEPS.at(-1), "auth_user");
+});
+
+test("avatar yolları kullanıcının klasörüyle sınırlı", () => {
+  assert.deepEqual(avatarPaths("u1", ["avatar.jpg", "", "x/y.jpg"]), ["u1/avatar.jpg"]);
+  assert.ok(DELETION_STEPS.indexOf("avatars") < DELETION_STEPS.indexOf("auth_user"));
 });

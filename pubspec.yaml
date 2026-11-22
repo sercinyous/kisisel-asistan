@@ -24,6 +24,9 @@ dependencies:
   fl_chart: ^1.0.0
   shared_preferences: ^2.3.0
   google_sign_in: ^7.2.0
+  flutter_svg: ^2.0.10
+  image_picker: ^1.1.2
+  image: ^4.2.0
 
 dev_dependencies:
   flutter_test:
@@ -36,3 +39,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/
+    - assets/mascots/

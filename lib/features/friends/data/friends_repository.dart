@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/supabase_providers.dart';
+import '../../../core/avatar/avatar_spec.dart';
 import '../domain/friends_models.dart';
 
 final friendsRepositoryProvider = Provider<FriendsRepository>((ref) {
@@ -132,6 +133,7 @@ class DemoFriendsRepository implements FriendsRepository {
             shareSteps: true,
             shareSleep: true,
             shareCalories: false,
+            avatar: AvatarChoice(kind: AvatarKind.mascot, mascotId: 'tilki'),
           ),
           const Friend(
             friendId: 'f-2',
@@ -139,6 +141,7 @@ class DemoFriendsRepository implements FriendsRepository {
             shareSteps: false,
             shareSleep: false,
             shareCalories: false,
+            avatar: AvatarChoice(color: AvatarColorRole.sleep),
           ),
         ];
 
@@ -220,6 +223,7 @@ class DemoFriendsRepository implements FriendsRepository {
         sleepWeekAvg: 428,
         kcalToday: 1840,
         kcalWeek: 9870,
+        avatar: AvatarChoice(kind: AvatarKind.mascot, mascotId: 'bal_porsugu'),
       ),
     ];
     var i = 0;
@@ -238,6 +242,7 @@ class DemoFriendsRepository implements FriendsRepository {
         sleepWeekAvg: f.shareSleep ? 400 + i * 15 : null,
         kcalToday: f.shareCalories ? 1600 + i * 150 : null,
         kcalWeek: f.shareCalories ? 9000 + i * 700 : null,
+        avatar: f.avatar,
       ));
     }
     return out;

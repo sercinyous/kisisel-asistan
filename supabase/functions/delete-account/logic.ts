@@ -40,13 +40,24 @@ export function normalizeEmail(email: string | null | undefined): string | null 
 }
 
 /** Silme adımları sırası: önce açık silmeler, en son auth kullanıcısı. */
-export type DeletionStep = "friendships" | "friend_requests" | "auth_user";
+export type DeletionStep = "friendships" | "friend_requests" | "avatars" | "auth_user";
 
 export const DELETION_STEPS: readonly DeletionStep[] = [
   "friendships",
   "friend_requests",
+  "avatars",
   "auth_user",
 ];
+
+/** Profil fotoğrafının Storage kovası; dosyalar `<uid>/` klasöründedir. */
+export const AVATAR_BUCKET = "avatars";
+
+/** Kullanıcının avatar klasöründeki nesne adlarından silinecek tam yollar. */
+export function avatarPaths(userId: string, names: readonly string[]): string[] {
+  return names
+    .filter((n) => n.length > 0 && !n.includes("/"))
+    .map((n) => `${userId}/${n}`);
+}
 
 export function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

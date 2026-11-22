@@ -2,14 +2,15 @@
 // Kullanıcı kendi hesabını ve tüm verisini kalıcı olarak siler (App Store şartı).
 // Uygulama kullanıcı JWT'siyle {"confirm":"SİL"} gönderir. Akış:
 //   1) friendships (iki yön) ve friend_requests (gönderdiği + ona gelen) açıkça silinir,
-//   2) auth.admin.deleteUser; diğer tüm public satırları ON DELETE CASCADE ile gider.
+//   2) Storage `avatars` kovasındaki <uid>/ klasörü (profil fotoğrafı) silinir,
+//   3) auth.admin.deleteUser; diğer tüm public satırları ON DELETE CASCADE ile gider.
 // Kimlik doğrulama burada yapılır; fonksiyon `--no-verify-jwt` ile dağıtılır.
 // Ortam: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Supabase kendisi verir; anahtar
 // uygulamaya ya da depoya hiç girmez).
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { type AccountStore, createHandler } from "./handler.ts";
-import { jsonResponse, MESSAGES } from "./logic.ts";
+import { AVATAR_BUCKET, avatarPaths, jsonResponse, MESSAGES } from "./logic.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -40,6 +41,18 @@ const store: AccountStore = {
     if (email !== null) {
       const byEmail = await admin.from("friend_requests").delete().eq("target_email", email);
       if (byEmail.error !== null) throw new Error(byEmail.error.message);
+    }
+  },
+
+  async deleteAvatars(userId) {
+    const bucket = admin.storage.from(AVATAR_BUCKET);
+    for (;;) {
+      const { data, error } = await bucket.list(userId, { limit: 100 });
+      if (error !== null) throw new Error(error.message);
+      const paths = avatarPaths(userId, (data ?? []).map((o) => o.name));
+      if (paths.length === 0) return;
+      const removed = await bucket.remove(paths);
+      if (removed.error !== null) throw new Error(removed.error.message);
     }
   },
 

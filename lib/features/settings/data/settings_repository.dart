@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/supabase_providers.dart';
+import '../../../core/avatar/avatar_spec.dart';
 import '../domain/user_settings.dart';
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
@@ -67,6 +68,17 @@ class SettingsRepository {
           {'user_id': _userId, ...settings.toMap()},
           onConflict: 'user_id',
         )
+        .select()
+        .single();
+    return parseRow(row);
+  }
+
+  /// Yalnızca avatar sütunlarını yazar; diğer ayarlara dokunmaz.
+  Future<UserSettings> saveAvatar(AvatarChoice avatar) async {
+    final row = await _client
+        .from('user_settings')
+        .update(avatar.toMap())
+        .eq('user_id', _userId)
         .select()
         .single();
     return parseRow(row);

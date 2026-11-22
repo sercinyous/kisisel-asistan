@@ -25,6 +25,8 @@ export interface AccountStore {
   deleteFriendships(userId: string): Promise<void>;
   /** Kullanıcının gönderdiği ve ona gelen (kimlik ya da e-postayla) tüm istekler. */
   deleteFriendRequests(userId: string, email: string | null): Promise<void>;
+  /** Storage `avatars` kovasında kullanıcının `<uid>/` klasöründeki tüm nesneler. */
+  deleteAvatars(userId: string): Promise<void>;
   /** auth.users satırı; geri kalan public satırları ON DELETE CASCADE ile gider. */
   deleteAuthUser(userId: string): Promise<void>;
 }
@@ -67,6 +69,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     const run: Record<DeletionStep, () => Promise<void>> = {
       friendships: () => deps.store.deleteFriendships(user.id),
       friend_requests: () => deps.store.deleteFriendRequests(user.id, email),
+      avatars: () => deps.store.deleteAvatars(user.id),
       auth_user: () => deps.store.deleteAuthUser(user.id),
     };
     for (const step of DELETION_STEPS) {

@@ -528,12 +528,16 @@ class ReportLinkRow extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.color,
+    this.trailing,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final Color? color;
+
+  /// Okun solunda isteğe bağlı küçük öğe (ör. arkadaş avatarları).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -555,6 +559,10 @@ class ReportLinkRow extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
+          if (trailing != null) ...[
+            trailing!,
+            const SizedBox(width: AppSpacing.s),
+          ],
           Icon(
             Icons.chevron_right_rounded,
             size: 20,

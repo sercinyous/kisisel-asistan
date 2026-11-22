@@ -53,6 +53,8 @@ set_array() { # anahtar, öğeler...
 
 set_string NSHealthShareUsageDescription "'Adım, uyku ve aktif kalori verilerin günlük kokpitinde gösterilmek ve haftalık raporlara eklenmek için okunur.'"
 set_string NSHealthUpdateUsageDescription "'Bu uygulama Sağlık verilerine yazmaz; yalnızca okuma yapar.'"
+set_string NSPhotoLibraryUsageDescription "'Profil fotoğrafı seçmek için fotoğraf arşivine erişilir; yalnızca seçtiğin fotoğraf kırpılıp yüklenir.'"
+set_string NSCameraUsageDescription "'Profil fotoğrafı çekmek için kamera kullanılır.'"
 set_string CFBundleDisplayName "Ritim"
 set_string CFBundleDevelopmentRegion "tr"
 set_bool ITSAppUsesNonExemptEncryption false
