@@ -10,10 +10,8 @@ alter table auth.users add column if not exists raw_user_meta_data jsonb;
 
 delete from auth.users where id in ('f8100000-0000-0000-0000-000000000001',
                                     'f8200000-0000-0000-0000-000000000002');
-alter table auth.users disable trigger signup_invite_gate;
 select tf.mkuser('f8100000-0000-0000-0000-000000000001', 'scope-eski@example.com');
 select tf.mkuser('f8200000-0000-0000-0000-000000000002', 'scope-arkadas@example.com');
-alter table auth.users enable trigger signup_invite_gate;
 
 insert into public.user_settings (user_id, timezone)
 values ('f8100000-0000-0000-0000-000000000001', 'Europe/Istanbul'),

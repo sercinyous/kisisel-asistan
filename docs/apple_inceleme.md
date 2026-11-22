@@ -6,26 +6,10 @@ Supabase Dashboard'da ve App Store Connect'te kendin doldur.
 
 ## 1. Demo hesabını aç (Supabase Dashboard)
 
-Kayıt kapısı (`signup_invite_gate`) davetsiz e-postayla hesap açılmasını engeller ve
-Dashboard'dan da kapatılamaz. Bu yüzden önce o e-posta için bekleyen bir davet eklenir.
-
 1. Kullanacağın adresi seç (ör. senin kontrolündeki bir alias: `DEMO_EPOSTA`).
    Güçlü, rastgele bir şifre üret (`DEMO_SIFRE`); bir parola yöneticisinde sakla.
-2. **SQL Editor**'da kendi hesabınla (sahip) bekleyen davet ekle:
-
-   ```sql
-   insert into public.friend_requests (from_user, target_email)
-   select id, lower('DEMO_EPOSTA') from auth.users where email = 'SAHIP_EPOSTA';
-   ```
-
-3. **Authentication > Users > Add user > Create new user**: e-posta `DEMO_EPOSTA`,
+2. **Authentication > Users > Add user > Create new user**: e-posta `DEMO_EPOSTA`,
    şifre `DEMO_SIFRE`, **Auto Confirm User** işaretli.
-4. Davet artık gerekmez; inceleyicinin seni arkadaş listesinde görmemesi için sil:
-
-   ```sql
-   delete from public.friend_requests
-   where target_email = lower('DEMO_EPOSTA') and status = 'pending';
-   ```
 
 ## 2. Demo verisini yükle
 
@@ -59,9 +43,8 @@ Password: DEMO_SIFRE
 **Review Notes** (aynen yapıştır, yer tutucu yok):
 
 ```
-This is a private personal-assistant app for a small invite-only group. Sign-up
-is restricted to invited e-mail addresses, so please use the demo account
-provided above (e-mail + password on the sign-in screen; do not use "Sign in
+This is a personal-assistant app for a small group of friends. Anyone can sign
+up, but please use the demo account provided above (e-mail + password on the sign-in screen; do not use "Sign in
 with Google").
 
 The demo account is pre-filled with sample, non-personal data (tasks, notes,

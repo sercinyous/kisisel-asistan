@@ -12,7 +12,6 @@ set client_min_messages = notice;
 \set vectors `cat "$GOAL_VECTORS"`
 select set_config('tf.vectors', :'vectors', false) is not null as yuklendi \gset
 
-alter table auth.users disable trigger signup_invite_gate;
 select tf.mkuser('d1000000-0000-0000-0000-000000000001', 'esleme-izleyen@example.com');
 select tf.mkuser('d2000000-0000-0000-0000-000000000002', 'esleme-arkadas@example.com');
 insert into public.friendships (user_a, user_b)

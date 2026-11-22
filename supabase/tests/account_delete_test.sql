@@ -8,10 +8,8 @@
 set client_min_messages = notice;
 \ir helpers_faz4b.sql
 
-alter table auth.users disable trigger signup_invite_gate;
 select tf.mkuser('fa500000-0000-0000-0000-000000000001', 'faz5-silinecek@example.com');
 select tf.mkuser('fa500000-0000-0000-0000-000000000002', 'faz5-kalan@example.com');
-alter table auth.users enable trigger signup_invite_gate;
 
 -- 1) auth.users'a bağlı her FK kaskat olmalı (tek istisna: friend_requests.target_user
 --    set null; o satırları Edge Function açıkça siler).

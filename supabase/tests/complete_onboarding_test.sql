@@ -7,12 +7,10 @@
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
 
-alter table auth.users disable trigger signup_invite_gate;
 insert into auth.users (id, email) values
   ('c0c0c0c0-0000-0000-0000-000000000001', 'kurulum-a@test'),
   ('c0c0c0c0-0000-0000-0000-000000000002', 'kurulum-b@test')
 on conflict (id) do nothing;
-alter table auth.users enable trigger signup_invite_gate;
 
 do $$
 declare

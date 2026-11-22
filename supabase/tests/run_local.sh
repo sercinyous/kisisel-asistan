@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # schema.sql'i yerel bir PostgreSQL 16 kümesinde sınar (Supabase gerekmez):
 #   1) temiz kurulum, iki kez (idempotent mi?)
-#   1c) Faz 4B (ayrı veritabanında): kayıt kapısı (varsayılan açık kurulum),
+#   1c) Faz 4B (ayrı veritabanında): açık kayıt (davet kapısı kaldırıldı),
 #      şema/nötr seed/Pusholder→İş, arkadaşlar ve yetki sınırları, AI kotası
 #      (paralel oturumlarla atomiklik), SQL-Dart hedef eşliği (SQL tarafı;
 #      Dart tarafı test/friend_goal_parity_test.dart, aynı goal_vectors.json)
@@ -59,15 +59,15 @@ run -d fresh -f "$HERE/complete_onboarding_test.sql"
 echo "== 1b4) Faz 5 ilk kurulum (activity_level, profil ve saat dilimi) =="
 run -d fresh -f "$HERE/faz5_onboarding_test.sql"
 
-echo "== 1c) Faz 4B: kayıt kapısı, arkadaşlar, kota, eşlik =="
+echo "== 1c) Faz 4B: açık kayıt, arkadaşlar, kota, eşlik =="
 export GOAL_VECTORS="$HERE/goal_vectors.json"
 run -d postgres -c "create database faz4b"
 run -d faz4b -f "$HERE/auth_stub.sql"
 run -d faz4b -f "$SCHEMA"
 run -d faz4b -f "$SCHEMA"
-# Kapı testi şema yeni kurulmuşken İLK çalışır (varsayılan: kapı açık).
+# Açık kayıt testi şema yeni kurulmuşken İLK çalışır.
 run -d faz4b -f "$HERE/signup_gate_test.sql" >/dev/null
-echo "tamam: kayıt kapısı"
+echo "tamam: açık kayıt"
 run -d faz4b -f "$HERE/faz4b_schema_test.sql" >/dev/null
 echo "tamam: şema, nötr seed, Pusholder → İş, rapor zamanlayıcısı yetkisi"
 run -d faz4b -f "$HERE/friends_test.sql" >/dev/null
@@ -87,9 +87,7 @@ echo "tamam: hata takibi ve geri bildirim yalnızca ekleme, günlük sınır (ap
 
 # Atomiklik: 8 paralel oturum aynı kullanıcı için 5'er çağrı yapar, limit 10.
 # Tam 10 çağrı true almalı, sayaç tam 10 olmalı (aşım ve kayıp artış yok).
-run -d faz4b -c "alter table auth.users disable trigger signup_invite_gate" \
-  -c "insert into auth.users (id, email) values ('e1000000-0000-0000-0000-000000000001', 'paralel@example.com') on conflict do nothing" \
-  -c "alter table auth.users enable trigger signup_invite_gate"
+run -d faz4b -c "insert into auth.users (id, email) values ('e1000000-0000-0000-0000-000000000001', 'paralel@example.com') on conflict do nothing"
 for i in 1 2 3 4 5 6 7 8; do
   run -d faz4b -At -c "select count(*) from generate_series(1, 5) where public.consume_ai_quota('e1000000-0000-0000-0000-000000000001', 'paralel', 10)" \
     > "$WORK/quota_$i.out" &

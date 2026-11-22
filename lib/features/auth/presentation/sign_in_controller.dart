@@ -9,13 +9,16 @@ import '../domain/sign_in_messages.dart';
 enum SignInMethod { google, password }
 
 class SignInState {
-  const SignInState({this.busy, this.error});
+  const SignInState({this.busy, this.error, this.info});
 
   /// Süren giriş yöntemi; boşta `null`.
   final SignInMethod? busy;
 
   /// Son denemenin Türkçe hata metni; vazgeçme ve başarıda `null`.
   final String? error;
+
+  /// Başarılı ama ek adım gereken sonucun bilgi metni (ör. onay e-postası).
+  final String? info;
 
   bool get isBusy => busy != null;
 }
@@ -33,7 +36,7 @@ final googleLoginAvailableProvider = Provider<bool>(
       ref.watch(googleServerClientIdProvider).isNotEmpty,
 );
 
-/// Giriş ekranının mantığı: Google ve e-posta/şifre girişi, tek seferde bir
+/// Giriş ekranının mantığı: Google ve e-posta/şifre girişi, e-posta kaydı, tek seferde bir
 /// deneme, hataların Türkçe metne çevrilmesi. Başarıda oturum Supabase'ten
 /// gelir ([authSessionProvider]); ekran değişimini kapı yapar.
 class SignInController extends Notifier<SignInState> {
@@ -47,6 +50,7 @@ class SignInController extends Notifier<SignInState> {
               idToken: identity.idToken,
               accessToken: identity.accessToken,
             );
+        return null;
       });
 
   /// Başarıda `true`.
@@ -59,14 +63,32 @@ class SignInController extends Notifier<SignInState> {
               email: email.trim(),
               password: password,
             );
+        return null;
       });
 
-  Future<bool> _run(SignInMethod method, Future<void> Function() action) async {
+  /// Yeni e-posta hesabı açar. Başarıda `true`; e-posta onayı gerekiyorsa
+  /// [SignInState.info] onay metnini taşır.
+  Future<bool> signUpWithPassword({
+    required String email,
+    required String password,
+  }) =>
+      _run(SignInMethod.password, () async {
+        final signedIn = await ref.read(signInBackendProvider).signUpWithPassword(
+              email: email.trim(),
+              password: password,
+            );
+        return signedIn ? null : confirmationSentMessage;
+      });
+
+  Future<bool> _run(
+    SignInMethod method,
+    Future<String?> Function() action,
+  ) async {
     if (state.isBusy) return false;
     state = SignInState(busy: method);
     try {
-      await action();
-      state = const SignInState();
+      final info = await action();
+      state = SignInState(info: info);
       return true;
     } catch (error) {
       state = SignInState(error: signInErrorMessage(error));

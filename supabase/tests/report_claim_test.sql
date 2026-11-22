@@ -2,7 +2,6 @@
 -- Çalıştırma: supabase/tests/run_local.sh (auth_stub.sql + schema.sql sonrası).
 \set ON_ERROR_STOP on
 set client_min_messages = notice;
-alter table auth.users disable trigger signup_invite_gate;
 
 create schema rc;
 create function rc.ok(p_label text, p_cond boolean) returns void
@@ -94,6 +93,5 @@ select rc.ok('complete: dirty temizlendi, kira bırakıldı',
   (select not dirty and claim_token is null from public.daily_reports where user_id = :U));
 
 delete from auth.users where id = :U;
-alter table auth.users enable trigger signup_invite_gate;
 drop schema rc cascade;
 \echo RAPOR KIRA TESTLERI GECTI

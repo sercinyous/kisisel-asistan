@@ -32,6 +32,18 @@ class FakeSignInBackend implements SignInBackend {
   Object? error;
   final List<({String idToken, String? accessToken})> googleCalls = [];
   final List<({String email, String password})> passwordCalls = [];
+  final List<({String email, String password})> signUpCalls = [];
+  bool signUpOpensSession = false;
+
+  @override
+  Future<bool> signUpWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    signUpCalls.add((email: email, password: password));
+    if (error != null) throw error!;
+    return signUpOpensSession;
+  }
 
   @override
   Future<void> signInWithGoogleIdToken({
@@ -105,21 +117,7 @@ void main() {
       expect(backend.googleCalls, isEmpty);
     });
 
-    test('kayıt kapısı: davetsiz e-posta anlaşılır mesaj alır (kanca metni)',
-        () async {
-      backend.error = const AuthApiException(
-        'Bu e-posta için davet yok',
-        statusCode: '403',
-      );
-
-      expect(await controller().signInWithGoogle(), isFalse);
-      expect(state().error, noInviteMessage);
-      expect(state().error, contains('arkadaş'));
-    });
-
-    test(
-        'kayıt kapısı: tetikleyici reddi GoTrue\'da genel "Database error '
-        'saving new user" gelir, yine davet mesajı', () async {
+    test('yeni hesap kaydedilemezse genel kayıt mesajı', () async {
       backend.error = const AuthApiException(
         'Database error saving new user',
         statusCode: '500',
@@ -127,7 +125,7 @@ void main() {
       );
 
       expect(await controller().signInWithGoogle(), isFalse);
-      expect(state().error, noInviteMessage);
+      expect(state().error, signUpFailedMessage);
     });
 
     test('sunucuda Google sağlayıcısı yapılandırılmamışsa açıklama verir',
@@ -149,7 +147,7 @@ void main() {
     });
 
     test('başarılı denemeden sonra eski hata temizlenir', () async {
-      backend.error = const AuthApiException('Bu e-posta için davet yok');
+      backend.error = const AuthApiException('Beklenmeyen', statusCode: '500');
       await controller().signInWithGoogle();
       expect(state().error, isNotNull);
 
@@ -195,6 +193,44 @@ void main() {
     });
   });
 
+  group('e-posta ile kayıt', () {
+    test('onay gerekiyorsa onay e-postası bilgisi gösterilir', () async {
+      final ok = await controller()
+          .signUpWithPassword(email: ' yeni@gmail.com ', password: 'sifre1');
+
+      expect(ok, isTrue);
+      expect(backend.signUpCalls.single,
+          (email: 'yeni@gmail.com', password: 'sifre1'));
+      expect(state().info, confirmationSentMessage);
+      expect(state().error, isNull);
+    });
+
+    test('oturum hemen açılırsa bilgi metni yok', () async {
+      backend.signUpOpensSession = true;
+
+      expect(
+        await controller()
+            .signUpWithPassword(email: 'yeni@gmail.com', password: 'sifre1'),
+        isTrue,
+      );
+      expect(state().info, isNull);
+    });
+
+    test('kayıtlı e-posta ve zayıf şifre Türkçe mesaj verir', () async {
+      backend.error = const AuthApiException('User already registered',
+          statusCode: '422', code: 'user_already_exists');
+      await controller()
+          .signUpWithPassword(email: 'var@gmail.com', password: 'sifre1');
+      expect(state().error, contains('zaten bir hesap var'));
+
+      backend.error = const AuthApiException('Password should be at least 6',
+          statusCode: '422', code: 'weak_password');
+      await controller()
+          .signUpWithPassword(email: 'yeni@gmail.com', password: '123');
+      expect(state().error, contains('zayıf'));
+    });
+  });
+
   group('eşzamanlılık', () {
     test('süren giriş varken ikinci deneme başlamaz', () async {
       google.gate = Completer<void>();
@@ -237,15 +273,6 @@ void main() {
         signInErrorMessage(const AuthApiException('Beklenmeyen', statusCode: '500')),
         'Giriş başarısız: Beklenmeyen',
       );
-    });
-
-    test('davet reddi her iki biçimde de tanınır', () {
-      expect(isNoInviteRejection(const AuthException('Bu e-posta için davet yok')),
-          isTrue);
-      expect(isNoInviteRejection(const AuthException('Database error saving new user')),
-          isTrue);
-      expect(isNoInviteRejection(const AuthException('Invalid login credentials')),
-          isFalse);
     });
   });
 

@@ -6,7 +6,6 @@
 set client_min_messages = notice;
 \ir helpers_faz4b.sql
 
-alter table auth.users disable trigger signup_invite_gate;
 select tf.mkuser('b1000000-0000-0000-0000-000000000001', 'sema-a@example.com');
 select tf.mkuser('b2000000-0000-0000-0000-000000000002', 'sema-b@example.com');
 \set A '''b1000000-0000-0000-0000-000000000001'''

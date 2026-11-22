@@ -22,6 +22,17 @@ class _Backend implements SignInBackend {
   Object? error;
   int googleCalls = 0;
   int passwordCalls = 0;
+  int signUpCalls = 0;
+
+  @override
+  Future<bool> signUpWithPassword({
+    required String email,
+    required String password,
+  }) async {
+    signUpCalls++;
+    if (error != null) throw error!;
+    return false;
+  }
 
   @override
   Future<void> signInWithGoogleIdToken({
@@ -107,7 +118,7 @@ void main() {
     expect(find.byKey(const Key('sign-in-error')), findsNothing);
   });
 
-  testWidgets('davetsiz e-posta reddedilince anlaşılır Türkçe mesaj görünür',
+  testWidgets('hesap kaydedilemezse anlaşılır Türkçe mesaj görünür',
       (tester) async {
     backend.error = const AuthApiException(
       'Database error saving new user',
@@ -119,7 +130,7 @@ void main() {
     await tester.tap(find.byKey(const Key('sign-in-google')));
     await tester.pumpAndSettle();
 
-    expect(find.text(noInviteMessage), findsOneWidget);
+    expect(find.text(signUpFailedMessage), findsOneWidget);
   });
 
   testWidgets('e-posta formu doğrulanır ve gönderilir', (tester) async {
@@ -136,5 +147,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(backend.passwordCalls, 1);
+  });
+
+  testWidgets('Kayıt ol geçişi hesap oluşturur ve onay bilgisini gösterir',
+      (tester) async {
+    await pumpScreen(tester, googleAvailable: false);
+
+    expect(find.textContaining('davet'), findsNothing);
+    await tester.tap(find.byKey(const Key('sign-in-mode-toggle')));
+    await tester.pump();
+    expect(find.text('Hesap oluştur'), findsOneWidget);
+    expect(find.text('Hesabın var mı? Giriş yap'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextFormField).first, 'yeni@gmail.com');
+    await tester.enterText(find.byType(TextFormField).last, '123');
+    await tester.tap(find.byKey(const Key('sign-in-submit')));
+    await tester.pump();
+    expect(find.text('Şifre en az 6 karakter olmalı.'), findsOneWidget);
+    expect(backend.signUpCalls, 0);
+
+    await tester.enterText(find.byType(TextFormField).last, 'sifre1');
+    await tester.tap(find.byKey(const Key('sign-in-submit')));
+    await tester.pumpAndSettle();
+
+    expect(backend.signUpCalls, 1);
+    expect(backend.passwordCalls, 0);
+    expect(find.text(confirmationSentMessage), findsOneWidget);
   });
 }
