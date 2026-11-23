@@ -16,7 +16,12 @@ class StoryPublisher {
     UserSettings settings,
     List<PendingAchievement> candidates,
   ) async {
-    if (!settings.shareStories || !settings.shareStoriesColumn) return 0;
+    if (!settings.shareStories || !settings.shareStoriesColumn) {
+      // Kapatınca sunucu story'leri siler; yeniden açınca bugünküler tekrar
+      // yazılabilsin diye oturum hafızası da temizlenir.
+      _sent.clear();
+      return 0;
+    }
     var written = 0;
     for (final c in candidates) {
       if (!_sent.add(c.dedupeKey)) continue;

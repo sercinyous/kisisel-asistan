@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/avatar/avatar_spec.dart';
 import 'package:kisisel_asistan/features/health/domain/goal_mode.dart';
+import 'package:kisisel_asistan/features/health/domain/streaks.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 import 'package:kisisel_asistan/features/stories/data/stories_repository.dart';
 import 'package:kisisel_asistan/features/stories/data/story_publisher.dart';
@@ -61,13 +62,18 @@ void main() {
       final a = StoryBuilder.dailyTips(GoalMode.fatLoss, _today);
       expect(a, StoryBuilder.dailyTips(GoalMode.fatLoss, _today));
       expect(a, hasLength(2));
-      expect(a, isNot(StoryBuilder.dailyTips(
-          GoalMode.fatLoss, _today.add(const Duration(days: 1)))));
+      expect(
+          a,
+          isNot(StoryBuilder.dailyTips(
+              GoalMode.fatLoss, _today.add(const Duration(days: 1)))));
       final pool = [
         ...StoryBuilder.goalTips[GoalMode.leanGain]!,
         ...StoryBuilder.generalTips,
       ];
-      expect(StoryBuilder.dailyTips(GoalMode.leanGain, _today).every(pool.contains), isTrue);
+      expect(
+          StoryBuilder.dailyTips(GoalMode.leanGain, _today)
+              .every(pool.contains),
+          isTrue);
     });
 
     test('ipucu listesinde tıbbi iddia yok', () {
@@ -76,7 +82,8 @@ void main() {
         ...StoryBuilder.generalTips,
       ];
       for (final t in all) {
-        expect(t.toLowerCase(), isNot(matches(RegExp(r'tedavi|ilaç|hastalık|garanti|kesin'))));
+        expect(t.toLowerCase(),
+            isNot(matches(RegExp(r'tedavi|ilaç|hastalık|garanti|kesin'))));
       }
     });
 
@@ -84,7 +91,9 @@ void main() {
       final g = StoryBuilder.tips(
         today: _today,
         goal: GoalMode.maintain,
-        agenda: [StoryAgendaItem(title: 'Su iç', time: DateTime(2026, 11, 23, 15, 5))],
+        agenda: [
+          StoryAgendaItem(title: 'Su iç', time: DateTime(2026, 11, 23, 15, 5))
+        ],
       );
       expect(g.slides.last.id, 'agenda');
       expect(g.slides.last.body, '15:05  Su iç');
@@ -122,7 +131,10 @@ void main() {
       bool reached(List<double> kgs) => weightGoalReachedToday(
             weights: [
               for (final (i, kg) in kgs.indexed)
-                (at: _today.subtract(Duration(days: kgs.length - 1 - i)), kg: kg),
+                (
+                  at: _today.subtract(Duration(days: kgs.length - 1 - i)),
+                  kg: kg
+                ),
             ],
             targetKg: 70,
             startKg: 80,
@@ -140,7 +152,8 @@ void main() {
 
     test('paylaşım kapalıyken (varsayılan) hiçbir şey yazılmaz', () async {
       final repo = MemoryStoriesRepository();
-      final n = await StoryPublisher(repo).publish(const UserSettings.defaults(), pending);
+      final n = await StoryPublisher(repo)
+          .publish(const UserSettings.defaults(), pending);
       expect(n, 0);
       expect(repo.published, isEmpty);
       expect(const UserSettings.defaults().shareStories, isFalse);
@@ -158,10 +171,75 @@ void main() {
     test('açıkken bir kez yazılır (tür + gün tekil)', () async {
       final repo = MemoryStoriesRepository();
       final publisher = StoryPublisher(repo);
-      final settings = const UserSettings.defaults().copyWith(shareStories: true);
+      final settings =
+          const UserSettings.defaults().copyWith(shareStories: true);
       expect(await publisher.publish(settings, pending), 1);
       expect(await publisher.publish(settings, pending), 0);
       expect(repo.published, hasLength(1));
+    });
+  });
+
+  group('Denetim düzeltmeleri', () {
+    StreakStatus streak(int current, StreakToday today) => StreakStatus(
+          kind: StreakKind.steps,
+          current: current,
+          best: current,
+          today: today,
+          days: const {},
+        );
+
+    test('seri eşiği ertesi sabah (bugün sağlanmadan) tekrar yazılmaz', () {
+      final pendingDay8 = achievementStreaks([streak(7, StreakToday.pending)]);
+      expect(pendingDay8, isEmpty);
+      expect(
+        StoryBuilder.detectAchievements(
+            AchievementInput(today: _today, streaks: pendingDay8)),
+        isEmpty,
+      );
+      final doneDay7 = achievementStreaks([streak(7, StreakToday.done)]);
+      expect(doneDay7, {'Adım': 7});
+      expect(
+        StoryBuilder.detectAchievements(
+                AchievementInput(today: _today, streaks: doneDay7))
+            .single
+            .kind,
+        AchievementKind.streak7,
+      );
+    });
+
+    test('ipucu başlığı Türkçe büyük harf', () {
+      final g = StoryBuilder.tips(today: _today, goal: GoalMode.maintain);
+      expect(g.slides.first.eyebrow, contains('İ'));
+      expect(g.slides.first.eyebrow, isNot(contains('KILOYU')));
+    });
+
+    test('kapat-aç aynı oturumda bugünkü başarıyı yeniden yazar', () async {
+      final repo = MemoryStoriesRepository();
+      final publisher = StoryPublisher(repo);
+      final on = const UserSettings.defaults().copyWith(shareStories: true);
+      final pending = [PendingAchievement(AchievementKind.workout, _today)];
+      expect(await publisher.publish(on, pending), 1);
+      expect(
+          await publisher.publish(const UserSettings.defaults(), pending), 0);
+      repo.published.clear();
+      expect(await publisher.publish(on, pending), 1);
+    });
+
+    test('FriendStory.tryFromMap tepkileri okur, bozuk satırı atlar', () {
+      final s = FriendStory.tryFromMap({
+        'id': 's1',
+        'user_id': 'me',
+        'kind': 'workout',
+        'payload': {},
+        'created_at': '2026-11-23T08:00:00Z',
+        'expires_at': '2026-11-24T08:00:00Z',
+        'story_reactions': [
+          {'user_id': 'f-1', 'emoji': '🔥'},
+        ],
+      });
+      expect(s!.reactionOf('f-1'), '🔥');
+      expect(FriendStory.tryFromMap({'id': 'x', 'user_id': 'me', 'kind': '?'}),
+          isNull);
     });
   });
 
@@ -169,9 +247,11 @@ void main() {
     test('kişi başına bir halka, süresi dolan ve tanınmayan atlanır', () {
       final groups = StoryBuilder.friendGroups(
         stories: [
-          _story('a', 'f-1', AchievementKind.streak7, ago: const Duration(hours: 5)),
+          _story('a', 'f-1', AchievementKind.streak7,
+              ago: const Duration(hours: 5)),
           _story('b', 'f-2', AchievementKind.workout),
-          _story('c', 'f-1', AchievementKind.weightGoal, ago: const Duration(hours: 30)),
+          _story('c', 'f-1', AchievementKind.weightGoal,
+              ago: const Duration(hours: 30)),
           _story('d', 'x', AchievementKind.workout),
         ],
         friends: {
@@ -194,7 +274,8 @@ void main() {
           overrides: [storiesRepositoryProvider.overrideWithValue(repo)],
           child: MaterialApp(
             home: MediaQuery(
-              data: MediaQueryData(size: const Size(400, 800), disableAnimations: reduce),
+              data: MediaQueryData(
+                  size: const Size(400, 800), disableAnimations: reduce),
               child: StoryViewer(groups: groups),
             ),
           ),
@@ -208,7 +289,8 @@ void main() {
       tasksTotal: 2,
     ));
 
-    testWidgets('dokununca ilerler, kartlar görüldü olarak saklanır', (tester) async {
+    testWidgets('dokununca ilerler, kartlar görüldü olarak saklanır',
+        (tester) async {
       final repo = MemoryStoriesRepository();
       await tester.pumpWidget(app([daily], repo));
       await tester.pump();
@@ -221,10 +303,12 @@ void main() {
       expect(prefs.getStringList(StorySeenStore.prefsKey), daily.seenKeys);
     });
 
-    testWidgets('kendiliğinden ilerler; hareket azaltmada ilerlemez', (tester) async {
+    testWidgets('kendiliğinden ilerler; hareket azaltmada ilerlemez',
+        (tester) async {
       final repo = MemoryStoriesRepository();
       await tester.pumpWidget(app([daily], repo));
-      await tester.pump(StoryViewer.slideDuration + const Duration(milliseconds: 50));
+      await tester
+          .pump(StoryViewer.slideDuration + const Duration(milliseconds: 50));
       await tester.pump();
       expect(find.text('Bugünün işleri'), findsOneWidget);
 
@@ -232,6 +316,66 @@ void main() {
       await tester.pumpWidget(app([daily], repo, reduce: true));
       await tester.pump(StoryViewer.slideDuration * 2);
       expect(find.text('Bugünkü adımların'), findsOneWidget);
+    });
+
+    testWidgets('uzun basma iptal edilince duraklama kalkar', (tester) async {
+      final repo = MemoryStoriesRepository();
+      await tester.pumpWidget(app([daily], repo));
+      await tester.pump();
+      final gesture = await tester.startGesture(const Offset(200, 400));
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text('Duraklatıldı'), findsOneWidget);
+      await gesture.cancel();
+      await tester.pump();
+      expect(find.text('Duraklatıldı'), findsNothing);
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.pump();
+      expect(find.text('Bugünün işleri'), findsOneWidget);
+    });
+
+    testWidgets('kapanış bir kez çalışır, alttaki sayfa kapanmaz',
+        (tester) async {
+      final repo = MemoryStoriesRepository();
+      const single = StoryGroup(
+        id: 'g',
+        kind: StoryKind.tips,
+        label: 'İpuçları',
+        slides: [
+          StorySlide(
+              id: 'a', eyebrow: 'E', title: 'Tek kart', tone: StoryTone.mint)
+        ],
+      );
+      await tester.pumpWidget(ProviderScope(
+        overrides: [storiesRepositoryProvider.overrideWithValue(repo)],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () =>
+                        StoryViewer.open(context, groups: [single]),
+                    child: const Text('ara sayfa'),
+                  ),
+                ),
+              )),
+              child: const Text('kök'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('kök'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ara sayfa'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 4900));
+      await tester.tapAt(const Offset(350, 400));
+      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pumpAndSettle();
+      expect(find.text('ara sayfa'), findsOneWidget);
     });
 
     testWidgets('basılı tutunca duraklar', (tester) async {
@@ -247,9 +391,10 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('arkadaş story''sine tepki verilir', (tester) async {
+    testWidgets('arkadaş story' 'sine tepki verilir', (tester) async {
       final story = _story('s1', 'f-1', AchievementKind.workout);
-      final repo = MemoryStoriesRepository(currentUserId: 'me', friendStories: [story]);
+      final repo =
+          MemoryStoriesRepository(currentUserId: 'me', friendStories: [story]);
       final groups = StoryBuilder.friendGroups(
         stories: [story],
         friends: {'f-1': (name: 'Elif', avatar: const AvatarChoice())},
@@ -281,11 +426,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const ValueKey('story-viewer')), findsOneWidget);
-      await tester.fling(find.byKey(const ValueKey('story-viewer')), const Offset(0, 400), 1500);
+      await tester.fling(find.byKey(const ValueKey('story-viewer')),
+          const Offset(0, 400), 1500);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const ValueKey('story-viewer')), findsNothing);
     });
   });
 }
-

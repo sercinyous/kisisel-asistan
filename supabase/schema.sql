@@ -4545,6 +4545,10 @@ as $$
 begin
   new.created_at := now();
   new.expires_at := now() + interval '24 hours';
+  -- Sahibin bir günden uzun süredir dolmuş eski satırları temizlenir
+  -- (tablo kullanıcı başına sınırlı kalır; tepkiler cascade ile gider).
+  delete from public.friend_stories s
+  where s.user_id = new.user_id and s.expires_at < now() - interval '1 day';
   return new;
 end;
 $$;
@@ -4572,6 +4576,46 @@ create trigger user_settings_share_stories_purge
   after update of share_stories on public.user_settings
   for each row execute function public.share_stories_off_purge();
 
+-- Ayar satırı silinirse (paylaşım onayı kalmaz) story'ler de silinir.
+create or replace function public.share_stories_settings_delete_purge()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  delete from public.friend_stories s where s.user_id = old.user_id;
+  return old;
+end;
+$$;
+revoke all on function public.share_stories_settings_delete_purge() from public, anon, authenticated;
+drop trigger if exists user_settings_share_stories_delete_purge on public.user_settings;
+create trigger user_settings_share_stories_delete_purge
+  after delete on public.user_settings
+  for each row execute function public.share_stories_settings_delete_purge();
+
+-- Arkadaşlık bitince iki taraf arasındaki story tepkileri silinir.
+create or replace function public.story_reactions_unfriend_purge()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  delete from public.story_reactions r
+  using public.friend_stories s
+  where r.story_id = s.id
+    and ((s.user_id = old.user_a and r.user_id = old.user_b)
+      or (s.user_id = old.user_b and r.user_id = old.user_a));
+  return old;
+end;
+$$;
+revoke all on function public.story_reactions_unfriend_purge() from public, anon, authenticated;
+drop trigger if exists friendships_story_reactions_purge on public.friendships;
+create trigger friendships_story_reactions_purge
+  after delete on public.friendships
+  for each row execute function public.story_reactions_unfriend_purge();
+
 -- İki kullanıcı arkadaş mı? friendships RLS'i yalnızca üyeye satır gösterir;
 -- politikalarda çağıran kişi her zaman çiftin bir ucudur.
 create or replace function public.story_friends(p_a uuid, p_b uuid)
@@ -4588,10 +4632,20 @@ $$;
 revoke all on function public.story_friends(uuid, uuid) from public, anon;
 grant execute on function public.story_friends(uuid, uuid) to authenticated;
 
+-- Sahip için UPDATE politikası yoktur: süre (expires_at) yalnızca eklemede
+-- sunucuda damgalanır ve sonradan uzatılamaz.
 drop policy if exists friend_stories_owner_all on public.friend_stories;
-create policy friend_stories_owner_all on public.friend_stories
-  for all to authenticated
-  using ((select auth.uid()) = user_id)
+drop policy if exists friend_stories_owner_select on public.friend_stories;
+create policy friend_stories_owner_select on public.friend_stories
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+drop policy if exists friend_stories_owner_delete on public.friend_stories;
+create policy friend_stories_owner_delete on public.friend_stories
+  for delete to authenticated
+  using ((select auth.uid()) = user_id);
+drop policy if exists friend_stories_owner_insert on public.friend_stories;
+create policy friend_stories_owner_insert on public.friend_stories
+  for insert to authenticated
   with check (
     (select auth.uid()) = user_id
     and exists (
@@ -4638,7 +4692,9 @@ create policy story_reactions_delete on public.story_reactions
   for delete to authenticated
   using ((select auth.uid()) = user_id);
 
-revoke all on table public.friend_stories, public.story_reactions from anon;
+-- Supabase varsayılan yetkileri (authenticated: ALL) geri alınır; yalnızca
+-- gereken yetkiler verilir.
+revoke all on table public.friend_stories, public.story_reactions from anon, authenticated;
 grant select, insert, delete on table public.friend_stories to authenticated;
 grant select, insert, delete on table public.story_reactions to authenticated;
 -- END stories

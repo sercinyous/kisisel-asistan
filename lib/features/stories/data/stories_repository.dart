@@ -16,6 +16,9 @@ abstract class StoriesRepository {
   /// Arkadaşların süresi dolmamış story'leri (benim tepkimle birlikte).
   Future<List<FriendStory>> friendStories();
 
+  /// Benim süresi dolmamış story'lerim ve arkadaşlarımın tepkileri.
+  Future<List<FriendStory>> myStories();
+
   /// Başarıyı yazar; aynı tür + gün zaten varsa sessizce atlanır.
   Future<void> publish(PendingAchievement achievement);
 
@@ -44,6 +47,21 @@ class SupabaseStoriesRepository implements StoriesRepository {
         .select('id, user_id, kind, payload, created_at, expires_at, '
             'story_reactions(user_id, emoji)')
         .neq('user_id', _userId)
+        .gt('expires_at', DateTime.now().toUtc().toIso8601String())
+        .order('created_at');
+    return [
+      for (final row in (rows as List).cast<Map<String, dynamic>>())
+        if (FriendStory.tryFromMap(row) case final story?) story,
+    ];
+  }
+
+  @override
+  Future<List<FriendStory>> myStories() async {
+    final rows = await _client
+        .from('friend_stories')
+        .select('id, user_id, kind, payload, created_at, expires_at, '
+            'story_reactions(user_id, emoji)')
+        .eq('user_id', _userId)
         .gt('expires_at', DateTime.now().toUtc().toIso8601String())
         .order('created_at');
     return [
@@ -89,12 +107,15 @@ class MemoryStoriesRepository implements StoriesRepository {
   MemoryStoriesRepository({
     this.currentUserId = 'me',
     List<FriendStory> friendStories = const [],
-  }) : _friendStories = [...friendStories];
+    List<FriendStory> myStories = const [],
+  })  : _friendStories = [...friendStories],
+        _myStories = [...myStories];
 
   @override
   final String? currentUserId;
 
   final List<FriendStory> _friendStories;
+  final List<FriendStory> _myStories;
 
   /// [publish] ile yazılan başarılar.
   final List<PendingAchievement> published = [];
@@ -104,6 +125,15 @@ class MemoryStoriesRepository implements StoriesRepository {
     final now = DateTime.now();
     return [
       for (final s in _friendStories)
+        if (s.isVisibleAt(now)) s,
+    ];
+  }
+
+  @override
+  Future<List<FriendStory>> myStories() async {
+    final now = DateTime.now();
+    return [
+      for (final s in _myStories)
         if (s.isVisibleAt(now)) s,
     ];
   }

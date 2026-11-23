@@ -60,8 +60,10 @@ class StoryRing extends StatelessWidget {
   Widget build(BuildContext context) {
     const size = StoriesRow.ringSize;
     final Widget inner = switch (group.kind) {
-      StoryKind.daily => _IconFace(icon: Icons.wb_sunny_outlined, color: AppColors.sunsetMid),
-      StoryKind.tips => _IconFace(icon: Icons.lightbulb_outline_rounded, color: AppColors.accent),
+      StoryKind.daily =>
+        _IconFace(icon: Icons.wb_sunny_outlined, color: AppColors.sunsetMid),
+      StoryKind.tips => _IconFace(
+          icon: Icons.lightbulb_outline_rounded, color: AppColors.accent),
       StoryKind.friend => RitimAvatar(
           choice: group.avatar ?? const AvatarChoice(),
           name: group.label,
@@ -88,7 +90,10 @@ class StoryRing extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: unseen
                         ? SweepGradient(
-                            colors: [...AppColors.sunset, AppColors.sunsetStart],
+                            colors: [
+                              ...AppColors.sunset,
+                              AppColors.sunsetStart
+                            ],
                           )
                         : null,
                     color: unseen ? null : AppColors.textMuted,
@@ -111,7 +116,9 @@ class StoryRing extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: AppType.caption,
-                    color: unseen ? AppColors.textPrimary : AppColors.textSecondary,
+                    color: unseen
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -132,7 +139,8 @@ class _IconFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.surfaceHigh),
+      decoration:
+          BoxDecoration(shape: BoxShape.circle, color: AppColors.surfaceHigh),
       child: SizedBox.expand(child: Icon(icon, color: color, size: 26)),
     );
   }

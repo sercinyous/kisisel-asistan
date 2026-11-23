@@ -86,8 +86,15 @@ begin
     format($q$insert into public.story_reactions (story_id, emoji) values (%L, '👏') returning to_jsonb(story_id)$q$, old_sid),
     '42501');
   perform tf.fails('izinsiz emoji reddedilir', 'authenticated', friend_u,
-    format($q$insert into public.story_reactions (story_id, user_id, emoji) values (%L, %L, '😀') returning to_jsonb(story_id)$q$, sid, stranger),
-    null);
+    format($q$insert into public.story_reactions (story_id, emoji) values (%L, '😀') returning to_jsonb(story_id)$q$, sid),
+    '23514');
+  perform tf.fails('başkası adına tepki verilmez', 'authenticated', friend_u,
+    format($q$insert into public.story_reactions (story_id, user_id, emoji) values (%L, %L, '👏') returning to_jsonb(story_id)$q$, sid, stranger),
+    '42501');
+  r := tf.run('authenticated', friend_u,
+    format($q$with i as (insert into public.story_reactions (story_id, emoji) values (%L, '🔥')
+             on conflict do nothing returning 1) select to_jsonb(count(*)) from i$q$, sid));
+  perform tf.eq('tekrar tepki on conflict do nothing ile atlanır', r, '0');
   r := tf.run('authenticated', owner_u, 'select to_jsonb(count(*)) from public.story_reactions');
   perform tf.eq('sahip tepkiyi okur', r, '1');
   r := tf.run('authenticated', friend_u, 'select to_jsonb(count(*)) from public.story_reactions');
@@ -95,12 +102,49 @@ begin
   r := tf.run('authenticated', stranger, 'select to_jsonb(count(*)) from public.story_reactions');
   perform tf.eq('yabancı tepki okuyamaz', r, '0');
 
+  -- Supabase varsayılan yetkileri (authenticated: ALL) olsa bile sahip
+  -- süreyi uzatamaz: UPDATE politikası yok.
+  grant update on public.friend_stories, public.story_reactions to authenticated;
+  r := tf.run('authenticated', owner_u,
+    format($q$with u as (update public.friend_stories set expires_at = now() + interval '10 years'
+             where id = %L returning 1) select to_jsonb(count(*)) from u$q$, sid));
+  perform tf.eq('sahip süreyi uzatamaz (varsayılan yetkiyle)', r, '0');
+  r := tf.run('authenticated', friend_u,
+    format($q$with u as (update public.story_reactions set emoji = '👏'
+             where story_id = %L returning 1) select to_jsonb(count(*)) from u$q$, sid));
+  perform tf.eq('tepki güncellenemez (varsayılan yetkiyle)', r, '0');
+  revoke update on public.friend_stories, public.story_reactions from authenticated;
+
+  -- Arkadaşlık bitince story görünmez, tepki silinir.
+  delete from public.friendships where user_a = owner_u and user_b = friend_u;
+  r := tf.run('authenticated', friend_u, 'select to_jsonb(count(*)) from public.friend_stories');
+  perform tf.eq('eski arkadaş story''yi görmez', r, '0');
+  perform tf.eq('eski arkadaşın tepkisi silinir',
+    (select to_jsonb(count(*)) from public.story_reactions where story_id = sid), '0');
+  insert into public.friendships (user_a, user_b) values (owner_u, friend_u);
+  perform tf.run('authenticated', friend_u,
+    format($q$insert into public.story_reactions (story_id, emoji) values (%L, '🔥') returning to_jsonb(story_id)$q$, sid));
+
+  -- Çok eski (süresi bir günden uzun dolmuş) satırlar yeni eklemede temizlenir.
+  update public.friend_stories set expires_at = now() - interval '2 days' where id = old_sid;
+  perform tf.run('authenticated', owner_u,
+    $q$insert into public.friend_stories (kind, day) values ('workout', current_date) returning to_jsonb(id)$q$);
+  perform tf.eq('eski satır temizlenir',
+    (select to_jsonb(count(*)) from public.friend_stories where id = old_sid), '0');
+
   -- 4) Paylaşım kapatılınca story'ler ve tepkileri silinir.
   update public.user_settings set share_stories = false where user_id = owner_u;
   perform tf.eq('kapatınca story kalmaz',
     (select to_jsonb(count(*)) from public.friend_stories where user_id = owner_u), '0');
   perform tf.eq('kapatınca tepki kalmaz',
     (select to_jsonb(count(*)) from public.story_reactions where story_id = sid), '0');
+
+  -- 5) Ayar satırı silinirse story'ler de silinir.
+  update public.user_settings set share_stories = true where user_id = owner_u;
+  perform tf.run('authenticated', owner_u, ins);
+  delete from public.user_settings where user_id = owner_u;
+  perform tf.eq('ayar silinince story kalmaz',
+    (select to_jsonb(count(*)) from public.friend_stories where user_id = owner_u), '0');
 end;
 $$;
 

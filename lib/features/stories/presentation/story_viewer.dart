@@ -35,7 +35,8 @@ class StoryViewer extends ConsumerStatefulWidget {
             reduce ? Duration.zero : const Duration(milliseconds: 220),
         reverseTransitionDuration:
             reduce ? Duration.zero : const Duration(milliseconds: 180),
-        pageBuilder: (_, __, ___) => StoryViewer(groups: groups, initial: initial),
+        pageBuilder: (_, __, ___) =>
+            StoryViewer(groups: groups, initial: initial),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
@@ -53,6 +54,12 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   int _slide = 0;
   double _drag = 0;
   bool _paused = false;
+
+  /// Tepki gönderilirken kart ilerlemez.
+  bool _reacting = false;
+
+  /// Kapanış başladı: zamanlayıcı ve dokunuşlar artık işlem yapmaz.
+  bool _closing = false;
   bool _reduceMotion = false;
   bool _started = false;
 
@@ -65,10 +72,13 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   void initState() {
     super.initState();
     _group = widget.initial.clamp(0, widget.groups.length - 1);
-    _progress = AnimationController(vsync: this, duration: StoryViewer.slideDuration)
-      ..addStatusListener((s) {
-        if (s == AnimationStatus.completed && !_reduceMotion) _next();
-      });
+    _progress =
+        AnimationController(vsync: this, duration: StoryViewer.slideDuration)
+          ..addStatusListener((s) {
+            if (s == AnimationStatus.completed && !_reduceMotion && !_closing) {
+              _next();
+            }
+          });
   }
 
   @override
@@ -88,6 +98,7 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   }
 
   void _startSlide() {
+    if (_closing) return;
     final key = _current.seenKeys[_slide];
     // Sağlayıcı build sırasında değiştirilmesin diye kare sonrasına ertelenir.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -98,16 +109,20 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
       _progress.stop();
     } else {
       _progress.forward(from: 0);
-      if (_paused) _progress.stop();
+      if (_paused || _reacting) _progress.stop();
     }
   }
 
   void _close() {
+    if (_closing) return;
+    _closing = true;
+    _progress.stop();
     if (_reactions.isNotEmpty) ref.invalidate(friendStoryGroupsProvider);
     Navigator.of(context).maybePop();
   }
 
   void _next() {
+    if (_closing) return;
     if (_slide < _current.slides.length - 1) {
       setState(() => _slide++);
     } else if (_group < widget.groups.length - 1) {
@@ -123,6 +138,7 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   }
 
   void _previous() {
+    if (_closing) return;
     if (_slide > 0) {
       setState(() => _slide--);
     } else if (_group > 0) {
@@ -138,9 +154,15 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   }
 
   void _setPaused(bool paused) {
-    if (_reduceMotion) return;
+    if (_reduceMotion || _closing || _paused == paused) return;
     setState(() => _paused = paused);
-    if (paused) {
+    _syncProgress();
+  }
+
+  /// Basılı tutma, sürükleme ya da tepki sürerken zamanlayıcı durur.
+  void _syncProgress() {
+    if (_reduceMotion || _closing) return;
+    if (_paused || _reacting) {
       _progress.stop();
     } else if (_progress.value < 1) {
       _progress.forward();
@@ -153,7 +175,11 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
         ? _reactions[story.id]
         : story.reactionOf(repo.currentUserId);
     final next = before == emoji ? null : emoji;
-    setState(() => _reactions[story.id] = next);
+    setState(() {
+      _reactions[story.id] = next;
+      _reacting = true;
+    });
+    _syncProgress();
     try {
       await repo.react(story.id, next);
     } catch (_) {
@@ -162,6 +188,11 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(content: Text('Tepki gönderilemedi. Tekrar dene.')),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _reacting = false);
+        _syncProgress();
+      }
     }
   }
 
@@ -169,9 +200,10 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   Widget build(BuildContext context) {
     final group = _current;
     final slide = group.slides[_slide];
-    final story = group.kind == StoryKind.friend && _slide < group.stories.length
-        ? group.stories[_slide]
-        : null;
+    final story =
+        group.kind == StoryKind.friend && _slide < group.stories.length
+            ? group.stories[_slide]
+            : null;
     final repo = ref.watch(storiesRepositoryProvider);
     final myReaction = story == null
         ? null
@@ -182,59 +214,75 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
     return Scaffold(
       key: const ValueKey('story-viewer'),
       backgroundColor: AppColors.background,
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapUp: (d) {
-          final width = MediaQuery.sizeOf(context).width;
-          if (d.localPosition.dx < width / 3) {
-            _previous();
-          } else {
-            _next();
-          }
+      body: Listener(
+        // Uzun basma ya da sürükleme iptal edilirse (ör. sistem hareketi)
+        // görüntüleyici duraklatılmış kalmasın.
+        onPointerCancel: (_) {
+          if (_paused) _setPaused(false);
+          if (_drag != 0 && !_closing) setState(() => _drag = 0);
         },
-        onLongPressStart: (_) => _setPaused(true),
-        onLongPressEnd: (_) => _setPaused(false),
-        onVerticalDragUpdate: (d) =>
-            setState(() => _drag = (_drag + d.delta.dy).clamp(0, 400)),
-        onVerticalDragEnd: (d) {
-          if (_drag > 120 || (d.primaryVelocity ?? 0) > 700) {
-            _close();
-          } else {
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapUp: (d) {
+            final width = MediaQuery.sizeOf(context).width;
+            if (d.localPosition.dx < width / 3) {
+              _previous();
+            } else {
+              _next();
+            }
+          },
+          onLongPressStart: (_) => _setPaused(true),
+          onLongPressEnd: (_) => _setPaused(false),
+          onLongPressCancel: () => _setPaused(false),
+          onVerticalDragStart: (_) => _setPaused(true),
+          onVerticalDragUpdate: (d) =>
+              setState(() => _drag = (_drag + d.delta.dy).clamp(0, 400)),
+          onVerticalDragEnd: (d) {
+            if (_drag > 120 || (d.primaryVelocity ?? 0) > 700) {
+              _close();
+            } else {
+              setState(() => _drag = 0);
+              _setPaused(false);
+            }
+          },
+          onVerticalDragCancel: () {
+            if (_closing) return;
             setState(() => _drag = 0);
-          }
-        },
-        child: Transform.translate(
-          offset: Offset(0, _drag),
-          child: DecoratedBox(
-            key: ValueKey('story-slide-${group.id}-${slide.id}'),
-            decoration: BoxDecoration(gradient: _background(slide.tone)),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.page,
-                  AppSpacing.sm,
-                  AppSpacing.page,
-                  AppSpacing.l,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _ProgressBars(
-                      count: group.slides.length,
-                      index: _slide,
-                      progress: _progress,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _Header(group: group, onClose: _close, paused: _paused),
-                    const Spacer(),
-                    _SlideBody(slide: slide),
-                    const Spacer(),
-                    if (story != null)
-                      _Reactions(
-                        selected: myReaction,
-                        onReact: (e) => _react(story, e),
+            _setPaused(false);
+          },
+          child: Transform.translate(
+            offset: Offset(0, _drag),
+            child: DecoratedBox(
+              key: ValueKey('story-slide-${group.id}-${slide.id}'),
+              decoration: BoxDecoration(gradient: _background(slide.tone)),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.page,
+                    AppSpacing.sm,
+                    AppSpacing.page,
+                    AppSpacing.l,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ProgressBars(
+                        count: group.slides.length,
+                        index: _slide,
+                        progress: _progress,
                       ),
-                  ],
+                      const SizedBox(height: AppSpacing.md),
+                      _Header(group: group, onClose: _close, paused: _paused),
+                      const Spacer(),
+                      _SlideBody(slide: slide),
+                      const Spacer(),
+                      if (story != null)
+                        _Reactions(
+                          selected: myReaction,
+                          onReact: (e) => _react(story, e),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -249,7 +297,10 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          AppColors.nightPurple.withValues(alpha: 0.85),
+          // Açık temada başlık metni bu rengin üstünde okunur kalsın diye
+          // gece moru yalnızca düşük alfayla kullanılır.
+          AppColors.nightPurple
+              .withValues(alpha: AppColors.palette.isDark ? 0.85 : 0.12),
           AppColors.background,
           storyToneColor(tone).withValues(alpha: 0.28),
           AppColors.sunsetEnd.withValues(alpha: 0.32),
@@ -257,6 +308,13 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
         stops: const [0, 0.45, 0.8, 1],
       );
 }
+
+/// Kart tonunun metin rengi: açık temada simge sarısı metinde AA'yı
+/// tutturmadığı için sarı ton metni ana mürekkeple yazılır.
+Color storyToneTextColor(StoryTone tone) =>
+    tone == StoryTone.butter && !AppColors.palette.isDark
+        ? AppColors.textPrimary
+        : storyToneColor(tone);
 
 /// Kart tonunun renk rolü.
 Color storyToneColor(StoryTone tone) => switch (tone) {
@@ -312,7 +370,8 @@ class _ProgressBars extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.group, required this.onClose, required this.paused});
+  const _Header(
+      {required this.group, required this.onClose, required this.paused});
 
   final StoryGroup group;
   final VoidCallback onClose;
@@ -327,8 +386,10 @@ class _Header extends StatelessWidget {
           userId: group.friendId,
           size: 32,
         ),
-      StoryKind.daily => Icon(Icons.wb_sunny_outlined, color: AppColors.sunsetMid),
-      StoryKind.tips => Icon(Icons.lightbulb_outline_rounded, color: AppColors.accent),
+      StoryKind.daily =>
+        Icon(Icons.wb_sunny_outlined, color: AppColors.sunsetMid),
+      StoryKind.tips =>
+        Icon(Icons.lightbulb_outline_rounded, color: AppColors.accent),
     };
     return Row(
       children: [
@@ -366,6 +427,7 @@ class _SlideBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tone = storyToneColor(slide.tone);
+    final toneText = storyToneTextColor(slide.tone);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -377,14 +439,14 @@ class _SlideBody extends StatelessWidget {
             fontSize: AppType.caption,
             letterSpacing: 1.2,
             fontWeight: FontWeight.w700,
-            color: tone,
+            color: toneText,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           slide.title,
           style: TextStyle(
-            fontSize: 28,
+            fontSize: AppType.storyTitle,
             height: 1.2,
             fontWeight: FontWeight.w800,
             color: AppColors.textPrimary,
@@ -395,9 +457,9 @@ class _SlideBody extends StatelessWidget {
           Text(
             slide.value!,
             style: TextStyle(
-              fontSize: 40,
+              fontSize: AppType.storyValue,
               fontWeight: FontWeight.w800,
-              color: tone,
+              color: toneText,
             ),
           ),
         ],
@@ -410,7 +472,7 @@ class _SlideBody extends StatelessWidget {
           Text(
             slide.body!,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: AppType.storyBody,
               height: 1.5,
               color: AppColors.textSecondary,
             ),
@@ -439,22 +501,30 @@ class _Reactions extends StatelessWidget {
               button: true,
               selected: selected == e,
               label: 'Tepki $e',
-              child: GestureDetector(
-                key: ValueKey('story-react-$e'),
-                onTap: () => onReact(e),
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected == e ? AppColors.selection : AppColors.glass,
-                    border: Border.all(
-                      color: selected == e ? AppColors.sunsetMid : AppColors.glassBorder,
-                    ),
+              child: Material(
+                color: selected == e ? AppColors.selection : AppColors.glass,
+                shape: CircleBorder(
+                  side: BorderSide(
+                    color: selected == e
+                        ? AppColors.sunsetMid
+                        : AppColors.glassBorder,
                   ),
-                  child: ExcludeSemantics(
-                    child: Text(e, style: const TextStyle(fontSize: 26)),
+                ),
+                child: InkWell(
+                  key: ValueKey('story-react-$e'),
+                  customBorder: const CircleBorder(),
+                  onTap: () => onReact(e),
+                  child: SizedBox(
+                    width: 56,
+                    height: 56,
+                    child: Center(
+                      child: ExcludeSemantics(
+                        child: Text(
+                          e,
+                          style: const TextStyle(fontSize: AppType.storyEmoji),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),

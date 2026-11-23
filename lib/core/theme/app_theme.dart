@@ -359,6 +359,10 @@ abstract final class AppType {
   static const double caption = 11; // .s
   static const double badge = 10.5; // .badge
   static const double micro = 9.5; // .days
+  static const double storyTitle = 28; // story kartı başlığı 800
+  static const double storyValue = 40; // story kartı değeri 800
+  static const double storyBody = 16; // story kartı açıklaması
+  static const double storyEmoji = 26; // story tepki emojisi
 }
 
 abstract final class AppTheme {

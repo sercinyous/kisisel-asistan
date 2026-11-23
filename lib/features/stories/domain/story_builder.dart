@@ -1,5 +1,7 @@
 import '../../../core/avatar/avatar_spec.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../health/domain/goal_mode.dart';
+import '../../health/domain/streaks.dart';
 import 'story_models.dart';
 
 /// Günün özeti için girdiler (hepsi isteğe bağlı: veri yoksa kart çıkmaz).
@@ -49,12 +51,21 @@ class AchievementInput {
 
   final DateTime today;
 
-  /// Seri adı → güncel gün sayısı.
+  /// Seri adı → güncel gün sayısı. Yalnızca bugün sağlanmış seriler
+  /// verilmelidir (bkz. [achievementStreaks]); dünle biten seri dün
+  /// yazılmış eşiği ertesi gün tekrarlatır.
   final Map<String, int> streaks;
   final bool weeklyGoalHit;
   final bool workoutToday;
   final bool weightGoalReached;
 }
+
+/// Başarı tespiti için seriler: yalnızca bugün sağlanmış olanlar. Bugün
+/// henüz sağlanmamış seri dünle biter; eşiği dün zaten yazılmıştır.
+Map<String, int> achievementStreaks(Iterable<StreakStatus> streaks) => {
+      for (final st in streaks)
+        if (st.today == StreakToday.done) st.kind.label: st.current,
+    };
 
 String _dayKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -84,9 +95,13 @@ abstract final class StoryBuilder {
       slides.add(StorySlide(
         id: 'steps-yesterday',
         eyebrow: 'DÜN',
-        title: goal != null && y >= goal ? 'Adım hedefini tutturdun' : 'Dünkü adımların',
+        title: goal != null && y >= goal
+            ? 'Adım hedefini tutturdun'
+            : 'Dünkü adımların',
         value: '${storyNumber(y)} adım',
-        progress: goal == null || goal <= 0 ? null : (y / goal).clamp(0, 1).toDouble(),
+        progress: goal == null || goal <= 0
+            ? null
+            : (y / goal).clamp(0, 1).toDouble(),
         tone: StoryTone.sky,
       ));
     }
@@ -103,7 +118,9 @@ abstract final class StoryBuilder {
             : left <= 0
                 ? 'Hedef tamam.'
                 : 'Hedefe ${storyNumber(left)} adım kaldı.',
-        progress: goal == null || goal <= 0 ? null : (t / goal).clamp(0, 1).toDouble(),
+        progress: goal == null || goal <= 0
+            ? null
+            : (t / goal).clamp(0, 1).toDouble(),
         tone: StoryTone.mint,
       ));
     }
@@ -128,7 +145,9 @@ abstract final class StoryBuilder {
       slides.add(StorySlide(
         id: 'tasks',
         eyebrow: 'İŞLER',
-        title: done == input.tasksTotal ? 'Bugünün işleri bitti' : 'Bugünün işleri',
+        title: done == input.tasksTotal
+            ? 'Bugünün işleri bitti'
+            : 'Bugünün işleri',
         value: '$done / ${input.tasksTotal}',
         body: done == input.tasksTotal
             ? 'Hepsi tamam.'
@@ -156,7 +175,8 @@ abstract final class StoryBuilder {
         id: 'empty',
         eyebrow: 'GÜNÜN ÖZETİ',
         title: 'Bugün yeni bir sayfa',
-        body: 'Bir öğün, bir yürüyüş ya da bir iş ekle; özetin burada belirsin.',
+        body:
+            'Bir öğün, bir yürüyüş ya da bir iş ekle; özetin burada belirsin.',
         tone: StoryTone.rose,
       ));
     }
@@ -179,7 +199,7 @@ abstract final class StoryBuilder {
       for (final (i, tip) in dailyTips(goal, today, count: count).indexed)
         StorySlide(
           id: 'tip-$i',
-          eyebrow: 'İPUCU · ${goal.label.toUpperCase()}',
+          eyebrow: 'İPUCU · ${AppDates.upperTr(goal.label)}',
           title: tip,
           tone: i.isEven ? StoryTone.mint : StoryTone.sky,
         ),
@@ -193,7 +213,8 @@ abstract final class StoryBuilder {
             ? '1 hatırlatma'
             : '${upcoming.length} hatırlatma',
         body: upcoming
-            .map((a) => a.time == null ? a.title : '${_hhmm(a.time!)}  ${a.title}')
+            .map((a) =>
+                a.time == null ? a.title : '${_hhmm(a.time!)}  ${a.title}')
             .join('\n'),
         tone: StoryTone.lav,
       ));
@@ -251,24 +272,43 @@ abstract final class StoryBuilder {
   static StorySlide achievementSlide(FriendStory story) {
     final streak = story.payload['streak'];
     final streakName = streak is String && streak.length <= 20 ? streak : null;
-    String serie(int days) =>
-        streakName == null ? '$days günlük seri' : '$days günlük $streakName serisi';
+    String serie(int days) => streakName == null
+        ? '$days günlük seri'
+        : '$days günlük $streakName serisi';
     return switch (story.kind) {
       AchievementKind.streak7 => StorySlide(
-          id: story.id, eyebrow: 'SERİ', title: serie(7), value: '7 gün', tone: StoryTone.butter),
+          id: story.id,
+          eyebrow: 'SERİ',
+          title: serie(7),
+          value: '7 gün',
+          tone: StoryTone.butter),
       AchievementKind.streak14 => StorySlide(
-          id: story.id, eyebrow: 'SERİ', title: serie(14), value: '14 gün', tone: StoryTone.peach),
+          id: story.id,
+          eyebrow: 'SERİ',
+          title: serie(14),
+          value: '14 gün',
+          tone: StoryTone.peach),
       AchievementKind.streak30 => StorySlide(
-          id: story.id, eyebrow: 'SERİ', title: serie(30), value: '30 gün', tone: StoryTone.rose),
+          id: story.id,
+          eyebrow: 'SERİ',
+          title: serie(30),
+          value: '30 gün',
+          tone: StoryTone.rose),
       AchievementKind.weeklyGoal => StorySlide(
           id: story.id,
           eyebrow: 'HAFTA',
           title: 'Haftalık hedefini tutturdu',
           tone: StoryTone.mint),
       AchievementKind.workout => StorySlide(
-          id: story.id, eyebrow: 'ANTRENMAN', title: 'Bugün antrenman yaptı', tone: StoryTone.sky),
+          id: story.id,
+          eyebrow: 'ANTRENMAN',
+          title: 'Bugün antrenman yaptı',
+          tone: StoryTone.sky),
       AchievementKind.weightGoal => StorySlide(
-          id: story.id, eyebrow: 'HEDEF', title: 'Kilo hedefine ulaştı', tone: StoryTone.lav),
+          id: story.id,
+          eyebrow: 'HEDEF',
+          title: 'Kilo hedefine ulaştı',
+          tone: StoryTone.lav),
     };
   }
 
@@ -287,7 +327,8 @@ abstract final class StoryBuilder {
     final groups = [
       for (final e in byOwner.entries)
         () {
-          final list = [...e.value]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          final list = [...e.value]
+            ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
           final f = friends[e.key]!;
           return StoryGroup(
             id: 'friend-${e.key}',
@@ -300,7 +341,8 @@ abstract final class StoryBuilder {
           );
         }(),
     ];
-    groups.sort((a, b) => b.stories.last.createdAt.compareTo(a.stories.last.createdAt));
+    groups.sort(
+        (a, b) => b.stories.last.createdAt.compareTo(a.stories.last.createdAt));
     return groups;
   }
 

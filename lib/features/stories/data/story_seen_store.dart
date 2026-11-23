@@ -22,7 +22,8 @@ class StorySeenStore {
   }
 
   /// [keys]'i görüldü olarak ekler; güncel kümeyi döndürür.
-  Future<Set<String>> markSeen(Set<String> current, Iterable<String> keys) async {
+  Future<Set<String>> markSeen(
+      Set<String> current, Iterable<String> keys) async {
     final list = [...current];
     for (final k in keys) {
       if (!current.contains(k)) list.add(k);

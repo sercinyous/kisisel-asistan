@@ -114,8 +114,7 @@ class PendingAchievement {
   /// Küçük, kimlik içermeyen ayrıntı (ör. {'streak': 'Adım'}).
   final Map<String, Object> payload;
 
-  String get dedupeKey =>
-      '${kind.dbValue}:${day.year}-${day.month}-${day.day}';
+  String get dedupeKey => '${kind.dbValue}:${day.year}-${day.month}-${day.day}';
 }
 
 /// Bir story'ye verilen tepki.

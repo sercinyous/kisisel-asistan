@@ -15,11 +15,12 @@ import '../data/story_seen_store.dart';
 import '../domain/story_builder.dart';
 import '../domain/story_models.dart';
 
-final storySeenStoreProvider = Provider<StorySeenStore>((ref) => StorySeenStore());
+final storySeenStoreProvider =
+    Provider<StorySeenStore>((ref) => StorySeenStore());
 
 /// Görülmüş kart anahtarları (cihazda).
-final storySeenProvider =
-    AsyncNotifierProvider<StorySeenNotifier, Set<String>>(StorySeenNotifier.new);
+final storySeenProvider = AsyncNotifierProvider<StorySeenNotifier, Set<String>>(
+    StorySeenNotifier.new);
 
 class StorySeenNotifier extends AsyncNotifier<Set<String>> {
   @override
@@ -129,6 +130,20 @@ List<StoryGroup> watchStoryGroups(WidgetRef ref) {
   return [daily, tips, ...friends];
 }
 
+/// Benim yayındaki story'lerim ve tepkileri (paylaşım açıkken).
+final myStoriesProvider = FutureProvider<List<FriendStory>>((ref) async {
+  final settings = await ref.watch(userSettingsProvider.future);
+  if (!settings.shareStories || !settings.shareStoriesColumn) return const [];
+  return ref.watch(storiesRepositoryProvider).myStories();
+});
+
+/// Arkadaş kimliği → görünen ad (tepki verenleri adlandırmak için).
+final storyFriendNamesProvider =
+    FutureProvider<Map<String, String>>((ref) async {
+  final friends = await ref.watch(friendsRepositoryProvider).friends();
+  return {for (final f in friends) f.friendId: f.displayName};
+});
+
 final storyPublisherProvider = Provider<StoryPublisher>(
   (ref) => StoryPublisher(ref.watch(storiesRepositoryProvider)),
 );
@@ -141,7 +156,8 @@ final storyAchievementSyncProvider = FutureProvider<int>((ref) async {
   final today = AppDates.startOfDay(ref.watch(kokpitClockProvider));
   final streaks = await ref.watch(streaksProvider.future);
   final monday = AppDates.addDays(today, -(today.weekday - 1));
-  final week = await ref.watch(healthDaysProvider((from: monday, to: today)).future);
+  final week =
+      await ref.watch(healthDaysProvider((from: monday, to: today)).future);
   final goalDays = week.days
       .where((d) => d.steps != null && d.steps! >= settings.dailySteps)
       .length;
@@ -151,12 +167,13 @@ final storyAchievementSyncProvider = FutureProvider<int>((ref) async {
         settings,
         StoryBuilder.detectAchievements(AchievementInput(
           today: today,
-          streaks: _streakMap(streaks),
+          streaks: achievementStreaks(streaks.streaks),
           weeklyGoalHit: goalDays >= 5,
-          workoutToday:
-              workouts.any((w) => _sameDay(w.loggedAt, today)),
+          workoutToday: workouts.any((w) => _sameDay(w.loggedAt, today)),
           weightGoalReached: weightGoalReachedToday(
-            weights: [for (final w in weights) (at: w.loggedAt, kg: w.weightKg)],
+            weights: [
+              for (final w in weights) (at: w.loggedAt, kg: w.weightKg)
+            ],
             targetKg: settings.targetWeightKg,
             startKg: settings.startWeightKg,
             goal: settings.goalMode,
