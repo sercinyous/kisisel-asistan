@@ -163,7 +163,7 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
             border: Border(top: BorderSide(color: AppColors.border)),
           ),
           child: SafeArea(
@@ -243,7 +243,7 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                             onPressed: state.isBusy ? null : _save,
                             icon: state.status == QuickAddStatus.saving
                                 ? const _ButtonSpinner()
-                                : const Icon(Icons.check_rounded),
+                                : const Icon(Icons.check_outlined),
                             label: Text(
                               state.status == QuickAddStatus.saving
                                   ? 'Kaydediliyor…'
@@ -263,7 +263,7 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                           state.isBusy || _textController.text.trim().isEmpty
                               ? null
                               : _parse,
-                      icon: const Icon(Icons.auto_awesome_rounded),
+                      icon: const Icon(Icons.auto_awesome_outlined),
                       label: Text(
                         state.status == QuickAddStatus.parsing
                             ? 'Ayrıştırılıyor…'
@@ -303,7 +303,7 @@ class _Header extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadii.inner),
           ),
           child: Icon(mode.icon, color: color),
         ),
@@ -330,7 +330,7 @@ class _Header extends StatelessWidget {
         IconButton(
           onPressed: onClose,
           tooltip: 'Kapat',
-          icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+          icon: Icon(Icons.close_outlined, color: AppColors.textSecondary),
         ),
       ],
     );
@@ -362,7 +362,7 @@ class _OtherDomainBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       decoration: BoxDecoration(
         color: AppColors.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
       ),
       child: Column(
@@ -371,7 +371,7 @@ class _OtherDomainBanner extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.swap_horiz_rounded,
+              Icon(Icons.swap_horiz_outlined,
                   size: 18, color: AppColors.warning),
               const SizedBox(width: 10),
               Expanded(
@@ -430,13 +430,13 @@ class _SavedNotice extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.accent.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.check_circle_outline_rounded,
+          Icon(Icons.check_circle_outline_outlined,
               size: 18, color: AppColors.accent),
           const SizedBox(width: 10),
           Expanded(
@@ -508,9 +508,9 @@ class _InputSection extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: Material(
               color: AppColors.surfaceHigh,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadii.inner),
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadii.inner),
                 onTap: enabled ? () => onExample(example) : null,
                 child: Padding(
                   padding:
@@ -518,7 +518,7 @@ class _InputSection extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.north_west_rounded,
+                        Icons.north_west_outlined,
                         size: 16,
                         color: AppColors.textMuted,
                       ),
@@ -566,7 +566,7 @@ class _PreviewList extends StatelessWidget {
       if (header != null) header!,
       for (final (i, n) in entry.nutrition.indexed)
         _PreviewTile(
-          icon: Icons.restaurant_rounded,
+          icon: Icons.restaurant_outlined,
           color: AppColors.nutrition,
           tag: 'Beslenme · ${n.mealLabel}',
           title: n.quantityText == null
@@ -579,7 +579,7 @@ class _PreviewList extends StatelessWidget {
         ),
       for (final (i, t) in entry.tasks.indexed)
         _PreviewTile(
-          icon: Icons.task_alt_rounded,
+          icon: Icons.task_alt_outlined,
           color: AppColors.forTaskCategory(t.category),
           tag: 'Görev · ${t.category}'
               '${t.priority == 'high' ? ' · Yüksek öncelik' : ''}',
@@ -594,7 +594,7 @@ class _PreviewList extends StatelessWidget {
         ),
       for (final (i, r) in entry.routines.indexed)
         _PreviewTile(
-          icon: Icons.event_repeat_rounded,
+          icon: Icons.event_repeat_outlined,
           color: AppColors.forRoutineCategory(r.category),
           tag: '${r.isMonthly ? 'Aylık iş' : 'Tekrarlayan iş'} · ${r.scope}'
               ' · ${r.categoryLabel}',
@@ -604,7 +604,7 @@ class _PreviewList extends StatelessWidget {
         ),
       for (final (i, r) in entry.reminders.indexed)
         _PreviewTile(
-          icon: Icons.alarm_rounded,
+          icon: Icons.alarm_outlined,
           color: AppColors.accent,
           tag: 'Hatırlatıcı',
           title: r.title,
@@ -613,7 +613,7 @@ class _PreviewList extends StatelessWidget {
         ),
       for (final (i, w) in entry.workouts.indexed)
         _PreviewTile(
-          icon: Icons.fitness_center_rounded,
+          icon: Icons.fitness_center_outlined,
           color: AppColors.fitness,
           tag: 'Antrenman · ${w.typeLabel}',
           title: w.title,
@@ -627,7 +627,7 @@ class _PreviewList extends StatelessWidget {
         ),
       for (final (i, w) in entry.weights.indexed)
         _PreviewTile(
-          icon: Icons.monitor_weight_rounded,
+          icon: Icons.monitor_weight_outlined,
           color: AppColors.accent,
           tag: 'Kilo',
           title: '${w.weightKg.toStringAsFixed(1)} kg',
@@ -638,7 +638,7 @@ class _PreviewList extends StatelessWidget {
         ),
       for (final (i, n) in entry.notes.indexed)
         _PreviewTile(
-          icon: Icons.sticky_note_2_rounded,
+          icon: Icons.sticky_note_2_outlined,
           color: AppColors.warning,
           tag: 'Not · ${n.category}',
           title: n.title,
@@ -681,7 +681,7 @@ class _PreviewTile extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
       decoration: BoxDecoration(
         color: AppColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
@@ -729,7 +729,7 @@ class _PreviewTile extends StatelessWidget {
             tooltip: 'Bu kaydı çıkar',
             visualDensity: VisualDensity.compact,
             icon: Icon(
-              Icons.close_rounded,
+              Icons.close_outlined,
               size: 18,
               color: AppColors.textMuted,
             ),
@@ -751,13 +751,13 @@ class _ErrorBanner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.danger.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline_rounded, size: 18, color: AppColors.danger),
+          Icon(Icons.error_outline_outlined, size: 18, color: AppColors.danger),
           const SizedBox(width: 10),
           Expanded(
             child: Text(

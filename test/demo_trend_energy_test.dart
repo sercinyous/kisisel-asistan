@@ -178,7 +178,7 @@ void main() {
         expect(todayEnergy, isNotNull);
         expect(todayEnergy!.isToday, isTrue);
         expect(todayEnergy.verdict, isNot(EnergyVerdict.noMeals));
-        expect(todayEnergy.intake, 880);
+        expect(todayEnergy.intake, 1670);
       });
     });
   }

@@ -34,7 +34,7 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
     ],
   ),
   OnboardingIntroCard(
-    icon: Icons.add_circle_rounded,
+    icon: Icons.add_circle_outlined,
     title: '+ ile iki ayrı giriş',
     body: 'Alt çubuğun ortasındaki + düğmesine bir cümle yaz; yapay zekâ '
         'bunu kayda çevirir. İki ayrı kapı vardır ve birbirine karışmaz:',
@@ -44,7 +44,7 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
     ],
   ),
   OnboardingIntroCard(
-    icon: Icons.checklist_rounded,
+    icon: Icons.checklist_outlined,
     title: 'İşler ve aylık rutinler',
     body: 'İşler sekmesinde görevler, notlar ve rutinler (tekrarlayan '
         'işler) durur. Aylık rutinler ayın belirli günü bir iştir; '
@@ -69,7 +69,7 @@ const List<OnboardingIntroCard> onboardingIntroCards = [
     ],
   ),
   OnboardingIntroCard(
-    icon: Icons.groups_rounded,
+    icon: Icons.groups_outlined,
     title: 'İçgörü ve Arkadaşlar',
     body: 'Günlük ve haftalık raporlar sunucuda otomatik hazırlanır. '
         'Kokpit\'in sağ üstündeki Hesap simgesinden profilini, '
@@ -184,8 +184,8 @@ class OnboardingDots extends StatelessWidget {
             width: i == index ? 18 : 6,
             height: 6,
             decoration: BoxDecoration(
-              color: i == index ? AppColors.accent : AppColors.border,
-              borderRadius: BorderRadius.circular(3),
+              color: i == index ? AppColors.accent : AppColors.track,
+              borderRadius: BorderRadius.circular(AppRadii.bar),
             ),
           ),
       ],

@@ -43,7 +43,6 @@ class KokpitScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final now = ref.watch(kokpitClockProvider);
-    final theme = Theme.of(context);
 
     return SafeArea(
       bottom: false,
@@ -69,15 +68,22 @@ class KokpitScreen extends ConsumerWidget {
                     children: [
                       Text(
                         AppDates.upperTr(AppDates.longDay(now)),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          letterSpacing: 1.1,
-                          fontWeight: FontWeight.w600,
+                        style: TextStyle(
+                          fontSize: AppType.caption,
+                          letterSpacing: 0.6,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
+                      const SizedBox(height: 2),
                       Text(
                         AppDates.greeting(now),
-                        style: theme.textTheme.headlineMedium,
+                        style: TextStyle(
+                          fontSize: AppType.screenTitle,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -85,7 +91,7 @@ class KokpitScreen extends ConsumerWidget {
                 const FriendsButton(),
               ],
             ),
-            const SizedBox(height: AppSpacing.l),
+            const SizedBox(height: AppSpacing.section),
             const KokpitDayView(),
           ],
         ),

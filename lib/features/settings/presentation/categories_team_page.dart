@@ -97,7 +97,7 @@ class _TeamCardState extends ConsumerState<TeamCard> {
     );
     final full = team.length >= SettingsLimits.teamMax;
     return SettingsSection(
-      icon: Icons.groups_rounded,
+      icon: Icons.groups_outlined,
       title: 'Ekip',
       color: AppColors.fitness,
       trailing: '${team.length}/${SettingsLimits.teamMax}',
@@ -159,7 +159,7 @@ class _TeamCardState extends ConsumerState<TeamCard> {
                 key: const Key('settings-team-add'),
                 tooltip: 'Ekle',
                 onPressed: full || _saving ? null : () => _add(team),
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(Icons.add_outlined),
               ),
             ),
           ],

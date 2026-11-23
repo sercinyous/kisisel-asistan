@@ -9,6 +9,7 @@ import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_providers.dart';
+import 'reports_health.dart';
 import 'reports_state.dart';
 import 'reports_widgets.dart';
 
@@ -58,13 +59,14 @@ class ReportsMonthView extends ConsumerWidget {
         overview.when(
           loading: () => const KokpitSkeletonCard(height: 320),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Ay özeti yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(monthOverviewProvider(selected)),
           ),
           data: (value) => ReportsMonthSummary(overview: value),
         ),
+        ReportsMeasurementMonthCard(month: selected),
       ],
     );
   }
@@ -96,13 +98,12 @@ class ReportsMonthSummary extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const KokpitSectionHeader(title: 'Ay özeti'),
         BentoGrid(
           children: [
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.repeat_rounded,
+                icon: Icons.repeat_outlined,
                 color: AppColors.accent,
                 label: 'Rutinler',
                 value: routinePercent == null
@@ -116,8 +117,8 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.task_alt_rounded,
-                color: AppColors.ops,
+                icon: Icons.task_alt_outlined,
+                color: AppColors.accent,
                 label: 'Görevler',
                 value: taskPercent == null
                     ? KokpitFormat.none
@@ -130,8 +131,8 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.directions_walk_rounded,
-                color: AppColors.fitness,
+                icon: Icons.directions_walk_outlined,
+                color: AppColors.sleep,
                 label: 'Ort. adım',
                 value: health.avgSteps == null
                     ? KokpitFormat.none
@@ -142,8 +143,8 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.bedtime_rounded,
-                color: AppColors.ops,
+                icon: Icons.bedtime_outlined,
+                color: AppColors.accent,
                 label: 'Ort. uyku',
                 value: KokpitFormat.sleep(health.avgSleepMinutes),
                 caption: 'Hedef ${KokpitFormat.sleep(targets.sleepMinutes)}',
@@ -152,7 +153,7 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.local_fire_department_rounded,
+                icon: Icons.local_fire_department_outlined,
                 color: AppColors.nutrition,
                 label: 'Ort. kalori',
                 value: avgCalories == null
@@ -228,7 +229,7 @@ class _MonthStatCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: theme.textTheme.headlineSmall?.copyWith(
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),

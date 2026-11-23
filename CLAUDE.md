@@ -21,6 +21,12 @@
   etiketsiz, 5 slot (`lib/core/widgets/app_bottom_bar.dart`). Seçili sekme ikonun arkasındaki yarı saydam
   kapsülle belirtilir. Slotlar: Kokpit, İşler, **+** (AI giriş), Sağlık, İçgörü. Yeni sekme eklenmez.
   İçerik barın arkasından akar; kaydırılan ekranlar altta en az 120 boşluk bırakır.
+- Görsel dil (tasarım v2): kart `#121214` + 1 px çizgi, yarıçap kart 18 / iç 12 / çip 12 / kapsül 999;
+  pastel vurgular (mint, peach, lav, sky, butter, rose); seçim dolgusu `AppColors.selection`, çubuk/halka izi
+  `AppColors.track`; yazı ölçeği `AppType`. Ortak parçalar `lib/core/widgets/ritim_ui.dart`
+  (`RitimSegmented`, `RitimChipTile`, `RitimPillButton`, `RitimStatBar`, `RitimRing`, `RitimBadge`, `RitimDot`).
+- İkon kuralı: ince, yuvarlak uçlu çizgi ikon. Alt bar `RitimLineIcon` (çizgi 1.8, `lib/core/widgets/ritim_icons.dart`);
+  diğer yerlerde yalnızca `Icons.*_rounded` / `Icons.*_outlined`; seçili durum dolu ikonla değil zemin kapsülüyle gösterilir.
 - Renk, yarıçap ve boşluklar yalnızca `lib/core/theme/app_theme.dart` içindeki
   `AppColors`, `AppRadii`, `AppSpacing` üzerinden; bileşenlerde ham hex yazılmaz.
 - UI metinleri Türkçe.

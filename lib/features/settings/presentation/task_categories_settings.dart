@@ -167,7 +167,7 @@ class _TaskCategoriesCardState extends ConsumerState<TaskCategoriesCard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.label_rounded,
+            icon: Icons.label_outlined,
             label: 'Görev kategorileri',
             color: AppColors.ops,
             trailing: '${TaskCategory.activeNames(list).length} açık',
@@ -224,7 +224,7 @@ class _TaskCategoriesCardState extends ConsumerState<TaskCategoriesCard> {
           OutlinedButton.icon(
             key: const Key('task-category-create'),
             onPressed: _busy ? null : () => _create(list),
-            icon: const Icon(Icons.add_rounded, size: 18),
+            icon: const Icon(Icons.add_outlined, size: 18),
             label: const Text('Özel kategori oluştur'),
           ),
         ],
@@ -272,7 +272,7 @@ class _CategoryRow extends StatelessWidget {
           PopupMenuButton<String>(
             tooltip: 'Kategori seçenekleri',
             enabled: !busy,
-            icon: Icon(Icons.more_horiz_rounded, color: AppColors.textMuted),
+            icon: Icon(Icons.more_horiz_outlined, color: AppColors.textMuted),
             onSelected: (value) =>
                 value == 'edit' ? onEdit!() : onDelete?.call(),
             itemBuilder: (_) => const [
@@ -409,7 +409,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                       ),
                       child: key == _color
                           ? Icon(
-                              Icons.check_rounded,
+                              Icons.check_outlined,
                               size: 18,
                               color: AppColors.onAccent,
                             )

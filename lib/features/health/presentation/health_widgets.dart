@@ -30,7 +30,7 @@ class HealthSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 14, bottom: 4),
+      padding: const EdgeInsets.only(top: 8, bottom: 0, left: 4),
       child: Row(
         children: [
           Expanded(
@@ -38,7 +38,7 @@ class HealthSectionHeader extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
           TextButton(
@@ -154,7 +154,14 @@ class HealthListCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final (index, child) in children.indexed) ...[
-            if (index > 0) const Divider(indent: 16, endIndent: 16),
+            if (index > 0)
+              Divider(
+                height: 1,
+                thickness: 0.5,
+                indent: 12,
+                endIndent: 12,
+                color: AppColors.border,
+              ),
             child,
           ],
         ],
@@ -163,7 +170,8 @@ class HealthListCard extends StatelessWidget {
   }
 }
 
-/// Liste satırı: renkli ikon, başlık + alt metin, sağda değer ve menü.
+/// Liste satırı: başlık + gri alt metin, sağda değer ve menü. [icon] verilirse
+/// yalnızca başlık vurgulanır (ikon çizilmez).
 class HealthListRow extends StatelessWidget {
   const HealthListRow({
     super.key,
@@ -194,34 +202,17 @@ class HealthListRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final glyph = icon;
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
+        constraints: const BoxConstraints(minHeight: 46),
         child: Padding(
-          padding: EdgeInsets.only(left: 16, right: trailing == null ? 16 : 4),
+          padding: EdgeInsets.only(left: 12, right: trailing == null ? 12 : 0),
           child: Row(
             children: [
-              SizedBox(
-                width: 36,
-                child: glyph == null
-                    ? null
-                    : DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(AppRadii.chip),
-                        ),
-                        child: SizedBox(
-                          height: 36,
-                          child: Icon(glyph, size: 18, color: color),
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 7),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -229,10 +220,13 @@ class HealthListRow extends StatelessWidget {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: glyph == null
-                            ? theme.textTheme.bodyMedium
-                            : theme.textTheme.titleSmall,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight:
+                              icon == null ? FontWeight.w400 : FontWeight.w600,
+                        ),
                       ),
+                      const SizedBox(height: 1),
                       Text(
                         subtitle,
                         maxLines: 2,
@@ -248,7 +242,8 @@ class HealthListRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   value!,
-                  style: theme.textTheme.labelLarge?.copyWith(
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
                     color: valueMuted
                         ? AppColors.textMuted
                         : AppColors.textPrimary,
@@ -256,7 +251,11 @@ class HealthListRow extends StatelessWidget {
                   ),
                 ),
               ],
-              if (trailing != null) trailing!,
+              if (trailing != null)
+                IconTheme.merge(
+                  data: const IconThemeData(size: 18),
+                  child: trailing!,
+                ),
             ],
           ),
         ),
@@ -272,7 +271,15 @@ class HealthWeekdayLabel extends StatelessWidget {
   const HealthWeekdayLabel(this.day, {super.key, this.highlight = false});
 
   /// Pazartesi'den Pazar'a.
-  static const List<String> _short = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+  static const List<String> _short = [
+    'Pzt',
+    'Sal',
+    'Çar',
+    'Per',
+    'Cum',
+    'Cmt',
+    'Paz'
+  ];
 
   final DateTime day;
   final bool highlight;
@@ -317,7 +324,7 @@ class HealthBigValue extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final base =
-        large ? theme.textTheme.headlineLarge : theme.textTheme.headlineSmall;
+        large ? theme.textTheme.headlineSmall : theme.textTheme.titleLarge;
     return Text.rich(
       maxLines: singleLine ? 1 : null,
       softWrap: !singleLine,
@@ -397,14 +404,14 @@ class HealthWhenPicker extends StatelessWidget {
       children: [
         if (onDate != null) ...[
           OpsPickerRow(
-            icon: Icons.event_rounded,
+            icon: Icons.event_outlined,
             label: healthFormDate(date),
             onTap: () => _pickDate(context),
           ),
           const SizedBox(height: 8),
         ],
         OpsPickerRow(
-          icon: Icons.schedule_rounded,
+          icon: Icons.schedule_outlined,
           label: formatTimeOfDay(time),
           onTap: () => _pickTime(context),
         ),

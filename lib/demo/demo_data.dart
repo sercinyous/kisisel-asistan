@@ -11,6 +11,10 @@ import '../features/operations/domain/task_item.dart';
 import '../features/reports/domain/report_models.dart';
 import '../features/routines/domain/routine.dart';
 import '../core/avatar/avatar_spec.dart';
+import '../features/health/data/body_repository.dart';
+import '../features/health/domain/energy_balance.dart' show Sex;
+import '../features/health/domain/goal_mode.dart' show GoalMode;
+import '../features/health/domain/targets_engine.dart';
 import '../features/settings/domain/user_settings.dart';
 import 'demo_backend.dart';
 
@@ -39,6 +43,7 @@ class DemoData {
     required this.kokpit,
     required this.settings,
     required this.reports,
+    required this.body,
   });
 
   final FakeRoutinesRepository routines;
@@ -48,6 +53,9 @@ class DemoData {
   final FakeKokpitRepository kokpit;
   final FakeSettingsRepository settings;
   final FakeReportsRepository reports;
+
+  /// Mezura ölçüleri (fotoğraf web demosunda yüklenmez).
+  final MemoryBodyRepository body;
 
   int _seq = 0;
   String nextId(String prefix) => '$prefix-demo-${_seq++}';
@@ -188,6 +196,31 @@ class DemoData {
           eatenAt: today.add(const Duration(hours: 13, minutes: 5)),
           source: 'ai',
         ),
+        // Yağ yakımı "Bugün" kartı karışık bir gün göstersin: yağ fazla,
+        // protein ve karbonhidrat eksik.
+        NutritionLog(
+          id: 'n-5',
+          mealType: 'lunch',
+          foodName: 'Peynirli börek',
+          quantityText: '1 porsiyon',
+          calories: 420,
+          proteinG: 12,
+          carbsG: 38,
+          fatG: 26,
+          eatenAt: today.add(const Duration(hours: 13, minutes: 5)),
+          source: 'ai',
+        ),
+        NutritionLog(
+          id: 'n-6',
+          mealType: 'snack',
+          foodName: 'Karışık kuruyemiş',
+          quantityText: '60 gr',
+          calories: 370,
+          proteinG: 11,
+          carbsG: 12,
+          fatG: 32,
+          eatenAt: today.add(const Duration(hours: 16, minutes: 30)),
+        ),
       ],
       // Son iki haftanın antrenmanları (plan günlerine göre; birkaçı kaçmış).
       workouts: [
@@ -266,20 +299,29 @@ class DemoData {
       // Profil dolu: Enerji dengesi kartı sayıları gösterir (boş profilde
       // "boy, yaş ve cinsiyet gerekli" der). Kilo hedefleri demodaki tartı
       // geçmişiyle tutarlıdır; ekip isteğe bağlıdır, demoda birkaç kişi vardır.
+      // Hedefler plan motorunun yazdığı gibidir (0,5 kg/hafta, son tartı).
       settings: FakeSettingsRepository(
-        settings: const UserSettings.defaults().copyWith(
-          startWeightKg: demoStartWeightKg,
-          targetWeightKg: demoTargetWeightKg,
-          heightCm: demoHeightCm,
-          birthYear: demoBirthYear,
-          sex: demoSex,
-          teamMembers: _demoTeam,
-          avatar: const AvatarChoice(
-            kind: AvatarKind.mascot,
-            mascotId: 'bal_porsugu',
+        settings: demoPlanSettings(
+          const UserSettings.defaults().copyWith(
+            startWeightKg: demoStartWeightKg,
+            targetWeightKg: demoTargetWeightKg,
+            heightCm: demoHeightCm,
+            birthYear: demoBirthYear,
+            sex: demoSex,
+            activityLevel: ActivityLevel.moderate,
+            teamMembers: _demoTeam,
+            weeklyRate: FatLossRate.half,
+            goalMode: GoalMode.fatLoss,
+            avatar: const AvatarChoice(
+              kind: AvatarKind.mascot,
+              mascotId: 'bal_porsugu',
+            ),
           ),
+          latestWeightKg: 83.6,
+          now: now,
         ),
       ),
+      body: MemoryBodyRepository(measurements: demoMeasurements(today)),
       reports: FakeReportsRepository(
         // Bu hafta (kısmi) + önceki iki hafta.
         weekly: [
@@ -981,4 +1023,49 @@ ParsedEntry demoParse(String input, QuickAddMode mode, {DateTime? now}) {
     'other_domain_summary':
         otherDomain ? 'Metinde beslenme ya da spor kaydı var.' : null,
   });
+}
+
+/// Demo ayarlarına plan motorunun hedeflerini yazar (ilk kurulum sonrası
+/// durum gibi; kaynak 'plan').
+UserSettings demoPlanSettings(
+  UserSettings base, {
+  required double latestWeightKg,
+  required DateTime now,
+}) {
+  final resolved = resolveTargets(
+    settings: base,
+    latestWeightKg: latestWeightKg,
+    age: ageFromSettings(base, now),
+    sex: Sex.tryParse(base.sex),
+  );
+  return planWrite(
+    settings: base,
+    resolved: resolved,
+    trigger: PlanTrigger.rateChanged,
+    now: now.subtract(const Duration(days: 2)),
+  )!
+      .settings;
+}
+
+/// 12 haftalık mezura geçmişi (her pazartesi): bel 94 → 89 cm, kalça
+/// 104 → 101 cm; kol ve boyun yaklaşık sabit. Bu haftanın ölçüsü henüz
+/// girilmemiştir (Vücut sekmesinde "ölçü günü" görünsün).
+List<BodyMeasurement> demoMeasurements(DateTime today) {
+  final thisMonday = AppDates.weekStart(today);
+  return [
+    for (var week = 12; week >= 1; week--)
+      BodyMeasurement(
+        id: 'bm-$week',
+        measuredOn: AppDates.addDays(thisMonday, -7 * week),
+        values: {
+          BodyField.waist:
+              roundCm(89 + week * 0.42 + (week % 3 == 0 ? 0.3 : 0)),
+          BodyField.hip: roundCm(101 + week * 0.25),
+          BodyField.chest: roundCm(103 + week * 0.15),
+          BodyField.arm: roundCm(35.5 - week * 0.02),
+          if (week.isEven) BodyField.thigh: roundCm(58 + week * 0.18),
+          BodyField.neck: roundCm(39.5 + week * 0.05),
+        },
+      ),
+  ];
 }

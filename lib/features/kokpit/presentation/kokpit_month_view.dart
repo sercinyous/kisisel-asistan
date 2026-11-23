@@ -54,7 +54,7 @@ class KokpitMonthView extends ConsumerWidget {
         const SizedBox(height: 8),
         if (overview.hasError && data == null) ...[
           KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Ay verisi yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(monthOverviewProvider(month)),
@@ -100,7 +100,7 @@ class _MonthSwitcher extends StatelessWidget {
         IconButton(
           onPressed: onPrevious,
           tooltip: 'Önceki ay',
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(Icons.chevron_left_outlined),
         ),
         Expanded(
           child: Column(

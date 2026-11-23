@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { avatarObjectPath, avatarPaths, DELETION_STEPS, purgeAvatars, extractBearer, isConfirmed, normalizeEmail } from "./logic.ts";
+import { avatarObjectPath, avatarPaths, BODY_PHOTO_BUCKET, DELETION_STEPS, purgeAvatars, purgeBodyPhotos, extractBearer, isConfirmed, normalizeEmail } from "./logic.ts";
 
 test("onay sözcüğü Türkçe büyük harfle eşleşir", () => {
   assert.equal(isConfirmed({ confirm: "SİL" }), true);
@@ -79,4 +79,50 @@ test("purgeAvatars bir tur hiçbir şey silmezse durur", async () => {
     "u1",
   );
   assert.equal(lists, 1);
+});
+
+test("purgeBodyPhotos tarih klasörlerindeki tüm fotoğrafları siler", async () => {
+  const objects = new Set([
+    "u1/2026-11-02/front.jpg",
+    "u1/2026-11-02/side.jpg",
+    "u1/2026-11-09/back.jpg",
+    "u2/2026-11-02/front.jpg",
+  ]);
+  const bucket = {
+    async list(prefix) {
+      const out = new Map();
+      for (const p of objects) {
+        if (!p.startsWith(`${prefix}/`)) continue;
+        const rest = p.slice(prefix.length + 1);
+        const [head, ...tail] = rest.split("/");
+        out.set(head, tail.length > 0 ? { name: head, id: null } : { name: head, id: "x" });
+      }
+      return [...out.values()];
+    },
+    async remove(paths) {
+      let n = 0;
+      for (const p of paths) if (objects.delete(p)) n++;
+      return n;
+    },
+  };
+  await purgeBodyPhotos(bucket, "u1");
+  assert.equal(BODY_PHOTO_BUCKET, "body_photos");
+  assert.deepEqual([...objects], ["u2/2026-11-02/front.jpg"]);
+});
+
+test("purgeBodyPhotos hiçbir şey silinmezse durur", async () => {
+  let lists = 0;
+  await purgeBodyPhotos(
+    {
+      async list(prefix) {
+        lists++;
+        return prefix === "u1" ? [{ name: "2026-11-02", id: null }] : [{ name: "a.jpg", id: "1" }];
+      },
+      async remove() {
+        return 0;
+      },
+    },
+    "u1",
+  );
+  assert.equal(lists, 2);
 });

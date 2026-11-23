@@ -119,7 +119,7 @@ class _ItemActionsSheet extends StatelessWidget {
             ),
             ListTile(
               leading:
-                  Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+                  Icon(Icons.delete_outline_outlined, color: AppColors.danger),
               title: Text('Sil', style: TextStyle(color: AppColors.danger)),
               onTap: () => Navigator.of(context).pop(_ItemChoice.delete),
             ),
@@ -217,7 +217,7 @@ class _SwipeToDeleteState extends State<SwipeToDelete> {
           child: Padding(
             padding: const EdgeInsets.only(right: 20),
             child: Icon(
-              Icons.delete_outline_rounded,
+              Icons.delete_outline_outlined,
               color: AppColors.onAccent,
               semanticLabel: 'Sil',
             ),

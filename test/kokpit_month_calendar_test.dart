@@ -155,31 +155,6 @@ void main() {
     });
   });
 
-  group('withCompletion', () {
-    final today = DateTime(2026, 11, 16);
-    RoutineOccurrence due(int day, {bool completed = false}) => occurrence(
-          monthlyRoutine('m', day),
-          DateTime(2026, 11, day),
-          completed: completed,
-        );
-
-    test('işaretlenince done', () {
-      final result = withCompletion(due(20), true, today);
-      expect(result.completed, isTrue);
-      expect(result.status, OccurrenceStatus.done);
-      expect(result.completionKey, due(20).completionKey);
-    });
-
-    test('işaret kalkınca güne göre durum', () {
-      expect(withCompletion(due(20, completed: true), false, today).status,
-          OccurrenceStatus.upcoming);
-      expect(withCompletion(due(16, completed: true), false, today).status,
-          OccurrenceStatus.dueToday);
-      expect(withCompletion(due(10, completed: true), false, today).status,
-          OccurrenceStatus.overdue);
-    });
-  });
-
   test('completionPercent', () {
     expect(completionPercent(0, 0), isNull);
     expect(completionPercent(0, 10), 0);

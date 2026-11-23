@@ -1,8 +1,39 @@
 import '../../../core/avatar/avatar_spec.dart';
 import '../../operations/domain/task_category.dart';
+import '../../health/domain/fat_loss_rate.dart' show FatLossRate;
+import '../../health/domain/goal_mode.dart' show GainRate, GoalMode;
 import 'activity_level.dart';
 
+export '../../health/domain/fat_loss_rate.dart' show FatLossRate;
 export 'activity_level.dart';
+
+/// Günlük hedeflerin (kcal ve makrolar) son kaynağı (`targets_source`).
+enum TargetsSource {
+  /// İlk kurulumda plan motoruyla yazıldı.
+  onboarding,
+
+  /// Plan motoru (tempo değişimi, tartı, öneriyi uygulama) yazdı.
+  plan,
+
+  /// Kullanıcı Ayarlar > Hedeflerim'den elle yazdı; tartı hedefleri değiştirmez.
+  manual;
+
+  static TargetsSource parse(Object? value) {
+    for (final s in values) {
+      if (s.name == value) return s;
+    }
+    return TargetsSource.plan;
+  }
+}
+
+/// Ölçü ve fotoğraf gününün sıklığı (`checkin_cadence`).
+enum CheckinCadence {
+  weekly,
+  monthly;
+
+  static CheckinCadence parse(Object? value) =>
+      value == 'monthly' ? CheckinCadence.monthly : CheckinCadence.weekly;
+}
 
 /// Gün içi saat (`time` sütunu). Flutter'ın `TimeOfDay`'inden bağımsızdır ki
 /// alan katmanı arayüz kitaplığına bağlanmasın.
@@ -78,6 +109,20 @@ class UserSettings {
     this.taskCategoriesRaw,
     this.activityLevel,
     this.avatar = const AvatarChoice(),
+    this.weeklyRate = FatLossRate.classic,
+    this.expenditureKcalManual,
+    this.mealCount = 3,
+    this.targetsSource = TargetsSource.plan,
+    this.targetsUpdatedAt,
+    this.checkinCadence = CheckinCadence.weekly,
+    this.checkinWeekday = 1,
+    this.checkinMonthday = 1,
+    this.checkinReminder = true,
+    this.hidePhotos = false,
+    this.healthPlanColumns = true,
+    this.goalMode = GoalMode.fatLoss,
+    this.gainRate = GainRate.slow,
+    this.goalModeColumns = true,
   });
 
   const UserSettings.defaults()
@@ -106,7 +151,28 @@ class UserSettings {
         onboardedAt = null,
         taskCategoriesRaw = null,
         activityLevel = null,
-        avatar = const AvatarChoice();
+        avatar = const AvatarChoice(),
+        weeklyRate = FatLossRate.classic,
+        expenditureKcalManual = null,
+        mealCount = 3,
+        targetsSource = TargetsSource.plan,
+        targetsUpdatedAt = null,
+        checkinCadence = CheckinCadence.weekly,
+        checkinWeekday = 1,
+        checkinMonthday = 1,
+        checkinReminder = true,
+        hidePhotos = false,
+        healthPlanColumns = true,
+        goalMode = GoalMode.fatLoss,
+        gainRate = GainRate.slow,
+        goalModeColumns = true;
+
+  /// Elle girilen günlük harcamanın sınırları (schema.sql check).
+  static const int expenditureManualMin = 1200;
+  static const int expenditureManualMax = 6000;
+
+  /// Ayın ölçü günü en çok 28 (her ay var).
+  static const int checkinMonthdayMax = 28;
 
   /// Profil alanlarının sınırları; supabase/schema.sql'deki check'lerle aynıdır.
   static const int heightCmMin = 100;
@@ -174,6 +240,47 @@ class UserSettings {
   /// şemada diğer ayarların kaydı bozulmasın).
   final AvatarChoice avatar;
 
+  /// Haftalık kayıp hızı (`weekly_rate`); varsayılan Klasik (kg × 26).
+  final FatLossRate weeklyRate;
+
+  /// Elle girilen günlük harcama (kcal); `null` = model tahmini kullanılır.
+  final int? expenditureKcalManual;
+
+  /// Günlük öğün sayısı (2 ya da 3); örnek menü ve eksik satırı paylaşır.
+  final int mealCount;
+
+  /// Günlük kcal/makro hedeflerinin kaynağı.
+  final TargetsSource targetsSource;
+
+  /// Hedeflerin son yazıldığı an; hiç yazılmadıysa `null`.
+  final DateTime? targetsUpdatedAt;
+
+  /// Ölçü ve fotoğraf günü: haftalık (ISO gün 1..7) ya da aylık (1..28).
+  final CheckinCadence checkinCadence;
+  final int checkinWeekday;
+  final int checkinMonthday;
+
+  /// Ölçü gününde 09:00 hatırlatması.
+  final bool checkinReminder;
+
+  /// İlerleme fotoğrafları dokunulana kadar bulanık gösterilir.
+  final bool hidePhotos;
+
+  /// Satır Sağlık v2 sütunlarını taşıyor mu? Şema henüz yükseltilmemişse
+  /// (`weekly_rate` anahtarı yok) [toMap] bu sütunları yazmaz, böylece diğer
+  /// ayarların kaydı bozulmaz.
+  final bool healthPlanColumns;
+
+  /// Hedef türü (`goal_mode`); varsayılan yağ yakma.
+  final GoalMode goalMode;
+
+  /// Kas yapma temposu (`gain_rate`); varsayılan yavaş (+250 kcal).
+  final GainRate gainRate;
+
+  /// Satır `goal_mode` sütununu taşıyor mu? Şema henüz yükseltilmemişse
+  /// [toMap] `goal_mode`/`gain_rate` yazmaz.
+  final bool goalModeColumns;
+
   /// Etkin görev kategorileri tanımı (kapalılar dahil).
   List<TaskCategory> get taskCategories =>
       taskCategoriesRaw ?? TaskCategory.defaults;
@@ -235,6 +342,22 @@ class UserSettings {
           : null,
       activityLevel: ActivityLevel.tryParse(map['activity_level']),
       avatar: AvatarChoice.fromMap(map),
+      weeklyRate: FatLossRate.parse(map['weekly_rate'] as String?),
+      goalMode: GoalMode.parse(map['goal_mode']),
+      gainRate: GainRate.parse(map['gain_rate']),
+      expenditureKcalManual: _profileInt(map['expenditure_kcal_manual'],
+          expenditureManualMin, expenditureManualMax),
+      mealCount: _profileInt(map['meal_count'], 2, 3) ?? d.mealCount,
+      targetsSource: TargetsSource.parse(map['targets_source']),
+      targetsUpdatedAt: _timestamp(map['targets_updated_at']),
+      checkinCadence: CheckinCadence.parse(map['checkin_cadence']),
+      checkinWeekday:
+          _profileInt(map['checkin_weekday'], 1, 7) ?? d.checkinWeekday,
+      checkinMonthday:
+          _profileInt(map['checkin_monthday'], 1, checkinMonthdayMax) ??
+              d.checkinMonthday,
+      checkinReminder: map['checkin_reminder'] as bool? ?? d.checkinReminder,
+      hidePhotos: map['hide_photos'] as bool? ?? d.hidePhotos,
     );
   }
 
@@ -301,6 +424,22 @@ class UserSettings {
         // Yalnızca seçildiyse yazılır (sütunu henüz olmayan şemada diğer
         // ayarların kaydı bozulmasın).
         if (activityLevel != null) 'activity_level': activityLevel!.dbValue,
+        if (healthPlanColumns) ...{
+          'weekly_rate': weeklyRate.dbValue,
+          'expenditure_kcal_manual': expenditureKcalManual,
+          'meal_count': mealCount,
+          'targets_source': targetsSource.name,
+          'targets_updated_at': targetsUpdatedAt?.toUtc().toIso8601String(),
+          'checkin_cadence': checkinCadence.name,
+          'checkin_weekday': checkinWeekday,
+          'checkin_monthday': checkinMonthday,
+          'checkin_reminder': checkinReminder,
+          'hide_photos': hidePhotos,
+        },
+        if (goalModeColumns) ...{
+          'goal_mode': goalMode.dbValue,
+          'gain_rate': gainRate.dbValue,
+        },
       };
 
   UserSettings copyWith({
@@ -335,6 +474,21 @@ class UserSettings {
     bool clearSex = false,
     bool clearDisplayName = false,
     bool clearWorkDescription = false,
+    FatLossRate? weeklyRate,
+    int? expenditureKcalManual,
+    bool clearExpenditureKcalManual = false,
+    int? mealCount,
+    TargetsSource? targetsSource,
+    DateTime? targetsUpdatedAt,
+    CheckinCadence? checkinCadence,
+    int? checkinWeekday,
+    int? checkinMonthday,
+    bool? checkinReminder,
+    bool? hidePhotos,
+    bool? healthPlanColumns,
+    GoalMode? goalMode,
+    GainRate? gainRate,
+    bool? goalModeColumns,
   }) =>
       UserSettings(
         startWeightKg: startWeightKg ?? this.startWeightKg,
@@ -368,5 +522,21 @@ class UserSettings {
             : TaskCategory.ensureActive(taskCategories),
         activityLevel: activityLevel ?? this.activityLevel,
         avatar: avatar ?? this.avatar,
+        weeklyRate: weeklyRate ?? this.weeklyRate,
+        expenditureKcalManual: clearExpenditureKcalManual
+            ? null
+            : (expenditureKcalManual ?? this.expenditureKcalManual),
+        mealCount: mealCount ?? this.mealCount,
+        targetsSource: targetsSource ?? this.targetsSource,
+        targetsUpdatedAt: targetsUpdatedAt ?? this.targetsUpdatedAt,
+        checkinCadence: checkinCadence ?? this.checkinCadence,
+        checkinWeekday: checkinWeekday ?? this.checkinWeekday,
+        checkinMonthday: checkinMonthday ?? this.checkinMonthday,
+        checkinReminder: checkinReminder ?? this.checkinReminder,
+        hidePhotos: hidePhotos ?? this.hidePhotos,
+        healthPlanColumns: healthPlanColumns ?? this.healthPlanColumns,
+        goalMode: goalMode ?? this.goalMode,
+        gainRate: gainRate ?? this.gainRate,
+        goalModeColumns: goalModeColumns ?? this.goalModeColumns,
       );
 }

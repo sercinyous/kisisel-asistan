@@ -36,6 +36,8 @@ class AppPalette {
     required this.glass,
     required this.glassBorder,
     required this.navSelected,
+    required this.selection,
+    required this.track,
   });
 
   final Brightness brightness;
@@ -106,6 +108,12 @@ class AppPalette {
   /// Alt barda seçili sekmenin arkasındaki kapsül.
   final Color navSelected;
 
+  /// Seçili bölme, çip ve hayalet buton dolgusu (yarı saydam, önizlemedeki --sel).
+  final Color selection;
+
+  /// İlerleme çubuğu/halkası izi ve boş gün noktası (opak).
+  final Color track;
+
   bool get isDark => brightness == Brightness.dark;
 
   /// Durum çubuğu ikonları: koyu temada açık, açık temada koyu.
@@ -116,91 +124,86 @@ class AppPalette {
   static AppPalette of(Brightness brightness) =>
       brightness == Brightness.dark ? dark : light;
 
-  /// Saf OLED siyah (varsayılan).
+  /// Saf OLED siyah (varsayılan). Değerler tasarım önizlemesiyle
+  /// (Sağlık v2) ile aynıdır: kart #121214, çizgi #222226, pastel vurgular.
   static const AppPalette dark = AppPalette(
     brightness: Brightness.dark,
     background: Color(0xFF000000),
-    surface: Color(0xFF0E0E10),
-    surfaceHigh: Color(0xFF18181B),
-    border: Color(0xFF222226),
-    textPrimary: Color(0xFFF2F4F8),
-    textSecondary: Color(0xFFA1A1AA),
-    textMuted: Color(0xFF71717A),
-    accent: Color(0xFF5EEAD4), // mint
-    ops: Color(0xFF7AA7FF),
-    fitness: Color(0xFFFF8A65),
-    nutrition: Color(0xFFB9F27C),
-    sleep: Color(0xFFB39DFF),
-    water: Color(0xFF5AC8FA),
-    warning: Color(0xFFFBBF24),
-    danger: Color(0xFFFF6B6B),
-    onAccent: Color(0xFF000000),
-    onPrimary: Color(0xFF04201B),
-    onSecondary: Color(0xFF07142E),
-    onError: Color(0xFF2B0606),
+    surface: Color(0xFF121214), // --card
+    surfaceHigh: Color(0xFF1E1E22),
+    border: Color(0xFF222226), // --card-line
+    textPrimary: Color(0xFFF4F4F6), // --ink
+    textSecondary: Color(0xFF8E8E96), // --sub
+    textMuted: Color(0xFF85858E), // AA 4.5+ kartta
+    accent: Color(0xFF7EE0C3), // --mint
+    ops: Color(0xFF8CC8FF), // --sky
+    fitness: Color(0xFFFFB59A), // --peach
+    nutrition: Color(0xFF7EE0C3), // --mint (kalori halkası)
+    sleep: Color(0xFFB9A7FF), // --lav
+    water: Color(0xFF8CC8FF), // --sky
+    warning: Color(0xFFFFB59A), // --peach
+    danger: Color(0xFFFF8FA3), // --rose
+    onAccent: Color(0xFF0A0A0A), // --onacc
+    onPrimary: Color(0xFF0A0A0A),
+    onSecondary: Color(0xFF0A0A0A),
+    onError: Color(0xFF0A0A0A),
     controlOutline: Color(0xFF222226),
-    controlOutlineSoft: Color(0xFFFFFFFF),
-    controlContent: Color(0xFFF2F4F8),
-    controlFill: Color(0xFF0E0E10),
-    inverseSurface: Color(0xFF18181B),
-    onInverseSurface: Color(0xFFF2F4F8),
+    controlOutlineSoft: Color(0xFF2E2E34),
+    controlContent: Color(0xFFF4F4F6),
+    controlFill: Color(0xFF26262B), // --track
+    inverseSurface: Color(0xFF26262B),
+    onInverseSurface: Color(0xFFF4F4F6),
     scrim: Color.from(alpha: 0.6, red: 0, green: 0, blue: 0),
     shadow: Color.from(alpha: 0.35, red: 0, green: 0, blue: 0),
-    // surfaceHigh %72
+    // --glass rgba(40,40,46,.62)
     glass: Color.from(
-      alpha: 0.72,
-      red: 0x18 / 255,
-      green: 0x18 / 255,
-      blue: 0x1B / 255,
+      alpha: 0.62,
+      red: 40 / 255,
+      green: 40 / 255,
+      blue: 46 / 255,
     ),
-    // textPrimary %14 ve %16
-    glassBorder: Color.from(
-      alpha: 0.14,
-      red: 0xF2 / 255,
-      green: 0xF4 / 255,
-      blue: 0xF8 / 255,
-    ),
-    navSelected: Color.from(
-      alpha: 0.16,
-      red: 0xF2 / 255,
-      green: 0xF4 / 255,
-      blue: 0xF8 / 255,
-    ),
+    glassBorder: Color.from(alpha: 0.12, red: 1, green: 1, blue: 1),
+    navSelected: Color.from(alpha: 0.14, red: 1, green: 1, blue: 1),
+    selection: Color.from(alpha: 0.14, red: 1, green: 1, blue: 1), // --sel
+    track: Color(0xFF26262B), // --track
   );
 
-  /// Beyaz tema: beyaz sayfa, açık gri kartlar, beyazda okunan koyu vurgular.
+  /// Beyaz tema: önizlemenin açık bloğu. Vurgular beyaz zeminde AA (4.5)
+  /// kontrastı tutacak kadar koyulaştırılmıştır.
   static const AppPalette light = AppPalette(
     brightness: Brightness.light,
-    background: Color(0xFFFFFFFF),
-    surface: Color(0xFFF4F4F6),
-    surfaceHigh: Color(0xFFE7E7EC),
-    border: Color(0xFFE0E0E6),
-    textPrimary: Color(0xFF0B0B0F),
-    textSecondary: Color(0xFF4E4E57),
-    textMuted: Color(0xFF696974),
-    accent: Color(0xFF0E736B), // koyu turkuaz
-    ops: Color(0xFF1D5BD6),
-    fitness: Color(0xFFB83D00),
-    nutrition: Color(0xFF41740E),
-    sleep: Color(0xFF5B3FC4),
-    water: Color(0xFF0B6FA4),
-    warning: Color(0xFF985700),
-    danger: Color(0xFFC81E28),
-    onAccent: Color(0xFFFFFFFF),
+    background: Color(0xFFFFFFFF), // --phone
+    surface: Color(0xFFF6F6F8), // --card
+    surfaceHigh: Color(0xFFEDEDF1),
+    border: Color(0xFFE4E4EA), // --card-line
+    textPrimary: Color(0xFF141418), // --ink
+    textSecondary: Color(0xFF5F5F68), // --sub (AA için bir ton koyu)
+    textMuted: Color(0xFF6A6A73), // AA 4.5+ yüzeylerde
+    accent: Color(0xFF147A60), // --mint #1f9e7d, AA
+    ops: Color(0xFF2468AE), // --sky #2f7fcf, AA
+    fitness: Color(0xFFB04E26), // --peach #d9693f, AA
+    nutrition: Color(0xFF147A60), // --mint, AA
+    sleep: Color(0xFF6E57D8), // --lav
+    water: Color(0xFF2468AE), // --sky
+    warning: Color(0xFFB04E26), // --peach, AA
+    danger: Color(0xFFC0304E), // --rose #cf3f5c, AA
+    onAccent: Color(0xFFFFFFFF), // --onacc
     onPrimary: Color(0xFFFFFFFF),
     onSecondary: Color(0xFFFFFFFF),
     onError: Color(0xFFFFFFFF),
     controlOutline: Color(0xFF8A8A96),
-    controlOutlineSoft: Color(0xFFC6C6CE),
+    controlOutlineSoft: Color(0xFFD4D4DC),
     controlContent: Color(0xFF4E4E57),
-    controlFill: Color(0xFFE7E7EC),
+    controlFill: Color(0xFFE2E2E8), // --track
     inverseSurface: Color(0xFF1F1F24),
     onInverseSurface: Color(0xFFFFFFFF),
     scrim: Color.from(alpha: 0.32, red: 0, green: 0, blue: 0),
-    shadow: Color.from(alpha: 0.12, red: 0, green: 0, blue: 0),
-    glass: Color.from(alpha: 0.78, red: 1, green: 1, blue: 1),
-    glassBorder: Color.from(alpha: 0.10, red: 0, green: 0, blue: 0),
-    navSelected: Color.from(alpha: 0.08, red: 0, green: 0, blue: 0),
+    shadow: Color.from(alpha: 0.10, red: 0, green: 0, blue: 0),
+    glass: Color.from(alpha: 0.72, red: 1, green: 1, blue: 1), // --glass
+    glassBorder: Color.from(alpha: 0.08, red: 0, green: 0, blue: 0),
+    navSelected: Color.from(alpha: 0.07, red: 0, green: 0, blue: 0),
+    selection: Color.from(alpha: 0.07, red: 0, green: 0, blue: 0), // --sel
+    track: Color(0xFFD8D8E0), // --track (yüzeyde seçilebilir)
   );
 }
 
@@ -226,6 +229,9 @@ abstract final class AppColors {
   static Color get nutrition => palette.nutrition; // beslenme
   static Color get sleep => palette.sleep; // uyku
   static Color get water => palette.water; // su
+  static Color get protein => palette.sleep; // protein çubuğu (lavanta)
+  static Color get positive => palette.accent; // iyi yönde değişim (mint)
+  static Color get negative => palette.fitness; // kötü yönde değişim (şeftali)
   static Color get warning => palette.warning;
   static Color get danger => palette.danger;
 
@@ -237,6 +243,8 @@ abstract final class AppColors {
   static Color get glass => palette.glass;
   static Color get glassBorder => palette.glassBorder;
   static Color get navSelected => palette.navSelected;
+  static Color get selection => palette.selection;
+  static Color get track => palette.track;
 
   static Color forRoutineCategory(String category) => switch (category) {
         'operasyon' => ops,
@@ -260,18 +268,27 @@ abstract final class AppColors {
       };
 }
 
-/// Bento ızgarası ve kartlar için ortak yarıçaplar.
+/// Ortak yarıçaplar (tasarım önizlemesi: kart 18, iç öğe 12, kapsül 999).
 abstract final class AppRadii {
-  static const double card = 24;
-  static const double inner = 16;
+  static const double card = 18;
+  static const double inner = 12;
   static const double chip = 12;
+
+  /// Bölmeli kontroldeki seçili parça (dış 12 − 3 iç boşluk).
+  static const double segment = 9;
+
+  /// İlerleme çubuğu uçları.
+  static const double bar = 4;
+
+  /// Tam yuvarlak kapsül (buton, rozet).
+  static const double pill = 999;
 }
 
-/// Bento ızgarası boşlukları.
+/// Bento ızgarası boşlukları (önizlemenin sık yoğunluğu).
 abstract final class AppSpacing {
-  static const double page = 16;
-  static const double grid = 10;
-  static const double cardPadding = 20;
+  static const double page = 12;
+  static const double grid = 8;
+  static const double cardPadding = 12;
 
   // Boşluk ölçeği: 4 / 8 / 16 / 24 / 32.
   static const double xs = 4;
@@ -280,11 +297,25 @@ abstract final class AppSpacing {
   static const double l = 24;
   static const double xl = 32;
 
-  // Eski ara değerler (mevcut ekranlar kullanır).
+  // Ara değerler.
   static const double sm = 6;
-  static const double md = 12;
-  static const double lg = 20;
-  static const double section = 18;
+  static const double md = 10;
+  static const double lg = 16;
+  static const double section = 14;
+}
+
+/// Önizlemenin yazı ölçeği (SF Pro / sistem fontu). Boyutlar ve kalınlıklar
+/// tek yerden; renkler temadan gelir.
+abstract final class AppType {
+  static const double value = 16; // metrik değeri 700
+  static const double screenTitle = 22; // .title 700
+  static const double cardTitle = 12.5; // .h 600
+  static const double body = 12.5;
+  static const double chipValue = 13; // .chip b
+  static const double chip = 11.5; // .chip, .btn
+  static const double caption = 11; // .s
+  static const double badge = 10.5; // .badge
+  static const double micro = 9.5; // .days
 }
 
 abstract final class AppTheme {
@@ -319,47 +350,56 @@ abstract final class AppTheme {
       splashFactory: InkSparkle.splashFactory,
     );
 
-    final textTheme = base.textTheme
-        .apply(
-          bodyColor: p.textPrimary,
-          displayColor: p.textPrimary,
-        )
-        .copyWith(
-          headlineMedium: base.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-            color: p.textPrimary,
-          ),
-          titleLarge: base.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.2,
-            color: p.textPrimary,
-          ),
-          titleMedium: base.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: p.textPrimary,
-          ),
-          bodyLarge: base.textTheme.bodyLarge?.copyWith(
-            height: 1.4,
-            color: p.textPrimary,
-          ),
-          bodyMedium: base.textTheme.bodyMedium?.copyWith(
-            height: 1.4,
-            color: p.textPrimary,
-          ),
-          labelMedium: base.textTheme.labelMedium?.copyWith(
-            color: p.textSecondary,
-            letterSpacing: 0.2,
-          ),
+    TextStyle? t(TextStyle? s, double size, FontWeight w,
+            {Color? color, double ls = 0, double? height}) =>
+        s?.copyWith(
+          fontSize: size,
+          fontWeight: w,
+          letterSpacing: ls,
+          height: height,
+          color: color ?? p.textPrimary,
         );
+
+    final bt = base.textTheme;
+    final textTheme = bt
+        .apply(bodyColor: p.textPrimary, displayColor: p.textPrimary)
+        .copyWith(
+          displaySmall: t(bt.displaySmall, 28, FontWeight.w700, ls: -0.8),
+          headlineLarge: t(bt.headlineLarge, 26, FontWeight.w700, ls: -0.6),
+          headlineMedium: t(bt.headlineMedium, 22, FontWeight.w700, ls: -0.5),
+          headlineSmall: t(bt.headlineSmall, 22, FontWeight.w700, ls: -0.44),
+          titleLarge: t(bt.titleLarge, 17, FontWeight.w700, ls: -0.2),
+          titleMedium: t(bt.titleMedium, 14, FontWeight.w600),
+          titleSmall: t(bt.titleSmall, AppType.cardTitle, FontWeight.w600),
+          bodyLarge: t(bt.bodyLarge, 13.5, FontWeight.w400, height: 1.4),
+          bodyMedium:
+              t(bt.bodyMedium, AppType.body, FontWeight.w400, height: 1.4),
+          bodySmall: t(bt.bodySmall, AppType.caption, FontWeight.w400,
+              color: p.textSecondary, height: 1.35),
+          labelLarge: t(bt.labelLarge, AppType.body, FontWeight.w600),
+          labelMedium: t(bt.labelMedium, AppType.chip, FontWeight.w500,
+              color: p.textSecondary),
+          labelSmall: t(bt.labelSmall, AppType.badge, FontWeight.w500,
+              color: p.textSecondary),
+        );
+
+    final pillShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(AppRadii.pill),
+    );
+    final innerRadius = BorderRadius.circular(AppRadii.inner);
+    const buttonText = TextStyle(fontSize: 13, fontWeight: FontWeight.w600);
 
     return base.copyWith(
       textTheme: textTheme,
+      iconTheme: IconThemeData(color: p.textPrimary, size: 20),
       appBarTheme: AppBarTheme(
         backgroundColor: p.background,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
+        titleTextStyle: textTheme.headlineSmall,
+        iconTheme: IconThemeData(color: p.textPrimary, size: 22),
         systemOverlayStyle: p.overlayStyle,
       ),
       cardTheme: CardThemeData(
@@ -367,7 +407,7 @@ abstract final class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadii.card),
           side: BorderSide(color: p.border),
         ),
       ),
@@ -376,60 +416,157 @@ abstract final class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: p.surface,
         modalBackgroundColor: p.surface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: false,
+        dragHandleColor: p.track,
+        dragHandleSize: const Size(36, 4),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: p.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          side: BorderSide(color: p.border),
+        ),
       ),
       dividerTheme: DividerThemeData(
         color: p.border,
         thickness: 1,
         space: 1,
       ),
+      listTileTheme: ListTileThemeData(
+        iconColor: p.textSecondary,
+        dense: true,
+        shape: RoundedRectangleBorder(borderRadius: innerRadius),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: p.surfaceHigh,
         hintStyle: TextStyle(color: p.textMuted),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: innerRadius,
           borderSide: BorderSide(color: p.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: innerRadius,
           borderSide: BorderSide(color: p.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: innerRadius,
           borderSide: BorderSide(color: p.accent, width: 1.5),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          minimumSize: const Size.fromHeight(40),
+          backgroundColor: p.accent,
+          foregroundColor: p.onAccent,
+          shape: pillShape,
+          textStyle: buttonText,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(40),
           foregroundColor: p.textPrimary,
-          side: BorderSide(color: p.border),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          backgroundColor: p.selection,
+          side: BorderSide.none,
+          shape: pillShape,
+          textStyle: buttonText,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: p.accent,
+          shape: pillShape,
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          // Bölücü çizgi yok: seçim yalnızca yarı saydam dolguyla belirtilir.
+          side: const WidgetStatePropertyAll(BorderSide.none),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: innerRadius),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? p.selection : p.surface,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected)
+                ? p.textPrimary
+                : p.textSecondary,
+          ),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: p.selection,
+        selectedColor: p.accent.withValues(alpha: 0.18),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.chip),
+        ),
+        labelStyle: TextStyle(
+          fontSize: AppType.chip,
+          fontWeight: FontWeight.w500,
+          color: p.textPrimary,
+        ),
+        checkmarkColor: p.accent,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: p.accent,
+        linearTrackColor: p.track,
+        circularTrackColor: p.track,
+        linearMinHeight: 6,
+        borderRadius: BorderRadius.circular(AppRadii.bar),
+      ),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: p.accent,
+        inactiveTrackColor: p.track,
+        thumbColor: p.textPrimary,
+        overlayColor: p.selection,
+        trackHeight: 6,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) =>
+              s.contains(WidgetState.selected) ? p.onAccent : p.textSecondary,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? p.accent : p.track,
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        side: BorderSide(color: p.textSecondary, width: 1.5),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: p.inverseSurface,
         contentTextStyle: TextStyle(color: p.onInverseSurface),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: innerRadius),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: p.inverseSurface,
+          borderRadius: innerRadius,
+        ),
+        textStyle: TextStyle(color: p.onInverseSurface, fontSize: 12),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: p.accent,
-        foregroundColor: p.onPrimary,
-        elevation: 6,
+        foregroundColor: p.onAccent,
+        elevation: 0,
         shape: const CircleBorder(),
       ),
     );

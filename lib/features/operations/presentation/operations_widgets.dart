@@ -42,7 +42,7 @@ Future<OpsFilterPick?> showOpsFilterSheet(
           key: ValueKey('ops-filter-option-${value ?? 'all'}'),
           title: Text(label),
           trailing: isSelected
-              ? Icon(Icons.check_rounded, color: AppColors.ops)
+              ? Icon(Icons.check_outlined, color: AppColors.accent)
               : null,
           onTap: () => Navigator.of(context).pop(OpsFilterPick(value)),
         );
@@ -99,9 +99,9 @@ class OpsGroupCard extends StatelessWidget {
     final header = Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.cardPadding,
-        action == null ? 12 : 4,
-        action == null ? AppSpacing.cardPadding : 8,
-        action == null ? 12 : 4,
+        action == null ? 12 : 2,
+        action == null ? AppSpacing.cardPadding : 4,
+        action == null ? 4 : 0,
       ),
       child: Row(
         children: [
@@ -110,18 +110,24 @@ class OpsGroupCard extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleSmall,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: AppColors.textPrimary),
             ),
           ),
           Text(
             '$count',
-            style: theme.textTheme.labelMedium
-                ?.copyWith(color: AppColors.textMuted),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
           ),
           if (onHeaderTap != null) ...[
             const SizedBox(width: 4),
             Icon(
-              collapsed ? Icons.expand_more_rounded : Icons.expand_less_rounded,
+              collapsed
+                  ? Icons.expand_more_outlined
+                  : Icons.expand_less_outlined,
               size: 20,
               color: AppColors.textMuted,
             ),
@@ -140,9 +146,8 @@ class OpsGroupCard extends StatelessWidget {
           else
             InkWell(onTap: onHeaderTap, child: header),
           if (!collapsed && children.isNotEmpty) ...[
-            const Divider(height: 1),
             ...children,
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
           ],
         ],
       ),
@@ -246,7 +251,7 @@ class OpsMessage extends StatelessWidget {
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 20),
+              icon: const Icon(Icons.refresh_outlined, size: 20),
               label: const Text('Tekrar dene'),
             ),
           ],
@@ -267,7 +272,7 @@ class OpsItemMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<bool>(
       tooltip: 'Seçenekler',
-      icon: Icon(Icons.more_vert_rounded, color: AppColors.textMuted),
+      icon: Icon(Icons.more_vert_outlined, color: AppColors.textMuted),
       onSelected: (edit) => edit ? onEdit() : onDelete(),
       itemBuilder: (context) => const [
         PopupMenuItem(value: true, child: Text('Düzenle')),
@@ -371,14 +376,14 @@ class OpsSheetFrame extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge,
+                      style: theme.textTheme.titleSmall,
                     ),
                   ),
                   IconButton(
                     tooltip: 'Kapat',
                     onPressed:
                         saving ? null : () => Navigator.of(context).pop(false),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_outlined),
                   ),
                 ],
               ),
@@ -457,7 +462,7 @@ class OpsPickerRow extends StatelessWidget {
           IconButton(
             tooltip: 'Temizle',
             onPressed: onClear,
-            icon: Icon(Icons.close_rounded, color: AppColors.textMuted),
+            icon: Icon(Icons.close_outlined, color: AppColors.textMuted),
           ),
       ],
     );

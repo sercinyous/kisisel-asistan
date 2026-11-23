@@ -41,6 +41,9 @@ class FakeWaterRepository implements WaterRepository {
 
   @override
   Future<int> fetchDailyTarget() async => targetMl;
+
+  @override
+  Future<void> setDailyTarget(int ml) async => targetMl = ml;
 }
 
 /// Bellekte haftalık check-in'ler (demo ve testler).

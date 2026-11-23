@@ -28,16 +28,16 @@ class AppearanceCard extends ConsumerWidget {
   const AppearanceCard({super.key});
 
   static IconData _icon(AppThemeMode mode) => switch (mode) {
-        AppThemeMode.system => Icons.brightness_auto_rounded,
-        AppThemeMode.light => Icons.light_mode_rounded,
-        AppThemeMode.dark => Icons.dark_mode_rounded,
+        AppThemeMode.system => Icons.brightness_auto_outlined,
+        AppThemeMode.light => Icons.light_mode_outlined,
+        AppThemeMode.dark => Icons.dark_mode_outlined,
       };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
     return SettingsSection(
-      icon: Icons.palette_rounded,
+      icon: Icons.palette_outlined,
       title: 'Tema',
       color: AppColors.warning,
       children: [
@@ -58,11 +58,11 @@ class AppearanceCard extends ConsumerWidget {
           style: SegmentedButton.styleFrom(
             backgroundColor: AppColors.surface,
             foregroundColor: AppColors.textSecondary,
-            selectedBackgroundColor: AppColors.surfaceHigh,
-            selectedForegroundColor: AppColors.accent,
+            selectedBackgroundColor: AppColors.selection,
+            selectedForegroundColor: AppColors.textPrimary,
             side: BorderSide(color: AppColors.border),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadii.inner),
+              borderRadius: BorderRadius.circular(AppRadii.segment),
             ),
           ),
         ),

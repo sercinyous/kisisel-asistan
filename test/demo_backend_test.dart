@@ -364,11 +364,11 @@ void main() {
 
     test('bugünün öğünleri kalem kalem; Kokpit özeti aynı kayıtlardan', () async {
       final logs = await data.health.fetchNutritionLogs(today);
-      expect(logs.map((l) => l.mealType).toSet(), {'breakfast', 'lunch'});
+      expect(logs.map((l) => l.mealType).toSet(), {'breakfast', 'lunch', 'snack'});
       final summary = await data.kokpit.fetchNutritionFor(today);
       expect(summary.entryCount, logs.length);
       expect(summary.calories, logs.fold<double>(0, (s, l) => s + l.calories));
-      expect(summary.calories, 880);
+      expect(summary.calories, 1670);
     });
 
     test('kilo serisi 90 günü kapsar ve bugünkü ölçümle biter', () async {

@@ -254,7 +254,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _targetWeight.text = _formatKg(target);
     final answers = _answers;
     if (answers == null) return;
-    _fillTargets(GoalSuggestion.compute(answers, nowYear: _now().year));
+    _fillTargets(suggestOnboardingTargets(answers, now: _now()));
     _targetsFor = answers.targetsSignature;
   }
 
@@ -525,7 +525,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       case OnboardingStep.targets:
         final height = OnboardingValidators.parseInt(_height.text) ?? 170;
         final weight = OnboardingValidators.parseDecimal(_weight.text) ?? 70;
+        final answers = _answers;
         return OnboardingTargetsStep(
+          age: answers == null ? null : _now().year - answers.birthYear,
+          lossUsesEngine: answers != null && usesPlanEngine(answers),
           goal: _goal,
           onGoal: _onGoal,
           activity: _activity,
@@ -607,7 +610,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     key: const Key('onboarding-close'),
                     tooltip: 'Kapat',
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_outlined),
                   )
                 else
                   TextButton(
@@ -620,12 +623,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           if (!widget.replay)
             ClipRRect(
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(AppRadii.bar),
               child: LinearProgressIndicator(
                 key: const Key('onboarding-progress'),
                 value: (_step.index + fraction) / stepCount,
                 minHeight: 4,
-                backgroundColor: AppColors.surfaceHigh,
+                backgroundColor: AppColors.track,
                 color: AppColors.accent,
               ),
             ),

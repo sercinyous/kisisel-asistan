@@ -8,6 +8,7 @@ import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import 'reports_chart.dart';
 import 'reports_friends_row.dart';
+import 'reports_health.dart';
 import 'reports_week_details_screen.dart';
 import 'reports_format.dart';
 import 'reports_providers.dart';
@@ -27,7 +28,7 @@ import 'reports_widgets.dart';
 }
 
 /// Haftalık görünüm: hafta seçici, İş/Form puanları + yapay zekâ
-/// değerlendirmesi, günlük tamamlama grafiği, "Ayrıntılar" bağlantısı ve
+/// değerlendirmesi, günlük tamamlama grafiği, haftalık açık + seriler, "Ayrıntılar" bağlantısı ve
 /// arkadaşlar satırı.
 class ReportsWeeklyView extends ConsumerWidget {
   const ReportsWeeklyView({super.key});
@@ -79,7 +80,7 @@ class ReportsWeeklyView extends ConsumerWidget {
         report.when(
           loading: () => const KokpitSkeletonCard(height: 320),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Haftalık rapor yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(weeklyReportProvider(selected)),
@@ -96,9 +97,11 @@ class ReportsWeeklyView extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.grid),
+        ReportsHealthWeekCard(weekStart: selected),
+        const SizedBox(height: AppSpacing.grid),
         ReportLinkRow(
           key: const ValueKey('reports-details'),
-          icon: Icons.table_chart_rounded,
+          icon: Icons.table_chart_outlined,
           label: 'Ayrıntılar',
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(

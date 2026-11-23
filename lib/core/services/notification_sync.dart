@@ -1,16 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/health/presentation/providers/body_providers.dart';
+import '../../features/health/presentation/providers/week_deficit_providers.dart';
+import '../../features/kokpit/presentation/kokpit_providers.dart';
 import '../../features/operations/data/tasks_repository.dart';
+import '../../features/reports/presentation/reports_providers.dart';
 import '../../features/reminders/data/reminders_repository.dart';
 import '../../features/reminders/domain/reminder.dart';
 import '../../features/routines/data/routines_repository.dart';
 import '../../features/routines/domain/routine.dart';
 import '../../features/settings/domain/user_settings.dart';
 import '../../features/settings/presentation/settings_providers.dart';
+import '../utils/date_utils.dart';
+import 'health_service.dart';
+import 'notification_health.dart';
 import 'notification_plan.dart';
 import 'notification_service.dart';
 import 'supabase_providers.dart';
 
+export 'notification_health.dart';
 export 'notification_plan.dart';
 
 /// Bildirim izninin güncel durumu. Yalnızca okur; izin penceresi açmaz
@@ -77,6 +85,8 @@ final notificationSessionGuardProvider = Provider<void>((ref) {
 final notificationSyncProvider = FutureProvider<void>((ref) async {
   final notifications = ref.watch(notificationServiceProvider);
   final routinesRepository = ref.watch(routinesRepositoryProvider);
+  // Sağlık dürtüleri bu turla yaşar; tur (resync) bitince yeniden planlanır.
+  ref.listen<AsyncValue<void>>(healthNudgeSyncProvider, (_, __) {});
   final tasksRepository = ref.watch(tasksRepositoryProvider);
   final queue = ref.watch(notificationSyncQueueProvider);
 
@@ -172,6 +182,88 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
     // Hatırlatıcılar da resync'ten sonra, aynı turda planlanır: çıkışta
     // endSession'ın resync'i bunları da siler.
     await notifications.scheduleHabitReminders(habits);
+  });
+  // resync sağlık dürtülerini de sildi: aynı sıradan yeniden planlanır.
+  if (current()) ref.invalidate(healthNudgeSyncProvider);
+});
+
+/// Dürtülerin okuduğu anlık durum; okunamayan parça `null` kalır ve o dürtü
+/// planlanmaz.
+final healthNudgeStateProvider = FutureProvider<HealthNudgeState>((ref) async {
+  Future<T?> safe<T>(Future<T> Function() read) async {
+    try {
+      return await read();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  final settings = ref.watch(settingsOrDefaultProvider);
+  final nutrition = await safe(() => ref.watch(todayNutritionProvider.future));
+  final health = await safe(() => ref.watch(healthTodayProvider.future));
+  final week = await safe(() => ref.watch(currentWeekDeficitProvider.future));
+  final checkin = await safe(() => ref.watch(checkinTodayProvider.future));
+  final report = await safe(() => ref
+      .watch(weeklyReportProvider(AppDates.weekStart(DateTime.now())).future));
+  final hasWeek = week != null && week.days.any((d) => d.deficit != null);
+  return HealthNudgeState(
+    mealsLoggedToday: nutrition == null ? null : nutrition.entryCount > 0,
+    stepsToday: health?.status == HealthStatus.ok ? health!.steps : null,
+    stepTarget: settings.dailySteps,
+    checkinDoneToday: checkin?.done ?? false,
+    weekDeficitKcal: hasWeek ? week.totalKcal : null,
+    weekDeficitKg: hasWeek ? week.kg : null,
+    weekSurplusGoal: hasWeek && week.surplusGoal,
+    tasksDonePercent: report?.metrics.workRate,
+  );
+});
+
+/// Sağlık dürtülerini (öğün, adım, ölçü günü, haftalık özet) planlar: önce
+/// önceki planın anahtarlarını siler, sonra yenisini yazar. Durum değişince
+/// (öğün eklendi, adım arttı, ölçü kaydedildi) kendiliğinden yenilenir.
+final healthNudgeSyncProvider = FutureProvider<void>((ref) async {
+  final notifications = ref.watch(notificationServiceProvider);
+  final queue = ref.watch(notificationSyncQueueProvider);
+  var alive = true;
+  ref.onDispose(() => alive = false);
+  final generation = queue.generation;
+  bool current() => alive && queue.generation == generation;
+
+  UserSettings settings;
+  try {
+    settings = await ref.watch(userSettingsProvider.future);
+  } catch (_) {
+    return;
+  }
+  final disabled = await ref.watch(healthNudgePrefsProvider.future);
+  final state = await ref.watch(healthNudgeStateProvider.future);
+  if (!current()) return;
+
+  final now = DateTime.now();
+  final plan =
+      settings.notificationsEnabled && await notifications.hasPermission()
+          ? buildHealthNudgePlan(
+              now: now,
+              settings: settings,
+              state: state,
+              disabled: disabled,
+            )
+          : const <PlannedNotification>[];
+
+  await queue.run(current, () async {
+    for (final key in healthNudgeKeysAround(now)) {
+      await notifications.cancelReminder(key);
+    }
+    for (final p in plan) {
+      await notifications.scheduleReminder(
+        ReminderSchedule(
+          taskId: p.key,
+          title: p.title,
+          when: p.fireAt,
+          body: p.body,
+        ),
+      );
+    }
   });
 });
 

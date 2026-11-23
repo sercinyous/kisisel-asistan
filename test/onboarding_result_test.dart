@@ -52,6 +52,7 @@ OnboardingResult _build({
     );
 
 void main() {
+  _targetSourceTests();
   group('buildOnboardingResult: tek user_settings kaydı', () {
     test('cevaplar, hedefler ve kurulum anı tek kayıtta', () {
       final settings = _build().settings;
@@ -72,6 +73,9 @@ void main() {
         'work_description': 'Mimarım.',
         'onboarded_at': '2026-11-17T09:30:00.000Z',
         'activity_level': 'light',
+        // Elle girilen hedefler önerilenden farklı: kaynak 'manual'.
+        'targets_source': 'manual',
+        'targets_updated_at': '2026-11-17T09:30:00.000Z',
       });
     });
 
@@ -270,4 +274,27 @@ class _RecordingRepository implements OnboardingRepository {
       Map<String, dynamic>.from(payload['settings'] as Map),
     );
   }
+
+}
+
+void _targetSourceTests() {
+  group('ilk kurulum hedef kaynağı', () {
+    test('önerilen hedefler aynen kabul edilince kaynak onboarding', () {
+      final a = _answers();
+      final suggested = suggestOnboardingTargets(a, now: _now);
+      final r = buildOnboardingResult(
+        base: const UserSettings.defaults(),
+        answers: a,
+        targets: suggested,
+        preferences: const OnboardingPreferences(),
+        routines: const [],
+        now: _now,
+      );
+      expect(r.settings.targetsSource, TargetsSource.onboarding);
+      expect(r.settings.dailyCalories, suggested.calories);
+      // 70,5 kg, hedef 65, Klasik: ⌊70,5 × 26⌋ = 1833.
+      expect(suggested.calories, 1833);
+      expect(suggested.proteinG, 141);
+    });
+  });
 }

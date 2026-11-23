@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/notification_sync.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../health/domain/energy_balance.dart' show Sex;
+import '../../health/presentation/health_segment.dart';
+import '../../health/presentation/providers/targets_providers.dart';
+import '../../kokpit/presentation/kokpit_health_card.dart' show openHealth;
 import '../domain/user_settings.dart';
 import 'avatar_picker_sheet.dart';
 import 'delete_account_screen.dart';
@@ -239,16 +243,30 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
     final birthYear = int.tryParse(_birthYear.text.trim());
     final displayName = _blankToNull(_displayName.text);
     final work = _blankToNull(_workDescription.text);
-    return base.copyWith(
+    final kcal = int.parse(_calories.text.trim());
+    final protein = int.parse(_protein.text.trim());
+    final carbs = int.parse(_carbs.text.trim());
+    final fat = int.parse(_fat.text.trim());
+    // Kalori/makro elle değiştiyse kaynak 'manual' olur (tartı artık
+    // hedefleri değiştirmez; Plan yalnızca öneri gösterir).
+    final edited = kcal != base.dailyCalories ||
+        protein != base.dailyProteinG ||
+        carbs != base.dailyCarbsG ||
+        fat != base.dailyFatG;
+    final targetsBase = edited
+        ? manualTargets(base,
+            kcal: kcal,
+            proteinG: protein,
+            carbsG: carbs,
+            fatG: fat,
+            now: DateTime.now())
+        : base;
+    return targetsBase.copyWith(
       // numeric(5,2): iki ondalığa yuvarlanır.
       startWeightKg:
           (_parseDecimal(_startWeight.text)! * 100).roundToDouble() / 100,
       targetWeightKg:
           (_parseDecimal(_targetWeight.text)! * 100).roundToDouble() / 100,
-      dailyCalories: int.parse(_calories.text.trim()),
-      dailyProteinG: int.parse(_protein.text.trim()),
-      dailyCarbsG: int.parse(_carbs.text.trim()),
-      dailyFatG: int.parse(_fat.text.trim()),
       dailySteps: int.parse(_steps.text.trim()),
       sleepMinutes: int.parse(_sleep.text.trim()),
       // Boş alan null yazılır; böylece kullanıcı profilini temizleyebilir.
@@ -289,11 +307,29 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
 
     setState(() => _saving = true);
     try {
-      final saved =
-          await ref.read(userSettingsProvider.notifier).save(_draft());
+      // Hedef kilo, boy, yaş, hareket ya da adım değiştiyse plan hedefleri
+      // de aynı kayıtta güncellenir (kaynak 'manual' değilse ve fark eşiği
+      // aşıyorsa; tartıyla aynı kural).
+      final draft = _draft();
+      final now = DateTime.now();
+      final write = planWrite(
+        settings: draft,
+        resolved: resolveTargets(
+          settings: draft,
+          latestWeightKg: ref.read(latestWeightProvider).valueOrNull?.weightKg,
+          age: ageFromSettings(draft, now),
+          sex: Sex.tryParse(draft.sex),
+        ),
+        trigger: PlanTrigger.profileSaved,
+        now: now,
+      );
+      final saved = await ref
+          .read(userSettingsProvider.notifier)
+          .save(write?.settings ?? draft);
       ref.invalidate(notificationSyncProvider);
       if (mounted) setState(() => _load(saved));
-      showSettingsSnack(messenger, 'Kaydedildi.');
+      showSettingsSnack(messenger,
+          write == null ? 'Kaydedildi.' : 'Kaydedildi. ${write.message}');
     } catch (_) {
       showSettingsSnack(
         messenger,
@@ -360,7 +396,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
                                   ),
                                 ),
                                 child: Icon(
-                                  Icons.edit_rounded,
+                                  Icons.edit_outlined,
                                   size: 16,
                                   color: AppColors.onAccent,
                                 ),
@@ -389,7 +425,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.danger,
                       ),
-                      icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                      icon: const Icon(Icons.delete_forever_outlined, size: 18),
                       label: const Text('Hesabımı sil'),
                     ),
                   ),
@@ -414,7 +450,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
         _birthYear.text.trim().isEmpty ||
         _sex == null;
     return SettingsSection(
-      icon: Icons.badge_rounded,
+      icon: Icons.badge_outlined,
       title: 'Profil',
       color: AppColors.fitness,
       children: [
@@ -523,10 +559,26 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
 
   Widget _goalsCard() {
     return SettingsSection(
-      icon: Icons.flag_rounded,
+      icon: Icons.flag_outlined,
       title: 'Hedefler',
       color: AppColors.accent,
       children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const Key('settings-open-plan'),
+            onPressed: () {
+              if (_dirty) {
+                showSettingsSnack(ScaffoldMessenger.of(context),
+                    'Önce değişiklikleri kaydet.');
+                return;
+              }
+              openHealth(context, ref, HealthSegment.plan);
+            },
+            icon: const Icon(Icons.insights_outlined, size: 18),
+            label: const Text('Plan\'ı gör'),
+          ),
+        ),
         _goalField(
           SettingsNumberField(
             fieldKey: const Key('settings-start-weight'),

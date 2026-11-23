@@ -157,7 +157,7 @@ class HealthSourceBanner extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.error_outline_rounded,
+            Icon(Icons.error_outline_outlined,
                 size: 20, color: AppColors.warning),
             const SizedBox(width: 10),
             Expanded(

@@ -66,7 +66,76 @@ void main() {
         'sex': null,
         'display_name': null,
         'work_description': null,
+        'weekly_rate': 'classic',
+        'expenditure_kcal_manual': null,
+        'meal_count': 3,
+        'targets_source': 'plan',
+        'targets_updated_at': null,
+        'checkin_cadence': 'weekly',
+        'checkin_weekday': 1,
+        'checkin_monthday': 1,
+        'checkin_reminder': true,
+        'hide_photos': false,
+        'goal_mode': 'fat_loss',
+        'gain_rate': 'slow',
       });
+    });
+
+    test('sağlık v2 sütunları okunur, yazılır; bozuk değer varsayılana düşer',
+        () {
+      final s = UserSettings.fromMap(const {
+        'weekly_rate': '0.75',
+        'expenditure_kcal_manual': 2600,
+        'meal_count': 2,
+        'targets_source': 'manual',
+        'targets_updated_at': '2026-11-21T08:00:00Z',
+        'checkin_cadence': 'monthly',
+        'checkin_weekday': 3,
+        'checkin_monthday': 15,
+        'checkin_reminder': false,
+        'hide_photos': true,
+      });
+      expect(s.weeklyRate, FatLossRate.threeQuarter);
+      expect(s.expenditureKcalManual, 2600);
+      expect(s.mealCount, 2);
+      expect(s.targetsSource, TargetsSource.manual);
+      expect(s.targetsUpdatedAt, DateTime.utc(2026, 11, 21, 8).toLocal());
+      expect(s.checkinCadence, CheckinCadence.monthly);
+      expect(s.checkinMonthday, 15);
+      expect(s.checkinReminder, isFalse);
+      expect(s.hidePhotos, isTrue);
+      final m = s.toMap();
+      expect(m['weekly_rate'], '0.75');
+      expect(m['targets_source'], 'manual');
+      expect(m['checkin_cadence'], 'monthly');
+
+      final bad = UserSettings.fromMap(const {
+        'weekly_rate': '0.25',
+        'expenditure_kcal_manual': 900,
+        'meal_count': 5,
+        'targets_source': 'ai',
+        'checkin_monthday': 31,
+        'checkin_weekday': 0,
+      });
+      expect(bad.weeklyRate, FatLossRate.classic);
+      expect(bad.expenditureKcalManual, isNull);
+      expect(bad.mealCount, 3);
+      expect(bad.targetsSource, TargetsSource.plan);
+      expect(bad.checkinMonthday, 1);
+      expect(bad.checkinWeekday, 1);
+    });
+
+    test('eski cihaz tercihindeki hız adı da çözülür', () {
+      expect(FatLossRate.parse('half'), FatLossRate.half);
+      expect(FatLossRate.parse('1.0'), FatLossRate.one);
+      expect(FatLossRate.parse(null), FatLossRate.classic);
+    });
+
+    test('v2 sütunları olmayan satır bu sütunları yazmaz', () {
+      final s = const UserSettings.defaults()
+          .copyWith(healthPlanColumns: false, weeklyRate: FatLossRate.half);
+      expect(s.toMap().containsKey('weekly_rate'), isFalse);
+      expect(s.toMap().containsKey('targets_source'), isFalse);
     });
 
     test('fromMap: PostgREST satırı (numeric double/int, time saniyeli)', () {

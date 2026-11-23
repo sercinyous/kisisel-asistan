@@ -40,15 +40,15 @@ class AvatarActions {
 
   final WidgetRef ref;
 
-  AvatarChoice get _current =>
-      ref.read(settingsOrDefaultProvider).avatar;
+  AvatarChoice get _current => ref.read(settingsOrDefaultProvider).avatar;
 
   Future<void> _save(AvatarChoice avatar) =>
       ref.read(userSettingsProvider.notifier).saveAvatar(avatar);
 
   /// Önceki seçim fotoğrafsa ve yenisi değilse dosyayı siler: bir kez
   /// yineler, yine olmazsa hatayı raporlar (seçim yine de geçerli kalır).
-  Future<void> _dropPhotoIfLeft(AvatarChoice previous, AvatarChoice next) async {
+  Future<void> _dropPhotoIfLeft(
+      AvatarChoice previous, AvatarChoice next) async {
     if (previous.kind != AvatarKind.photo || next.kind == AvatarKind.photo) {
       return;
     }
@@ -172,7 +172,8 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
                 const MyAvatar(size: 56),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Text('Profil resmi', style: theme.textTheme.titleLarge),
+                  child:
+                      Text('Profil resmi', style: theme.textTheme.titleLarge),
                 ),
                 if (_busy)
                   const SizedBox.square(
@@ -185,7 +186,7 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
             if (photoSupported) ...[
               _ActionTile(
                 key: const Key('avatar-camera'),
-                icon: Icons.photo_camera_rounded,
+                icon: Icons.photo_camera_outlined,
                 label: 'Fotoğraf çek',
                 onTap: _busy
                     ? null
@@ -196,7 +197,7 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
               ),
               _ActionTile(
                 key: const Key('avatar-gallery'),
-                icon: Icons.photo_library_rounded,
+                icon: Icons.photo_library_outlined,
                 label: 'Galeriden seç',
                 onTap: _busy
                     ? null
@@ -209,7 +210,7 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
             if (avatar.kind != AvatarKind.initials)
               _ActionTile(
                 key: const Key('avatar-remove'),
-                icon: Icons.person_off_rounded,
+                icon: Icons.person_off_outlined,
                 label: 'Kaldır',
                 color: AppColors.danger,
                 onTap: _busy
@@ -313,7 +314,8 @@ class _ColorDot extends StatelessWidget {
 
 /// 16 maskotun ızgarası (adlarıyla). Seçili olan halkayla işaretlenir.
 class MascotGrid extends StatelessWidget {
-  const MascotGrid({super.key, required this.selectedId, required this.onSelect});
+  const MascotGrid(
+      {super.key, required this.selectedId, required this.onSelect});
 
   final String? selectedId;
   final ValueChanged<String>? onSelect;
@@ -365,7 +367,8 @@ class MascotGrid extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: selected ? AppColors.accent : AppColors.textSecondary,
+                      color:
+                          selected ? AppColors.accent : AppColors.textSecondary,
                       fontWeight: selected ? FontWeight.w700 : null,
                     ),
                   ),

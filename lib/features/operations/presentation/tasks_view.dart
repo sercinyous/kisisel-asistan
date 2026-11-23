@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../settings/presentation/settings_providers.dart';
@@ -162,7 +163,12 @@ class TasksView extends ConsumerWidget {
 
     List<Widget> rows(List<TaskItem> items) => [
           for (final (index, task) in items.indexed) ...[
-            if (index > 0) const Divider(indent: 52, height: 1),
+            if (index > 0)
+              const Divider(
+                indent: AppSpacing.cardPadding,
+                endIndent: AppSpacing.cardPadding,
+                height: 1,
+              ),
             row(task),
           ],
         ];
@@ -177,7 +183,7 @@ class TasksView extends ConsumerWidget {
             loading: () => const [OpsLoading()],
             error: (_, __) => [
               OpsMessage(
-                icon: Icons.cloud_off_rounded,
+                icon: Icons.cloud_off_outlined,
                 text: 'Görevler yüklenemedi.',
                 onRetry: () => ref.invalidate(opsTasksProvider),
               ),
@@ -190,7 +196,7 @@ class TasksView extends ConsumerWidget {
               if (visible.isEmpty) {
                 return [
                   OpsMessage(
-                    icon: Icons.task_alt_rounded,
+                    icon: Icons.task_alt_outlined,
                     text: filter == null
                         ? 'Açık görev yok. + ile yeni görev oluştur.'
                         : '$filter kategorisinde açık görev yok.',
@@ -292,20 +298,27 @@ class _TaskRow extends StatelessWidget {
     final when = task.scheduledAt;
     final overdue =
         !task.isDone && when != null && when.isBefore(DateTime.now());
-    final muted =
-        theme.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary);
+    final muted = TextStyle(
+      fontSize: AppType.caption,
+      height: 1.3,
+      color: AppColors.textSecondary,
+    );
 
     return InkWell(
       onTap: onEdit,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 4, AppSpacing.cardPadding, 4),
+        padding: const EdgeInsets.fromLTRB(2, 2, AppSpacing.cardPadding, 2),
         child: Row(
           children: [
             Checkbox(
               key: ValueKey('task-check-${task.id}'),
               value: task.isDone,
               onChanged: (_) => onToggle(),
-              activeColor: AppColors.ops,
+              activeColor: AppColors.accent,
+              checkColor: AppColors.onAccent,
+              shape: const CircleBorder(),
+              side: BorderSide(color: AppColors.textMuted, width: 1.5),
+              visualDensity: VisualDensity.compact,
             ),
             Expanded(
               child: Column(
@@ -316,6 +329,7 @@ class _TaskRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
                       color: task.isDone ? AppColors.textMuted : null,
                       decoration:
                           task.isDone ? TextDecoration.lineThrough : null,
@@ -329,8 +343,7 @@ class _TaskRow extends StatelessWidget {
                           alignment: PlaceholderAlignment.middle,
                           child: Padding(
                             padding: const EdgeInsets.only(right: 6),
-                            child: Icon(
-                              Icons.circle,
+                            child: RitimDot(
                               size: 6,
                               color: categoryColor,
                             ),
@@ -343,7 +356,7 @@ class _TaskRow extends StatelessWidget {
                           TextSpan(
                             text: ' · ${AppDates.relativeDayTime(when)}',
                             style: overdue
-                                ? TextStyle(color: AppColors.danger)
+                                ? TextStyle(color: AppColors.negative)
                                 : null,
                           ),
                         if (task.priority == 'high')

@@ -23,7 +23,7 @@ class TaskDashboardGrid extends StatelessWidget {
     final change = stats.weekChangePercent;
     final summaryColor = change == null || change == 0
         ? AppColors.textSecondary
-        : (change > 0 ? AppColors.fitness : AppColors.danger);
+        : (change > 0 ? AppColors.positive : AppColors.negative);
     final rate = stats.completionRate;
     final best = stats.bestWeekday;
 
@@ -31,13 +31,12 @@ class TaskDashboardGrid extends StatelessWidget {
       children: [
         BentoCell(
           child: BentoCard(
-            tint: AppColors.ops,
             child: Row(
               children: [
                 Icon(
                   change != null && change < 0
-                      ? Icons.trending_down_rounded
-                      : Icons.trending_up_rounded,
+                      ? Icons.trending_down_outlined
+                      : Icons.trending_up_outlined,
                   color: summaryColor,
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -58,9 +57,9 @@ class TaskDashboardGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.bar_chart_rounded,
+                  icon: Icons.bar_chart_outlined,
                   label: 'Haftalık tamamlanan',
-                  color: AppColors.ops,
+                  color: AppColors.accent,
                   trailing: 'Bu hafta ${stats.thisWeek}',
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -72,9 +71,9 @@ class TaskDashboardGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: _StatCard(
-            icon: Icons.task_alt_rounded,
+            icon: Icons.task_alt_outlined,
             label: 'Tamamlama',
-            color: AppColors.fitness,
+            color: AppColors.accent,
             value: rate == null ? '—' : '%${(rate * 100).round()}',
             caption: rate == null
                 ? 'Planlı görev yok'
@@ -85,7 +84,7 @@ class TaskDashboardGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: _StatCard(
-            icon: Icons.schedule_rounded,
+            icon: Icons.schedule_outlined,
             label: 'Geciken',
             color:
                 stats.overdueCount > 0 ? AppColors.danger : AppColors.textMuted,
@@ -99,7 +98,7 @@ class TaskDashboardGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.calendar_view_week_rounded,
+                  icon: Icons.calendar_view_week_outlined,
                   label: 'En verimli gün',
                   color: AppColors.accent,
                   trailing: best == null ? null : turkishWeekday(best),
@@ -116,7 +115,7 @@ class TaskDashboardGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.donut_small_rounded,
+                  icon: Icons.donut_small_outlined,
                   label: 'Kategori dağılımı',
                   color: AppColors.nutrition,
                 ),
@@ -166,8 +165,8 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             value,
-            style: theme.textTheme.headlineMedium
-                ?.copyWith(color: AppColors.textPrimary),
+            style: theme.textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -203,7 +202,7 @@ class _WeeklyBarChart extends StatelessWidget {
     final theme = Theme.of(context);
     final top = weeks.fold<int>(0, (m, w) => math.max(m, w.count));
     final maxY = top == 0 ? 1.0 : top * 1.15;
-    final color = AppColors.ops;
+    final color = AppColors.accent;
     final labelStyle =
         theme.textTheme.labelSmall?.copyWith(color: AppColors.textMuted);
     final dayFormat = DateFormat('d MMM', AppDates.locale);
@@ -307,7 +306,7 @@ class _WeekdayStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final top = counts.fold<int>(0, math.max);
-    const short = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+    const short = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     return SizedBox(
       height: 90,
       child: Row(
@@ -368,7 +367,7 @@ class _CategoryBars extends StatelessWidget {
     final theme = Theme.of(context);
     final total = categories.fold<int>(0, (s, e) => s + e.value);
     final palette = [
-      AppColors.ops,
+      AppColors.accent,
       AppColors.accent,
       AppColors.nutrition,
       AppColors.fitness,

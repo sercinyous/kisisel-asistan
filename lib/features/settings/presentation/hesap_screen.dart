@@ -154,38 +154,38 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
           BentoCard(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Column(
-              children: [
+              children: _divided([
                 _MenuRow(
                   key: const Key('hesap-profile'),
-                  icon: Icons.badge_rounded,
+                  icon: Icons.badge_outlined,
                   title: 'Profil ve hedefler',
                   hint: profileHint,
                   onTap: () => _open(const ProfileGoalsPage()),
                 ),
                 _MenuRow(
                   key: const Key('settings-friends'),
-                  icon: Icons.people_rounded,
+                  icon: Icons.people_outlined,
                   title: 'Arkadaşlar',
                   badge: pending > 0 ? '$pending davet' : null,
                   onTap: () => _open(const FriendsScreen()),
                 ),
                 _MenuRow(
                   key: const Key('hesap-notifications'),
-                  icon: Icons.notifications_rounded,
+                  icon: Icons.notifications_outlined,
                   title: 'Bildirimler',
                   hint: notificationHint,
                   onTap: () => _open(const NotificationsPage()),
                 ),
                 _MenuRow(
                   key: const Key('hesap-appearance'),
-                  icon: Icons.palette_rounded,
+                  icon: Icons.palette_outlined,
                   title: 'Görünüm',
                   hint: themeMode.label,
                   onTap: () => _open(const AppearancePage()),
                 ),
                 _MenuRow(
                   key: const Key('hesap-categories'),
-                  icon: Icons.category_rounded,
+                  icon: Icons.category_outlined,
                   title: 'Kategoriler ve ekip',
                   hint: teamCount == null || teamCount == 0
                       ? null
@@ -194,32 +194,32 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                 ),
                 _MenuRow(
                   key: const Key('hesap-connections'),
-                  icon: Icons.link_rounded,
+                  icon: Icons.link_outlined,
                   title: 'Bağlantılar',
                   hint: source == HealthSourceKind.appleHealth
                       ? 'Apple Sağlık'
                       : source.label,
                   onTap: () => _open(const ConnectionsPage()),
                 ),
-              ],
+              ]),
             ),
           ),
           const SizedBox(height: AppSpacing.section),
           BentoCard(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Column(
-              children: [
+              children: _divided([
                 // BEGIN faz5_account
                 _MenuRow(
                   key: const Key('settings-privacy'),
-                  icon: Icons.privacy_tip_rounded,
+                  icon: Icons.privacy_tip_outlined,
                   title: 'Yardım ve gizlilik',
                   compact: true,
                   onTap: () => _open(const PrivacyScreen()),
                 ),
                 _MenuRow(
                   key: const Key('settings-replay-guide'),
-                  icon: Icons.menu_book_rounded,
+                  icon: Icons.menu_book_outlined,
                   title: 'Kılavuzu yeniden göster',
                   compact: true,
                   onTap: () => Navigator.of(context).push<void>(
@@ -231,7 +231,7 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                 ),
                 _MenuRow(
                   key: const Key('settings-feedback'),
-                  icon: Icons.bug_report_rounded,
+                  icon: Icons.bug_report_outlined,
                   title: 'Sorun bildir',
                   compact: true,
                   onTap: () => FeedbackSheet.show(context),
@@ -239,14 +239,14 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                 // END faz5_account
                 _MenuRow(
                   key: const Key('settings-sign-out'),
-                  icon: Icons.logout_rounded,
+                  icon: Icons.logout_outlined,
                   title: _signingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap',
                   compact: true,
                   danger: true,
                   showChevron: false,
                   onTap: _signingOut ? null : _signOut,
                 ),
-              ],
+              ]),
             ),
           ),
         ],
@@ -255,7 +255,21 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
   }
 }
 
-/// Menü satırı: ikon, başlık, sağda gri durum ya da rozet ve ok.
+/// Kart içindeki satırların arasına ince ayırıcı çizgi koyar.
+List<Widget> _divided(List<Widget> rows) => [
+      for (final (i, row) in rows.indexed) ...[
+        if (i > 0)
+          const Divider(
+            height: 1,
+            thickness: 0.5,
+            indent: AppSpacing.cardPadding,
+            endIndent: AppSpacing.cardPadding,
+          ),
+        row,
+      ],
+    ];
+
+/// Menü satırı: başlık, sağda gri durum ya da rozet ve ok.
 class _MenuRow extends StatelessWidget {
   const _MenuRow({
     super.key,
@@ -285,7 +299,7 @@ class _MenuRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: compact ? 44 : 52),
+        constraints: const BoxConstraints(minHeight: 44),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.cardPadding,
@@ -293,19 +307,10 @@ class _MenuRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                icon,
-                size: compact ? 18 : 20,
-                color: danger ? AppColors.danger : AppColors.textSecondary,
-              ),
-              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
                   title,
-                  style: (compact
-                          ? theme.textTheme.bodyMedium
-                          : theme.textTheme.bodyLarge)
-                      ?.copyWith(color: color),
+                  style: theme.textTheme.bodyLarge?.copyWith(color: color),
                 ),
               ),
               if (badge != null)
@@ -327,14 +332,15 @@ class _MenuRow extends StatelessWidget {
                   ),
                 )
               else if (hint != null)
-                Flexible(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
                   child: Text(
                     hint!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.end,
                     style: theme.textTheme.bodySmall
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: AppColors.textSecondary),
                   ),
                 ),
               if (showChevron) ...[

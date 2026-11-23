@@ -74,7 +74,7 @@ class SettingsLoadError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_rounded, color: AppColors.textMuted),
+            Icon(Icons.cloud_off_outlined, color: AppColors.textMuted),
             const SizedBox(height: 12),
             Text(
               'Hesap bilgileri yüklenemedi.',
@@ -193,7 +193,7 @@ class SettingsSection extends StatelessWidget {
         children: [
           BentoLabel(
               icon: icon, label: title, color: color, trailing: trailing),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ...children,
         ],
       ),
@@ -358,7 +358,7 @@ class SettingsTimeRow extends StatelessWidget {
         const SizedBox(width: 8),
         TextButton.icon(
           onPressed: onTap,
-          icon: const Icon(Icons.schedule_rounded, size: 18),
+          icon: const Icon(Icons.schedule_outlined, size: 18),
           label: Text(
             value.format(),
             style: const TextStyle(
@@ -401,11 +401,6 @@ class SettingsStatusRow extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(icon, size: 20, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -204,7 +204,7 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               BentoLabel(
-                icon: Icons.monitor_heart_rounded,
+                icon: Icons.monitor_heart_outlined,
                 label: 'Google Health',
                 color: AppColors.accent,
               ),

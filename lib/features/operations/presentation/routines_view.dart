@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart' show KokpitCheckBox;
 import '../../routines/data/routines_repository.dart';
@@ -209,7 +210,7 @@ class RoutinesView extends ConsumerWidget {
       action: IconButton(
         key: const ValueKey('ops-reminder-add'),
         tooltip: 'Hatırlatıcı ekle',
-        icon: Icon(Icons.add_rounded, color: AppColors.ops),
+        icon: Icon(Icons.add_outlined, color: AppColors.textSecondary, size: 20),
         onPressed: () => ReminderFormSheet.show(context),
       ),
       children: reminders.when(
@@ -217,7 +218,7 @@ class RoutinesView extends ConsumerWidget {
         loading: () => const [OpsLoading()],
         error: (_, __) => [
           OpsMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             text: 'Hatırlatıcılar yüklenemedi.',
             onRetry: () => ref.invalidate(remindersProvider),
           ),
@@ -290,7 +291,7 @@ class RoutinesView extends ConsumerWidget {
             loading: () => const [OpsLoading()],
             error: (_, __) => [
               OpsMessage(
-                icon: Icons.cloud_off_rounded,
+                icon: Icons.cloud_off_outlined,
                 text: 'Rutinler yüklenemedi.',
                 onRetry: () => ref.invalidate(opsRoutinesProvider),
               ),
@@ -303,7 +304,7 @@ class RoutinesView extends ConsumerWidget {
               if (visible.isEmpty) {
                 return [
                   OpsMessage(
-                    icon: Icons.repeat_rounded,
+                    icon: Icons.repeat_outlined,
                     text: filter == null
                         ? 'Henüz rutin yok. + ile tekrarlayan iş oluştur.'
                         : '$filter kapsamında rutin yok.',
@@ -449,15 +450,15 @@ class _RoutineCheckState extends ConsumerState<_RoutineCheck> {
       label: label,
       excludeSemantics: true,
       child: SizedBox(
-        width: 44,
-        height: 44,
+        width: 32,
+        height: 32,
         child: InkResponse(
           onTap: _toggle,
-          radius: 22,
+          radius: 18,
           child: Center(
             child: KokpitCheckBox(
               checked: checked,
-              color: AppColors.forRoutineCategory(occurrence.routine.category),
+              color: AppColors.accent,
             ),
           ),
         ),
@@ -488,7 +489,7 @@ class _RoutineRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.cardPadding,
-          vertical: 10,
+          vertical: 8,
         ),
         child: Row(
           children: [
@@ -496,12 +497,9 @@ class _RoutineRow extends StatelessWidget {
               check,
               const SizedBox(width: 4),
             ] else ...[
-              Icon(
-                Icons.circle,
+              RitimDot(
                 size: 6,
-                color: active
-                    ? AppColors.forRoutineCategory(routine.category)
-                    : AppColors.textMuted,
+                color: active ? AppColors.textSecondary : AppColors.textMuted,
               ),
               const SizedBox(width: 12),
             ],
@@ -514,6 +512,7 @@ class _RoutineRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
                       color: active ? null : AppColors.textMuted,
                     ),
                   ),
@@ -526,8 +525,11 @@ class _RoutineRow extends StatelessWidget {
                     ].join(' · '),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium
-                        ?.copyWith(color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: AppType.caption,
+                      height: 1.3,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -563,14 +565,13 @@ class _ReminderRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.cardPadding,
-          vertical: 10,
+          vertical: 8,
         ),
         child: Row(
           children: [
-            Icon(
-              Icons.alarm_rounded,
-              size: 18,
-              color: enabled ? AppColors.ops : AppColors.textMuted,
+            RitimDot(
+              size: 6,
+              color: enabled ? AppColors.accent : AppColors.textMuted,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -582,6 +583,7 @@ class _ReminderRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
                       color: enabled ? null : AppColors.textMuted,
                     ),
                   ),
@@ -591,8 +593,11 @@ class _ReminderRow extends StatelessWidget {
                         .join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium
-                        ?.copyWith(color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: AppType.caption,
+                      height: 1.3,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),

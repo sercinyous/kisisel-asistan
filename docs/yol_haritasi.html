@@ -153,7 +153,7 @@ p{margin:0}
     <dl class="stats">
       <div><dt>tamamlanan faz (Faz 2'den Faz 5'e)</dt><dd>7</dd></div>
       <div><dt>bağımsız inceleme bulgusu kapatıldı</dt><dd>12</dd></div>
-      <div><dt>otomatik test geçiyor (Flutter)</dt><dd>1418</dd></div>
+      <div><dt>otomatik test geçiyor (Flutter)</dt><dd>1555</dd></div>
       <div><dt>kalan iş, dağıtım için şart olan yok</dt><dd>1</dd></div>
     </dl>
 
@@ -201,7 +201,7 @@ p{margin:0}
       </article>
     </div>
 
-    <p class="verdict"><b>Özet:</b> ilk plandaki 15 parçanın tamamı bitti. Üzerine planda olmayan 9 parça eklendi ve hepsi çalışıyor. Faz 5 dağıtım hazırlığındaki 5 parçanın hepsi tamamlandı.</p>
+    <p class="verdict"><b>Özet:</b> ilk plandaki 15 parçanın tamamı bitti. Üzerine planda olmayan 13 parça eklendi ve hepsi çalışıyor (son üçü Sağlık v2: seriler, ölçü ve fotoğraf, sağlık dürtüleri). Faz 5 dağıtım hazırlığındaki 5 parçanın hepsi tamamlandı.</p>
   </section>
 
   <section class="sec" aria-labelledby="h-faz">
@@ -219,6 +219,8 @@ p{margin:0}
       <li><b>İnceleme 2<small>5 bulgu</small></b><p>Arkadaş paylaşım kapsamı, kullanıcıya bağlı Apple Sağlık onayı, AI giriş bildirimleri, kira tabanlı rapor yenileme, sunucuda seçili kaynak.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>5/5 kapatıldı</span></li>
       <li><b>Sadeleştirme<small>Ferah arayüz</small></b><p>Kokpit yalnızca bugün; İşler (Görevler/Rutinler/Notlar, Takvim), Sağlık (Özet/Beslenme/Hareket), İçgörü (Gün/Hafta/Ay, Ayrıntılar); Ayarlar yerine profil ikonundan Hesap menüsü; rutinler İşler'den işaretlenir. İki tur bağımsız kontrol, bulguların hepsi kapatıldı.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>Profil avatarı<small>Kişiselleştirme</small></b><p>16 maskot (bal porsuğu yeniden çizildi), kamera ya da galeriden kare kırpılmış fotoğraf (özel depolama, yalnızca arkadaşlar görür, hesapla silinir) ya da renkli baş harfler; Hesap, Kokpit profil ikonu, arkadaş listesi, İçgörü arkadaş satırı ve ilk kurulumda isteğe bağlı "Profilini seç" adımı.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Yağ yakımı<small>Beslenme aracı</small></b><p>Son tartıdan günlük kalori (klasik kg × 26 ya da seçilen haftalık hız: 0,50 / 0,75 / 1 kg; harcama − hız × 1.100 kcal, en az max(1.200, bazal)), "Ne kadar sağlıklı?" rozeti (haftalık kaybın vücut ağırlığına oranı) ve artı/eksiler, diyette günlük vitamin/mineral kartı (D3, magnezyum, omega-3, multivitamin, su), protein, yağ, karbonhidrat ve lif; haftalık kayıp tahmini (profilden bazal × hareket ya da elle günlük harcama), besin karşılıkları (1/2/3 öğün), kiloya göre ölçeklenen 2/3 öğünlük örnek menü, tek dokunuşla hedefleri ayarlama ve "Bugün ne eksik / ne fazla": günün öğünleri hedefle karşılaştırılır; öğün açığı/fazlası saate göre kalan öğünlere sınırlı porsiyonlarla bölünür (kalanı yarına), fazlalar sınırlı telafiyle (adım, yağ, karbonhidrat) önerilir (Beslenme kartında kısa özet satırı). Sağlık › Beslenme ve Kilo ayrıntısından açılır.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Sağlık v2<small>Tek doğruluk kaynağı</small></b><p>Hedefleri tek yazar (motor) belirler: Klasik (kg × 26) ya da 0,50 / 0,75 / 1 kg/hafta, taban max(1.200, bazal), makrolar kaloriyi aşmaz, 18 yaş altı ve BMI &lt; 18,5 bakım hedefi. Hedef türleri: yağ yakma, kas yaparken yağ yakma, kas yapma, kiloyu koru; her biri 12 haftalık tahmini sonucu gösterir. Sağlık Bugün · Vücut · Plan; adım, kayıt ve açık serileri; mezura ölçüleri ve yalnızca sahibin gördüğü ilerleme fotoğrafları (hesapla silinir). Kokpit'te tek Sağlık kartı (kalan halkası, adım, seri satırı), ortak su kutusu ve ölçü günü satırı; İçgörü'de haftalık açık, seriler, kilo ve ay ölçü farkı; öğün, adım, ölçü günü ve Pazar özeti dürtüleri (günde en çok 2, sessiz saate uyar, tür tür kapatılır).</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
     </ol>
   </section>
 
@@ -251,17 +253,21 @@ p{margin:0}
     {x:248,y:138,w:184,h:46,b:["Google ile giriş",""],a:["Giriş","Google veya e-posta","done"]},
     {x:472,y:138,w:184,h:46,a:["İlk kurulum","tek işlem · Apple/Google seçimi","new"]},
     {x:456,y:260,w:200,h:46,a:["Arkadaşlar","sıralama · ayrı ayrıntı onayı","new"]},
-    {x:col(0),y:316,w:cw,h:58,b:["Kokpit","günün özeti"],a:["Kokpit",["yalnızca bugün","su · işler · adım"],"done"]},
+    {x:col(0),y:316,w:cw,h:58,b:["Kokpit","günün özeti"],a:["Kokpit",["sağlık kartı · seriler","su · işler · ölçü günü"],"done"]},
     {x:col(1),y:316,w:cw,h:58,b:["Operasyon",["görev · sabit","not"]],a:["İşler",["görev · rutin · not","takvim"],"done"]},
     {x:col(2),y:316,w:cw,h:58,b:["+ AI giriş","hızlı giriş"],a:["+ AI giriş",["hızlı giriş","aktif kategoriler"],"done"]},
-    {x:col(3),y:316,w:cw,h:58,b:["Sağlık",["adım · uyku","kilo · öğün"]],a:["Sağlık",["özet · beslenme","hareket"],"done"]},
-    {x:col(4),y:316,w:cw,h:58,b:["Raporlar",["günlük","haftalık"]],a:["İçgörü",["gün · hafta · ay","ayrıntılar"],"done"]},
+    {x:col(3),y:316,w:cw,h:58,b:["Sağlık",["adım · uyku","kilo · öğün"]],a:["Sağlık",["bugün · vücut","plan"],"done"]},
+    {x:col(4),y:316,w:cw,h:58,b:["Raporlar",["günlük","haftalık"]],a:["İçgörü",["haftalık açık · seriler","ölçü farkı"],"done"]},
     {x:col(0),y:414,w:cw,h:46,a:["Profil avatarı","maskot · fotoğraf","new"]},
     {x:col(1),y:414,w:cw,h:46,b:["Rutinler","aylık döngü"],a:["Rutinler","sahiplik güvencesi","done"]},
     {x:col(2),y:414,w:cw,h:46,a:["Bildirim kuyruğu","oturuma bağlı","new"]},
     {x:col(3),y:414,w:cw,h:46,a:["Öğün seçici","9 kategori · porsiyon","new"]},
+    {x:col(4),y:414,w:cw,h:46,a:["Hedef motoru","tek yazar · güvenli taban","new"]},
     {x:col(1),y:476,w:cw,h:46,a:["Dashboard","görev özeti","done"]},
     {x:col(3),y:476,w:cw,h:46,a:["Kaynak ve onay","Apple · Google","new"]},
+    {x:col(0),y:476,w:cw,h:46,a:["Sağlık dürtüleri","günde en çok 2","new"]},
+    {x:col(2),y:476,w:cw,h:46,a:["Seriler","adım · kayıt · açık","new"]},
+    {x:col(4),y:476,w:cw,h:46,a:["Ölçü ve fotoğraf","mezura · özel kova","new"]},
     {x:col(0),y:560,w:cw,h:46,a:["Hesap silme","uygulama içinden","done"]},
     {x:col(1),y:560,w:cw,h:46,a:["Gizlilik metni","veri ve paylaşım","done"]},
     {x:col(2),y:560,w:cw,h:46,a:["İnceleyici hesabı","Apple için demo","done"]},
@@ -301,7 +307,7 @@ p{margin:0}
     function e(d,both){return '<path class="e" d="'+d+'" marker-end="url(#'+m+')"'+(both?' marker-start="url(#'+m+'s)"':'')+'/>';}
     function t(d){return '<path class="tree" d="'+d+'"/>';}
     var s='<svg class="dg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+(after?
-      "Bugünkü durum: herkes kaydolabilir, giriş yapar, ilk kurulumu bitirir ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık ve Google Health'ten okunur. Hesap silme, gizlilik metni, inceleyici hesabı, uygulama ikonu, hata takibi ve profil avatarı hazır; sekmeler Kokpit, İşler, Sağlık ve İçgörü.":
+      "Bugünkü durum: herkes kaydolabilir, giriş yapar, ilk kurulumu bitirir ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık ve Google Health'ten okunur. Hesap silme, gizlilik metni, inceleyici hesabı, uygulama ikonu, hata takibi, profil avatarı ve Sağlık v2 (tek hedef motoru, seriler, ölçü ve fotoğraf günü, günde en çok iki sağlık dürtüsü) hazır; sekmeler Kokpit, İşler, Sağlık ve İçgörü.":
       "İlk plan: tek kullanıcı Google ile giriş yapar ve beş sekmeli uygulamaya girer. Sekmeler Supabase veritabanını kullanır; AI girişi ai-proxy üzerinden Gemini'ye gider; raporlar pg_cron ve generate-reports ile üretilir; sağlık verisi Apple Sağlık'tan okunur.")+'">';
     s+='<defs><marker id="'+m+'" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 .5L8 4L0 7.5z"/></marker>'+
        '<marker id="'+m+'s" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M8 .5L0 4L8 7.5z"/></marker></defs>';
@@ -322,7 +328,7 @@ p{margin:0}
     }
     // sekmelerin alt parçaları
     s+=t("M212 374V414");
-    if(after) s+=t("M84 374V414")+t("M340 374V414")+t("M448 374V414")+t("M212 460V476")+t("M468 460V476");
+    if(after) s+=t("M84 374V414")+t("M340 374V414")+t("M448 374V414")+t("M212 460V476")+t("M468 460V476")+t("M528 437H536");
     // sağlık verisi: Sağlık sekmesi -> dış servisler
     s+=e("M498 374V399H673V820H422V835");
     if(after) s+=e("M586 820V835");

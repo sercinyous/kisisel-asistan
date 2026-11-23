@@ -88,7 +88,8 @@ void main() {
       await harness.pump(tester);
 
       expect(find.text('Haftalık değerlendirme'), findsOneWidget);
-      expect(find.textContaining('İş tarafında güçlü bir hafta'), findsOneWidget);
+      expect(
+          find.textContaining('İş tarafında güçlü bir hafta'), findsOneWidget);
       // Büyük düğme yok; yenileme başlıktaki simgede.
       expect(find.text('Raporu yeniden oluştur'), findsNothing);
       expect(find.byTooltip('Raporu yeniden oluştur'), findsOneWidget);
@@ -235,7 +236,6 @@ void main() {
       await tester.tap(find.text('Ay'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Ay özeti'), findsOneWidget);
       expect(find.text('Rutinler'), findsOneWidget);
       expect(find.text('Görevler'), findsOneWidget);
       expect(find.text('Bu ay'), findsOneWidget);
@@ -250,12 +250,12 @@ void main() {
   });
 
   group('yeniden oluşturma', () {
-    testWidgets('doğru tür ve tarihle çağırır, meşgul olur, yeni özeti gösterir',
+    testWidgets(
+        'doğru tür ve tarihle çağırır, meşgul olur, yeni özeti gösterir',
         (tester) async {
       harness.reports
         ..weekly = [weeklyReport(thisWeek, summary: 'Eski özet.')]
-        ..weeklyBuilder =
-            ((week) => weeklyReport(week, summary: 'Yeni özet.'))
+        ..weeklyBuilder = ((week) => weeklyReport(week, summary: 'Yeni özet.'))
         ..regenerateGate = Completer<void>();
       await harness.pump(tester);
 
@@ -279,8 +279,7 @@ void main() {
         (tester) async {
       harness.reports
         ..weekly = [weeklyReport(thisWeek, summary: 'Eski özet.')]
-        ..weeklyBuilder =
-            ((week) => weeklyReport(week, summary: 'Yeni özet.'))
+        ..weeklyBuilder = ((week) => weeklyReport(week, summary: 'Yeni özet.'))
         ..regenerateError =
             const ReportGenerationException('Bağlantı kurulamadı.');
       await harness.pump(tester);
@@ -318,7 +317,8 @@ void main() {
   });
 
   group('günlük görünüm', () {
-    Future<void> openDaily(WidgetTester tester, {double textScale = 1.0}) async {
+    Future<void> openDaily(WidgetTester tester,
+        {double textScale = 1.0}) async {
       await harness.pump(tester, textScale: textScale);
       await tester.tap(find.text('Gün'));
       await tester.pumpAndSettle();

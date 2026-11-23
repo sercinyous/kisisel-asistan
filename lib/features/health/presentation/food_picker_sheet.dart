@@ -12,14 +12,6 @@ import 'health_providers.dart';
 import 'health_widgets.dart';
 import 'meal_form_sheet.dart';
 
-/// Günün saatine göre en olası öğün.
-String mealTypeForHour(int hour) {
-  if (hour < 11) return 'breakfast';
-  if (hour < 16) return 'lunch';
-  if (hour < 22) return 'dinner';
-  return 'snack';
-}
-
 /// Satır özeti: varsayılan porsiyonun ve 100 g'ın kalorisi.
 /// "1 adet (50 g): 78 kcal · 100 g: 156 kcal"
 String foodSummary(FoodItem food) {
@@ -201,7 +193,7 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
             theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
       ),
       trailing:
-          Icon(Icons.add_circle_outline_rounded, color: AppColors.nutrition),
+          Icon(Icons.add_circle_outline_outlined, color: AppColors.nutrition),
       onTap: () => _open(food),
     );
   }
@@ -274,13 +266,13 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
                 decoration: InputDecoration(
                   labelText: 'Besin ara',
                   hintText: 'ör. yumurta, muz, ayran',
-                  prefixIcon: const Icon(Icons.search_rounded),
+                  prefixIcon: const Icon(Icons.search_outlined),
                   suffixIcon: query.isEmpty
                       ? null
                       : IconButton(
                           tooltip: 'Aramayı temizle',
                           onPressed: () => setState(_search.clear),
-                          icon: const Icon(Icons.close_rounded),
+                          icon: const Icon(Icons.close_outlined),
                         ),
                 ),
                 onChanged: (_) => setState(() {}),
@@ -618,7 +610,7 @@ class _FoodAmountSheetState extends ConsumerState<FoodAmountSheet> {
               key: const Key('amount-dec'),
               tooltip: 'Azalt',
               onPressed: _canStep(-1) ? () => _step(-1) : null,
-              icon: const Icon(Icons.remove_circle_outline_rounded),
+              icon: const Icon(Icons.remove_circle_outline_outlined),
             ),
             Expanded(
               child: index != null
@@ -643,7 +635,7 @@ class _FoodAmountSheetState extends ConsumerState<FoodAmountSheet> {
               key: const Key('amount-inc'),
               tooltip: 'Artır',
               onPressed: _canStep(1) ? () => _step(1) : null,
-              icon: const Icon(Icons.add_circle_outline_rounded),
+              icon: const Icon(Icons.add_circle_outline_outlined),
             ),
           ],
         ),

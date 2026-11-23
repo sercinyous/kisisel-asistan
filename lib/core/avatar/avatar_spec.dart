@@ -152,8 +152,7 @@ class AvatarChoice {
         version: version,
       );
 
-  AvatarChoice cleared() =>
-      AvatarChoice(color: color, version: version);
+  AvatarChoice cleared() => AvatarChoice(color: color, version: version);
 
   @override
   bool operator ==(Object other) =>
@@ -179,8 +178,9 @@ String initialsFor(String? name, {String? email}) {
       .toList();
   if (parts.isEmpty) return '?';
   String first(String p) => String.fromCharCode(p.runes.first);
-  final letters =
-      parts.length > 1 ? first(parts.first) + first(parts.last) : first(parts.first);
+  final letters = parts.length > 1
+      ? first(parts.first) + first(parts.last)
+      : first(parts.first);
   return _upperTr(letters);
 }
 

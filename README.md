@@ -493,8 +493,8 @@ iki hesapla denenmeden bitmiş sayılmaz.
 ## Tarayıcı demosu ve ekran görüntüleri
 
 Sunucu olmadan, örnek veriyle (bugünün öğünleri, antrenmanlar, 90 günlük kilo serisi, 60 günlük adım /
-uyku / kalori geçmişi, dolu profil, 3 haftalık ve 7 günlük rapor) çalışan demo. Trend ekranı, Enerji dengesi
-ve besin arama bu veriyle çalışır; son üç haftadan eski günlerin bazısında sağlık verisi ya da öğün yoktur
+uyku / kalori geçmişi, haftalık vücut ölçüleri, dolu profil, 3 haftalık ve 7 günlük rapor) çalışan demo. Sağlık
+(Bugün · Vücut · Plan), seriler ve besin arama bu veriyle çalışır; ilerleme fotoğrafları demoda yoktur (boş durum görünür); son üç haftadan eski günlerin bazısında sağlık verisi ya da öğün yoktur
 (boş günler görünsün diye). Google Health seçeneği sahte bir hesapla çalışır (giriş penceresi açılmaz,
 Google'a veri isteği gitmez; yalnızca `google_sign_in_web` eklentisi sayfa açılırken Google'ın giriş betiğini
 yükler, kullanılmaz). Depoda `web/` klasörü tutulmaz; deneme için ayrı bir kopyada üretilir:

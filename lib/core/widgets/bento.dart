@@ -69,78 +69,138 @@ class BentoCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(AppSpacing.cardPadding),
     this.onTap,
+    this.onLongPress,
     this.tint,
+    this.gradient,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   /// Kartı hafifçe renklendirir (ör. vurgulanan metrik).
   final Color? tint;
 
+  /// Verilirse kart zemini bu renkler arasında soldan sağa hafif geçişle
+  /// boyanır (ör. ölçü günü banner'ı: mint → lavanta).
+  final List<Color>? gradient;
+
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(AppRadii.card);
+    final g = gradient;
+    if (g != null) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: AppColors.border),
+          gradient: LinearGradient(
+            colors: [
+              for (final c in g)
+                Color.alphaBlend(c.withValues(alpha: 0.14), AppColors.surface),
+            ],
+          ),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(padding: padding, child: child),
+          ),
+        ),
+      );
+    }
     final color = tint == null
         ? AppColors.surface
-        : Color.alphaBlend(tint!.withValues(alpha: 0.10), AppColors.surface);
+        : Color.alphaBlend(tint!.withValues(alpha: 0.08), AppColors.surface);
 
     return Material(
       color: color,
       shape: RoundedRectangleBorder(
         borderRadius: radius,
-        side: BorderSide(color: AppColors.border, width: 0.5),
+        side: BorderSide(color: AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(padding: padding, child: child),
       ),
     );
   }
 }
 
-/// Bento kartı başlığı: küçük ikon + etiket (+ isteğe bağlı sağ metin).
+/// Bento kartı başlığı: solda mürekkep renginde başlık, sağda küçük gri
+/// meta/eylem metni (ör. "2 öğün", "Detay ›"). Önizlemedeki gibi ikon
+/// çizilmez; [icon] geriye dönük uyumluluk için kabul edilir.
 class BentoLabel extends StatelessWidget {
   const BentoLabel({
     super.key,
-    required this.icon,
+    this.icon,
     required this.label,
     Color? color,
     this.trailing,
+    this.onTrailingTap,
+    this.trailingColor,
   }) : _color = color;
 
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final Color? _color;
   final String? trailing;
 
-  /// Verilmezse etkin temanın ikincil metin rengi.
+  /// Verilirse sağ metin dokunulabilir bir eyleme dönüşür.
+  final VoidCallback? onTrailingTap;
+
+  /// Sağ metnin rengi; verilmezse ikincil metin rengi.
+  final Color? trailingColor;
+
+  /// Alan rengi (yalnızca veri/durum için; başlıkta kullanılmaz).
   Color get color => _color ?? AppColors.textSecondary;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelLarge?.copyWith(color: color),
+    final meta = trailing;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: AppType.cardTitle,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
           ),
-        ),
-        if (trailing != null)
-          Text(
-            trailing!,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: AppColors.textMuted),
-          ),
-      ],
+          if (meta != null)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTrailingTap,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(
+                  meta,
+                  style: TextStyle(
+                    color: trailingColor ?? AppColors.textSecondary,
+                    fontSize: AppType.caption,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

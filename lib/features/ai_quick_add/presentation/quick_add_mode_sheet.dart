@@ -6,8 +6,8 @@ import '../domain/quick_add_mode.dart';
 /// Giriş alanlarının arayüzdeki simge ve rengi.
 extension QuickAddModeStyle on QuickAddMode {
   IconData get icon => switch (this) {
-        QuickAddMode.work => Icons.work_outline_rounded,
-        QuickAddMode.health => Icons.monitor_heart_rounded,
+        QuickAddMode.work => Icons.work_outline_outlined,
+        QuickAddMode.health => Icons.monitor_heart_outlined,
       };
 
   Color get color => switch (this) {
@@ -39,7 +39,7 @@ class QuickAddModeSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
@@ -91,7 +91,7 @@ class _ModeOption extends StatelessWidget {
     return Material(
       color: AppColors.surfaceHigh,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         side: BorderSide(color: AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
@@ -106,7 +106,7 @@ class _ModeOption extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: mode.color.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadii.inner),
                 ),
                 child: Icon(mode.icon, color: mode.color),
               ),

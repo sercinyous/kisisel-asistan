@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_targets.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../routines/domain/routine.dart';
 import '../../settings/presentation/settings_providers.dart';
 import 'calendar_screen.dart';
@@ -56,7 +57,7 @@ class OperationsScreen extends ConsumerWidget {
 
     return Theme(
       data: theme.copyWith(
-        colorScheme: theme.colorScheme.copyWith(primary: AppColors.ops),
+        colorScheme: theme.colorScheme.copyWith(primary: AppColors.accent),
       ),
       child: SafeArea(
         bottom: false,
@@ -83,7 +84,7 @@ class OperationsScreen extends ConsumerWidget {
                   IconButton(
                     key: const ValueKey('ops-calendar'),
                     tooltip: 'Takvim',
-                    icon: const Icon(Icons.calendar_month_rounded),
+                    icon: const Icon(Icons.calendar_month_outlined),
                     color: AppColors.textSecondary,
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -96,12 +97,12 @@ class OperationsScreen extends ConsumerWidget {
                     tooltip: 'Filtre',
                     icon: Icon(
                       filter == null
-                          ? Icons.filter_list_rounded
-                          : Icons.filter_list_alt,
+                          ? Icons.filter_list_outlined
+                          : Icons.filter_alt_outlined,
                     ),
                     color: filter == null
                         ? AppColors.textSecondary
-                        : AppColors.ops,
+                        : AppColors.accent,
                     onPressed: () async {
                       final picked = await showOpsFilterSheet(
                         context,
@@ -115,8 +116,8 @@ class OperationsScreen extends ConsumerWidget {
                   IconButton(
                     key: const ValueKey('ops-add'),
                     tooltip: 'Ekle',
-                    icon: const Icon(Icons.add_rounded),
-                    color: AppColors.ops,
+                    icon: const Icon(Icons.add_outlined),
+                    color: AppColors.textPrimary,
                     onPressed: () => _add(context, segment),
                   ),
                 ],
@@ -129,26 +130,16 @@ class OperationsScreen extends ConsumerWidget {
                 AppSpacing.page,
                 12,
               ),
-              child: SegmentedButton<OpsSegment>(
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(
-                    value: OpsSegment.tasks,
-                    label: Text('Görevler'),
-                  ),
-                  ButtonSegment(
-                    value: OpsSegment.routines,
-                    label: Text('Rutinler'),
-                  ),
-                  ButtonSegment(
-                    value: OpsSegment.notes,
-                    label: Text('Notlar'),
-                  ),
-                ],
-                selected: {segment},
-                onSelectionChanged: (selection) => ref
+              child: RitimSegmented<OpsSegment>(
+                segments: const {
+                  OpsSegment.tasks: 'Görevler',
+                  OpsSegment.routines: 'Rutinler',
+                  OpsSegment.notes: 'Notlar',
+                },
+                selected: segment,
+                onChanged: (value) => ref
                     .read(opsSegmentProvider.notifier)
-                    .state = selection.first,
+                    .state = value,
               ),
             ),
             if (filter != null)

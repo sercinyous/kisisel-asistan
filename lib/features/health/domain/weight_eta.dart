@@ -166,3 +166,19 @@ String weightEtaMessage(WeightEta eta,
           '${d.day} ${_months[d.month - 1]}$year';
   }
 }
+
+/// Tek ETA fonksiyonu: Kilo kartı, KiloDetay ve Plan bunu kullanır
+/// ([estimateWeightEta] ile aynı doğrusal eğilim).
+WeightEta weightEta(
+  List<WeightEntry> series, {
+  required double targetKg,
+  required DateTime now,
+}) =>
+    estimateWeightEta(series, targetKg: targetKg, now: now);
+
+/// Gerçek haftalık kayıp (kg/hafta, kayıpta pozitif) aynı eğilimden;
+/// eğilim hesaplanamıyorsa `null`.
+double? actualKgPerWeek(List<WeightEntry> series, {required DateTime now}) {
+  final slope = estimateWeightEta(series, targetKg: 0, now: now).slopeKgPerWeek;
+  return slope == null ? null : -slope;
+}

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import 'reports_providers.dart';
 
@@ -55,17 +56,17 @@ class ReportDailyCompletionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.bar_chart_rounded,
+            icon: Icons.bar_chart_outlined,
             label: 'Günlük tamamlama',
-            color: AppColors.ops,
+            color: AppColors.accent,
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 16,
             runSpacing: 4,
             children: [
-              _Legend(color: AppColors.ops, label: 'İş'),
-              _Legend(color: AppColors.fitness, label: 'Form'),
+              _Legend(color: AppColors.accent, label: 'İş'),
+              _Legend(color: AppColors.sleep, label: 'Form'),
             ],
           ),
           if (days.isEmpty)
@@ -140,8 +141,8 @@ class ReportDailyCompletionCard extends StatelessWidget {
                                 x: index,
                                 barsSpace: _rodGap,
                                 barRods: [
-                                  _rod(day.workRate, AppColors.ops),
-                                  _rod(day.formRate, AppColors.fitness),
+                                  _rod(day.workRate, AppColors.accent),
+                                  _rod(day.formRate, AppColors.sleep),
                                 ],
                               ),
                           ],
@@ -169,7 +170,7 @@ class _Legend extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.circle, size: 10, color: color),
+        RitimDot(color: color),
         const SizedBox(width: 6),
         Text(
           label,

@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  aiSafeSentence,
   buildGeminiRequest,
+  filterHealthAdvice,
+  healthSafetyOf,
   buildPrompt,
   extractBearer,
   lastFinishedWeekStart,
@@ -211,4 +214,96 @@ test("parseGeminiText: metin yoksa null", () => {
 test("parseGeminiText: aşırı uzun yanıt kısaltılır", () => {
   const response = { candidates: [{ content: { parts: [{ text: "a".repeat(5000) }] } }] };
   assert.equal(parseGeminiText(response).length, 2000);
+});
+
+const healthMetrics = {
+  nutrition: { calories: 1900, days_logged: 5 },
+  safety: { floor_kcal: 1605, expenditure_kcal: 2500 },
+  days: [
+    { date: "2026-11-13", calories: 2000 },
+    { date: "2026-11-14", calories: 1950 },
+    { date: "2026-11-15", calories: 1900 },
+  ],
+};
+
+test("healthSafetyOf: taban, sınır, dönem açığı ve seri", () => {
+  const s = healthSafetyOf(healthMetrics);
+  assert.equal(s.floorKcal, 1605);
+  assert.equal(s.deficitCapKcal, 625);
+  assert.equal(s.periodDeficitKcal, 3000);
+  assert.equal(s.deficitStreakDays, 3);
+  const empty = healthSafetyOf({});
+  assert.equal(empty.floorKcal, 1200);
+  assert.equal(empty.deficitCapKcal, null);
+  assert.equal(empty.deficitStreakDays, null);
+});
+
+test("healthSafetyOf: fazla yenen gün seriyi bitirir", () => {
+  const s = healthSafetyOf({ ...healthMetrics, days: [{ calories: 1900 }, { calories: 2700 }] });
+  assert.equal(s.deficitStreakDays, 0);
+});
+
+test("buildPrompt: sağlık sınırları talimatta", () => {
+  const prompt = buildPrompt("weekly", "2026-11-09", healthMetrics);
+  assert.match(prompt.system, /en az 1605 kcal/);
+  assert.match(prompt.system, /0,75 kg/);
+  assert.match(prompt.system, /en çok 625 kcal/);
+  assert.match(prompt.system, /3000 kcal/);
+  assert.match(prompt.system, /oruç/);
+  assert.match(prompt.system, /16:8/);
+});
+
+test("healthSafetyOf: hedef türü okunur, bilinmeyen yağ yakma", () => {
+  assert.equal(healthSafetyOf(healthMetrics).goalMode, "fat_loss");
+  const gain = { ...healthMetrics, safety: { ...healthMetrics.safety, goal_mode: "lean_gain" } };
+  assert.equal(healthSafetyOf(gain).goalMode, "lean_gain");
+  const bad = { ...healthMetrics, safety: { ...healthMetrics.safety, goal_mode: "bulk" } };
+  assert.equal(healthSafetyOf(bad).goalMode, "fat_loss");
+});
+
+test("buildPrompt: kas yapmada açık dili yok, fazla dengesi var", () => {
+  const metrics = {
+    ...healthMetrics,
+    nutrition: { calories: 2800, days_logged: 5 },
+    safety: { ...healthMetrics.safety, goal_mode: "lean_gain" },
+  };
+  const prompt = buildPrompt("weekly", "2026-11-09", metrics);
+  assert.match(prompt.system, /hedefi: kas yapma/);
+  assert.match(prompt.system, /dengesi \(alım − harcama\) 1500 kcal/);
+  assert.doesNotMatch(prompt.system, /Güvenli açık serisi/);
+  assert.doesNotMatch(prompt.system, /kalori açığı en çok/);
+  assert.match(prompt.system, /en az 1605 kcal/);
+  assert.match(prompt.system, /oruç/);
+});
+
+test("buildPrompt: korumada açık/fazla önerilmez", () => {
+  const metrics = { ...healthMetrics, safety: { ...healthMetrics.safety, goal_mode: "maintain" } };
+  const prompt = buildPrompt("weekly", "2026-11-09", metrics);
+  assert.match(prompt.system, /kiloyu korumak/);
+  assert.doesNotMatch(prompt.system, /Güvenli açık serisi/);
+});
+
+test("filterHealthAdvice: güvenli metin ve geçmiş kalori cümlesi kalır", () => {
+  const s = healthSafetyOf(healthMetrics);
+  for (const text of [
+    "Salı akşam yemeğin 600 kcal civarındaydı.",
+    "Bu hafta 900 kcal açık verdin.",
+    "Proteini artır.\nGünde 8.000 adım hedefle.",
+    "Öğle yemeğinde 500 kalori aldın, dengeliydi.",
+  ]) {
+    assert.equal(filterHealthAdvice(text, s), text);
+  }
+});
+
+test("filterHealthAdvice: taban altı, hızlı kayıp, oruç, 16:8, pas geç değiştirilir", () => {
+  const s = healthSafetyOf(healthMetrics);
+  const text = "Harika gidiyorsun. Günde 1.000 kcal ye.\n16:8 yap.\n" +
+    "Akşam yemeğini pas geç.\nHaftada 1,5 kg ver.\nGünde 1200 kaloriye düşür.\n" +
+    "Günde 900 kcal açık hedefle.";
+  const out = filterHealthAdvice(text, s);
+  assert.ok(out.startsWith("Harika gidiyorsun."));
+  assert.equal(out.split(aiSafeSentence(1605)).length - 1, 1);
+  for (const bad of ["1.000 kcal", "16:8", "pas geç", "1,5 kg", "1200", "900 kcal"]) {
+    assert.ok(!out.includes(bad), bad);
+  }
 });

@@ -34,9 +34,6 @@ const int defaultDailyWaterMl = 2000;
 /// Tek kayıtta izin verilen en büyük miktar (veritabanı kısıtıyla aynı).
 const int maxWaterLogMl = 3000;
 
-/// Hızlı ekleme düğmeleri (ml).
-const List<int> waterQuickAddMl = [250, 500];
-
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 

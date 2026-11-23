@@ -389,7 +389,7 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
                   key: const Key('food-clear'),
                   tooltip: 'Seçimi kaldır',
                   onPressed: _clearFood,
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_outlined),
                 ),
               ],
             ),
@@ -450,7 +450,7 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
                     onPressed: _canChangeCount(food, -1)
                         ? () => _changeCount(food, -1)
                         : null,
-                    icon: const Icon(Icons.remove_circle_outline_rounded),
+                    icon: const Icon(Icons.remove_circle_outline_outlined),
                   ),
                   SizedBox(
                     width: 32,
@@ -467,7 +467,7 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
                     onPressed: _canChangeCount(food, 1)
                         ? () => _changeCount(food, 1)
                         : null,
-                    icon: const Icon(Icons.add_circle_outline_rounded),
+                    icon: const Icon(Icons.add_circle_outline_outlined),
                   ),
                 ],
               ),
@@ -503,13 +503,13 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
           decoration: InputDecoration(
             labelText: 'Besin ara',
             hintText: 'ör. yumurta, süt, yulaf',
-            prefixIcon: const Icon(Icons.search_rounded),
+            prefixIcon: const Icon(Icons.search_outlined),
             suffixIcon: query.isEmpty
                 ? null
                 : IconButton(
                     tooltip: 'Aramayı temizle',
                     onPressed: () => setState(_search.clear),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_outlined),
                   ),
           ),
           onChanged: (_) => setState(() {}),

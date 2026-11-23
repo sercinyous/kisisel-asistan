@@ -41,7 +41,7 @@ class ReportPeriodSwitcher extends StatelessWidget {
         IconButton(
           onPressed: onPrevious,
           tooltip: previousTooltip,
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(Icons.chevron_left_outlined),
           color: AppColors.textSecondary,
         ),
         Expanded(
@@ -105,7 +105,7 @@ class ReportRateCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             ReportsFormat.rate(rate),
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
               fontFeatures: _tabular,
@@ -319,7 +319,7 @@ class ReportAiCard extends ConsumerWidget {
             const SizedBox(height: 14),
           ],
           BentoLabel(
-            icon: Icons.auto_awesome_rounded,
+            icon: Icons.auto_awesome_outlined,
             label: title,
             color: AppColors.accent,
             trailing: 'AI',
@@ -364,7 +364,7 @@ class ReportAiCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.error_outline_rounded,
+                  Icons.error_outline_outlined,
                   size: 18,
                   color: AppColors.danger,
                 ),
@@ -438,7 +438,7 @@ class ReportRefreshButton extends ConsumerWidget {
                 color: AppColors.accent,
               ),
             )
-          : const Icon(Icons.refresh_rounded, size: 22),
+          : const Icon(Icons.refresh_outlined, size: 22),
     );
   }
 }
@@ -470,7 +470,7 @@ class ReportScorePair extends StatelessWidget {
           child: _Score(
             label: 'Form',
             rate: formRate,
-            color: AppColors.fitness,
+            color: AppColors.sleep,
           ),
         ),
       ],
@@ -504,7 +504,7 @@ class _Score extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               ReportsFormat.rate(rate),
-              style: theme.textTheme.headlineMedium?.copyWith(
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.5,
                 color: color,
@@ -546,17 +546,14 @@ class ReportLinkRow extends StatelessWidget {
       onTap: onTap,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.cardPadding,
-        vertical: 14,
+        vertical: 12,
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: color ?? AppColors.accent),
-          const SizedBox(width: 12),
           Expanded(
             child: Text(
               label,
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.titleMedium,
             ),
           ),
           if (trailing != null) ...[
@@ -687,9 +684,17 @@ class ReportListEntry {
 
 /// Geçmiş raporların dokunulabilir listesi (tek kart, ayraçlı satırlar).
 class ReportListCard extends StatelessWidget {
-  const ReportListCard({super.key, required this.icon, required this.entries});
+  const ReportListCard({
+    super.key,
+    required this.icon,
+    required this.entries,
+    this.title,
+  });
 
   final IconData icon;
+
+  /// Kartın içindeki başlık (ör. "Son 7 gün"); sağda kayıt sayısı.
+  final String? title;
   final List<ReportListEntry> entries;
 
   @override
@@ -698,9 +703,20 @@ class ReportListCard extends StatelessWidget {
     return BentoCard(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (title case final t?)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.cardPadding,
+                8,
+                AppSpacing.cardPadding,
+                2,
+              ),
+              child: BentoLabel(label: t, trailing: '${entries.length} kayıt'),
+            ),
           for (final (index, entry) in entries.indexed) ...[
-            if (index > 0)
+            if (index > 0 || title != null)
               const Divider(
                 height: 1,
                 thickness: 0.5,
@@ -712,26 +728,23 @@ class ReportListCard extends StatelessWidget {
               onTap: entry.onTap,
               child: ConstrainedBox(
                 // Dokunma hedefi en az 44pt.
-                constraints: const BoxConstraints(minHeight: 56),
+                constraints: const BoxConstraints(minHeight: 48),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.cardPadding,
-                    vertical: 10,
+                    vertical: 8,
                   ),
                   child: Row(
                     children: [
-                      Icon(icon, size: 20, color: AppColors.ops),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               entry.title,
-                              style: theme.textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w600),
+                              style: theme.textTheme.bodyLarge
+                                  ?.copyWith(fontWeight: FontWeight.w500),
                             ),
-                            const SizedBox(height: 2),
                             Text(
                               entry.subtitle,
                               style: theme.textTheme.bodySmall?.copyWith(

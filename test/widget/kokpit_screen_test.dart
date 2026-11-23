@@ -211,18 +211,19 @@ void main() {
     testWidgets('örnek veriyle tüm bölümler çizilir', (tester) async {
       await pumpKokpit(tester);
 
-      expect(find.text('1.450'), findsOneWidget);
-      expect(find.text('/ 2.000 kcal'), findsOneWidget);
-      expect(find.text('550 kcal kaldı'), findsOneWidget);
+      // Tek Sağlık kartı: kalan halkası, yenen/hedef, adım çubuğu.
+      expect(find.text('Sağlık'), findsOneWidget);
+      expect(find.text('Kalan 550 kcal'), findsOneWidget);
+      expect(find.text('1.450 / 2.000 kcal'), findsOneWidget);
+      expect(find.text('8.432 / 8.000 adım'), findsOneWidget);
       expect(find.text('Protein'), findsNothing, reason: 'makro yok');
+      expect(find.text('Uyku'), findsNothing,
+          reason: 'adım/uyku kartları Sağlık kartına katıldı');
 
       expect(find.text('Günlük işler'), findsOneWidget);
       expect(find.text('0 / 5'), findsOneWidget);
       expect(find.text('5 iş kaldı'), findsOneWidget);
-      expect(find.text('8.432'), findsOneWidget);
-      expect(find.text('hedef 8.000'), findsOneWidget);
-      expect(find.text('7 sa 32 dk'), findsOneWidget);
-      expect(find.text('hedef 7,5 sa'), findsOneWidget);
+      expect(find.text('Su'), findsOneWidget);
       expect(healthStore.upsertedHealth, hasLength(1),
           reason: 'HealthKit özeti Supabase\'e yedeklenir');
 
@@ -261,8 +262,8 @@ void main() {
       expect(find.text('0 / 6'), findsOneWidget);
       await scrollThrough(tester);
       expect(find.text('Tümünü gör (6)'), findsOneWidget);
-      expect(find.byType(Divider), findsNWidgets(5),
-          reason: '5 satır arası 4 ayraç + Tümünü gör ayracı');
+      expect(find.byType(Divider), findsNWidgets(4),
+          reason: '5 satır arası 4 ayraç');
     });
 
     testWidgets('kalori hedefi aşılınca "fazla" yazar', (tester) async {
@@ -279,18 +280,17 @@ void main() {
       );
       await pumpKokpit(tester);
 
-      expect(find.text('/ 2.500 kcal'), findsOneWidget);
-      expect(find.text('1.050 kcal kaldı'), findsOneWidget);
-      expect(find.text('hedef 12.000'), findsOneWidget);
-      expect(find.text('hedef 8 sa'), findsOneWidget);
+      expect(find.text('1.450 / 2.500 kcal'), findsOneWidget);
+      expect(find.text('Kalan 1.050 kcal'), findsOneWidget);
+      expect(find.text('8.432 / 12.000 adım'), findsOneWidget);
     });
 
     testWidgets('ayarlar okunamazsa varsayılan hedeflerle çizilir',
         (tester) async {
       settings.fetchError = Exception('ağ yok');
       await pumpKokpit(tester);
-      expect(find.text('/ 2.000 kcal'), findsOneWidget);
-      expect(find.text('hedef 8.000'), findsOneWidget);
+      expect(find.text('1.450 / 2.000 kcal'), findsOneWidget);
+      expect(find.text('8.432 / 8.000 adım'), findsOneWidget);
     });
 
     testWidgets('aylık işler Kokpit sayacına ve listesine girmez',

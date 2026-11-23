@@ -151,6 +151,21 @@ class MonthHealthSummary {
 }
 
 /// `nutrition_logs` satırı (bir öğün kalemi). Alanlar tablo sütunlarıyla bire birdir.
+/// Günün saatine göre en olası öğün (öğün seçici ve "Bugün" kartı paylaşır).
+String mealTypeForHour(int hour) {
+  if (hour < mealSlotEndHour['breakfast']!) return 'breakfast';
+  if (hour < mealSlotEndHour['lunch']!) return 'lunch';
+  if (hour < mealSlotEndHour['dinner']!) return 'dinner';
+  return 'snack';
+}
+
+/// Ana öğün pencerelerinin bittiği saat (bu saatten itibaren öğün geçmiştir).
+const Map<String, int> mealSlotEndHour = {
+  'breakfast': 11,
+  'lunch': 16,
+  'dinner': 22,
+};
+
 class NutritionLog {
   const NutritionLog({
     required this.id,

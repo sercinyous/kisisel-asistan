@@ -6,9 +6,8 @@ import 'package:kisisel_asistan/core/theme/app_theme.dart';
 
 /// WCAG 2.x bağıl parlaklık.
 double _luminance(Color color) {
-  double channel(double c) => c <= 0.04045
-      ? c / 12.92
-      : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+  double channel(double c) =>
+      c <= 0.04045 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
   return 0.2126 * channel(color.r) +
       0.7152 * channel(color.g) +
       0.0722 * channel(color.b);
@@ -67,7 +66,7 @@ void main() {
 
       test('soluk metin en az 3', () {
         expect(contrast(p.textMuted, p.background), greaterThanOrEqualTo(3));
-        expect(contrast(p.textMuted, p.surface), greaterThanOrEqualTo(3));
+        expect(contrast(p.textMuted, p.surface), greaterThanOrEqualTo(4.5));
         expect(contrast(p.textMuted, p.surfaceHigh), greaterThanOrEqualTo(3));
       });
 
@@ -120,43 +119,45 @@ void main() {
   group('koyu palet', () {
     const p = AppPalette.dark;
 
-    test('renkler değişmedi (saf OLED siyah)', () {
+    test('tasarım v2 renkleri (saf OLED siyah)', () {
       expect(p.brightness, Brightness.dark);
       expect(p.background, const Color(0xFF000000));
-      expect(p.surface, const Color(0xFF0E0E10));
-      expect(p.surfaceHigh, const Color(0xFF18181B));
+      expect(p.surface, const Color(0xFF121214));
+      expect(p.surfaceHigh, const Color(0xFF1E1E22));
       expect(p.border, const Color(0xFF222226));
-      expect(p.textPrimary, const Color(0xFFF2F4F8));
-      expect(p.textSecondary, const Color(0xFFA1A1AA));
-      expect(p.textMuted, const Color(0xFF71717A));
-      expect(p.accent, const Color(0xFF5EEAD4));
-      expect(p.ops, const Color(0xFF7AA7FF));
-      expect(p.fitness, const Color(0xFFFF8A65));
-      expect(p.nutrition, const Color(0xFFB9F27C));
-      expect(p.warning, const Color(0xFFFBBF24));
-      expect(p.danger, const Color(0xFFFF6B6B));
-      expect(p.onAccent, const Color(0xFF000000));
+      expect(p.textPrimary, const Color(0xFFF4F4F6));
+      expect(p.textSecondary, const Color(0xFF8E8E96));
+      expect(p.textMuted, const Color(0xFF85858E));
+      expect(p.accent, const Color(0xFF7EE0C3));
+      expect(p.ops, const Color(0xFF8CC8FF));
+      expect(p.fitness, const Color(0xFFFFB59A));
+      expect(p.nutrition, const Color(0xFF7EE0C3));
+      expect(p.warning, const Color(0xFFFFB59A));
+      expect(p.danger, const Color(0xFFFF8FA3));
+      expect(p.onAccent, const Color(0xFF0A0A0A));
     });
 
-    test('alt bar ve karartma eski saydamlıklarla aynı', () {
-      expect(p.glass, p.surfaceHigh.withValues(alpha: 0.72));
-      expect(p.glassBorder, p.textPrimary.withValues(alpha: 0.14));
-      expect(p.navSelected, p.textPrimary.withValues(alpha: 0.16));
+    test('alt bar, seçim ve karartma önizlemedeki saydamlıklarla aynı', () {
+      expect(p.glass, const Color(0xFF28282E).withValues(alpha: 0.62));
+      expect(p.glassBorder, Colors.white.withValues(alpha: 0.12));
+      expect(p.navSelected, Colors.white.withValues(alpha: 0.14));
+      expect(p.selection, Colors.white.withValues(alpha: 0.14));
+      expect(p.track, const Color(0xFF26262B));
       expect(p.shadow, Colors.black.withValues(alpha: 0.35));
       expect(p.scrim, Colors.black.withValues(alpha: 0.6));
     });
 
-    test('tema Material varsayılanlarını korur', () {
+    test('tema paletten kurulur', () {
       final scheme = AppTheme.dark.colorScheme;
       expect(AppTheme.dark.brightness, Brightness.dark);
       expect(AppTheme.dark.scaffoldBackgroundColor, p.background);
       expect(scheme.primary, p.accent);
-      expect(scheme.onPrimary, const Color(0xFF04201B));
+      expect(scheme.onPrimary, p.onPrimary);
       expect(scheme.secondary, p.ops);
       expect(scheme.outline, p.border);
-      expect(scheme.outlineVariant, Colors.white);
+      expect(scheme.outlineVariant, p.controlOutlineSoft);
       expect(scheme.onSurfaceVariant, p.textPrimary);
-      expect(scheme.surfaceContainerHighest, p.surface);
+      expect(scheme.surfaceContainerHighest, p.track);
     });
   });
 

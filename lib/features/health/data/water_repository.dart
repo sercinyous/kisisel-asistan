@@ -51,4 +51,13 @@ class WaterRepository {
     final value = row?['daily_water_ml'];
     return value is num && value > 0 ? value.toInt() : defaultDailyWaterMl;
   }
+
+  /// Günlük su hedefini yazar (250–8.000 ml; RLS: yalnızca sahibi).
+  Future<void> setDailyTarget(int ml) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw StateError('Oturum yok');
+    await _client
+        .from('user_settings')
+        .update({'daily_water_ml': ml}).eq('user_id', userId);
+  }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../health/domain/energy_balance.dart' show EnergyBands;
 import '../../settings/domain/user_settings.dart';
 import '../domain/goal_suggestion.dart';
 import '../domain/onboarding_answers.dart';
@@ -25,7 +26,16 @@ class OnboardingTargetsStep extends StatelessWidget {
     required this.steps,
     required this.sleep,
     required this.onReset,
+    this.age,
+    this.lossUsesEngine = false,
   });
+
+  /// Doğum yılından yaş; bilinmiyorsa `null`. 18 altında açık/fazla yoktur.
+  final int? age;
+
+  /// "Kilo ver" önerisi hedef motorundan (klasik formül, kilo × 26) gelir;
+  /// değilse günlük ihtiyaçtan 500 kcal eksik ([usesPlanEngine]).
+  final bool lossUsesEngine;
 
   final OnboardingGoal goal;
   final ValueChanged<OnboardingGoal> onGoal;
@@ -45,11 +55,30 @@ class OnboardingTargetsStep extends StatelessWidget {
   /// Alanları yeniden önerilen değerlere döndürür.
   final VoidCallback onReset;
 
-  String _goalText() => switch (goal) {
-        OnboardingGoal.lose => 'günlük ihtiyacından 500 kcal eksik',
-        OnboardingGoal.maintain => 'günlük ihtiyacın kadar',
-        OnboardingGoal.gain => 'günlük ihtiyacından 300 kcal fazla',
-      };
+  String _goalText() =>
+      goalText(goal, age: age, lossUsesEngine: lossUsesEngine);
+
+  /// Kalori açıklamasının amaç parçası; önerinin gerçek hesabıyla aynıdır.
+  static String goalText(
+    OnboardingGoal goal, {
+    int? age,
+    bool lossUsesEngine = false,
+  }) {
+    if (age != null && age < EnergyBands.adultAge &&
+        goal != OnboardingGoal.maintain) {
+      return 'günlük ihtiyacın kadar (18 yaş altında açık ya da fazla '
+          'uygulanmaz)';
+    }
+    return switch (goal) {
+      OnboardingGoal.lose => lossUsesEngine
+          ? 'kilo verme: kilo başına 26 kcal (klasik formül, güvenli '
+              'sınırlarla); açık harcamana göre değişir'
+          : 'günlük ihtiyacından 500 kcal eksik',
+      OnboardingGoal.maintain => 'günlük ihtiyacın kadar',
+      OnboardingGoal.gain =>
+        'günlük ihtiyacından 250 kcal fazla (kas yapma, yavaş tempo)',
+    };
+  }
 
   static String? _validator(String? value, int min, int max, String unit) {
     final parsed = TargetLimits.parse(value, min, max);
@@ -235,7 +264,7 @@ class OnboardingTargetsStep extends StatelessWidget {
           child: TextButton.icon(
             key: const Key('onboarding-targets-reset'),
             onPressed: onReset,
-            icon: const Icon(Icons.restart_alt_rounded, size: 18),
+            icon: const Icon(Icons.restart_alt_outlined, size: 18),
             label: const Text('Önerilene dön'),
           ),
         ),

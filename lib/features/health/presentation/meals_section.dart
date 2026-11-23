@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/item_actions.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import '../../operations/presentation/operations_widgets.dart';
 import 'food_picker_sheet.dart';
@@ -11,13 +13,6 @@ import 'health_format.dart';
 import 'health_providers.dart';
 import 'health_widgets.dart';
 import 'meal_form_sheet.dart';
-
-IconData _mealIcon(String mealType) => switch (mealType) {
-      'breakfast' => Icons.wb_sunny_rounded,
-      'lunch' => Icons.light_mode_outlined,
-      'dinner' => Icons.nightlight_round,
-      _ => Icons.cookie_outlined,
-    };
 
 const String _deleteTitle = 'Kayıt silinsin mi?';
 
@@ -60,60 +55,82 @@ class MealsSection extends ConsumerWidget {
     final today = AppDates.startOfDay(DateTime.now());
     final logs = ref.watch(dayNutritionLogsProvider(today));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 14, bottom: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Öğünler',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+    final count = logs.valueOrNull?.map((l) => l.mealType).toSet().length;
+    return BentoCard(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: BentoLabel(
+              label: 'Öğünler',
+              trailing: count == null ? null : '$count öğün',
+            ),
+          ),
+          const SizedBox(height: 4),
+          logs.when(
+            skipLoadingOnRefresh: true,
+            loading: () => const HealthCardLoading(height: 120),
+            error: (_, __) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: KokpitInlineMessage(
+                icon: Icons.cloud_off_outlined,
+                message: 'Öğünler yüklenemedi.',
+                actionLabel: 'Tekrar dene',
+                onAction: () => ref.invalidate(dayNutritionLogsProvider),
               ),
-              FilledButton.icon(
+            ),
+            data: (items) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (i, group) in groupMeals(items).indexed) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      indent: 12,
+                      endIndent: 12,
+                      color: AppColors.border,
+                    ),
+                  _MealGroupTile(
+                    group: group,
+                    onAdd: () =>
+                        FoodPickerSheet.show(context, mealType: group.mealType),
+                    onEdit: (log) => MealFormSheet.show(context, log: log),
+                    onDelete: (log) => _delete(context, log, confirm: true),
+                    onRemove: (log) => _delete(context, log),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ConstrainedBox(
                 key: const Key('meal-add'),
-                onPressed: () => FoodPickerSheet.show(context),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.nutrition,
-                  foregroundColor: AppColors.onAccent,
-                  minimumSize: const Size(healthMinTouch, healthMinTouch),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                constraints: const BoxConstraints(
+                  minHeight: healthMinTouch,
+                  minWidth: healthMinTouch,
                 ),
-                icon: const Icon(Icons.add_rounded, size: 20),
-                label: const Text('Öğün ekle'),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: RitimPillButton(
+                    label: 'Öğün ekle',
+                    icon: Icons.add_outlined,
+                    ghost: true,
+                    onPressed: () => FoodPickerSheet.show(context),
+                  ),
+                ),
               ),
-            ],
+            ),
           ),
-        ),
-        logs.when(
-          skipLoadingOnRefresh: true,
-          loading: () => const KokpitSkeletonCard(height: 168),
-          error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
-            message: 'Öğünler yüklenemedi.',
-            actionLabel: 'Tekrar dene',
-            onAction: () => ref.invalidate(dayNutritionLogsProvider),
-          ),
-          data: (items) => HealthListCard(
-            children: [
-              for (final group in groupMeals(items))
-                _MealGroupTile(
-                  group: group,
-                  onAdd: () =>
-                      FoodPickerSheet.show(context, mealType: group.mealType),
-                  onEdit: (log) => MealFormSheet.show(context, log: log),
-                  onDelete: (log) => _delete(context, log, confirm: true),
-                  onRemove: (log) => _delete(context, log),
-                ),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -169,8 +186,6 @@ class _MealGroupTileState extends State<_MealGroupTile> {
       children: [
         HealthListRow(
           key: ValueKey('meal-group-${group.mealType}'),
-          icon: _mealIcon(group.mealType),
-          color: AppColors.nutrition,
           title:
               empty ? label : '$label · ${HealthFormat.kcal(group.calories)}',
           subtitle: empty
@@ -184,7 +199,7 @@ class _MealGroupTileState extends State<_MealGroupTile> {
               ? IconButton(
                   tooltip: '$label ekle',
                   onPressed: widget.onAdd,
-                  icon: const Icon(Icons.add_rounded),
+                  icon: const Icon(Icons.add_outlined),
                   color: AppColors.nutrition,
                 )
               : IconButton(
@@ -192,8 +207,8 @@ class _MealGroupTileState extends State<_MealGroupTile> {
                   onPressed: () => setState(() => _expanded = !_expanded),
                   icon: Icon(
                     expanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
+                        ? Icons.expand_less_outlined
+                        : Icons.expand_more_outlined,
                   ),
                   color: AppColors.textSecondary,
                 ),
@@ -223,14 +238,14 @@ class _MealGroupTileState extends State<_MealGroupTile> {
           Align(
             alignment: Alignment.centerLeft,
             child: Padding(
-              padding: const EdgeInsets.only(left: 52),
+              padding: const EdgeInsets.only(left: 4),
               child: TextButton.icon(
                 onPressed: widget.onAdd,
                 style: TextButton.styleFrom(
                   minimumSize: const Size(healthMinTouch, healthMinTouch),
                   foregroundColor: AppColors.nutrition,
                 ),
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const Icon(Icons.add_outlined, size: 18),
                 label: Text('$label için kalem ekle'),
               ),
             ),

@@ -8,9 +8,10 @@ import '../../../core/services/health_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
+import '../../health/presentation/body/checkin_flow.dart';
 import '../../health/presentation/health_providers.dart';
-import '../../health/presentation/health_segment.dart';
-import '../../health/presentation/water_providers.dart';
+import '../../health/presentation/providers/body_providers.dart';
 import '../../operations/domain/task_item.dart';
 import '../../operations/presentation/operations_providers.dart';
 import '../../operations/presentation/routines_view.dart'
@@ -19,21 +20,19 @@ import '../../operations/presentation/tasks_view.dart' show TaskRowActions;
 import '../../reports/presentation/weekly_checkin_card.dart';
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
-import '../../settings/presentation/settings_providers.dart';
-import '../domain/kokpit_models.dart';
-import 'kokpit_format.dart';
+import 'kokpit_health_card.dart';
 import 'kokpit_providers.dart';
 import 'kokpit_widgets.dart';
 
 /// Alt bardaki sekme sırası (bkz. `HomeShell`).
 const int _operationsTab = 1;
-const int _healthTab = 2;
 
 /// "Bugünün işleri" kartında gösterilen en fazla satır.
 const int kokpitTodayMaxRows = 5;
 
-/// Bugün: kalori, günlük işler / adım / uyku, su, bugünün rutinleri ve
-/// (Pazar/Pazartesi) haftalık değerlendirme.
+/// Bugün: Sağlık kartı (kalan kalori, adım, seriler), günlük işler + su,
+/// bugünün listesi (ölçü günü satırı dahil) ve (Pazar/Pazartesi) haftalık
+/// değerlendirme.
 class KokpitDayView extends StatelessWidget {
   const KokpitDayView({super.key});
 
@@ -42,15 +41,13 @@ class KokpitDayView extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _CalorieSection(),
-        SizedBox(height: AppSpacing.m),
-        _StatsRow(),
+        KokpitHealthCard(),
         _HealthStatusMessage(),
-        SizedBox(height: AppSpacing.m),
-        _WaterCard(),
-        SizedBox(height: AppSpacing.xl),
+        SizedBox(height: AppSpacing.grid),
+        _StatsRow(),
+        SizedBox(height: AppSpacing.grid),
         _TodaySection(),
-        SizedBox(height: AppSpacing.l),
+        SizedBox(height: AppSpacing.grid),
         WeeklyCheckinCard(bottomSpacing: 0),
       ],
     );
@@ -98,12 +95,28 @@ class KokpitTaskItem extends KokpitTodayItem {
   bool get done => task.isDone;
 }
 
+/// Ölçü ve fotoğraf günü sistem satırı. Görev değildir; Kontrol akışını
+/// açar. O gün ölçü ya da fotoğraf kaydedildiyse tamamlanmış görünür.
+class KokpitCheckinItem extends KokpitTodayItem {
+  const KokpitCheckinItem({required this.done});
+
+  static const String title = 'Ölçü ve fotoğraf günü · ~3 dk';
+
+  @override
+  final bool done;
+
+  @override
+  DateTime? get time => null;
+}
+
 /// Bugünün rutinleri + bugüne (ya da öncesine) düşen açık görevler.
 /// Sıra: saati geçmiş açık kayıtlar önce, sonra saate göre; saatsizler sonda.
+/// [checkin] verilirse (bugün ölçü günü) en başa sistem satırı eklenir.
 List<KokpitTodayItem> kokpitTodayItems({
   required List<RoutineOccurrence> routines,
   required List<TaskItem> tasks,
   required DateTime now,
+  KokpitCheckinItem? checkin,
 }) {
   final day = AppDates.startOfDay(now);
   final tomorrow = day.add(const Duration(days: 1));
@@ -135,7 +148,10 @@ List<KokpitTodayItem> kokpitTodayItems({
       }
       return a.$1.compareTo(b.$1);
     });
-  return [for (final e in indexed) e.$2];
+  return [
+    if (checkin != null) checkin,
+    for (final e in indexed) e.$2,
+  ];
 }
 
 /// Kokpit kartlarının paylaştığı bugünün listesi; ikisi de yüklenene kadar
@@ -145,7 +161,21 @@ List<KokpitTodayItem>? _watchTodayItems(WidgetRef ref) {
   final tasks = ref.watch(upcomingRemindersProvider).valueOrNull;
   final now = ref.watch(kokpitClockProvider);
   if (routines == null || tasks == null) return null;
-  return kokpitTodayItems(routines: routines, tasks: tasks, now: now);
+  // Ölçü günü satırı listeyi bekletmez: yüklenemezse yalnızca görünmez.
+  final checkin = ref.watch(checkinTodayProvider).valueOrNull;
+  // Vücut banner'ında "Bugün gösterme" denmişse yapılmamış satır da gizlenir.
+  final dismissed =
+      ref.watch(checkinDismissedProvider) == AppDates.startOfDay(now);
+  return kokpitTodayItems(
+    routines: routines,
+    tasks: tasks,
+    now: now,
+    checkin: checkin != null &&
+            checkin.isCheckinDay &&
+            (checkin.done || !dismissed)
+        ? KokpitCheckinItem(done: checkin.done)
+        : null,
+  );
 }
 
 /// İyimser işaretleme; hata olursa notifier geri alır, burada yalnızca
@@ -170,12 +200,6 @@ Future<void> _toggleOccurrence(
 void _openTab(WidgetRef ref, int index) =>
     ref.read(homeTabRequestProvider.notifier).state = index;
 
-/// Sağlık sekmesini [segment] görünümüyle açar.
-void _openHealth(WidgetRef ref, HealthSegment segment) {
-  ref.read(healthSegmentProvider.notifier).state = segment;
-  _openTab(ref, _healthTab);
-}
-
 /// İşler sekmesini açar: gizli satırların çoğu görevse Görevler, değilse
 /// Rutinler görünümüyle. Filtreler sıfırlanır ki hiçbir kayıt gizlenmesin.
 void _openTodayAll(WidgetRef ref, {required bool tasksFirst}) {
@@ -186,118 +210,18 @@ void _openTodayAll(WidgetRef ref, {required bool tasksFirst}) {
   _openTab(ref, _operationsTab);
 }
 
-// --------------------------------------------------------------------- kalori
-
-class _CalorieSection extends ConsumerWidget {
-  const _CalorieSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final nutrition = ref.watch(todayNutritionProvider);
-    return nutrition.when(
-      skipLoadingOnRefresh: true,
-      loading: () => const KokpitSkeletonCard(height: 132),
-      error: (_, __) => KokpitInlineMessage(
-        icon: Icons.cloud_off_rounded,
-        message: 'Beslenme özeti yüklenemedi.',
-        actionLabel: 'Tekrar dene',
-        onAction: () => ref.invalidate(todayNutritionProvider),
-      ),
-      data: (summary) => _CalorieCard(summary: summary),
-    );
-  }
-}
-
-class _CalorieCard extends ConsumerWidget {
-  const _CalorieCard({required this.summary});
-
-  final NutritionSummary summary;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final target = ref.watch(
-      settingsOrDefaultProvider.select((s) => s.dailyCalories),
-    );
-    final remaining = target - summary.calories;
-    final over = remaining < 0;
-    final thousands = KokpitFormat.thousands;
-
-    return BentoCard(
-      onTap: () => _openHealth(ref, HealthSegment.nutrition),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          BentoLabel(
-            icon: Icons.local_fire_department_rounded,
-            label: 'Kalori',
-            color: AppColors.nutrition,
-          ),
-          const SizedBox(height: AppSpacing.s),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                thousands.format(summary.calories.round()),
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  '/ ${thousands.format(target)} kcal',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: AppColors.textSecondary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          KokpitBar(
-            value: target > 0 ? summary.calories / target : 0,
-            color: over ? AppColors.danger : AppColors.nutrition,
-            height: 8,
-          ),
-          const SizedBox(height: AppSpacing.s),
-          Text(
-            over
-                ? '${thousands.format(remaining.abs().round())} kcal fazla'
-                : '${thousands.format(remaining.round())} kcal kaldı',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: over ? AppColors.danger : AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ------------------------------------------------------------- üçlü istatistik
+// ------------------------------------------------------------- işler + su
 
 class _StatsRow extends ConsumerWidget {
   const _StatsRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = _watchTodayItems(ref);
-    final health = ref.watch(healthTodayProvider).valueOrNull;
-    final ok = health?.status == HealthStatus.ok;
-    final settings = ref.watch(settingsOrDefaultProvider);
-    final thousands = KokpitFormat.thousands;
-
+    final items =
+        _watchTodayItems(ref)?.where((i) => i is! KokpitCheckinItem).toList();
     final done = items?.where((i) => i.done).length ?? 0;
     final total = items?.length ?? 0;
     final left = total - done;
-    final steps = ok ? health!.steps : null;
-    final sleep = ok ? health!.sleepMinutes : null;
-    final sleepTarget = settings.sleepMinutes;
 
     return IntrinsicHeight(
       child: Row(
@@ -305,9 +229,9 @@ class _StatsRow extends ConsumerWidget {
         children: [
           Expanded(
             child: _StatCard(
-              icon: Icons.checklist_rounded,
+              icon: Icons.checklist_outlined,
               label: 'Günlük işler',
-              color: AppColors.ops,
+              color: AppColors.positive,
               value: items == null ? '—' : '$done / $total',
               caption: items == null
                   ? ''
@@ -318,36 +242,8 @@ class _StatsRow extends ConsumerWidget {
               onTap: () => _openTab(ref, _operationsTab),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.directions_walk_rounded,
-              label: 'Adım',
-              color: AppColors.fitness,
-              value: steps == null ? '—' : thousands.format(steps),
-              caption: 'hedef ${thousands.format(settings.dailySteps)}',
-              progress: steps == null || settings.dailySteps <= 0
-                  ? null
-                  : steps / settings.dailySteps,
-              onTap: () => _openHealth(ref, HealthSegment.movement),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: _StatCard(
-              icon: Icons.bedtime_rounded,
-              label: 'Uyku',
-              color: AppColors.sleep,
-              value: KokpitFormat.sleep(sleep),
-              caption: sleepTarget > 0
-                  ? 'hedef ${KokpitFormat.hours(sleepTarget)} sa'
-                  : '',
-              progress: sleep == null || sleepTarget <= 0
-                  ? null
-                  : sleep / sleepTarget,
-              onTap: () => _openHealth(ref, HealthSegment.movement),
-            ),
-          ),
+          const SizedBox(width: AppSpacing.grid),
+          const Expanded(child: KokpitWaterTile()),
         ],
       ),
     );
@@ -375,57 +271,43 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BentoCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(14),
       child: Semantics(
         label: '$label: $value${caption.isEmpty ? '' : ', $caption'}',
         excludeSemantics: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(icon, size: 14, color: color),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s),
+            BentoLabel(label: label, trailing: 'Aç ›'),
+            const SizedBox(height: AppSpacing.sm),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
                 maxLines: 1,
-                style: theme.textTheme.titleLarge?.copyWith(
+                style: TextStyle(
+                  fontSize: AppType.value,
                   fontWeight: FontWeight.w700,
+                  height: 1.25,
+                  color: AppColors.textPrimary,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),
-            const Spacer(),
-            if (caption.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xs),
+            if (caption.isNotEmpty)
               Text(
                 caption,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: AppColors.textMuted),
+                style: TextStyle(
+                  fontSize: AppType.caption,
+                  height: 1.3,
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ],
+            const Spacer(),
             if (progress != null) ...[
               const SizedBox(height: AppSpacing.s),
               KokpitBar(value: progress!, color: color, height: 4),
@@ -452,7 +334,7 @@ class _HealthStatusMessage extends ConsumerWidget {
       skipLoadingOnRefresh: true,
       loading: () => null,
       error: (_, __) => KokpitInlineMessage(
-        icon: Icons.heart_broken_rounded,
+        icon: Icons.heart_broken_outlined,
         message: '${source.shortLabel} verisi okunamadı.',
         actionLabel: 'Tekrar dene',
         onAction: resync,
@@ -460,13 +342,13 @@ class _HealthStatusMessage extends ConsumerWidget {
       data: (snapshot) => switch (snapshot.status) {
         HealthStatus.ok => null,
         HealthStatus.unavailable => KokpitInlineMessage(
-            icon: Icons.phonelink_off_rounded,
+            icon: Icons.phonelink_off_outlined,
             message: snapshot.message ??
                 'Adım, uyku ve aktif kalori yalnızca iPhone\'da '
                     'HealthKit üzerinden okunur.',
           ),
         HealthStatus.denied => KokpitInlineMessage(
-            icon: Icons.favorite_border_rounded,
+            icon: Icons.favorite_border_outlined,
             message: 'HealthKit erişimi verilmedi. Sağlık uygulaması > '
                 'Paylaşım > Uygulamalar bölümünden izin verebilirsin.',
             actionLabel: 'Bağlan',
@@ -476,8 +358,8 @@ class _HealthStatusMessage extends ConsumerWidget {
         HealthStatus.reconnect =>
           KokpitInlineMessage(
             icon: snapshot.status == HealthStatus.reconnect
-                ? Icons.sync_problem_rounded
-                : Icons.link_off_rounded,
+                ? Icons.sync_problem_outlined
+                : Icons.link_off_outlined,
             message: snapshot.message ?? 'Google Health bağlı değil.',
             actionLabel: snapshot.status == HealthStatus.reconnect
                 ? 'Yeniden bağlan'
@@ -485,7 +367,7 @@ class _HealthStatusMessage extends ConsumerWidget {
             onAction: () => _connectGoogle(context),
           ),
         HealthStatus.failed => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: snapshot.message ??
                 '${snapshot.source.shortLabel} verisi okunamadı.',
             actionLabel: 'Tekrar dene',
@@ -495,7 +377,7 @@ class _HealthStatusMessage extends ConsumerWidget {
     );
     if (message == null) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.m),
+      padding: const EdgeInsets.only(top: AppSpacing.grid),
       child: message,
     );
   }
@@ -509,122 +391,6 @@ class _HealthStatusMessage extends ConsumerWidget {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(error)));
-  }
-}
-
-// ------------------------------------------------------------------------- su
-
-/// "0,25" — litre, en fazla iki ondalık, birimsiz.
-String _liters(int ml) {
-  final liters = ml / 1000;
-  if (liters == liters.roundToDouble()) return liters.toStringAsFixed(0);
-  return liters
-      .toStringAsFixed(2)
-      .replaceFirst(RegExp(r'0$'), '')
-      .replaceAll('.', ',');
-}
-
-class _WaterCard extends ConsumerWidget {
-  const _WaterCard();
-
-  static const int _stepMl = 250;
-
-  Future<void> _run(
-    BuildContext context,
-    Future<void> Function() action,
-    String error,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    unawaited(HapticFeedback.selectionClick());
-    try {
-      await action();
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(error)));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final water = ref.watch(waterTodayProvider);
-    final theme = Theme.of(context);
-    final today = water.valueOrNull;
-    final notifier = ref.read(waterTodayProvider.notifier);
-
-    return BentoCard(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.cardPadding,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BentoLabel(
-                  icon: Icons.water_drop_rounded,
-                  label: 'Su',
-                  color: AppColors.water,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  today == null
-                      ? (water.hasError ? 'Yüklenemedi' : '—')
-                      : '${_liters(today.totalMl)} / '
-                          '${_liters(today.targetMl)} L',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (today == null && water.hasError)
-            TextButton(
-              onPressed: () => ref.invalidate(waterTodayProvider),
-              child: const Text('Tekrar dene'),
-            )
-          else ...[
-            IconButton.outlined(
-              tooltip: 'Son su kaydını geri al',
-              onPressed: today == null || today.logs.isEmpty
-                  ? null
-                  : () => _run(
-                        context,
-                        notifier.undo,
-                        'Su kaydı geri alınamadı.',
-                      ),
-              icon: const Icon(Icons.remove_rounded),
-              color: AppColors.water,
-              style: IconButton.styleFrom(
-                side: BorderSide(color: AppColors.border),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.s),
-            FilledButton.tonal(
-              onPressed: today == null
-                  ? null
-                  : () => _run(
-                        context,
-                        () => notifier.add(_stepMl),
-                        'Su kaydı eklenemedi.',
-                      ),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.water.withValues(alpha: 0.16),
-                foregroundColor: AppColors.water,
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: const StadiumBorder(),
-              ),
-              child: const Text('+ 250 ml'),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }
 
@@ -643,14 +409,14 @@ class _TodaySection extends ConsumerWidget {
     final Widget body;
     if (routines.hasError && routines.valueOrNull == null) {
       body = KokpitInlineMessage(
-        icon: Icons.cloud_off_rounded,
+        icon: Icons.cloud_off_outlined,
         message: 'Rutinler yüklenemedi.',
         actionLabel: 'Tekrar dene',
         onAction: () => ref.invalidate(todayOccurrencesProvider),
       );
     } else if (tasks.hasError && tasks.valueOrNull == null) {
       body = KokpitInlineMessage(
-        icon: Icons.cloud_off_rounded,
+        icon: Icons.cloud_off_outlined,
         message: 'Görevler yüklenemedi.',
         actionLabel: 'Tekrar dene',
         onAction: () => ref.invalidate(upcomingRemindersProvider),
@@ -659,7 +425,7 @@ class _TodaySection extends ConsumerWidget {
       body = const KokpitSkeletonCard(height: 220);
     } else if (items.isEmpty) {
       body = const KokpitInlineMessage(
-        icon: Icons.event_available_rounded,
+        icon: Icons.event_available_outlined,
         message: 'Bugün için rutin ya da görev yok. Ortadaki + ile '
             'tek cümleyle ekleyebilirsin.',
       );
@@ -672,14 +438,20 @@ class _TodaySection extends ConsumerWidget {
       final shown = ordered.take(kokpitTodayMaxRows).toList();
       final hidden = ordered.skip(shown.length);
       final hiddenTasks = hidden.whereType<KokpitTaskItem>().length;
+      final countable = items.where((i) => i is! KokpitCheckinItem).length;
       final tasksFirst = hiddenTasks * 2 > hidden.length;
+      final doneCount =
+          items.where((i) => i is! KokpitCheckinItem && i.done).length;
       body = BentoCard(
-        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            KokpitSectionHeader(
+              title: 'Bugünün işleri',
+              trailing: '$doneCount / $countable tamam',
+            ),
             for (final (index, item) in shown.indexed) ...[
-              if (index > 0) const Divider(indent: 56, endIndent: 16),
+              if (index > 0) const Divider(height: 1),
               switch (item) {
                 KokpitRoutineItem(:final occurrence) => RoutineRowActions(
                     key: ValueKey(occurrence.completionKey),
@@ -689,9 +461,7 @@ class _TodaySection extends ConsumerWidget {
                       time: item.time,
                       now: now,
                       done: item.done,
-                      color: AppColors.forRoutineCategory(
-                        occurrence.routine.category,
-                      ),
+color: AppColors.positive,
                       onTap: () => _toggleOccurrence(context, ref, occurrence),
                     ),
                   ),
@@ -703,19 +473,32 @@ class _TodaySection extends ConsumerWidget {
                       time: item.time,
                       now: now,
                       done: false,
-                      color: AppColors.forTaskCategory(task.category),
+                      color: AppColors.positive,
                       onTap: () => completeKokpitTask(context, task),
                     ),
+                  ),
+                KokpitCheckinItem() => _TodayTile(
+                    key: const ValueKey('kokpit-checkin'),
+                    title: KokpitCheckinItem.title,
+                    time: null,
+                    now: now,
+                    done: item.done,
+                    color: AppColors.positive,
+                    icon: Icons.straighten_outlined,
+                    onTap: () => CheckinFlowScreen.open(context),
                   ),
               },
             ],
             if (items.length > shown.length) ...[
-              const Divider(height: 1),
-              TextButton(
-                key: const ValueKey('kokpit-today-all'),
-                onPressed: () => _openTodayAll(ref, tasksFirst: tasksFirst),
-                style: TextButton.styleFrom(foregroundColor: AppColors.ops),
-                child: Text('Tümünü gör (${items.length})'),
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: RitimPillButton(
+                  key: const ValueKey('kokpit-today-all'),
+                  ghost: true,
+                  label: 'Tümünü gör ($countable)',
+                  onPressed: () => _openTodayAll(ref, tasksFirst: tasksFirst),
+                ),
               ),
             ],
           ],
@@ -723,6 +506,7 @@ class _TodaySection extends ConsumerWidget {
       );
     }
 
+    if (body is BentoCard) return body;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -735,12 +519,14 @@ class _TodaySection extends ConsumerWidget {
 
 class _TodayTile extends StatelessWidget {
   const _TodayTile({
+    super.key,
     required this.title,
     required this.time,
     required this.now,
     required this.done,
     required this.color,
     required this.onTap,
+    this.icon,
   });
 
   final String title;
@@ -750,9 +536,11 @@ class _TodayTile extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
+  /// Sistem satırında işaret kutusu yerine gösterilen simge.
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final t = time;
     final overdue = !done && t != null && t.isBefore(now);
     final timeText = t == null
@@ -762,23 +550,39 @@ class _TodayTile extends StatelessWidget {
             : AppDates.relativeDayTime(t);
 
     return Semantics(
-      checked: done,
+      checked: icon == null ? done : null,
       button: true,
       label: title,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 9),
           child: Row(
             children: [
-              KokpitCheckBox(checked: done, color: color),
-              const SizedBox(width: 14),
+              if (icon != null && !done)
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.16),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 12, color: color),
+                  ),
+                )
+              else
+                KokpitCheckBox(checked: done, color: color),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge?.copyWith(
+                  style: TextStyle(
+                    fontSize: AppType.body,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
                     color: done ? AppColors.textMuted : AppColors.textPrimary,
                     decoration: done ? TextDecoration.lineThrough : null,
                     decorationColor: AppColors.textMuted,
@@ -789,11 +593,12 @@ class _TodayTile extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   timeText,
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  style: TextStyle(
+                    fontSize: AppType.caption,
                     color: done
                         ? AppColors.textMuted
                         : overdue
-                            ? AppColors.danger
+                            ? AppColors.negative
                             : AppColors.textSecondary,
                     fontWeight: FontWeight.w600,
                     fontFeatures: const [FontFeature.tabularFigures()],

@@ -335,3 +335,110 @@ EnergyRangeSummary summarize(Iterable<EnergyDay> days) {
     estimatedFatKg: sum / EnergyBands.kcalPerKgFat,
   );
 }
+
+/// Harcamanın kaynağı.
+enum ExpenditureSource {
+  /// Kullanıcının elle girdiği değer (`expenditure_kcal_manual`).
+  manual,
+
+  /// Bazal (Mifflin) + sağlık kaynağından gelen aktif kalori.
+  health,
+
+  /// Model: bazal × hareket katsayısı ya da bazal × 1,2 + adım × 0,04.
+  estimate,
+
+  /// Profil eksik: varsayılan harcama.
+  fallback,
+}
+
+/// Bir harcama değeri ve kaynağı.
+class Expenditure {
+  const Expenditure(this.kcal, this.source);
+
+  final int kcal;
+  final ExpenditureSource source;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Expenditure && other.kcal == kcal && other.source == source;
+
+  @override
+  int get hashCode => Object.hash(kcal, source);
+
+  @override
+  String toString() => 'Expenditure($kcal, ${source.name})';
+}
+
+/// Tek harcama modelinin sabitleri.
+abstract final class ExpenditureModel {
+  /// Hareket bilgisi yokken bazal katsayısı.
+  static const double baseFactor = 1.2;
+
+  /// Adım başına kcal.
+  static const double kcalPerStep = 0.04;
+
+  /// Profil eksikse planın kullandığı günlük harcama.
+  static const int fallbackKcal = 3000;
+  static const int minKcal = 1200;
+  static const int maxKcal = 6000;
+}
+
+/// Planın (tipik bir günün) harcaması. Sıra: elle girilen; bazal × hareket
+/// katsayısı; bazal × 1,2 + hedef adım × 0,04; profil yoksa 3.000.
+/// Sonuç 1.200–6.000 aralığına sıkıştırılır.
+Expenditure planExpenditure({
+  int? manualKcal,
+  double? basal,
+  double? activityFactor,
+  int stepsTarget = 0,
+}) {
+  int clamp(num v) => v
+      .round()
+      .clamp(ExpenditureModel.minKcal, ExpenditureModel.maxKcal)
+      .toInt();
+  if (manualKcal != null) {
+    return Expenditure(clamp(manualKcal), ExpenditureSource.manual);
+  }
+  if (basal != null && basal.isFinite && basal > 0) {
+    final kcal = activityFactor != null
+        ? basal * activityFactor
+        : basal * ExpenditureModel.baseFactor +
+            math.max(0, stepsTarget) * ExpenditureModel.kcalPerStep;
+    return Expenditure(clamp(kcal), ExpenditureSource.estimate);
+  }
+  return const Expenditure(
+      ExpenditureModel.fallbackKcal, ExpenditureSource.fallback);
+}
+
+/// Bir günün gerçek harcaması (gün dengesi, haftalık açık ve seriler aynı
+/// modeli kullanır). Sıra: elle girilen; bazal + sağlık kaynağının aktif
+/// kalorisi; bazal × 1,2 + adım × 0,04. Bugün için bazal (ve elle girilen
+/// değer) günün geçen oranıyla ölçeklenir ("şu ana kadar"). Bazal da elle
+/// değer de yoksa `null`.
+Expenditure? dayExpenditure({
+  required DateTime day,
+  required DateTime now,
+  int? manualKcal,
+  double? basal,
+  int? activeKcal,
+  int steps = 0,
+}) {
+  final dayOnly = DateTime(day.year, day.month, day.day);
+  final today = DateTime(now.year, now.month, now.day);
+  final fraction = dayOnly == today ? _elapsedDayFraction(now) : 1.0;
+  if (manualKcal != null && manualKcal > 0) {
+    return Expenditure(
+        (manualKcal * fraction).round(), ExpenditureSource.manual);
+  }
+  if (basal == null || !basal.isFinite || basal <= 0) return null;
+  if (activeKcal != null && activeKcal > 0) {
+    return Expenditure(
+        (basal * fraction + activeKcal).round(), ExpenditureSource.health);
+  }
+  return Expenditure(
+    (basal * ExpenditureModel.baseFactor * fraction +
+            math.max(0, steps) * ExpenditureModel.kcalPerStep)
+        .round(),
+    ExpenditureSource.estimate,
+  );
+}

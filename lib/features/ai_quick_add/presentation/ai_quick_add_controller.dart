@@ -5,6 +5,7 @@ import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../health/presentation/energy_providers.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../health/presentation/providers/targets_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../operations/presentation/operations_providers.dart';
 import '../../reminders/presentation/reminders_providers.dart';
@@ -224,7 +225,15 @@ class QuickAddController
     if (result.workoutCount > 0 || wroteRoutines) {
       ref.invalidate(weekWorkoutPlanProvider);
     }
-    if (result.weightCount > 0) ref.invalidate(weightSeriesProvider);
+    if (result.weightCount > 0) {
+      ref.invalidate(weightSeriesProvider);
+      // Tartı formuyla aynı kural: hedefler yeni kiloya göre güncellenir
+      // (kaynak 'manual' değilse ve fark eşiği aşıyorsa). Hata kaydı bozmaz.
+      ref
+          .read(planControllerProvider)
+          .applyPlan(PlanTrigger.weightSaved)
+          .ignore();
+    }
     // Ay görünümü aylık işleri, randevuları ve sağlık ortalamalarını içerir.
     if (wroteRoutines || wroteTasks || wroteHealth) {
       ref.invalidate(monthOverviewProvider);

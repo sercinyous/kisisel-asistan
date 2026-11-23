@@ -79,7 +79,7 @@ class ReportsDailyView extends ConsumerWidget {
         report.when(
           loading: () => const KokpitSkeletonCard(height: 320),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Günlük rapor yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(dailyReportProvider(selected)),
@@ -88,12 +88,11 @@ class ReportsDailyView extends ConsumerWidget {
               ? aiCard(null)
               : _DailyReportGrid(report: value, aiCard: aiCard(value)),
         ),
-        const SizedBox(height: 24),
-        const KokpitSectionHeader(title: 'Son 7 gün'),
+        const SizedBox(height: AppSpacing.grid),
         recent.when(
           loading: () => const KokpitSkeletonCard(height: 120),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Son günlerin raporları yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(dailyReportListProvider),
@@ -105,12 +104,13 @@ class ReportsDailyView extends ConsumerWidget {
             ];
             if (others.isEmpty) {
               return const KokpitInlineMessage(
-                icon: Icons.history_rounded,
+                icon: Icons.history_outlined,
                 message: 'Son 7 günde başka rapor yok.',
               );
             }
             return ReportListCard(
-              icon: Icons.today_rounded,
+              icon: Icons.today_outlined,
+              title: 'Son 7 gün',
               entries: [
                 for (final item in others)
                   ReportListEntry(
@@ -166,9 +166,9 @@ class _DailyReportGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: ReportRateCard(
-            icon: Icons.task_alt_rounded,
+            icon: Icons.task_alt_outlined,
             label: 'İş',
-            color: AppColors.ops,
+            color: AppColors.accent,
             rate: m.workRate,
             caption: 'Görev ${m.tasksDone} / ${m.tasksTotal} · '
                 'Rutin ${m.routinesDone} / ${m.routinesPlanned}',
@@ -177,9 +177,9 @@ class _DailyReportGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: ReportRateCard(
-            icon: Icons.fitness_center_rounded,
+            icon: Icons.fitness_center_outlined,
             label: 'Form',
-            color: AppColors.fitness,
+            color: AppColors.sleep,
             rate: m.formRate,
             caption: 'Antrenman ${m.workoutsDone} / ${m.workoutsPlanned} · '
                 '$proteinNote',
@@ -191,7 +191,7 @@ class _DailyReportGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.restaurant_rounded,
+                  icon: Icons.restaurant_outlined,
                   label: 'Beslenme',
                   color: AppColors.nutrition,
                 ),
