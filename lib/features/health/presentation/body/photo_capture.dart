@@ -100,8 +100,9 @@ class _PhotoCaptureSheetState extends ConsumerState<PhotoCaptureSheet> {
       _saving = true;
       _error = null;
     });
+    final ProgressPhoto photo;
     try {
-      await ref.read(bodyRepositoryProvider).uploadPhoto(
+      photo = await ref.read(bodyRepositoryProvider).uploadPhoto(
             takenOn: widget.date,
             pose: widget.pose,
             imageBytes: bytes,
@@ -114,7 +115,7 @@ class _PhotoCaptureSheetState extends ConsumerState<PhotoCaptureSheet> {
       });
       return;
     }
-    ref.invalidate(progressPhotosProvider);
+    invalidatePhotoPath(ref, photo.storagePath);
     if (navigator.canPop()) navigator.pop(true);
   }
 

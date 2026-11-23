@@ -59,6 +59,14 @@ class WaterTodayNotifier extends AsyncNotifier<WaterToday> {
     state = AsyncData(current.copyWith(logs: [...current.logs, log]));
   }
 
+  /// Günlük hedefi [ml] yapar (Plan > Rehber "Hedefi … yap").
+  Future<void> setTarget(int ml) async {
+    final current = await future;
+    await ref.read(waterRepositoryProvider).setDailyTarget(ml);
+    state = AsyncData(
+        WaterToday(day: current.day, logs: current.logs, targetMl: ml));
+  }
+
   /// Bugünün son kaydını siler; kayıt yoksa bir şey yapmaz.
   Future<void> undo() async {
     final current = await future;

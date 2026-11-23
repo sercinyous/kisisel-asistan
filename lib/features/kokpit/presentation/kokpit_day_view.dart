@@ -162,11 +162,16 @@ List<KokpitTodayItem>? _watchTodayItems(WidgetRef ref) {
   if (routines == null || tasks == null) return null;
   // Ölçü günü satırı listeyi bekletmez: yüklenemezse yalnızca görünmez.
   final checkin = ref.watch(checkinTodayProvider).valueOrNull;
+  // Vücut banner'ında "Bugün gösterme" denmişse yapılmamış satır da gizlenir.
+  final dismissed =
+      ref.watch(checkinDismissedProvider) == AppDates.startOfDay(now);
   return kokpitTodayItems(
     routines: routines,
     tasks: tasks,
     now: now,
-    checkin: checkin != null && checkin.isCheckinDay
+    checkin: checkin != null &&
+            checkin.isCheckinDay &&
+            (checkin.done || !dismissed)
         ? KokpitCheckinItem(done: checkin.done)
         : null,
   );

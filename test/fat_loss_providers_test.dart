@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/health/presentation/fat_loss_providers.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
+import 'package:kisisel_asistan/features/health/presentation/providers/targets_providers.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 import 'package:kisisel_asistan/features/settings/presentation/settings_providers.dart';
@@ -89,12 +90,14 @@ void main() {
     ]);
     addTearDown(c.dispose);
     await c.read(userSettingsProvider.future);
-    await c.read(fatLossRateProvider.notifier).set(FatLossRate.half);
+    await c
+        .read(planControllerProvider)
+        .applyPlan(PlanTrigger.rateChanged, rate: FatLossRate.half);
     final saved = repo.settings!;
     expect(saved.weeklyRate, FatLossRate.half);
     expect(saved.dailyCalories, 2250);
     expect(saved.targetsSource, TargetsSource.plan);
-    expect(c.read(fatLossRateProvider), FatLossRate.half);
+    expect(c.read(settingsOrDefaultProvider).weeklyRate, FatLossRate.half);
   });
 
   test('öğün sayısı user_settings\'e yazılır', () async {

@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/notification_sync.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../health/domain/targets_engine.dart' show manualTargets;
+import '../../health/domain/energy_balance.dart' show Sex;
+import '../../health/presentation/health_segment.dart';
+import '../../health/presentation/providers/targets_providers.dart';
+import '../../kokpit/presentation/kokpit_health_card.dart' show openHealth;
 import '../domain/user_settings.dart';
 import 'avatar_picker_sheet.dart';
 import 'delete_account_screen.dart';
@@ -304,11 +307,29 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
 
     setState(() => _saving = true);
     try {
-      final saved =
-          await ref.read(userSettingsProvider.notifier).save(_draft());
+      // Hedef kilo, boy, yaş, hareket ya da adım değiştiyse plan hedefleri
+      // de aynı kayıtta güncellenir (kaynak 'manual' değilse ve fark eşiği
+      // aşıyorsa; tartıyla aynı kural).
+      final draft = _draft();
+      final now = DateTime.now();
+      final write = planWrite(
+        settings: draft,
+        resolved: resolveTargets(
+          settings: draft,
+          latestWeightKg: ref.read(latestWeightProvider).valueOrNull?.weightKg,
+          age: ageFromSettings(draft, now),
+          sex: Sex.tryParse(draft.sex),
+        ),
+        trigger: PlanTrigger.profileSaved,
+        now: now,
+      );
+      final saved = await ref
+          .read(userSettingsProvider.notifier)
+          .save(write?.settings ?? draft);
       ref.invalidate(notificationSyncProvider);
       if (mounted) setState(() => _load(saved));
-      showSettingsSnack(messenger, 'Kaydedildi.');
+      showSettingsSnack(messenger,
+          write == null ? 'Kaydedildi.' : 'Kaydedildi. ${write.message}');
     } catch (_) {
       showSettingsSnack(
         messenger,
@@ -542,6 +563,22 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
       title: 'Hedefler',
       color: AppColors.accent,
       children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const Key('settings-open-plan'),
+            onPressed: () {
+              if (_dirty) {
+                showSettingsSnack(ScaffoldMessenger.of(context),
+                    'Önce değişiklikleri kaydet.');
+                return;
+              }
+              openHealth(context, ref, HealthSegment.plan);
+            },
+            icon: const Icon(Icons.insights_rounded, size: 18),
+            label: const Text('Plan\'ı gör'),
+          ),
+        ),
         _goalField(
           SettingsNumberField(
             fieldKey: const Key('settings-start-weight'),

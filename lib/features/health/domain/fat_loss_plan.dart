@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import 'safe_targets.dart';
+
 /// Yağ yakımı planı: son tartıdan günlük kalori ve makro hedefleri, besin
 /// karşılıkları, örnek menüler ve haftalık kayıp tahmini. Saf fonksiyonlar;
 /// metin biçimleri Türkçedir. Bilgilendirme amaçlıdır, tıbbi tavsiye değildir.
@@ -433,7 +435,7 @@ abstract final class FatLossMenus {
       MenuItem(FatLossFoods.walnut, 20),
     ]),
     Meal('Öğün 2', [
-      MenuItem(FatLossFoods.chicken, 270),
+      MenuItem(FatLossFoods.chicken, 250),
       MenuItem(FatLossFoods.rice, 200),
       MenuItem(FatLossFoods.lentil, 150),
       MenuItem(FatLossFoods.salad, 250),
@@ -482,10 +484,59 @@ List<Meal> scaledMenu(int mealCount, FatLossTargets targets) {
   final meals = [
     for (final meal in source)
       Meal(meal.name, [
-        for (final raw in meal.items) _scale(raw, factor),
+        for (final raw in meal.items) _capMeat(_scale(raw, factor)),
       ]),
   ];
-  return trimToTarget(meals, targets.kcal, fatTargetG: targets.fatG);
+  final shared =
+      mealCount >= 3 ? capMealShare(meals, targets.kcal) : meals;
+  return trimToTarget(shared, targets.kcal, fatTargetG: targets.fatG);
+}
+
+/// Öğün başına et/balık sınırı ([SafeTargets.maxMeatGramsPerMeal]); fazlası
+/// ölçeklenmez, atılır.
+const Set<FatLossFood> _meatSources = {FatLossFoods.chicken, FatLossFoods.tuna};
+
+MenuItem _capMeat(MenuItem item) => _meatSources.contains(item.food) &&
+        item.quantity > SafeTargets.maxMeatGramsPerMeal
+    ? item.withQuantity(SafeTargets.maxMeatGramsPerMeal.toDouble())
+    : item;
+
+/// Tek öğün hedefin en çok %45'i ([SafeTargets.maxMealShare]): aşan öğünde
+/// en çok kalori veren protein dışı kalem adım adım azaltılır (0'a inen
+/// çıkar). Yalnızca 3 öğünlü menüde uygulanır; 2 öğünde her öğün zaten
+/// hedefin yarısı civarındadır.
+List<Meal> capMealShare(List<Meal> meals, int targetKcal) {
+  final limit = targetKcal * SafeTargets.maxMealShare;
+  return [
+    for (final meal in meals)
+      Meal(meal.name, () {
+        final items = [...meal.items];
+        double kcal() => items.fold(0.0, (sum, i) => sum + i.kcal);
+        while (kcal() > limit) {
+          var best = -1;
+          var bestKcal = 0.0;
+          for (var i = 0; i < items.length; i++) {
+            final item = items[i];
+            if (_proteinSources.contains(item.food)) continue;
+            if (item.quantity - _step(item.food) <
+                _minQuantity(item.food) - 1e-9) {
+              continue;
+            }
+            if (item.kcal > bestKcal) {
+              bestKcal = item.kcal;
+              best = i;
+            }
+          }
+          if (best < 0) break;
+          final item = items[best];
+          items[best] = item.withQuantity(item.quantity - _step(item.food));
+        }
+        return [
+          for (final item in items)
+            if (item.quantity > 0) item,
+        ];
+      }()),
+  ];
 }
 
 /// Menü toplamı hedefin %90'ının altında kaldı.

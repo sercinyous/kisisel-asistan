@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/bento.dart';
-import '../health_format.dart';
 import '../providers/streaks_providers.dart';
 import '../providers/week_deficit_providers.dart';
 import '../streak_detail_screen.dart';
@@ -161,9 +160,9 @@ class _WeekChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final total = week.totalKcal;
-    final value = '${TodayFormat.deficit(total)} ${TodayFormat.kg(week.kg)}';
+    final value = '${TodayFormat.weekTotal(week)} ${TodayFormat.weekKg(week)}';
     final target = week.targetKcal > 0
-        ? 'hedef ${HealthFormat.count(week.targetKcal)}'
+        ? TodayFormat.weekTarget(week.targetKcal)
         : null;
     return Semantics(
       label: 'Haftalık kalori açığı $value'
@@ -191,10 +190,12 @@ class _WeekChip extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              TodayFormat.deficit(total),
+              TodayFormat.weekTotal(week),
               key: const Key('streak-week-total'),
               style: theme.textTheme.titleMedium?.copyWith(
-                color: total < 0 ? AppColors.warning : AppColors.textPrimary,
+                color: week.hasData && total < 0
+                    ? AppColors.warning
+                    : AppColors.textPrimary,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -204,7 +205,8 @@ class _WeekChip extends StatelessWidget {
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
-              [TodayFormat.kg(week.kg), if (target != null) target].join(' · '),
+              [TodayFormat.weekKg(week), if (target != null) target]
+                  .join(' · '),
               key: const Key('streak-week-sub'),
               style: theme.textTheme.labelSmall
                   ?.copyWith(color: AppColors.textMuted),

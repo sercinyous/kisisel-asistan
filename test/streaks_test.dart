@@ -81,6 +81,37 @@ void main() {
       expect(_of(s, StreakKind.deficit).current, 0);
     });
 
+    test('harcamanın üstünde yenen gün (fazla) Açık serisine sayılmaz', () {
+      // Klasik hedef harcamadan yüksek: hedefte yemek fazla demektir.
+      const t = StreakTargets(
+          dailySteps: 8000, kcalTarget: 3120, floorKcal: 1500,
+          plannedDeficit: 0);
+      final day = StreakDay(date: _d(1), mealCount: 3, intakeKcal: 3000,
+          expenditureKcal: 2534);
+      expect(isDeficitDay(day, t), isFalse);
+    });
+
+    test('taban hedefin üstündeyse hedefte yenen gün sayılır, uyarı yok', () {
+      const t = StreakTargets(
+          dailySteps: 8000, kcalTarget: 1560, floorKcal: 1605,
+          plannedDeficit: 0);
+      final day = StreakDay(date: _d(1), mealCount: 3, intakeKcal: 1560,
+          expenditureKcal: 2000);
+      expect(isDeficitDay(day, t), isTrue);
+      expect(effectiveFloorKcal(1605, 1560), 1560);
+      expect(
+          lowIntakeWarning(
+            days: [
+              for (var b = 1; b <= 3; b++)
+                StreakDay(date: _d(b), mealCount: 3, intakeKcal: 1560,
+                    expenditureKcal: 2000),
+            ],
+            floorKcal: effectiveFloorKcal(1605, 1560),
+            today: _today,
+          ),
+          isFalse);
+    });
+
     test('açık sınırı aşan gün sayılmaz', () {
       // 1600 kcal, harcama 2600 → 1000 açık > max(650, 500).
       final day = StreakDay(date: _d(1), mealCount: 3, intakeKcal: 1600,

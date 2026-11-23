@@ -117,16 +117,26 @@ bool isLoggingDay(StreakDay d, StreakTargets t) =>
 bool isStepsDay(StreakDay d, StreakTargets t) =>
     d.steps != null && d.steps! >= t.dailySteps;
 
-/// Açık günü: Kayıt günü VE taban ≤ alınan ≤ hedef VE gerçek açık ≤ sınır
-/// (max(min(%25 harcama, 1.000), planın açığı)). Aç kalmak ödüllendirilmez.
+/// Açık günü: Kayıt günü VE taban ≤ alınan ≤ hedef VE 0 < gerçek açık ≤
+/// sınır (max(min(%25 harcama, 1.000), planın açığı)). Aç kalmak da fazla
+/// yemek de ödüllendirilmez. Taban hedefin üstündeyse (ör. Klasik hedef
+/// bazalın altında) hedef taban sayılır: hedefinde yiyen gün sayılır.
 bool isDeficitDay(StreakDay d, StreakTargets t) {
   if (!isLoggingDay(d, t)) return false;
-  if (d.intakeKcal < t.floorKcal || d.intakeKcal > t.kcalTarget) return false;
+  final floor = effectiveFloorKcal(t.floorKcal, t.kcalTarget);
+  if (d.intakeKcal < floor || d.intakeKcal > t.kcalTarget) return false;
   final exp = d.expenditureKcal;
   if (exp == null) return true;
+  final gap = exp - d.intakeKcal;
+  if (gap <= 0) return false;
   final cap = math.max(deficitCap(exp), t.plannedDeficit);
-  return exp - d.intakeKcal <= cap;
+  return gap <= cap;
 }
+
+/// Serilerde ve az yeme uyarısında kullanılan taban: min(taban, hedef).
+/// Uygulamanın kendi hedefinde yemek asla "çok az" sayılmaz.
+int effectiveFloorKcal(int floorKcal, int kcalTarget) =>
+    kcalTarget > 0 ? math.min(floorKcal, kcalTarget) : floorKcal;
 
 /// [days] (herhangi bir sırada, eksik günler boş sayılır) ve [today] için
 /// üç seri. Bugün sağlanmadıysa "bekleniyor"dur ve seriyi bozmaz.
@@ -245,6 +255,9 @@ class WeekDeficit {
 
   /// Haftalık hedef açık (kcal): haftalık hız × 7.700 ya da plan açığı × 7.
   final int targetKcal;
+
+  /// En az bir günün açığı hesaplanabildi (öğün ve harcama var).
+  bool get hasData => days.any((d) => d.deficit != null);
 
   /// Kapalı günler + bugün (şu ana kadar) toplamı.
   double get totalKcal => days.fold(0.0, (sum, d) => sum + (d.deficit ?? 0));

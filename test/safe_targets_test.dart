@@ -101,44 +101,4 @@ void main() {
     expect(manualExpenditureOutOfRange(manualKcal: 1700, estimateKcal: 2500),
         isTrue);
   });
-
-  group('AI filtresi', () {
-    const floor = 1500;
-    test('güvenli metin değişmez', () {
-      const text = 'Bu hafta proteini artır. Günde 8.000 adım hedefle.';
-      expect(filterAiHealthAdvice(text, floorKcal: floor), text);
-    });
-
-    test('taban altı kalori, oruç ve hızlı kayıp cümlesi değiştirilir', () {
-      const text = 'Harika gidiyorsun. Günde 1.000 kcal ye. '
-          'Aralıklı oruç dene. Haftada 1,5 kg ver.';
-      final out = filterAiHealthAdvice(text, floorKcal: floor);
-      expect(out, startsWith('Harika gidiyorsun.'));
-      expect(out, contains(aiSafeSentence(floor)));
-      expect(out, isNot(contains('1.000 kcal')));
-      expect(out, isNot(contains('oruç')));
-      expect(aiSafeSentence(floor).allMatches(out).length, 1);
-    });
-
-    test('açık sayısı taban altı olsa da yemek önerisi değilse kalır', () {
-      const text = 'Bu hafta 900 kcal açık verdin.';
-      expect(filterAiHealthAdvice(text, floorKcal: floor), text);
-    });
-
-    test('bağlam talimatı sınırları içerir', () {
-      const c = AiHealthContext(
-        kcalTarget: 1900,
-        proteinG: 150,
-        floorKcal: 1500,
-        deficitCapKcal: 700,
-        weekDeficitKcal: 2850,
-        weekTargetKcal: 3850,
-        streakLine: 'Adım 7 · Kayıt 12 · Açık 4',
-      );
-      expect(c.prompt, contains('en az 1500 kcal'));
-      expect(c.prompt, contains('0,75 kg'));
-      expect(c.prompt, contains('oruç'));
-      expect(c.prompt, contains('Adım 7'));
-    });
-  });
 }

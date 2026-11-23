@@ -3235,6 +3235,10 @@ begin
   into v_result
   from agg a;
 
+  -- Sağlık sınırları (AI talimatı ve cevap filtresi; report_health_safety).
+  v_result := v_result || jsonb_build_object(
+    'safety', public.report_health_safety(p_user, p_to, v_tz));
+
   return v_result;
 end;
 $$;
@@ -4199,13 +4203,33 @@ alter table public.user_settings
   add column if not exists weekly_rate text not null default 'classic',
   add column if not exists expenditure_kcal_manual integer,
   add column if not exists meal_count smallint not null default 3,
-  add column if not exists targets_source text not null default 'plan',
   add column if not exists targets_updated_at timestamptz,
   add column if not exists checkin_cadence text not null default 'weekly',
   add column if not exists checkin_weekday smallint not null default 1,
   add column if not exists checkin_monthday smallint not null default 1,
   add column if not exists checkin_reminder boolean not null default true,
   add column if not exists hide_photos boolean not null default false;
+
+-- targets_source: yeni kullanıcı 'plan' (tartı hedefleri motorla günceller).
+-- Sütun ilk eklenirken ilk kurulumu bitmiş kullanıcılar 'manual' başlar:
+-- önceden elle ya da "Uygula" ile yazılmış hedefleri ilk tartı ezmesin.
+-- updated_at tetikleyicisi bu tek seferlik yazıda çalışmaz.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'user_settings'
+      and column_name = 'targets_source'
+  ) then
+    alter table public.user_settings
+      add column targets_source text not null default 'plan';
+    alter table public.user_settings disable trigger user;
+    update public.user_settings set targets_source = 'manual'
+    where onboarded_at is not null;
+    alter table public.user_settings enable trigger user;
+  end if;
+end;
+$$;
 
 do $$
 declare
@@ -4354,4 +4378,73 @@ begin
            and (storage.foldername(name))[1] = (select auth.uid())::text);
 end;
 $$;
+-- AI raporunun sağlık sınırları: kalori tabanı max(1.200, bazal) ve tahmini
+-- günlük harcama (elle girilen ya da bazal × hareket katsayısı). Bazal
+-- Mifflin–St Jeor (istemci basalKcal ile aynı); boy/doğum yılı yoksa
+-- harcama null.
+-- Yalnızca service_role (report_period_metrics içinden) çağırır.
+create or replace function public.report_health_safety(
+  p_user uuid,
+  p_to date,
+  p_tz text
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_s      user_settings%rowtype;
+  v_weight numeric;
+  v_age    integer;
+  v_basal  numeric;
+  v_factor numeric;
+  v_exp    integer;
+begin
+  select * into v_s from user_settings s where s.user_id = p_user;
+  if not found then
+    return jsonb_build_object('floor_kcal', 1200, 'expenditure_kcal', null);
+  end if;
+
+  select f.weight_kg into v_weight
+  from fitness_logs f
+  where f.user_id = p_user and f.log_type = 'weight'
+    and f.logged_at < (p_to + 1)::timestamp at time zone coalesce(p_tz, 'Europe/Istanbul')
+  order by f.logged_at desc
+  limit 1;
+  v_weight := coalesce(v_weight, v_s.start_weight_kg);
+
+  if v_s.height_cm is not null and v_s.birth_year is not null and v_s.sex is not null
+     and v_weight is not null then
+    v_age := extract(year from p_to)::integer - v_s.birth_year;
+    v_basal := greatest(0, 10 * v_weight + 6.25 * v_s.height_cm - 5 * v_age
+      + case v_s.sex when 'male' then 5 when 'female' then -161 else -78 end);
+  end if;
+
+  -- İstemci planExpenditure ile aynı: elle; bazal × hareket katsayısı; yoksa
+  -- bazal × 1,2 + adım hedefi × 0,04. 1.200–6.000 aralığına kırpılır.
+  v_factor := case v_s.activity_level
+    when 'sedentary' then 1.2
+    when 'light' then 1.375
+    when 'moderate' then 1.55
+    when 'active' then 1.725
+    when 'very_active' then 1.9
+    end;
+  v_exp := coalesce(v_s.expenditure_kcal_manual,
+    case when v_basal > 0 then round(
+      case when v_factor is not null then v_basal * v_factor
+           else v_basal * 1.2 + greatest(0, coalesce(v_s.daily_steps, 0)) * 0.04 end
+    )::integer end);
+  v_exp := case when v_exp is null then null else least(6000, greatest(1200, v_exp)) end;
+
+  return jsonb_build_object(
+    'floor_kcal', greatest(1200, coalesce(round(v_basal)::integer, 0)),
+    'expenditure_kcal', v_exp);
+end;
+$$;
+
+revoke all on function public.report_health_safety(uuid, date, text)
+  from public, anon, authenticated;
+grant execute on function public.report_health_safety(uuid, date, text) to service_role;
 -- END health_v2

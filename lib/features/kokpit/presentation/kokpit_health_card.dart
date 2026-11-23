@@ -19,7 +19,16 @@ import 'kokpit_widgets.dart';
 /// Alt bardaki Sağlık sekmesinin sırası (bkz. `HomeShell`).
 const int kokpitHealthTab = 2;
 
-/// Kokpit'ten Sağlık > Bugün'e tek giriş noktası (kart, satır, su).
+/// Başka bir sekmeden ya da ekrandan Sağlık'ın belirli görünümüne tek giriş
+/// noktası (Kokpit, İçgörü, Ayarlar). Açık alt sayfalar kapatılır; Sağlık
+/// sekmesine geçilip [segment] seçilir.
+void openHealth(BuildContext context, WidgetRef ref, HealthSegment segment) {
+  Navigator.of(context).popUntil((route) => route.isFirst);
+  ref.read(healthSegmentProvider.notifier).state = segment;
+  ref.read(homeTabRequestProvider.notifier).state = kokpitHealthTab;
+}
+
+/// Kokpit'ten Sağlık > Bugün (kart, satır, su).
 void openHealthToday(WidgetRef ref) {
   ref.read(healthSegmentProvider.notifier).state = HealthSegment.today;
   ref.read(homeTabRequestProvider.notifier).state = kokpitHealthTab;
@@ -177,6 +186,11 @@ class _HealthCardBody extends ConsumerWidget {
       onTap: () {
         unawaited(HapticFeedback.selectionClick());
         openHealthToday(ref);
+      },
+      // Uzun basış Plan'ı açar (hedef, tempo, rehber).
+      onLongPress: () {
+        unawaited(HapticFeedback.mediumImpact());
+        openHealth(context, ref, HealthSegment.plan);
       },
       child: Semantics(
         button: true,

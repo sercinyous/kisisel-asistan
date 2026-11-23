@@ -346,7 +346,6 @@ class WaterRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final water = ref.watch(waterProvider);
-    final recommended = ref.watch(recommendedWaterMlProvider).valueOrNull;
     return water.when(
       skipLoadingOnRefresh: true,
       loading: () => const SizedBox(height: 44),
@@ -355,8 +354,9 @@ class WaterRow extends ConsumerWidget {
         onRetry: () => ref.invalidate(waterProvider),
       ),
       data: (today) {
+        // Hedef ayardan gelir; kiloya göre öneri Plan > Rehber'de uygulanır.
         final target =
-            today.targetMl > 0 ? today.targetMl : (recommended ?? 2000);
+            today.targetMl > 0 ? today.targetMl : defaultDailyWaterMl;
         final glasses =
             math.max(1, math.min(12, (target / waterGlassMl).ceil()));
         final filled = (today.totalMl / waterGlassMl).floor();

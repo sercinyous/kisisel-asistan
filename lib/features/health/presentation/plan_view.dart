@@ -15,6 +15,8 @@ import '../domain/fat_loss_rate.dart';
 import 'health_format.dart';
 import 'health_widgets.dart';
 import 'providers/targets_providers.dart';
+import 'today/today_common.dart' show TodayFormat;
+import 'water_providers.dart' show formatWaterMl, waterTodayProvider;
 import 'trend_providers.dart' show trendClockProvider;
 import 'weight_sheets.dart';
 
@@ -31,10 +33,22 @@ const String supplementDisclaimer =
     'Genel bilgilendirmedir; takviye başlamadan önce doktoruna/eczacına '
     'danış. Hamilelik, emzirme ve kronik hastalıkta farklıdır.';
 
-const String magnesiumSupplementText =
-    'Takviye genelde 200–350 mg; takviyeden günde 350 mg\'ı aşma.';
-
 const String planExpenditureError = '1200–6000 arası gir';
+
+const String planSaveError = 'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.';
+
+/// Plan ayar yazımı: hata olursa snackbar gösterir (sessizce kaybolmaz).
+Future<void> guardedPlanWrite(
+  BuildContext context,
+  Future<Object?> Function() write,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await write();
+  } on Object {
+    messenger.showSnackBar(const SnackBar(content: Text(planSaveError)));
+  }
+}
 
 /// Her tempo seçeneğinin bugünkü ayar ve kiloyla sonucu (Tempo listesinde
 /// her seçeneğin kalorisi gösterilir).
@@ -59,18 +73,6 @@ Color rateHealthColor(RateHealth h) => switch (h) {
       RateHealth.fast => AppColors.warning,
       RateHealth.aggressive => AppColors.danger,
     };
-
-/// Motor sonucunu "Ne kadar sağlıklı?" metinlerinin biçimine çevirir.
-FatLossRateResult rateResultOf(ResolvedTargets r) => FatLossRateResult(
-      rate: r.rate,
-      targets: r.asFatLossTargets,
-      floorKcal: r.floorKcal,
-      clampedToFloor: r.clamped,
-      actualKgPerWeek: r.kgPerWeek,
-      proteinReduced: r.proteinReduced,
-      fatReduced: r.fatReduced,
-      carbsBelowMin: r.carbsG < FatLossRateRules.carbsMinG,
-    );
 
 /// Sağlık > Plan: hedef, günlük hedefler, tempo, açıklama, rehber, ölçü günü
 /// ve elle ayar bağlantısı.
@@ -322,6 +324,8 @@ class _GoalCard extends ConsumerWidget {
                 ),
                 FilledButton.tonal(
                   key: const Key('plan-suggestion-apply'),
+                  // Tema tam genişlik verir; satır içinde içerik kadar olsun.
+                  style: FilledButton.styleFrom(minimumSize: const Size(88, 44)),
                   onPressed: () => _apply(context, ref),
                   child: const Text('Uygula'),
                 ),
@@ -410,7 +414,9 @@ class _TargetsCard extends ConsumerWidget {
               ),
             ),
           ],
-          for (final w in resolved.warnings)
+          // Hız uyarısı (1 kg) yalnızca Tempo kartında.
+          for (final w in resolved.warnings
+              .where((w) => w != resolved.rate.warning))
             _WarningLine(
               key: Key('plan-warning-${resolved.warnings.indexOf(w)}'),
               text: w,
@@ -480,7 +486,7 @@ class _TempoCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final options = ref.watch(tempoOptionsProvider).valueOrNull;
     final selected = resolved.rate;
-    final info = rateInfo(rateResultOf(resolved));
+    final info = rateInfo(resolved.asRateResult);
     return BentoCard(
       key: const Key('plan-tempo'),
       child: Column(
@@ -499,7 +505,7 @@ class _TempoCard extends ConsumerWidget {
               selected: r == selected,
               onTap: r == selected ? null : () => _select(context, ref, r),
             ),
-          if (selected.warning != null)
+          if (resolved.mode == TargetsMode.rate && selected.warning != null)
             _WarningLine(
               key: const Key('plan-rate-warning'),
               text: selected.warning!,
@@ -743,10 +749,14 @@ class _WhyCard extends ConsumerWidget {
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
     final value = await showDialog<int>(
       context: context,
-      builder: (_) => ExpenditureDialog(initial: resolved.expenditure.kcal),
+      builder: (_) => ExpenditureDialog(
+        initial: resolved.expenditure.kcal,
+        estimateKcal: resolved.estimatedExpenditureKcal,
+      ),
     );
-    if (value != null) {
-      await ref.read(planControllerProvider).setExpenditureManual(value);
+    if (value != null && context.mounted) {
+      await guardedPlanWrite(context,
+          () => ref.read(planControllerProvider).setExpenditureManual(value));
     }
   }
 
@@ -758,13 +768,20 @@ class _WhyCard extends ConsumerWidget {
         theme.textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary);
     final kgText = HealthFormat.kg(resolved.weightKg);
     final deficitText = switch (resolved.mode) {
-      TargetsMode.classic =>
+      TargetsMode.classic when resolved.deficit > 0 =>
         'Klasik formül kilonun 26 katını verir (${formatTr(resolved.kcal)} kcal); '
             'bu, günde ${formatTr(resolved.deficit)} kcal açık demek.',
-      TargetsMode.rate =>
+      TargetsMode.classic =>
+        'Klasik formül kilonun 26 katını verir (${formatTr(resolved.kcal)} kcal); '
+            'bu, harcamandan ${formatTr(-resolved.deficit)} kcal fazla: açık yok, '
+            'bu hedefle kilo vermezsin.',
+      TargetsMode.rate when resolved.deficit > 0 =>
         'Seçtiğin hız için günde ${formatTr(resolved.deficit)} kcal açık gerekir '
             '(1 kg yağ ≈ 7.700 kcal). Hedef ${formatTr(resolved.floorKcal)} '
             'kcal tabanının altına inmez.',
+      TargetsMode.rate =>
+        'Harcaman ${formatTr(resolved.floorKcal)} kcal tabanının altında; '
+            'hedef tabana sabitlendi, bu yüzden açık oluşmuyor.',
       TargetsMode.maintain =>
         'Hedef kilon şimdiki kilondan düşük değil; harcaman kadar yemen önerilir.',
       TargetsMode.locked => SafeTargets.lockedMessage,
@@ -784,6 +801,12 @@ class _WhyCard extends ConsumerWidget {
             key: const Key('plan-why-expenditure'),
             style: body,
           ),
+          if (resolved.manualExpenditureOff)
+            _WarningLine(
+              key: const Key('plan-why-expenditure-off'),
+              text: '${SafeTargets.manualExpenditureWarning} (tahmin '
+                  '${formatTr(resolved.estimatedExpenditureKcal!)} kcal).',
+            ),
           const SizedBox(height: 8),
           Text(deficitText, key: const Key('plan-why-deficit'), style: body),
           const SizedBox(height: 8),
@@ -805,9 +828,11 @@ class _WhyCard extends ConsumerWidget {
               if (manual)
                 TextButton(
                   key: const Key('plan-reset-expenditure'),
-                  onPressed: () => ref
-                      .read(planControllerProvider)
-                      .setExpenditureManual(null),
+                  onPressed: () => guardedPlanWrite(
+                      context,
+                      () => ref
+                          .read(planControllerProvider)
+                          .setExpenditureManual(null)),
                   child: const Text('Tahmine dön'),
                 ),
             ],
@@ -821,9 +846,17 @@ class _WhyCard extends ConsumerWidget {
 /// Günlük harcama girişi; denetleyicinin sahibi bu durum nesnesidir, böylece
 /// diyalog kapanış animasyonu sırasında da denetleyici geçerli kalır.
 class ExpenditureDialog extends StatefulWidget {
-  const ExpenditureDialog({super.key, required this.initial});
+  const ExpenditureDialog({
+    super.key,
+    required this.initial,
+    this.estimateKcal,
+  });
 
   final int initial;
+
+  /// Modelin tahmini; girilen değer bundan ±%30 saparsa uyarı (kaydı
+  /// engellemez).
+  final int? estimateKcal;
 
   @override
   State<ExpenditureDialog> createState() => _ExpenditureDialogState();
@@ -838,6 +871,14 @@ class _ExpenditureDialogState extends State<ExpenditureDialog> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  bool get _offEstimate {
+    final estimate = widget.estimateKcal;
+    final value = int.tryParse(_controller.text.trim());
+    return estimate != null &&
+        value != null &&
+        manualExpenditureOutOfRange(manualKcal: value, estimateKcal: estimate);
   }
 
   void _submit() {
@@ -861,11 +902,18 @@ class _ExpenditureDialogState extends State<ExpenditureDialog> {
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         autofocus: true,
-        onChanged: (_) {
-          if (_error != null) setState(() => _error = null);
-        },
+        onChanged: (_) => setState(() => _error = null),
         onSubmitted: (_) => _submit(),
-        decoration: InputDecoration(suffixText: 'kcal', errorText: _error),
+        decoration: InputDecoration(
+          suffixText: 'kcal',
+          errorText: _error,
+          helperText: _offEstimate
+              ? '${SafeTargets.manualExpenditureWarning} '
+                  '(tahmin ${formatTr(widget.estimateKcal!)} kcal)'
+              : null,
+          helperStyle: TextStyle(color: AppColors.warning),
+          helperMaxLines: 2,
+        ),
       ),
       actions: [
         TextButton(
@@ -1045,8 +1093,8 @@ class _MenuSection extends ConsumerWidget {
             ButtonSegment(value: 3, label: Text('3 öğün')),
           ],
           selected: {mealCount},
-          onSelectionChanged: (s) =>
-              ref.read(planControllerProvider).setMealCount(s.first),
+          onSelectionChanged: (s) => guardedPlanWrite(context,
+              () => ref.read(planControllerProvider).setMealCount(s.first)),
         ),
         for (final meal in menu) ...[
           const SizedBox(height: 12),
@@ -1099,6 +1147,37 @@ class _MenuSection extends ConsumerWidget {
   }
 }
 
+/// Rehberdeki su önerisi takipteki hedeften farklıysa "Hedefi 2,95 L yap".
+class _WaterTargetAction extends ConsumerWidget {
+  const _WaterTargetAction({required this.recommendedMl});
+
+  final int recommendedMl;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(waterTodayProvider).valueOrNull?.targetMl;
+    if (current == null || current == recommendedMl) {
+      return const SizedBox.shrink();
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextButton.icon(
+          key: const Key('plan-water-apply'),
+          onPressed: () => guardedPlanWrite(
+            context,
+            () => ref.read(waterTodayProvider.notifier).setTarget(recommendedMl),
+          ),
+          icon: Icon(Icons.water_drop_rounded, size: 18, color: AppColors.water),
+          label: Text('Hedefi ${formatWaterMl(recommendedMl)} yap '
+              '(şu an ${formatWaterMl(current)})'),
+        ),
+      ),
+    );
+  }
+}
+
 class _SupplementSection extends StatelessWidget {
   const _SupplementSection({required this.targets, required this.sex});
 
@@ -1147,7 +1226,7 @@ class _SupplementSection extends StatelessWidget {
         item(
             'magnesium',
             'Magnezyum',
-            '${guide.magnesiumText}. $magnesiumSupplementText Sitrat/'
+            '${guide.magnesiumText}. ${SupplementGuide.magnesiumSupplementText} Sitrat/'
                 'bisglisinat, akşam. Böbrek hastalığında doktora sor.'),
         item(
             'omega3',
@@ -1172,6 +1251,7 @@ class _SupplementSection extends StatelessWidget {
             '≈ ${formatTr(recommendedWaterMl(targets.weightKg))} ml/gün '
                 '(kilo × 35 ml, en çok 4.000 ml); yiyecek ve içecek dahil; '
                 'kalp/böbrek hastalığında doktora sor.'),
+        _WaterTargetAction(recommendedMl: recommendedWaterMl(targets.weightKg)),
         item(
             'fiber',
             'Lif',
@@ -1228,8 +1308,8 @@ class _CheckinCard extends ConsumerWidget {
                   value: CheckinCadence.monthly, label: Text('Aylık')),
             ],
             selected: {settings.checkinCadence},
-            onSelectionChanged: (s) =>
-                controller.setCheckinSchedule(cadence: s.first),
+            onSelectionChanged: (s) => guardedPlanWrite(
+                context, () => controller.setCheckinSchedule(cadence: s.first)),
           ),
           const SizedBox(height: 12),
           if (weekly)
@@ -1240,11 +1320,11 @@ class _CheckinCard extends ConsumerWidget {
                 for (var d = 1; d <= 7; d++)
                   ChoiceChip(
                     key: Key('plan-checkin-weekday-$d'),
-                    label: Text(trWeekdayNames[d - 1].substring(0, 3)),
+                    label: Text(TodayFormat.weekdayShort[d - 1]),
                     tooltip: trWeekdayNames[d - 1],
                     selected: settings.checkinWeekday == d,
-                    onSelected: (_) =>
-                        controller.setCheckinSchedule(weekday: d),
+                    onSelected: (_) => guardedPlanWrite(
+                        context, () => controller.setCheckinSchedule(weekday: d)),
                   ),
               ],
             )
@@ -1262,7 +1342,10 @@ class _CheckinCard extends ConsumerWidget {
                       DropdownMenuItem(value: d, child: Text('$d')),
                   ],
                   onChanged: (d) {
-                    if (d != null) controller.setCheckinSchedule(monthday: d);
+                    if (d != null) {
+                      guardedPlanWrite(context,
+                          () => controller.setCheckinSchedule(monthday: d));
+                    }
                   },
                 ),
               ],
@@ -1273,7 +1356,8 @@ class _CheckinCard extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
             title: const Text('Hatırlatma (09:00)'),
             value: settings.checkinReminder,
-            onChanged: (v) => controller.setCheckinSchedule(reminder: v),
+            onChanged: (v) => guardedPlanWrite(
+                context, () => controller.setCheckinSchedule(reminder: v)),
           ),
         ],
       ),

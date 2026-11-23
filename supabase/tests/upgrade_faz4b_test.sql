@@ -32,6 +32,10 @@ begin
      or r.daily_protein_g <> 170 or r.daily_carbs_g <> 180 then
     raise exception 'BAŞARISIZ: eski ayar satırının değerleri değişti: %', to_jsonb(r);
   end if;
+  -- Sağlık v2: mevcut hesabın hedefleri elle sayılır; ilk tartı ezmez.
+  if r.targets_source <> 'manual' then
+    raise exception 'BAŞARISIZ: mevcut hesabın targets_source değeri %', r.targets_source;
+  end if;
   if cardinality(r.team_members) = 0 then
     raise exception 'BAŞARISIZ: eski ekip listesi silindi';
   end if;

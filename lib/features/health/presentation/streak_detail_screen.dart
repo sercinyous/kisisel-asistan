@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
-import 'health_format.dart';
 import 'health_widgets.dart';
 import 'providers/streaks_providers.dart';
 import 'providers/week_deficit_providers.dart';
@@ -280,9 +279,9 @@ class _WeeksBody extends StatelessWidget {
         const SizedBox(height: 8),
         if (weeks.isNotEmpty)
           Text(
-            'Bu hafta ${TodayFormat.deficit(weeks.last.totalKcal)}'
-            '${target > 0 ? ' / hedef ${HealthFormat.count(target)} kcal' : ''}'
-            ' ${TodayFormat.kg(weeks.last.kg)}',
+            'Bu hafta ${TodayFormat.weekTotal(weeks.last)}'
+            '${target > 0 ? ' / ${TodayFormat.weekTarget(target)}' : ''}'
+            ' · ${TodayFormat.weekKg(weeks.last)}',
             key: const Key('streak-weeks-current'),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.textPrimary,

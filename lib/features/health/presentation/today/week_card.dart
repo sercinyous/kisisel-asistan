@@ -64,9 +64,8 @@ class WeekCard extends ConsumerWidget {
                   const SizedBox(height: 12),
                   Text(
                     [
-                      TodayFormat.deficit(w.totalKcal),
-                      if (w.targetKcal > 0)
-                        'hedef ${HealthFormat.count(w.targetKcal)} kcal',
+                      TodayFormat.weekTotal(w),
+                      if (w.targetKcal > 0) TodayFormat.weekTarget(w.targetKcal),
                     ].join(' / '),
                     key: const Key('week-total'),
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -74,7 +73,7 @@ class WeekCard extends ConsumerWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Text(TodayFormat.kg(w.kg), style: muted),
+                  Text(TodayFormat.weekKg(w), style: muted),
                   if (w.targetKcal > 0) ...[
                     const SizedBox(height: 8),
                     SlimBar(progress: w.progress, color: AppColors.accent),

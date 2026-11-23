@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'energy_balance.dart' show Sex;
 import 'fat_loss_plan.dart';
+import 'safe_targets.dart';
 
 /// Yağ yakımı hızı seçimi ve sağlık değerlendirmesi. Saf fonksiyonlar;
 /// bilgilendirme amaçlıdır, tıbbi tavsiye değildir.
@@ -43,19 +44,10 @@ enum FatLossRate {
       : null;
 }
 
-/// Hız modlarının sabitleri.
+/// Hız değerlendirmesinin sabitleri. Hedef sayıları tek motordan
+/// (`resolveTargets`, sınırlar `SafeTargets`) gelir.
 abstract final class FatLossRateRules {
-  static const int kcalFloor = 1200;
-
-  /// Kalori yetmezse protein kg × 1,6'ya kadar iner; her durumda en çok
-  /// 220 g.
-  static const double proteinMinPerKg = 1.6;
-  static const int proteinMaxG = 220;
-  static const double fatMinPerKg = 0.6;
-
-  /// Protein indirimi de yetmezse yağın inebileceği alt sınır.
-  static const double fatFloorPerKg = 0.5;
-  static const double fatShareOfKcal = 0.25;
+  /// Bunun altındaki karbonhidrat "uzun süre devam etme" notu verir.
   static const int carbsMinG = 50;
 
   /// Vücut ağırlığının yüzdesi olarak haftalık kayıp sınırları.
@@ -99,7 +91,7 @@ class FatLossRateResult {
 
   /// Klasik formül 1.200 kcal tabanının altında kalori veriyor.
   bool get classicBelowFloor =>
-      rate == FatLossRate.classic && targets.kcal < FatLossRateRules.kcalFloor;
+      rate == FatLossRate.classic && targets.kcal < SafeTargets.kcalFloorMin;
 
   /// Makro indirimlerinin açıklaması; indirim yoksa `null`.
   String? get macroNote {
@@ -116,119 +108,6 @@ class FatLossRateResult {
     ];
     return parts.isEmpty ? null : parts.join(' ');
   }
-}
-
-/// Hız modu için günlük kalori: harcama − r × 7700 / 7; en az
-/// max(1200, bazal). Klasikte [computeFatLossTargets] aynen kullanılır.
-FatLossRateResult computeRateTargets({
-  required double weightKg,
-  required int expenditureKcal,
-  required FatLossRate rate,
-  double? basalKcal,
-}) {
-  if (!weightKg.isFinite || weightKg <= 0) {
-    throw ArgumentError.value(weightKg, 'weightKg', 'must be positive');
-  }
-  final floor = math.max(
-    FatLossRateRules.kcalFloor,
-    basalKcal == null || !basalKcal.isFinite ? 0 : basalKcal.round(),
-  );
-  final r = rate.kgPerWeek;
-  if (r == null) {
-    final t = computeFatLossTargets(weightKg);
-    return FatLossRateResult(
-      rate: rate,
-      targets: t,
-      floorKcal: floor,
-      clampedToFloor: false,
-      actualKgPerWeek: _weeklyKg(expenditureKcal, t.kcal),
-      proteinReduced: false,
-      fatReduced: false,
-      carbsBelowMin: false,
-    );
-  }
-  final raw = (expenditureKcal - r * FatLossRules.kcalPerKgFat / 7).round();
-  final clamped = raw < floor;
-  final kcal = clamped ? floor : raw;
-  final macros = rateMacros(weightKg: weightKg, kcal: kcal);
-  return FatLossRateResult(
-    rate: rate,
-    targets: macros.targets,
-    floorKcal: floor,
-    clampedToFloor: clamped,
-    actualKgPerWeek: _weeklyKg(expenditureKcal, kcal),
-    proteinReduced: macros.proteinReduced,
-    fatReduced: macros.fatReduced,
-    carbsBelowMin: macros.carbsBelowMin,
-  );
-}
-
-double _weeklyKg(int expenditure, int kcal) {
-  final deficit = expenditure - kcal;
-  return deficit <= 0 ? 0 : deficit * 7 / FatLossRules.kcalPerKgFat;
-}
-
-/// Hız modu makroları. Başlangıç: protein = kg × 2 (en çok 220 g),
-/// yağ = max(kg × 0,6, kcal × 0,25 / 9), lif = kcal / 1000 × 14,
-/// karbonhidrat kalan. Karbonhidrat 50 g'a yetmezse sırasıyla:
-/// yağ kg × 0,6'ya, protein kg × 1,6'ya, yağ kg × 0,5'e iner. Son çare
-/// karbonhidrat 0 ve yağ kalan kaloriye sığdırılır; böylece
-/// P×4 + Y×9 + K×4 ≤ kcal her zaman sağlanır.
-({
-  FatLossTargets targets,
-  bool proteinReduced,
-  bool fatReduced,
-  bool carbsBelowMin,
-}) rateMacros({
-  required double weightKg,
-  required int kcal,
-}) {
-  const carbsMin = FatLossRateRules.carbsMinG;
-  final fullProtein = (weightKg * FatLossRules.proteinPerKg).floor();
-  var protein = math.min(fullProtein, FatLossRateRules.proteinMaxG);
-  final fatMin = (weightKg * FatLossRateRules.fatMinPerKg).ceil();
-  final fatFloor = (weightKg * FatLossRateRules.fatFloorPerKg).ceil();
-  final fatStart = math.max(
-    fatMin,
-    (kcal * FatLossRateRules.fatShareOfKcal / 9).floor(),
-  );
-  var fat = fatStart;
-  int fatFits(int p) => ((kcal - p * 4 - carbsMin * 4) / 9).floor();
-  bool short() => protein * 4 + fat * 9 + carbsMin * 4 > kcal;
-
-  // 1) Yağı %25 payından kg × 0,6'ya doğru indir.
-  if (short() && fat > fatMin) fat = math.max(fatMin, fatFits(protein));
-  // 2) Proteini kg × 1,6'ya doğru indir.
-  if (short()) {
-    final pMin = math.min(
-      (weightKg * FatLossRateRules.proteinMinPerKg).floor(),
-      FatLossRateRules.proteinMaxG,
-    );
-    final need = ((kcal - fat * 9 - carbsMin * 4) / 4).floor();
-    protein = math.max(pMin, math.min(protein, need));
-  }
-  // 3) Yağı kg × 0,5'e doğru indir.
-  if (short() && fat > fatFloor) fat = math.max(fatFloor, fatFits(protein));
-  // 4) Son çare: karbonhidrat 0, yağ ve gerekirse protein sığdırılır.
-  if (protein * 4 + fat * 9 > kcal) {
-    if (protein * 4 > kcal) protein = kcal ~/ 4;
-    fat = math.max(0, (kcal - protein * 4) ~/ 9);
-  }
-  final rest = kcal - (protein * 4 + fat * 9);
-  final carbs = rest <= 0 ? 0 : rest ~/ 4;
-  return (
-    targets: FatLossTargets(
-      weightKg: weightKg,
-      kcal: kcal,
-      proteinG: protein,
-      fatG: fat,
-      fiberG: (kcal * FatLossRules.fiberPer1000Kcal / 1000).floor(),
-      carbsG: carbs,
-    ),
-    proteinReduced: protein < fullProtein,
-    fatReduced: fat < fatStart,
-    carbsBelowMin: carbs < carbsMin,
-  );
 }
 
 /// Haftalık kaybın vücut ağırlığına göre sınıfı.
@@ -348,7 +227,7 @@ class SupplementGuide {
   final int waterMl;
 
   /// Cinsiyete göre toplam magnezyum; bilinmiyorsa iki değer. Takviye
-  /// sınırı [magnesiumSupplementText] ile ayrıca söylenir.
+  /// sınırı [magnesiumSupplementText] ile ayrıca söylenir (tek kaynak).
   final String magnesiumText;
 
   /// Takviye dozu ve üst sınır (yiyecekten bağımsız).

@@ -404,7 +404,9 @@ void main() {
           'weights': [_weight],
         }),
       );
-      expect(refreshed, {'monthOverview', 'energyDay'});
+      // Tartı hedefleri motorla günceller (tartı formuyla aynı kural); ayar
+      // yazılınca bildirim planı da yenilenir.
+      expect(refreshed, {'monthOverview', 'energyDay', 'notificationSync'});
       expect(stateOf(QuickAddMode.health).savedCount, 2);
     });
 

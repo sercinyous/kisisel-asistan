@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/fat_loss_plan.dart' show formatTrDecimal2;
+import '../../domain/streaks.dart' show WeekDeficit;
 import '../health_format.dart';
 
 /// Bugün ve detay ekranlarının ortak biçimleri ve küçük çizim parçaları.
@@ -13,8 +14,21 @@ abstract final class TodayFormat {
       ? '−${HealthFormat.count(kcal)} kcal'
       : '+${HealthFormat.count(-kcal)} kcal';
 
-  /// "≈ 0,37 kg" (yağ karşılığı; 7.700 kcal ≈ 1 kg).
-  static String kg(double kg) => '≈ ${formatTrDecimal2(kg.abs())} kg';
+  /// "≈ 0,37 kg" (yağ karşılığı; 7.700 kcal ≈ 1 kg). Fazla alımda kayıp
+  /// yoktur: "fazla alım".
+  static String kg(double kg) =>
+      kg < 0 ? 'fazla alım' : '≈ ${formatTrDecimal2(kg)} kg';
+
+  /// Haftalık toplam; veri yoksa "—".
+  static String weekTotal(WeekDeficit week) =>
+      week.hasData ? deficit(week.totalKcal) : '—';
+
+  /// Haftalık kg satırı; veri yoksa "Henüz veri yok".
+  static String weekKg(WeekDeficit week) =>
+      week.hasData ? kg(week.kg) : 'Henüz veri yok';
+
+  /// Haftalık hedef (tüm ekranlarda aynı biçim): "hedef −3.850 kcal".
+  static String weekTarget(int targetKcal) => 'hedef ${deficit(targetKcal)}';
 
   /// Pazartesiden başlayan kısa gün adları.
   static const List<String> weekdayShort = [

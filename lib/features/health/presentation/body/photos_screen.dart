@@ -115,7 +115,7 @@ class _PhotosScreenState extends ConsumerState<PhotosScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(bodyRepositoryProvider).deletePhoto(photo);
-      ref.invalidate(progressPhotosProvider);
+      invalidatePhotoPath(ref, photo.storagePath);
     } on Object {
       messenger.showSnackBar(const SnackBar(content: Text(healthDeleteError)));
     }

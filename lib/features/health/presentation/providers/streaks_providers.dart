@@ -58,7 +58,7 @@ final streaksProvider = FutureProvider<StreaksState>((ref) async {
     ),
     lowIntake: lowIntakeWarning(
       days: health.days,
-      floorKcal: resolved.floorKcal,
+      floorKcal: effectiveFloorKcal(resolved.floorKcal, settings.dailyCalories),
       today: today,
     ),
   );

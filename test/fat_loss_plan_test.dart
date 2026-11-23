@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/features/health/domain/fat_loss_plan.dart';
-import 'package:kisisel_asistan/features/health/domain/fat_loss_rate.dart';
+import 'package:kisisel_asistan/features/health/domain/targets_engine.dart';
+import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 
 void main() {
   group('hedefler', () {
@@ -125,9 +128,10 @@ void main() {
       expect(three.carbs, closeTo(216, 3));
       expect(three.fiber, closeTo(42, 2));
       final two = menuTotals(FatLossMenus.twoMeals);
-      expect(two.kcal, closeTo(2165, 45));
-      expect(two.protein, closeTo(167, 3));
-      expect(two.fat, closeTo(73, 2));
+      // 2 öğünde tavuk 250 g (öğün başına et sınırı).
+      expect(two.kcal, closeTo(2100, 25));
+      expect(two.protein, closeTo(162, 3));
+      expect(two.fat, closeTo(71, 2));
       expect(two.carbs, closeTo(208, 3));
       expect(two.fiber, closeTo(32, 2));
     });
@@ -140,9 +144,14 @@ void main() {
             FatLossRate.threeQuarter,
             FatLossRate.one
           ]) {
-            final t = computeRateTargets(
-                    weightKg: kg, expenditureKcal: e, rate: rate)
-                .targets;
+            final t = resolveTargets(
+              settings: const UserSettings.defaults().copyWith(
+                weeklyRate: rate,
+                expenditureKcalManual: e,
+                targetWeightKg: kg - 10,
+              ),
+              latestWeightKg: kg,
+            ).asFatLossTargets;
             for (final count in [2, 3]) {
               final menu = scaledMenu(count, t);
               final kcal = menuTotals(menu).kcal;
@@ -184,7 +193,7 @@ void main() {
           final chicken = menu
               .expand((m) => m.items)
               .firstWhere((i) => identical(i.food, FatLossFoods.chicken));
-          final ref = (count == 2 ? 270 : 150) * kg / 84;
+          final ref = math.min(250, (count == 2 ? 250 : 150) * kg / 84);
           expect(chicken.quantity, closeTo(ref, 5));
         }
       });
@@ -216,7 +225,8 @@ void main() {
       final menu = scaledMenu(2, t);
       final first = menu.first.items;
       expect(first[0].quantity, 4); // 3 × 100/84 = 3,57 → 4 yumurta
-      expect(menu[1].items.first.quantity, 320); // 270 × 1,19 = 321 → 320 g
+      // 250 × 1,19 = 298 → 300 g; öğün başına et sınırı 250 g.
+      expect(menu[1].items.first.quantity, 250);
       for (final meal in menu) {
         for (final item in meal.items) {
           if (item.food.unit == FoodUnit.gram) {
@@ -246,6 +256,32 @@ void main() {
       expect(const MenuItem(FatLossFoods.oliveOil, 1).label,
           '1 yemek kaşığı zeytinyağı');
       expect(const MenuItem(FatLossFoods.oats, 60).label, '60 g kuru yulaf');
+    });
+  });
+
+  group('menü sınırları', () {
+    test('et/balık öğün başına en çok 250 g; 3 öğünde öğün ≤ %45', () {
+      for (final kcal in [2184, 3380, 3900]) {
+        final t = FatLossTargets(
+            weightKg: 130, kcal: kcal, proteinG: 220, fatG: kcal ~/ 30,
+            fiberG: 40, carbsG: 300);
+        for (final count in [2, 3]) {
+          final menu = scaledMenu(count, t);
+          for (final meal in menu) {
+            for (final item in meal.items) {
+              if (item.food == FatLossFoods.chicken ||
+                  item.food == FatLossFoods.tuna) {
+                expect(item.quantity, lessThanOrEqualTo(250),
+                    reason: '$kcal, $count öğün');
+              }
+            }
+            if (count == 3) {
+              expect(menuTotals([meal]).kcal, lessThanOrEqualTo(kcal * 0.45 + 1),
+                  reason: '$kcal ${meal.name}');
+            }
+          }
+        }
+      }
     });
   });
 }

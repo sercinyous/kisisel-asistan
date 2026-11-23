@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-/// Sağlık hedeflerinin güvenlik sınırları. Hedef motoru, örnek menüler, eksik
-/// satırı ve Gemini aynı sabitleri kullanır. Saf fonksiyonlar; bilgilendirme
+/// Sağlık hedeflerinin güvenlik sınırları. Hedef motoru, örnek menüler ve eksik
+/// satırı aynı sabitleri kullanır. Saf fonksiyonlar; bilgilendirme
 /// amaçlıdır, tıbbi tavsiye değildir.
 abstract final class SafeTargets {
   /// Hız modlarında kalori tabanı: max(1.200, bazal).
@@ -36,9 +36,6 @@ abstract final class SafeTargets {
   /// Eksik satırı en çok bu kadar öneri verir.
   static const int maxGapSuggestions = 2;
 
-  /// AI asla bundan hızlı kayıp önermez (kg/hafta).
-  static const double aiMaxKgPerWeek = 0.75;
-
   /// Günlük su: kg × 35 ml, en çok 4.000 ml.
   static const int waterMlPerKg = 35;
   static const int waterMaxMl = 4000;
@@ -52,6 +49,9 @@ abstract final class SafeTargets {
   static const String classicBelowFloorWarning =
       'Klasik formül 1.200 kcal\'nin altında hedef veriyor; bu kadar az '
       'kaloriyle uzun süre devam etme.';
+  static const String classicSurplusWarning =
+      'Klasik formül harcamandan fazla kalori veriyor; bu hedefle kilo '
+      'vermezsin. Hız seçeneklerinden birini dene.';
   static const String lockedMessage =
       'Kilo verme planı sana uygun değil, dengeli beslenme hedefleri '
       'gösteriliyor';
@@ -177,111 +177,4 @@ MacroFit fitMacros({
     proteinReduced: protein < startProtein,
     fatReduced: fat < startFat,
   );
-}
-
-/// AI'a verilen sağlık bağlamı: hedefler, sınırlar, haftalık açık ve seriler.
-/// Fotoğraf ve mezura ölçüleri asla girmez.
-class AiHealthContext {
-  const AiHealthContext({
-    required this.kcalTarget,
-    required this.proteinG,
-    required this.floorKcal,
-    required this.deficitCapKcal,
-    this.weekDeficitKcal,
-    this.weekTargetKcal,
-    this.streakLine,
-  });
-
-  final int kcalTarget;
-  final int proteinG;
-  final int floorKcal;
-  final int deficitCapKcal;
-  final int? weekDeficitKcal;
-  final int? weekTargetKcal;
-
-  /// "Adım 7 · Kayıt 12 · Açık 4"
-  final String? streakLine;
-
-  /// Talimat metnine eklenen satırlar.
-  String get prompt => [
-        'Günlük kalori hedefi $kcalTarget kcal, protein $proteinG g.',
-        'Güvenlik sınırları: günde en az $floorKcal kcal; günlük açık en çok '
-            '$deficitCapKcal kcal; haftada en çok 0,75 kg kayıp.',
-        if (weekDeficitKcal != null)
-          'Bu haftaki kalori açığı $weekDeficitKcal kcal'
-              '${weekTargetKcal != null ? ' (hedef $weekTargetKcal)' : ''}.',
-        if (streakLine != null) 'Seriler: $streakLine.',
-        'ASLA $floorKcal kcal altında yemeyi, haftada 0,75 kg\'dan hızlı '
-            'kaybı, oruç tutmayı ya da öğün atlamayı önerme.',
-      ].join('\n');
-}
-
-/// Sınır aşan AI cümlesinin yerine konan güvenli cümle.
-String aiSafeSentence(int floorKcal) =>
-    'Günde en az ${_trThousands(floorKcal)} kcal al, öğün atlama ve haftada '
-    '0,75 kg\'dan hızlı kaybı hedefleme.';
-
-String _trThousands(int v) {
-  final s = v.toString();
-  final b = StringBuffer();
-  for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) b.write('.');
-    b.write(s[i]);
-  }
-  return b.toString();
-}
-
-final RegExp _aiFastingPattern = RegExp(
-  r'oruç|aralıklı açlık|öğün(ü|leri)? atla|öğün atlama(yı|n)? (öner|dene)|'
-  r'kahvaltıyı atla|akşam yemeğini atla|hiç yeme|aç kal',
-  caseSensitive: false,
-);
-final RegExp _aiKcalPattern = RegExp(
-    r'(\d{1,2}(?:[.\s]\d{3})|\d{3,4})\s*(?:kcal|kalori)',
-    caseSensitive: false);
-final RegExp _aiKgPerWeekPattern = RegExp(
-  r'(\d+(?:[,.]\d+)?)\s*kg\s*(?:/|\s*(?:her\s+)?)(?:hafta|haftada)',
-  caseSensitive: false,
-);
-
-/// AI cevabını cümle cümle denetler: tabanın altında kalori, 0,75 kg/hafta
-/// üstü hız, oruç ya da öğün atlama içeren cümle [aiSafeSentence] ile
-/// değiştirilir (aynı güvenli cümle bir kez yazılır).
-String filterAiHealthAdvice(String text, {required int floorKcal}) {
-  final safe = aiSafeSentence(floorKcal);
-  final sentences = text.split(RegExp(r'(?<=[.!?])\s+'));
-  final out = <String>[];
-  var replaced = false;
-  for (final sentence in sentences) {
-    if (_aiUnsafe(sentence, floorKcal)) {
-      if (!replaced) out.add(safe);
-      replaced = true;
-    } else {
-      out.add(sentence);
-    }
-  }
-  return out.join(' ');
-}
-
-bool _aiUnsafe(String sentence, int floorKcal) {
-  final lower = sentence.toLowerCase();
-  if (_aiFastingPattern.hasMatch(lower)) return true;
-  for (final m in _aiKcalPattern.allMatches(lower)) {
-    final value = int.tryParse(m.group(1)!.replaceAll(RegExp(r'[.\s]'), ''));
-    // "günde 1000 kcal" gibi hedef cümleleri; açık/yakım sayıları da düşük
-    // olabileceği için yalnızca yeme fiilleriyle birlikte sayılır.
-    if (value != null &&
-        value < floorKcal &&
-        RegExp(r'ye|al|tüket|hedefle|in|düşür').hasMatch(lower) &&
-        !RegExp(r'açık|yak|harca|eksik').hasMatch(lower)) {
-      return true;
-    }
-  }
-  for (final m in _aiKgPerWeekPattern.allMatches(lower)) {
-    final value = double.tryParse(m.group(1)!.replaceAll(',', '.'));
-    if (value != null && value > SafeTargets.aiMaxKgPerWeek + 1e-9) {
-      return true;
-    }
-  }
-  return false;
 }

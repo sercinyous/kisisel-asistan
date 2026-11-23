@@ -39,8 +39,7 @@ class FakeGeminiParserService implements GeminiParserService {
   }
 
   @override
-  Future<String> generateWeeklySummary(Map<String, dynamic> metrics,
-          {AiHealthContext? health}) async =>
+  Future<String> generateWeeklySummary(Map<String, dynamic> metrics) async =>
       'özet';
 
   @override

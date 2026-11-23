@@ -10,6 +10,8 @@ import {
   buildGeminiRequest,
   buildPrompt,
   extractBearer,
+  filterHealthAdvice,
+  healthSafetyOf,
   parseGeminiText,
   parseRequest,
   type ReportKind,
@@ -139,8 +141,13 @@ async function generateSummary(
       return null;
     }
     const text = parseGeminiText(await response.json());
-    if (text === null) deps.log("Gemini yanıtında metin yok.");
-    return text;
+    if (text === null) {
+      deps.log("Gemini yanıtında metin yok.");
+      return null;
+    }
+    // Sağlık sınırını aşan cümle (taban altı kalori, hızlı kayıp, oruç, öğün
+    // atlama) kaydedilmeden önce güvenli cümleyle değiştirilir.
+    return filterHealthAdvice(text, healthSafetyOf(metrics));
   } catch (error) {
     deps.log(`Gemini çağrısı başarısız: ${error instanceof Error ? error.name : "hata"}`);
     return null;

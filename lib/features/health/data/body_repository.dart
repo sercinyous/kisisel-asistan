@@ -125,7 +125,8 @@ class SupabaseBodyRepository implements BodyRepository {
           fileOptions: const FileOptions(
             upsert: true,
             contentType: 'image/jpeg',
-            cacheControl: '600',
+            // Aynı yola yeniden çekim yapılabilir; CDN eski baytı uzun tutmasın.
+            cacheControl: '60',
           ),
         );
     final row = await _client

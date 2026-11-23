@@ -20,9 +20,6 @@ import 'measurements_screen.dart';
 import 'photo_thumb.dart';
 import 'photos_screen.dart';
 
-/// Banner'ın kapatıldığı gün; kapatma yalnızca o güne geçerlidir.
-final checkinBannerDismissedProvider = StateProvider<DateTime?>((ref) => null);
-
 /// Sağlık > Vücut bölümü: kontrol günü, kilo, ölçüler, fotoğraflar.
 /// Kendisi kaydırmaz; sağlık ekranının listesine yerleşir (alt boşluk orada).
 class BodyView extends ConsumerWidget {
@@ -53,7 +50,7 @@ class CheckinBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final today = AppDates.startOfDay(DateTime.now());
-    final dismissed = ref.watch(checkinBannerDismissedProvider) == today;
+    final dismissed = ref.watch(checkinDismissedProvider) == today;
     final state = ref.watch(checkinTodayProvider).valueOrNull;
     if (state == null) return const SizedBox.shrink();
 
@@ -98,9 +95,8 @@ class CheckinBanner extends ConsumerWidget {
             IconButton(
               key: const Key('checkin-dismiss'),
               tooltip: 'Bugün gösterme',
-              onPressed: () => ref
-                  .read(checkinBannerDismissedProvider.notifier)
-                  .state = today,
+              onPressed: () =>
+                  ref.read(checkinDismissedProvider.notifier).dismiss(today),
               icon: Icon(Icons.close_rounded,
                   size: 18, color: AppColors.textMuted),
             ),

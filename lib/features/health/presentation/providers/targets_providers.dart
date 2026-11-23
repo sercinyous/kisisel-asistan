@@ -96,7 +96,7 @@ final resolvedTargetsProvider = FutureProvider<ResolvedTargets>((ref) async {
   );
 });
 
-/// Kaynak 'manual' iken kiloya göre önerilen hedef ("Kilona göre önerilen
+/// Kayıtlı hedef motordan farklıysa önerilen hedef ("Kilona göre önerilen
 /// 1.820 kcal [Uygula]"); yoksa `null`.
 final planSuggestionProvider = FutureProvider<ResolvedTargets?>((ref) async {
   final settings = await ref.watch(userSettingsProvider.future);

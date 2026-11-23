@@ -69,12 +69,14 @@ class BentoCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(AppSpacing.cardPadding),
     this.onTap,
+    this.onLongPress,
     this.tint,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   /// Kartı hafifçe renklendirir (ör. vurgulanan metrik).
   final Color? tint;
@@ -95,6 +97,7 @@ class BentoCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(padding: padding, child: child),
       ),
     );

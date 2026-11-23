@@ -157,6 +157,9 @@ class _WeightHistorySheetState extends ConsumerState<WeightHistorySheet> {
     }
     invalidateHealthData(container);
     if (mounted) setState(() => _error = null);
+    // Son tartı değişti: hedefler yeni son kiloya göre güncellenir.
+    await updatePlanAfterWeight(
+        container, mounted ? ScaffoldMessenger.maybeOf(context) : null);
   }
 
   @override

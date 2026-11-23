@@ -7,6 +7,7 @@ import 'health_providers.dart';
 import 'health_segment.dart';
 import 'healthkit_card.dart';
 import 'plan_view.dart';
+import 'providers/body_providers.dart' show invalidateBodyData;
 import 'providers/targets_providers.dart' show latestWeightProvider;
 import 'providers/week_deficit_providers.dart' show healthDaysProvider;
 import 'today/today_view.dart';
@@ -16,13 +17,15 @@ export 'health_segment.dart' show HealthSegment, healthSegmentProvider;
 /// Sağlık sekmesi: üstte Bugün / Vücut / Plan seçimi. Kaynak (HealthKit /
 /// Google Health) yalnızca sorun varken tek satır uyarı olarak görünür.
 ///
-/// Başka bir ekrandan belirli görünümü açmak için [healthSegmentProvider]
-/// ayarlanır (ör. Kokpit'ten Plan).
+/// Başka bir ekrandan belirli görünümü açmak için `openHealth` kullanılır
+/// (Kokpit kartına uzun basış ve Ayarlar > Hedeflerim "Plan'ı gör" Plan'ı
+/// açar).
 class HealthScreen extends ConsumerWidget {
   const HealthScreen({super.key});
 
   Future<void> _refresh(ProviderContainer container) async {
     invalidateHealthData(container);
+    invalidateBodyData(container);
     container
       ..invalidate(healthDaysProvider)
       ..invalidate(latestWeightProvider);

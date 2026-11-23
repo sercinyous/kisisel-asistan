@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/utils/date_utils.dart';
 import '../../../settings/presentation/settings_providers.dart';
@@ -10,6 +11,45 @@ import '../trend_providers.dart' show trendClockProvider;
 
 export '../../data/body_repository.dart';
 export '../../domain/checkin.dart';
+
+/// Ölçü günü hatırlatmasının (Vücut banner'ı ve Kokpit satırı) kapatıldığı
+/// gün; cihazda saklanır, yalnızca o güne geçerlidir.
+class CheckinDismissNotifier extends Notifier<DateTime?> {
+  static const String prefsKey = 'checkin_dismissed_on';
+
+  @override
+  DateTime? build() {
+    unawaited(_load());
+    return null;
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(prefsKey);
+      final day = raw == null ? null : DateTime.tryParse(raw);
+      if (day != null && state == null) state = AppDates.startOfDay(day);
+    } on Object {
+      // Saklama yoksa (test, web önizleme) yalnızca bu oturum için tutulur.
+    }
+  }
+
+  Future<void> dismiss(DateTime day) async {
+    final only = AppDates.startOfDay(day);
+    state = only;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(prefsKey,
+          '${only.year.toString().padLeft(4, '0')}-${only.month.toString().padLeft(2, '0')}-${only.day.toString().padLeft(2, '0')}');
+    } on Object {
+      // Kalıcı yazılamazsa kapatma bu oturumda geçerli kalır.
+    }
+  }
+}
+
+final checkinDismissedProvider =
+    NotifierProvider<CheckinDismissNotifier, DateTime?>(
+        CheckinDismissNotifier.new);
 
 /// Tüm mezura ölçüleri, eskiden yeniye.
 final measurementsProvider = FutureProvider<List<BodyMeasurement>>(
@@ -80,6 +120,15 @@ final checkinTodayProvider = FutureProvider<CheckinToday>((ref) async {
     scheduleLine: checkinScheduleLine(settings, today),
   );
 });
+
+/// Aynı yola (<uid>/<gün>/<poz>.jpg) yeniden yüklenen ya da silinen
+/// fotoğraf: liste ve o yolun imzalı adresi yenilenir. Yeni imza yeni adres
+/// demektir; Image.network eski baytları önbellekten göstermez.
+void invalidatePhotoPath(WidgetRef ref, String storagePath) {
+  ref
+    ..invalidate(progressPhotosProvider)
+    ..invalidate(photoUrlProvider(storagePath));
+}
 
 /// Ölçü/fotoğraf değişince Vücut sağlayıcılarını yeniler.
 void invalidateBodyData(ProviderContainer container) {

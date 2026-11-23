@@ -42,9 +42,23 @@ class ResolvedTargets {
     required this.clamped,
     required this.proteinReduced,
     required this.fatReduced,
+    this.estimatedExpenditureKcal,
   });
 
   final TargetsMode mode;
+
+  /// Elle değer olmasaydı modelin harcama tahmini (kcal); profil eksikse
+  /// `null`. Elle girilen değer bundan ±%30 saparsa uyarı gösterilir.
+  final int? estimatedExpenditureKcal;
+
+  /// Elle girilen harcama tahminden ±%30'dan fazla sapıyor.
+  bool get manualExpenditureOff {
+    final estimate = estimatedExpenditureKcal;
+    return expenditure.source == ExpenditureSource.manual &&
+        estimate != null &&
+        manualExpenditureOutOfRange(
+            manualKcal: expenditure.kcal, estimateKcal: estimate);
+  }
 
   /// Seçili hız (kilitli/korumada da ayardaki değer).
   final FatLossRate rate;
@@ -87,6 +101,11 @@ class ResolvedTargets {
   bool get classicBelowFloor =>
       mode == TargetsMode.classic && kcal < SafeTargets.kcalFloorMin;
 
+  /// Klasik formül harcamaya eşit ya da üstünde: açık yok, kilo verilmez
+  /// (uyarı; sayılar değişmez).
+  bool get classicSurplus =>
+      mode == TargetsMode.classic && kcal >= expenditure.kcal;
+
   /// Kilo verme planı kilitli (koruma hedefleri).
   bool get locked => mode == TargetsMode.locked;
 
@@ -95,8 +114,21 @@ class ResolvedTargets {
         if (locked) SafeTargets.lockedMessage,
         if (clamped) SafeTargets.clampedMessage,
         if (classicBelowFloor) SafeTargets.classicBelowFloorWarning,
+        if (classicSurplus) SafeTargets.classicSurplusWarning,
         if (mode == TargetsMode.rate && rate.warning != null) rate.warning!,
       ];
+
+  /// "Ne kadar sağlıklı?" metinlerinin ([rateInfo]) biçimi.
+  FatLossRateResult get asRateResult => FatLossRateResult(
+        rate: rate,
+        targets: asFatLossTargets,
+        floorKcal: floorKcal,
+        clampedToFloor: clamped,
+        actualKgPerWeek: kgPerWeek,
+        proteinReduced: proteinReduced,
+        fatReduced: fatReduced,
+        carbsBelowMin: carbsG < FatLossRateRules.carbsMinG,
+      );
 
   /// Eski plan ekranlarının kullandığı biçim.
   FatLossTargets get asFatLossTargets => FatLossTargets(
@@ -162,6 +194,11 @@ ResolvedTargets resolveTargets({
     activityFactor: settings.activityLevel?.factor,
     stepsTarget: settings.dailySteps,
   );
+  final estimate = planExpenditure(
+    basal: basal,
+    activityFactor: settings.activityLevel?.factor,
+    stepsTarget: settings.dailySteps,
+  );
   final floor = kcalFloor(basal);
   final rate = settings.weeklyRate;
 
@@ -192,6 +229,9 @@ ResolvedTargets resolveTargets({
       clamped: clamped,
       proteinReduced: fit.proteinReduced,
       fatReduced: fit.fatReduced,
+      estimatedExpenditureKcal: estimate.source == ExpenditureSource.estimate
+          ? estimate.kcal
+          : null,
     );
   }
 
@@ -253,6 +293,10 @@ enum PlanTrigger {
   /// Tartı kaydı: kaynak 'manual' değilse ve fark eşiği aşıyorsa yazar.
   weightSaved,
 
+  /// Profil (hedef kilo, boy, hareket, adım) kaydedildi: [weightSaved] ile
+  /// aynı kural.
+  profileSaved,
+
   /// Tempo değişti: her zaman yazar, kaynak 'plan'.
   rateChanged,
 
@@ -305,7 +349,8 @@ bool targetsDiffer(UserSettings settings, ResolvedTargets resolved) {
 
 /// `daily_calories/protein/carbs/fat` sütunlarının TEK yazarı. Yazılacak
 /// ayarı döndürür; yazma gerekmiyorsa `null`:
-/// * [PlanTrigger.weightSaved]: kaynak 'manual' ise ya da fark eşiğin
+/// * [PlanTrigger.weightSaved], [PlanTrigger.profileSaved]: kaynak 'manual'
+///   ise ya da fark eşiğin
 ///   altındaysa (|Δkcal| ≤ 50 ve |Δprotein| ≤ 5 g) yazılmaz.
 /// * Diğer tetikleyiciler her zaman yazar.
 /// Kaynak ilk kurulumda 'onboarding', diğerlerinde 'plan' olur;
@@ -316,7 +361,8 @@ PlanWrite? planWrite({
   required PlanTrigger trigger,
   required DateTime now,
 }) {
-  if (trigger == PlanTrigger.weightSaved) {
+  if (trigger == PlanTrigger.weightSaved ||
+      trigger == PlanTrigger.profileSaved) {
     if (settings.targetsSource == TargetsSource.manual) return null;
     if (!targetsDiffer(settings, resolved)) return null;
   }
@@ -356,13 +402,11 @@ UserSettings manualTargets(
       targetsUpdatedAt: now,
     );
 
-/// Kaynak 'manual' iken yeni kiloya göre önerilen hedef ("Kilona göre
-/// önerilen 1.820 kcal [Uygula]"); fark eşiğin altındaysa ya da kaynak
-/// 'manual' değilse `null`.
+/// Kayıtlı hedef motorun sonucundan eşik kadar farklıysa önerilen hedef
+/// ("Kilona göre önerilen 1.820 kcal [Uygula]"); kaynaktan bağımsızdır
+/// (elle ayar ya da henüz yeniden yazılmamış plan). Fark yoksa `null`.
 ResolvedTargets? planSuggestion(
   UserSettings settings,
   ResolvedTargets resolved,
-) {
-  if (settings.targetsSource != TargetsSource.manual) return null;
-  return targetsDiffer(settings, resolved) ? resolved : null;
-}
+) =>
+    targetsDiffer(settings, resolved) ? resolved : null;

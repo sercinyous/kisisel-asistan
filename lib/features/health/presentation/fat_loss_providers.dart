@@ -18,61 +18,6 @@ export '../domain/meal_gap.dart';
 /// okunur ve [PlanController] ile yazılır (cihazda tercih saklanmaz); hedef
 /// sayıları tek motordan ([resolveTargets]) gelir.
 
-/// Seçilen haftalık kayıp hızı (`user_settings.weekly_rate`).
-final fatLossRateProvider =
-    NotifierProvider<FatLossRateNotifier, FatLossRate>(FatLossRateNotifier.new);
-
-class FatLossRateNotifier extends Notifier<FatLossRate> {
-  @override
-  FatLossRate build() => ref.watch(settingsOrDefaultProvider).weeklyRate;
-
-  /// Tempo değişimi her zaman hedefleri yeniden yazar ([PlanTrigger.rateChanged]).
-  Future<void> set(FatLossRate rate) async {
-    state = rate;
-    await ref
-        .read(planControllerProvider)
-        .applyPlan(PlanTrigger.rateChanged, rate: rate);
-  }
-}
-
-int clampExpenditure(int kcal) => kcal
-    .clamp(FatLossRules.expenditureMin, FatLossRules.expenditureMax)
-    .toInt();
-
-/// Elle girilen günlük harcama; girilmediyse varsayılan öneri.
-final manualExpenditureProvider =
-    NotifierProvider<ManualExpenditureNotifier, int>(
-  ManualExpenditureNotifier.new,
-);
-
-class ManualExpenditureNotifier extends Notifier<int> {
-  @override
-  int build() =>
-      ref.watch(settingsOrDefaultProvider).expenditureKcalManual ??
-      FatLossRules.defaultExpenditure;
-
-  Future<void> set(int kcal) async {
-    state = clampExpenditure(kcal);
-    await ref.read(planControllerProvider).setExpenditureManual(state);
-  }
-}
-
-/// Elle girilen harcama kullanılıyor mu (`expenditure_kcal_manual` dolu).
-final manualExpenditureModeProvider =
-    NotifierProvider<ManualModeNotifier, bool>(ManualModeNotifier.new);
-
-class ManualModeNotifier extends Notifier<bool> {
-  @override
-  bool build() =>
-      ref.watch(settingsOrDefaultProvider).expenditureKcalManual != null;
-
-  Future<void> set(bool manual) async {
-    state = manual;
-    await ref.read(planControllerProvider).setExpenditureManual(
-        manual ? ref.read(manualExpenditureProvider) : null);
-  }
-}
-
 /// Günlük harcama ve kaynağı. [profileAvailable]: profil hesaba yetecek
 /// kadar dolu.
 typedef FatLossExpenditure = ({
@@ -97,26 +42,9 @@ class FatLossPlanState {
   /// Profildeki cinsiyet; bilinmiyorsa `null`.
   final Sex? sex;
 
-  /// Eski kartların biçimi.
-  FatLossRateResult get rateResult => FatLossRateResult(
-        rate: resolved.rate,
-        targets: targets,
-        floorKcal: resolved.floorKcal,
-        clampedToFloor: resolved.clamped,
-        actualKgPerWeek: resolved.kgPerWeek,
-        proteinReduced: resolved.proteinReduced,
-        fatReduced: resolved.fatReduced,
-        carbsBelowMin: resolved.carbsG < FatLossRateRules.carbsMinG,
-      );
-
   /// Seçilen hıza göre hedefler; bütün kartlar bunu kullanır.
   FatLossTargets get targets => resolved.asFatLossTargets;
   FatLossRate get rate => resolved.rate;
-
-  WeeklyLossEstimate get weekly => estimateWeeklyLoss(
-        expenditureKcal: expenditure.kcal,
-        targetKcal: targets.kcal,
-      );
 }
 
 /// Ayarlar yüklenene kadar bekler; ayar hatası plan hatası olarak görünür.

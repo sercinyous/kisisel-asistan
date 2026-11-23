@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../../../core/config/env.dart';
 import '../../../core/services/supabase_providers.dart';
 import '../../ai/data/gemini_transport.dart';
-import '../../health/domain/safe_targets.dart';
 import '../../routines/domain/routine.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../settings/presentation/settings_providers.dart';
@@ -14,7 +13,6 @@ import '../domain/parsed_entry.dart';
 import '../domain/quick_add_mode.dart';
 
 export '../../ai/data/gemini_transport.dart' show AiParseException;
-export '../../health/domain/safe_targets.dart' show AiHealthContext;
 
 /// Her giriş alanının kendi servisi vardır: talimat ve şema alana göre
 /// değişir, böylece bir alanın kaydı diğerine karışmaz.
@@ -141,18 +139,11 @@ class GeminiParserService {
 
   /// [metrics]: görev tamamlama oranı, antrenman sayısı, ortalama makrolar,
   /// kilo değişimi vb. içeren düz bir harita.
-  ///
-  /// [health] verilirse hedefler, kalori tabanı, açık sınırı, haftalık açık
-  /// ve seriler talimata girer; cevaptaki sınır aşan cümleler
-  /// ([filterAiHealthAdvice]) güvenli cümleyle değiştirilir.
-  Future<String> generateWeeklySummary(
-    Map<String, dynamic> metrics, {
-    AiHealthContext? health,
-  }) async {
+  Future<String> generateWeeklySummary(Map<String, dynamic> metrics) async {
     final raw = await _generate(
       systemInstruction: '''
 Sen kişisel bir verimlilik ve form koçusun. Kullanıcının başlangıç kilosu ${_settings.startWeightKg} kg, hedef kilosu ${_settings.targetWeightKg} kg.${_summaryWorkContext()}
-Günlük hedefleri: ${_settings.dailyCalories} kcal, ${_settings.dailyProteinG} g protein, ${_settings.dailySteps} adım.${health == null ? '' : '\n${health.prompt}'}
+Günlük hedefleri: ${_settings.dailyCalories} kcal, ${_settings.dailyProteinG} g protein, ${_settings.dailySteps} adım.
 Sana verilen haftalık metrikleri Türkçe, sade ve dürüst bir dille değerlendir.
 Biçim: düz metin, en fazla 120 kelime. Önce iş tarafını (görev ve rutinler), sonra spor/beslenme tarafını bir-iki cümleyle özetle; ardından gelecek hafta için en fazla 3 somut öneri ver. Yalnızca verilen sayılara dayan, veri uydurma. Tıbbi tavsiye verme.''',
       userText: 'Haftalık metrikler (JSON):\n${jsonEncode(metrics)}',
@@ -162,10 +153,7 @@ Biçim: düz metin, en fazla 120 kelime. Önce iş tarafını (görev ve rutinle
         'thinkingConfig': {'thinkingLevel': 'low'},
       },
     );
-    final text = raw.trim();
-    return health == null
-        ? text
-        : filterAiHealthAdvice(text, floorKcal: health.floorKcal);
+    return raw.trim();
   }
 
   // -------------------------------------------------------------- prompt

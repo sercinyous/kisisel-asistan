@@ -209,8 +209,55 @@ void main() {
       expect(w.settings.targetsSource, TargetsSource.plan);
     });
 
-    test('kaynak plan iken öneri yok', () {
-      expect(planSuggestion(_s(), _r(_s())), isNull);
+    test('kayıtlı hedef motorla aynıysa öneri yok; farklıysa her kaynakta öneri',
+        () {
+      final r = _r(_s());
+      final synced = _s().copyWith(
+          dailyCalories: r.kcal, dailyProteinG: r.proteinG);
+      expect(planSuggestion(synced, r), isNull);
+      // Kaynak 'plan' ama hedef eski (ör. AI ile tartı): Plan öneri gösterir.
+      final stale = synced.copyWith(dailyCalories: r.kcal + 300);
+      expect(planSuggestion(stale, r), isNotNull);
+    });
+
+    test('profil kaydı tartı kuralıyla yazar; elle kaynakta yazmaz', () {
+      final now = DateTime(2026, 11, 23);
+      final stale = _s().copyWith(dailyCalories: 1500);
+      expect(
+          planWrite(
+                  settings: stale,
+                  resolved: _r(stale),
+                  trigger: PlanTrigger.profileSaved,
+                  now: now)!
+              .kcal,
+          2184);
+      final manual = stale.copyWith(targetsSource: TargetsSource.manual);
+      expect(
+          planWrite(
+              settings: manual,
+              resolved: _r(manual),
+              trigger: PlanTrigger.profileSaved,
+              now: now),
+          isNull);
+    });
+
+    test('Klasik harcamayı aşıyorsa uyarı; sayılar değişmez', () {
+      // 120 kg, elle harcama 2.534: Klasik 3.120 kcal → açık yok.
+      final s = _s(manual: 2534, target: 90);
+      final r = _r(s, kg: 120);
+      expect(r.kcal, 3120);
+      expect(r.classicSurplus, isTrue);
+      expect(r.warnings, contains(SafeTargets.classicSurplusWarning));
+      expect(r.kgPerWeek, 0);
+      expect(_r(_s()).classicSurplus, isFalse);
+    });
+
+    test('elle harcama tahminden ±%30 saparsa işaretlenir', () {
+      final near = _r(_s(manual: 2800));
+      expect(near.estimatedExpenditureKcal, isNotNull);
+      expect(near.manualExpenditureOff, isFalse);
+      expect(_r(_s(manual: 5500)).manualExpenditureOff, isTrue);
+      expect(_r(_s(manual: null)).manualExpenditureOff, isFalse);
     });
 
     test('yazılan değerler sütun sınırına sıkıştırılır (ölçekleme yok)', () {

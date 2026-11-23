@@ -11,6 +11,7 @@ import '../../health/presentation/health_providers.dart'
 import '../../health/presentation/providers/body_providers.dart';
 import '../../health/presentation/providers/streaks_providers.dart';
 import '../../health/presentation/providers/week_deficit_providers.dart';
+import '../../health/presentation/weekly_detail_screen.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
@@ -133,6 +134,8 @@ class ReportsHealthWeekCard extends ConsumerWidget {
         final target = week.targetKcal;
         return BentoCard(
           key: const ValueKey('reports-health-week'),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => const WeeklyDetailScreen())),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -302,8 +305,11 @@ class ReportsMeasurementMonthCard extends ConsumerWidget {
                 for (final d in deltas)
                   _DeltaChip(
                     text: measurementDeltaLabel(d),
-                    good: d.field.lowerIsBetter ? d.deltaCm < 0 : d.deltaCm > 0,
-                    neutral: d.deltaCm.abs() < 0.05,
+                    // Göğüs/kol/bacak/boyun büyümesi iyi ya da kötü
+                    // sayılmaz (Vücut ile aynı: yalnızca azalan bel/kalça iyi).
+                    good: d.field.lowerIsBetter && d.deltaCm < 0,
+                    neutral:
+                        !d.field.lowerIsBetter || d.deltaCm.abs() < 0.05,
                     style: theme.textTheme.labelLarge,
                   ),
               ],
