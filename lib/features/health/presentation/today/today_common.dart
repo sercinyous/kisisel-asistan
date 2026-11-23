@@ -262,6 +262,7 @@ class KcalRing extends StatelessWidget {
     required this.center,
     this.caption,
     this.size = 116,
+    this.stroke = 10,
   });
 
   final double progress;
@@ -269,6 +270,7 @@ class KcalRing extends StatelessWidget {
   final String center;
   final String? caption;
   final double size;
+  final double stroke;
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +284,7 @@ class KcalRing extends StatelessWidget {
           color: color,
           overColor: AppColors.warning,
           track: AppColors.surfaceHigh,
+          stroke: stroke,
         ),
         child: Center(
           child: Padding(
@@ -296,6 +299,7 @@ class KcalRing extends StatelessWidget {
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
+                      fontSize: size < 100 ? 17 : null,
                     ),
                   ),
                   if (caption != null)
@@ -320,16 +324,17 @@ class _RingPainter extends CustomPainter {
     required this.color,
     required this.overColor,
     required this.track,
+    required this.stroke,
   });
 
   final double progress;
   final Color color;
   final Color overColor;
   final Color track;
+  final double stroke;
 
   @override
   void paint(Canvas canvas, Size size) {
-    const stroke = 10.0;
     final rect = Offset.zero & size;
     final arcRect = rect.deflate(stroke / 2);
     final base = Paint()
@@ -351,7 +356,10 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.color != color || old.track != track;
+      old.progress != progress ||
+      old.color != color ||
+      old.track != track ||
+      old.stroke != stroke;
 }
 
 /// İnce ilerleme çubuğu (yuvarlak uçlu).

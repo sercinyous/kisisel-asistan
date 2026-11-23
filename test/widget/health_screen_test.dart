@@ -222,8 +222,8 @@ void main() {
     expect(find.byKey(const Key('streak-chip-deficit')), findsOneWidget);
     expect(find.byKey(const Key('streak-chip-week')), findsOneWidget);
 
-    expect(text(tester, 'day-eaten'), '420 kcal');
-    expect(text(tester, 'day-protein'), startsWith('28 / '));
+    expect(text(tester, 'day-eaten'), 'Alınan 420 · Hedef 2.000 kcal');
+    expect(text(tester, 'day-protein'), startsWith('Protein 28 / '));
     expect(find.byKey(const Key('day-empty')), findsNothing);
     expect(find.byKey(const Key('day-gap-line')), findsOneWidget);
     expect(find.byKey(const Key('day-water')), findsOneWidget);
@@ -249,7 +249,7 @@ void main() {
       textScale: 1.3,
       snapshot: const HealthSnapshot(status: HealthStatus.unavailable),
     );
-    expect(text(tester, 'day-eaten'), '0 kcal');
+    expect(text(tester, 'day-eaten'), 'Alınan 0 · Hedef 2.000 kcal');
     expect(find.byKey(const Key('day-empty')), findsOneWidget);
     expect(find.byKey(const Key('day-gap-line')), findsNothing);
     // Sağlık kaynağı yok: Adım serisi gösterilmez.

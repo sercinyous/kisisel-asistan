@@ -19,8 +19,8 @@ class TodayView extends StatelessWidget {
           BentoGrid(children: [
             BentoCell(child: StreakStrip()),
             BentoCell(child: DayBalanceCard()),
+            BentoCell(child: MealsSection()),
           ]),
-          MealsSection(),
           SizedBox(height: AppSpacing.grid),
           MovementTiles(),
           SizedBox(height: AppSpacing.grid),

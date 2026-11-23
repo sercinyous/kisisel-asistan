@@ -92,7 +92,6 @@ class FatLossRateResult {
   /// Klasik formül 1.200 kcal tabanının altında kalori veriyor.
   bool get classicBelowFloor =>
       rate == FatLossRate.classic && targets.kcal < SafeTargets.kcalFloorMin;
-
 }
 
 /// Haftalık kaybın vücut ağırlığına göre sınıfı.

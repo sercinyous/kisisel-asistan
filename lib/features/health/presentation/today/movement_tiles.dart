@@ -133,18 +133,19 @@ class _Tile extends StatelessWidget {
     final progress = this.progress;
     return BentoCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BentoLabel(icon: icon, label: label, color: color),
-          const SizedBox(height: 10),
+          BentoLabel(label: label),
+          const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               value,
-              style: theme.textTheme.titleLarge?.copyWith(
+              style: TextStyle(
+                fontSize: AppType.value,
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
@@ -154,8 +155,8 @@ class _Tile extends StatelessWidget {
             sub,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: AppColors.textMuted),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: AppColors.textSecondary),
           ),
           if (progress != null) ...[
             const SizedBox(height: 8),

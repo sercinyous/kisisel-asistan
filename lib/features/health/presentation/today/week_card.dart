@@ -35,14 +35,12 @@ class WeekCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.calendar_view_week_outlined,
             label: 'Bu hafta',
-            color: AppColors.accent,
             trailing: week.valueOrNull == null
                 ? 'kalori açığı'
                 : TodayFormat.weekTitle(week.valueOrNull!),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           week.when(
             skipLoadingOnRefresh: true,
             loading: () => const HealthCardLoading(height: 150),
@@ -136,8 +134,6 @@ class _Average extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

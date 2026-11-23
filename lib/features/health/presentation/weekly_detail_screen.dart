@@ -134,7 +134,7 @@ final weeklyDetailDaysProvider =
 Color weeklyMetricColor(WeeklyMetric m) => switch (m) {
       WeeklyMetric.kcal => AppColors.nutrition,
       WeeklyMetric.deficit => AppColors.accent,
-      WeeklyMetric.protein => AppColors.fitness,
+      WeeklyMetric.protein => AppColors.protein,
       WeeklyMetric.steps => AppColors.ops,
       WeeklyMetric.sleep => AppColors.sleep,
       WeeklyMetric.workouts => AppColors.fitness,
@@ -279,9 +279,8 @@ class _DetailBody extends ConsumerWidget {
       return surplus && v != null ? -v : v;
     }
 
-    String format(double v) => surplus
-        ? TodayFormat.deficit(-v)
-        : formatWeeklyValue(metric, v);
+    String format(double v) =>
+        surplus ? TodayFormat.deficit(-v) : formatWeeklyValue(metric, v);
     final label = weeklyMetricLabel(metric, surplus: surplus);
     final values = [for (final d in days) valueOf(d)];
     final known = values.whereType<double>().toList();
@@ -342,8 +341,7 @@ class _DetailBody extends ConsumerWidget {
                 highlightIndex: days.length - 1,
                 target: target,
                 height: 150,
-                semanticsLabel:
-                    '$label grafiği, son ${days.length} gün',
+                semanticsLabel: '$label grafiği, son ${days.length} gün',
               ),
               if (!short) ...[
                 const SizedBox(height: 6),

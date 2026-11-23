@@ -454,8 +454,7 @@ List<Meal> scaledMenu(int mealCount, FatLossTargets targets) {
         for (final raw in meal.items) _capMeat(_scale(raw, factor)),
       ]),
   ];
-  final shared =
-      mealCount >= 3 ? capMealShare(meals, targets.kcal) : meals;
+  final shared = mealCount >= 3 ? capMealShare(meals, targets.kcal) : meals;
   return trimToTarget(shared, targets.kcal, fatTargetG: targets.fatG);
 }
 

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/bento.dart';
+import '../../../../core/widgets/ritim_ui.dart';
 import '../../../settings/presentation/settings_providers.dart';
 import '../../domain/weight_eta.dart';
 import '../health_format.dart';
@@ -58,56 +59,44 @@ class CheckinBanner extends ConsumerWidget {
       return BentoCard(
         key: const Key('checkin-banner'),
         gradient: [AppColors.accent, AppColors.sleep],
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.cardPadding, AppSpacing.m, AppSpacing.s, AppSpacing.m),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.16),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.straighten_outlined, color: AppColors.accent),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Bugün ölçü ve fotoğraf günü',
-                      style: theme.textTheme.titleSmall),
-                  Text(
-                    '3 adım, ~3 dk',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
-                  ),
-                ],
+            Text(
+              'Bugün ölçü ve fotoğraf günü',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: AppType.cardTitle,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(width: AppSpacing.s),
-            FilledButton(
-              key: const Key('checkin-start'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(0, 30),
-                tapTargetSize: MaterialTapTargetSize.padded,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                textStyle: TextStyle(
-                  fontSize: AppType.chip,
-                  fontWeight: FontWeight.w600,
+            const SizedBox(height: 4),
+            Text(
+              '3 adım, ~3 dk · tartı → mezura → fotoğraf',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                RitimPillButton(
+                  key: const Key('checkin-start'),
+                  label: 'Başla',
+                  onPressed: () => CheckinFlowScreen.open(context),
                 ),
-              ),
-              onPressed: () => CheckinFlowScreen.open(context),
-              child: const Text('Başla'),
-            ),
-            IconButton(
-              key: const Key('checkin-dismiss'),
-              tooltip: 'Bugün gösterme',
-              onPressed: () =>
-                  ref.read(checkinDismissedProvider.notifier).dismiss(today),
-              icon: Icon(Icons.close_outlined,
-                  size: 18, color: AppColors.textMuted),
+                const SizedBox(width: 6),
+                Tooltip(
+                  message: 'Bugün gösterme',
+                  child: RitimPillButton(
+                    key: const Key('checkin-dismiss'),
+                    label: 'Sonra',
+                    ghost: true,
+                    onPressed: () => ref
+                        .read(checkinDismissedProvider.notifier)
+                        .dismiss(today),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -143,20 +132,16 @@ class CheckinBanner extends ConsumerWidget {
   }
 }
 
-/// Kart başlığı + sağda tek eylem.
+/// Kart başlığı (ikonsuz, mürekkep) + sağda küçük gri eylem.
 class _CardHeader extends StatelessWidget {
   const _CardHeader({
-    required this.icon,
     required this.title,
-    required this.color,
     this.actionKey,
     this.actionLabel,
     this.onAction,
   });
 
-  final IconData icon;
   final String title;
-  final Color color;
   final Key? actionKey;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -165,24 +150,33 @@ class _CardHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: AppSpacing.s),
         Expanded(
           child: Text(
             title,
-            style:
-                Theme.of(context).textTheme.titleSmall?.copyWith(color: color),
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: AppType.cardTitle,
+              fontWeight: FontWeight.w600,
+              height: 1.3,
+            ),
           ),
         ),
         if (actionLabel != null)
-          TextButton(
+          GestureDetector(
             key: actionKey,
-            onPressed: onAction,
-            style: TextButton.styleFrom(
-              minimumSize: const Size(healthMinTouch, healthMinTouch),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            behavior: HitTestBehavior.opaque,
+            onTap: onAction,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 0, 6),
+              child: Text(
+                actionLabel!,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: AppType.caption,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-            child: Text(actionLabel!),
           ),
       ],
     );
@@ -240,9 +234,7 @@ class BodyWeightCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardHeader(
-            icon: Icons.monitor_weight_outlined,
             title: 'Kilo',
-            color: AppColors.accent,
             actionKey: const Key('body-weigh'),
             actionLabel: '+ Tartıl',
             onAction: () => WeightFormSheet.show(context),
@@ -280,14 +272,26 @@ class BodyWeightCard extends ConsumerWidget {
                         unit: 'kg',
                         large: true,
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        [
-                          if (change != null)
-                            '${BodyFormat.delta(change)} kg · 7 gün',
-                          if (eta != null) eta,
-                        ].join('\n'),
+                      const SizedBox(height: 2),
+                      Text.rich(
                         key: const Key('body-weight-summary'),
+                        TextSpan(children: [
+                          if (change != null)
+                            TextSpan(
+                              text: '${BodyFormat.delta(change)} kg · 7 gün',
+                              style: TextStyle(
+                                color: change == 0
+                                    ? AppColors.textSecondary
+                                    : (change < 0) ==
+                                            (target <= entries.last.weightKg)
+                                        ? AppColors.positive
+                                        : AppColors.negative,
+                              ),
+                            ),
+                          if (change != null && eta != null)
+                            const TextSpan(text: '\n'),
+                          if (eta != null) TextSpan(text: eta),
+                        ]),
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: AppColors.textSecondary),
                       ),
@@ -344,23 +348,9 @@ class _Sparkline extends StatelessWidget {
             isCurved: true,
             preventCurveOverShooting: true,
             color: color,
-            barWidth: 2,
-            dotData: FlDotData(
-              checkToShowDot: (spot, _) => spot == spots.last,
-              getDotPainter: (_, __, ___, ____) =>
-                  FlDotCirclePainter(radius: 3, color: color, strokeWidth: 0),
-            ),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  color.withValues(alpha: 0.18),
-                  color.withValues(alpha: 0),
-                ],
-              ),
-            ),
+            barWidth: 1.6,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(show: false),
           ),
         ],
       ),
@@ -383,9 +373,7 @@ class BodyMeasurementsCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardHeader(
-            icon: Icons.straighten_outlined,
             title: 'Ölçüler',
-            color: AppColors.ops,
             actionKey: const Key('body-measure'),
             actionLabel: '+ Ölç',
             onAction: () => MeasurementFormSheet.show(context),
@@ -451,8 +439,8 @@ class _MeasurementRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.chip),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 32),
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          constraints: const BoxConstraints(minHeight: 34),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
             border: divider
                 ? Border(bottom: BorderSide(color: AppColors.border))
@@ -460,14 +448,12 @@ class _MeasurementRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              SizedBox(
-                width: 64,
-                child: Text(s.field.label, style: theme.textTheme.bodyMedium),
-              ),
               Text(
-                '${BodyFormat.cm(s.last)} cm',
-                style:
-                    theme.textTheme.titleSmall?.copyWith(fontFeatures: tabular),
+                '${s.field.label} ${BodyFormat.cm(s.last)} cm',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontFeatures: tabular,
+                ),
               ),
               const Spacer(),
               if (s.fromStart != null)
@@ -483,7 +469,7 @@ class _MeasurementRow extends StatelessWidget {
                 Text(
                   '${BodyFormat.delta(s.fromPrevious!)} geçen',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.textMuted,
+                    color: AppColors.textPrimary,
                     fontFeatures: tabular,
                   ),
                 ),
@@ -513,9 +499,7 @@ class BodyPhotosCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardHeader(
-            icon: Icons.photo_camera_outlined,
             title: 'Fotoğraflar',
-            color: AppColors.sleep,
             actionKey: const Key('body-compare'),
             actionLabel:
                 (checkins.valueOrNull?.length ?? 0) >= 2 ? 'Karşılaştır' : null,
@@ -591,11 +575,7 @@ class _EmptyCta extends StatelessWidget {
                 ?.copyWith(color: AppColors.textSecondary),
           ),
         ),
-        OutlinedButton(
-          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
-          onPressed: onAction,
-          child: Text(action),
-        ),
+        RitimPillButton(label: action, ghost: true, onPressed: onAction),
       ],
     );
   }

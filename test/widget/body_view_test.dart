@@ -166,7 +166,7 @@ void main() {
       _m(0, {BodyField.waist: 88}),
     ]);
     await _pump(tester, _inList(const BodyView()), body: repo);
-    expect(find.text('88 cm'), findsOneWidget);
+    expect(find.text('Bel 88 cm'), findsOneWidget);
     expect(find.text('−4 başlangıçtan'), findsOneWidget);
     expect(find.text('−0,5 geçen'), findsOneWidget);
     expect(find.byKey(const Key('body-field-hip')), findsOneWidget);

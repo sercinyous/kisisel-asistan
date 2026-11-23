@@ -7,7 +7,7 @@ import '../../../core/widgets/bento.dart';
 import 'health_widgets.dart';
 import 'providers/streaks_providers.dart';
 import 'providers/week_deficit_providers.dart';
-import 'today/streak_strip.dart' show streakColor, streakIcon;
+
 import 'today/today_common.dart';
 import 'trend_providers.dart' show trendClockProvider;
 
@@ -105,39 +105,35 @@ class _StreakCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = streakColor(status.kind);
+    final color = AppColors.accent;
     final first = AppDates.addDays(today, -29);
+    final done = status.today == StreakToday.done;
     return BentoCard(
       key: Key('streak-card-${status.kind.name}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: streakIcon(status.kind),
             label: status.kind.semanticLabel,
-            color: color,
-            trailing: status.today == StreakToday.done
-                ? 'bugün tamam'
-                : 'bugün bekleniyor',
+            trailing: 'en iyi ${status.best}',
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _Stat(
-                  label: 'Şimdi',
-                  value: '${status.current} gün',
-                  semantics: status.semantics,
-                ),
+          const SizedBox(height: 6),
+          Semantics(
+            label: status.semantics,
+            excludeSemantics: true,
+            child: Text(
+              '${status.current} gün',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
               ),
-              Expanded(
-                child: _Stat(
-                  label: 'En iyi',
-                  value: '${status.best} gün',
-                  semantics: 'En iyi ${status.best} gün',
-                ),
-              ),
-            ],
+            ),
+          ),
+          Text(
+            done ? '✓ bugün tamam' : '• bugün bekleniyor',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: done ? AppColors.positive : AppColors.textSecondary,
+            ),
           ),
           const SizedBox(height: 12),
           Semantics(
@@ -179,42 +175,6 @@ class _StreakCard extends StatelessWidget {
   }
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({
-    required this.label,
-    required this.value,
-    required this.semantics,
-  });
-
-  final String label;
-  final String value;
-  final String semantics;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Semantics(
-      label: semantics,
-      excludeSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(color: AppColors.textSecondary)),
-          Text(
-            value,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 enum _DotState { done, missed, pending }
 
 class _Dot extends StatelessWidget {
@@ -225,8 +185,8 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 14,
-        height: 14,
+        width: 16,
+        height: 16,
         child: DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -261,12 +221,10 @@ class _WeeksBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BentoLabel(
-          icon: Icons.calendar_view_week_outlined,
           label: surplus ? 'Haftalık fazla' : 'Haftalık açık',
-          color: AppColors.fitness,
           trailing: 'son 8 hafta',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         DayBarChart(
           values: [for (final w in weeks) w.balanceKcal],
           color: AppColors.accent,
@@ -288,10 +246,8 @@ class _WeeksBody extends StatelessWidget {
             '${target > 0 ? ' / ${TodayFormat.weekTarget(target, surplus: surplus)}' : ''}'
             ' · ${TodayFormat.weekKg(weeks.last)}',
             key: const Key('streak-weeks-current'),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
           ),
         if (target > 0)
           Text(

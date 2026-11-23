@@ -154,12 +154,10 @@ class _PlanBody extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.tune_outlined, color: AppColors.textSecondary),
-                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Hedefleri elle ayarla',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -225,8 +223,6 @@ class _WarningLine extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: c),
-          const SizedBox(width: 6),
           Expanded(
             child: Text(
               text,
@@ -300,7 +296,7 @@ class _GoalCard extends ConsumerWidget {
             '${HealthFormat.plain(resolved.weightKg)} → '
             '${HealthFormat.plain(settings.targetWeightKg)} kg',
             key: const Key('plan-goal-weights'),
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.titleLarge?.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w700,
             ),
@@ -603,7 +599,7 @@ class _TargetsCard extends ConsumerWidget {
               _Macro(
                   label: 'Protein',
                   grams: t.proteinG,
-                  color: AppColors.fitness),
+                  color: AppColors.protein),
               _Macro(
                   label: 'Karb', grams: t.carbsG, color: AppColors.nutrition),
               _Macro(label: 'Yağ', grams: t.fatG, color: AppColors.warning),
@@ -647,9 +643,7 @@ class _TargetsCard extends ConsumerWidget {
             _WarningLine(
               key: Key('plan-warning-${resolved.warnings.indexOf(w)}'),
               text: w,
-              color: w == resolved.lockedText
-                  ? AppColors.textSecondary
-                  : null,
+              color: w == resolved.lockedText ? AppColors.textSecondary : null,
             ),
         ],
       ),
@@ -1341,8 +1335,8 @@ class _MenuSection extends ConsumerWidget {
         RitimSegmented<int>(
           segments: const {2: '2 öğün', 3: '3 öğün'},
           selected: mealCount,
-          onChanged: (n) => guardedPlanWrite(context,
-              () => ref.read(planControllerProvider).setMealCount(n)),
+          onChanged: (n) => guardedPlanWrite(
+              context, () => ref.read(planControllerProvider).setMealCount(n)),
         ),
         for (final meal in menu) ...[
           const SizedBox(height: 12),

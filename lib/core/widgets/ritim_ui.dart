@@ -114,11 +114,21 @@ class RitimChipTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: AppType.chip,
+                  height: 1.3,
+                  color: AppColors.textPrimary,
+                ),
+              ),
               Text(
                 value,
                 maxLines: 1,
@@ -128,16 +138,6 @@ class RitimChipTile extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   height: 1.3,
                   color: valueColor ?? AppColors.textPrimary,
-                ),
-              ),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: AppType.chip,
-                  height: 1.3,
-                  color: AppColors.textSecondary,
                 ),
               ),
               if (st != null)

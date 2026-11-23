@@ -274,7 +274,8 @@ class _Diff extends StatelessWidget {
           horizontal: AppSpacing.cardPadding, vertical: AppSpacing.md),
       child: Row(
         children: [
-          Icon(Icons.compare_arrows_outlined, size: 18, color: AppColors.accent),
+          Icon(Icons.compare_arrows_outlined,
+              size: 18, color: AppColors.accent),
           const SizedBox(width: AppSpacing.s),
           Expanded(
             child: Text(parts.join(' · '), style: theme.textTheme.bodyMedium),

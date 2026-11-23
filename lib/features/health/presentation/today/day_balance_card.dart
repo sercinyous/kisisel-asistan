@@ -9,7 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/bento.dart';
 import '../../../kokpit/presentation/kokpit_providers.dart';
-import '../fat_loss_providers.dart' show todayMealGapProvider, GapStatus;
+import '../fat_loss_providers.dart' show todayMealGapProvider;
 import '../health_format.dart';
 import '../health_widgets.dart';
 import '../providers/streaks_providers.dart';
@@ -38,7 +38,6 @@ class DayBalanceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final nutrition = ref.watch(todayNutritionProvider);
     final targets = ref.watch(targetsProvider);
     final lowIntake =
@@ -50,12 +49,7 @@ class DayBalanceCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BentoLabel(
-            icon: Icons.donut_large_outlined,
-            label: 'Günün dengesi',
-            color: AppColors.nutrition,
-            trailing: 'hedef ${HealthFormat.count(targets.kcal)} kcal',
-          ),
+          const BentoLabel(label: 'Günün dengesi', trailing: '›'),
           if (lowIntake) ...[
             const SizedBox(height: 10),
             const _Notice(
@@ -64,7 +58,7 @@ class DayBalanceCard extends ConsumerWidget {
                   'kalmak kas kaybettirir; bugün hedefe yaklaşmaya çalış.',
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           nutrition.when(
             skipLoadingOnRefresh: true,
             loading: () => const HealthCardLoading(height: 120),
@@ -79,20 +73,9 @@ class DayBalanceCard extends ConsumerWidget {
               targets: targets,
             ),
           ),
-          const DayDeficitLine(),
           const _GapLine(),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Divider(height: 1, thickness: 0.5, color: AppColors.border),
-          ),
+          const SizedBox(height: 10),
           const WaterRow(),
-          const SizedBox(height: 4),
-          Text(
-            'Ayrıntı için dokun',
-            textAlign: TextAlign.end,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: AppColors.textMuted),
-          ),
         ],
       ),
     );
@@ -119,97 +102,66 @@ class _Balance extends StatelessWidget {
     final left = target - eaten;
     final progress = target <= 0 ? 0.0 : eaten / target;
     final over = left < 0;
-    Widget row(String label, String value, {Color? color, Key? key}) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(
+    final proteinTarget = targets.proteinG;
+    final sub = theme.textTheme.bodyMedium?.copyWith(
+      color: AppColors.textSecondary,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Semantics(
+          key: const Key('day-left'),
+          label: over
+              ? 'Hedefin ${HealthFormat.count(-left)} kcal üstünde'
+              : 'Kalan ${HealthFormat.count(left)} kcal',
+          excludeSemantics: true,
+          child: KcalRing(
+            progress: progress,
+            color: AppColors.nutrition,
+            center: HealthFormat.count(left.abs()),
+            caption: over ? 'fazla' : 'kalan',
+            size: 84,
+            stroke: 8,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(color: AppColors.textSecondary),
-                ),
-              ),
               Text(
-                value,
-                key: key,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: color ?? AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
+                'Alınan ${HealthFormat.count(eaten)} · '
+                'Hedef ${HealthFormat.count(target)} kcal',
+                key: const Key('day-eaten'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: sub,
               ),
+              const SizedBox(height: 4),
+              Text(
+                'Protein ${HealthFormat.count(protein)} / '
+                '${HealthFormat.count(proteinTarget)} g',
+                key: const Key('day-protein'),
+                style: sub,
+              ),
+              const SizedBox(height: 6),
+              SlimBar(
+                progress: proteinTarget <= 0 ? 0 : protein / proteinTarget,
+                color: AppColors.protein,
+              ),
+              if (!logged) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Henüz öğün girilmedi.',
+                  key: const Key('day-empty'),
+                  style: sub,
+                ),
+              ],
+              const DayDeficitLine(),
             ],
           ),
-        );
-    final proteinTarget = targets.proteinG;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Semantics(
-              label: over
-                  ? 'Hedefin ${HealthFormat.count(-left)} kcal üstünde'
-                  : 'Kalan ${HealthFormat.count(left)} kcal',
-              excludeSemantics: true,
-              child: KcalRing(
-                progress: progress,
-                color: AppColors.nutrition,
-                center: HealthFormat.count(left.abs()),
-                caption: over ? 'kcal fazla' : 'kcal kalan',
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                children: [
-                  row('Alınan', '${HealthFormat.count(eaten)} kcal',
-                      key: const Key('day-eaten')),
-                  row('Hedef', '${HealthFormat.count(target)} kcal'),
-                  row(
-                    over ? 'Fazla' : 'Kalan',
-                    '${HealthFormat.count(left.abs())} kcal',
-                    key: const Key('day-left'),
-                    color: over ? AppColors.warning : AppColors.nutrition,
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Text(
-              'Protein',
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: AppColors.textSecondary),
-            ),
-            const Spacer(),
-            Text(
-              '${HealthFormat.count(protein)} / ${HealthFormat.count(proteinTarget)} g',
-              key: const Key('day-protein'),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        SlimBar(
-          progress: proteinTarget <= 0 ? 0 : protein / proteinTarget,
-          color: AppColors.fitness,
-        ),
-        if (!logged) ...[
-          const SizedBox(height: 10),
-          Text(
-            'Henüz öğün girilmedi.',
-            key: const Key('day-empty'),
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: AppColors.textSecondary),
-          ),
-        ],
       ],
     );
   }
@@ -224,12 +176,11 @@ class DayDeficitLine extends ConsumerWidget {
     if (deficit == null) return const SizedBox.shrink();
     // Kas yapmada fazla hedefin kendisidir: uyarı rengi yalnızca açıkla
     // çalışan hedeflerde.
-    final surplusGoal =
-        ref.watch(resolvedTargetsProvider).valueOrNull?.mode ==
-            TargetsMode.gain;
+    final surplusGoal = ref.watch(resolvedTargetsProvider).valueOrNull?.mode ==
+        TargetsMode.gain;
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -243,6 +194,7 @@ class DayDeficitLine extends ConsumerWidget {
                   ? AppColors.textPrimary
                   : AppColors.warning,
               fontWeight: FontWeight.w600,
+              height: 1.3,
             ),
           ),
           Text(
@@ -265,32 +217,14 @@ class _GapLine extends ConsumerWidget {
     final report = ref.watch(todayMealGapProvider).valueOrNull;
     if (report == null || report.nothingLogged) return const SizedBox.shrink();
     final theme = Theme.of(context);
-    final warn = report.gaps.any((g) => g.status == GapStatus.excess);
     return Padding(
       padding: const EdgeInsets.only(top: 10),
-      child: Row(
-        children: [
-          Icon(
-            report.allDone ? Icons.check_circle_rounded : Icons.flag_outlined,
-            size: 18,
-            color: report.allDone
-                ? AppColors.accent
-                : warn
-                    ? AppColors.warning
-                    : AppColors.nutrition,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              report.summary,
-              key: const Key('day-gap-line'),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        report.allDone ? '✓ ${report.summary}' : report.summary,
+        key: const Key('day-gap-line'),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: report.allDone ? AppColors.positive : AppColors.warning,
+        ),
       ),
     );
   }
@@ -370,48 +304,58 @@ class WaterRow extends ConsumerWidget {
         final notifier = ref.read(waterProvider.notifier);
         return Row(
           children: [
-            Icon(Icons.water_drop_outlined, size: 18, color: AppColors.water),
-            const SizedBox(width: 8),
             Expanded(
               child: Semantics(
                 label: 'Su ${formatWaterMl(today.totalMl)} / '
                     '${formatWaterMl(target)}',
                 excludeSemantics: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
                     Text(
-                      '${formatWaterMl(today.totalMl)} / ${formatWaterMl(target)}',
-                      key: const Key('day-water'),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      'Su',
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: AppColors.textPrimary),
                     ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: [
-                        for (var i = 0; i < glasses; i++)
-                          SizedBox(
-                            width: 10,
-                            height: 10,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: i < filled
-                                    ? AppColors.water
-                                    : AppColors.surfaceHigh,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Wrap(
+                        spacing: 5,
+                        runSpacing: 4,
+                        children: [
+                          for (var i = 0; i < glasses; i++)
+                            SizedBox(
+                              width: 9,
+                              height: 9,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color:
+                                      i < filled ? AppColors.textPrimary : null,
+                                  border: i < filled
+                                      ? null
+                                      : Border.all(
+                                          color: AppColors.textMuted,
+                                          width: 1.2,
+                                        ),
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${formatWaterMl(today.totalMl)} / '
+                      '${formatWaterMl(target)}',
+                      key: const Key('day-water'),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
               ),
             ),
+            const SizedBox(width: 6),
             IconButton(
               key: const Key('day-water-minus'),
               tooltip: 'Son su kaydını geri al',
@@ -419,13 +363,13 @@ class WaterRow extends ConsumerWidget {
                   ? () =>
                       _run(context, notifier.undo, 'Son kayıt geri alınamadı.')
                   : null,
-              icon: const Icon(Icons.remove_outlined, size: 18),
+              icon: const Icon(Icons.remove_outlined, size: 16),
               style: IconButton.styleFrom(
                 backgroundColor: AppColors.selection,
                 foregroundColor: AppColors.textPrimary,
                 disabledBackgroundColor: AppColors.selection,
-                fixedSize: const Size.square(34),
-                minimumSize: const Size.square(34),
+                fixedSize: const Size.square(30),
+                minimumSize: const Size.square(30),
               ),
             ),
             IconButton.filledTonal(
@@ -433,12 +377,12 @@ class WaterRow extends ConsumerWidget {
               tooltip: '$waterGlassMl ml su ekle',
               onPressed: () => _run(context, () => notifier.add(waterGlassMl),
                   'Su kaydı eklenemedi.'),
-              icon: const Icon(Icons.add_outlined, size: 18),
+              icon: const Icon(Icons.add_outlined, size: 16),
               style: IconButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.onAccent,
-                fixedSize: const Size.square(34),
-                minimumSize: const Size.square(34),
+                fixedSize: const Size.square(30),
+                minimumSize: const Size.square(30),
               ),
             ),
           ],
