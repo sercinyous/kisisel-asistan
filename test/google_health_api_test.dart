@@ -473,6 +473,105 @@ void main() {
       expect(error.message, contains('400'));
     });
 
+    test('400 ACCOUNT_NOT_LINKED → Google Health profili yok', () async {
+      final error = await failWith(400, body: {
+        'error': {
+          'code': 400,
+          'message': 'The user account is not linked to Google Health.',
+          'status': 'FAILED_PRECONDITION',
+          'details': [
+            {
+              '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+              'reason': 'ACCOUNT_NOT_LINKED',
+              'metadata': {'redirect_uri': 'https://fitbit.google.com/auth/signup'},
+            },
+          ],
+        },
+      });
+      expect(error.kind, GoogleHealthErrorKind.accountNotLinked);
+      expect(error.message, contains('Fitbit'));
+      expect(error.message, contains('yeniden bağlan'));
+      expect(error.detail, contains('ACCOUNT_NOT_LINKED'));
+    });
+
+    test('400 gövdesi: Google mesajı kısaltılmış ve temizlenmiş gösterilir',
+        () async {
+      final long = 'Invalid range:\n start must be before end. ${'x' * 300}';
+      final error = await failWith(400, body: {
+        'error': {
+          'code': 400,
+          'message': long,
+          'status': 'INVALID_ARGUMENT',
+        },
+      });
+      expect(error.kind, GoogleHealthErrorKind.requestRejected);
+      expect(error.message, contains('HTTP 400 · INVALID_ARGUMENT: Invalid range'));
+      expect(error.message, contains('Google\'a yeniden bağlanmayı dene'));
+      expect(error.message.contains('\n'), isFalse);
+      expect(error.detail!.length, lessThanOrEqualTo(150));
+    });
+
+    test('identity: GET users/me/identity, profil yoksa hata', () async {
+      final requests = <http.Request>[];
+      final ok = GoogleHealthApi(
+        accessToken: () async => 'tok',
+        client: MockClient((request) async {
+          requests.add(request);
+          return jsonResponse({'healthUserId': 'u-1'});
+        }),
+      );
+      expect(await ok.identity(), 'u-1');
+      expect(requests.single.method, 'GET');
+      expect(requests.single.url.toString(),
+          'https://health.googleapis.com/v4/users/me/identity');
+      final unlinked = GoogleHealthApi(
+        accessToken: () async => 'tok',
+        client: MockClient((_) async => jsonResponse({
+              'error': {
+                'code': 400,
+                'status': 'FAILED_PRECONDITION',
+                'details': [
+                  {'reason': 'ACCOUNT_NOT_LINKED'},
+                ],
+              },
+            }, status: 400)),
+      );
+      await expectLater(
+        unlinked.identity(),
+        throwsA(isA<GoogleHealthException>().having((e) => e.kind, 'kind',
+            GoogleHealthErrorKind.accountNotLinked)),
+      );
+    });
+
+    test('yeni hesap: boş rollUp yanıtı hata değil, boş sonuç', () async {
+      final api = GoogleHealthApi(
+        accessToken: () async => 'tok',
+        client: MockClient((_) async => jsonResponse(const {})),
+      );
+      expect(
+        await api.dailySteps(
+            from: DateTime(2026, 11, 16), to: DateTime(2026, 11, 17)),
+        isEmpty,
+      );
+    });
+
+    test('gece yarısından salise sonra boş aralık istenmez', () async {
+      var sent = 0;
+      final api = GoogleHealthApi(
+        accessToken: () async => 'tok',
+        client: MockClient((_) async {
+          sent++;
+          return jsonResponse(const {});
+        }),
+      );
+      final result = await api.dailySteps(
+        from: DateTime(2026, 11, 17),
+        to: DateTime(2026, 11, 17, 0, 0, 0, 400),
+      );
+      expect(result, isEmpty);
+      expect(sent, 0);
+    });
+
     test('ağ hatası ve bozuk yanıt', () async {
       final offline = GoogleHealthApi(
         accessToken: () async => 'tok',

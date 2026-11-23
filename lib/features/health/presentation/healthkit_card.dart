@@ -165,7 +165,7 @@ class HealthSourceBanner extends ConsumerWidget {
                 message: message,
                 child: Text(
                   message,
-                  maxLines: 1,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium,
                 ),

@@ -627,3 +627,19 @@ ortamdan açılamadığından belgelerdeki açıklama metinleri arama özetlerin
   antrenmanı saymasını.
 - `tool/test/configure_ios_test.sh` — gerçek `flutter create --platforms=ios` Info.plist'inde, PlistBuddy taklidiyle
   (`tool/test/plistbuddy_stub.py`): atlama, yazma, idempotentlik, kimlik değişimi, bozuk kimlik.
+
+### 11.5 Bağlantı doğrulama ve hata eşlemesi
+- Google'a bağlandıktan hemen sonra `GET v4/users/me/identity` çağrılır. 400 `FAILED_PRECONDITION`
+  (neden `ACCOUNT_NOT_LINKED`) → `accountNotLinked`: bağlantı kurulmuş sayılmaz, Google oturumu kapatılır,
+  satır "Bağlı değil" + "Google Health (Fitbit) profili yok…" gösterir. Diğer kimlik hataları bağlantıyı bozmaz.
+- Okuma sırasında `accountNotLinked` → kart durumu `reconnect` ("Google'a yeniden bağlan").
+- Diğer 4xx → `requestRejected`; mesaj `HTTP <kod> · <DURUM/NEDEN>: <Google mesajı>` (denetim karakterleri
+  atılır, mesaj 120 karakterde kesilir) + "Google'a yeniden bağlanmayı dene".
+- Boş yanıt (yeni hesap) hata değildir: durum `ok`, "bağlı, henüz veri yok".
+- `dailyRollUp` saniyeye kırpılınca boş kalan aralığı (gece yarısından salise sonra) istemez.
+- Karşılama: "bağlandı" yalnızca ilk okuma `ok` dönünce yazılır; Google'ın ilk okuması başarısızsa neden
+  gösterilir ve kaynak Apple Sağlık'a döner.
+- Bağlantılar › Apple Sağlık: düğme her dokunuşta HealthKit iznini ister, sonra bu hesap için onay verir ve
+  yeniden okur. `notConnected` → "Bu hesap için onay gerekli" / **Bağla**; Google seçiliyken **Bağlan ve seç**.
+- Bağlantılar › Google Health: hesap bağlı ama Apple Sağlık seçiliyken satırda **Kaynak olarak seç**
+  (`settings-google-select`) görünür; Google'ı etkin kaynak yapar ve ilk okumanın sonucunu bildirir.

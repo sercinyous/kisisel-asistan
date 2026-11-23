@@ -32,7 +32,8 @@ HealthStatus healthStatusForGoogleError(GoogleHealthErrorKind kind) =>
       GoogleHealthErrorKind.notConfigured => HealthStatus.unavailable,
       GoogleHealthErrorKind.notConnected => HealthStatus.notConnected,
       GoogleHealthErrorKind.reconnect ||
-      GoogleHealthErrorKind.missingScope =>
+      GoogleHealthErrorKind.missingScope ||
+      GoogleHealthErrorKind.accountNotLinked =>
         HealthStatus.reconnect,
       _ => HealthStatus.failed,
     };

@@ -5,6 +5,7 @@ import '../../../core/services/health_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../kokpit/presentation/kokpit_providers.dart';
 import 'onboarding_widgets.dart';
 
 /// Apple Health izninin bu adımdaki durumu.
@@ -59,19 +60,41 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
     } catch (_) {
       // Seçim yazılamazsa bile okuma denenir.
     }
+    // Kaynak zaten seçiliyse seçim okumayı yenilemez; onaydan sonra yenilenir.
+    container.invalidate(healthTodayProvider);
     if (!mounted || ref.read(healthSourceProvider) != kind) return;
     setState(() {
-      _confirmedFor = kind;
+      _confirmedFor = null;
       _todaySteps = null;
+      if (kind == HealthSourceKind.googleHealth) _googleError = null;
     });
+    HealthSnapshot snapshot;
     try {
-      final snapshot = await ref.read(healthDataSourceProvider).readToday();
-      if (!mounted || _confirmedFor != kind) return;
-      if (snapshot.status == HealthStatus.ok) {
-        setState(() => _todaySteps = snapshot.steps);
-      }
+      snapshot = await ref.read(healthDataSourceProvider).readToday();
     } catch (_) {
-      // Onay metni adım sayısı olmadan gösterilir.
+      snapshot = const HealthSnapshot(status: HealthStatus.failed);
+    }
+    if (!mounted || ref.read(healthSourceProvider) != kind) return;
+    if (snapshot.status == HealthStatus.ok) {
+      // Yeni hesapta veri olmaması hata değildir: bağlı, henüz veri yok.
+      setState(() {
+        _confirmedFor = kind;
+        _todaySteps = snapshot.hasData ? snapshot.steps : null;
+      });
+      return;
+    }
+    if (kind == HealthSourceKind.googleHealth) {
+      // İlk okuma başarısız: Google kaynak olarak bırakılmaz, neden gösterilir.
+      setState(() {
+        _googleError = snapshot.message ?? 'Google Health okunamadı.';
+      });
+      try {
+        await selectHealthSource(container, HealthSourceKind.appleHealth);
+      } catch (_) {
+        // Seçim yazılamazsa kullanıcı Bağlantılar'dan değiştirebilir.
+      }
+    } else {
+      setState(() => _confirmedFor = kind);
     }
   }
 
@@ -129,7 +152,7 @@ class _OnboardingHealthStepState extends ConsumerState<OnboardingHealthStep> {
         kind == HealthSourceKind.appleHealth ? 'Apple Sağlık' : 'Google Health';
     final steps = _todaySteps;
     return steps == null
-        ? '$name bağlandı.'
+        ? '$name bağlandı. Henüz veri yok; veriler geldikçe görünür.'
         : '$name bağlandı. Bugün $steps adım.';
   }
 

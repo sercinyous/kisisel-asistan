@@ -100,6 +100,34 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
     if (error != null) _show(messenger, error);
   }
 
+  /// Bağlı hesabı etkin sağlık kaynağı yapar ve ilk okumanın sonucunu bildirir.
+  Future<void> _select() async {
+    final container = ProviderScope.containerOf(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _syncing = true);
+    try {
+      await selectHealthSource(container, HealthSourceKind.googleHealth);
+    } catch (_) {
+      // Seçim yazılamazsa durum satırı eski kaynağı göstermeye devam eder.
+    }
+    if (mounted) setState(() => _syncing = false);
+    if (container.read(healthSourceProvider) != HealthSourceKind.googleHealth) {
+      return;
+    }
+    final snapshot = container.read(healthTodayProvider).valueOrNull;
+    if (snapshot == null || snapshot.source != HealthSourceKind.googleHealth) {
+      return;
+    }
+    _show(
+      messenger,
+      snapshot.status == HealthStatus.ok
+          ? (snapshot.hasData
+              ? 'Google Health kaynak olarak seçildi.'
+              : 'Google Health seçildi, henüz veri yok.')
+          : snapshot.message ?? 'Google Health okunamadı.',
+    );
+  }
+
   Future<void> _sync() async {
     final container = ProviderScope.containerOf(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
@@ -110,7 +138,9 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
     _show(
       messenger,
       snapshot?.status == HealthStatus.ok
-          ? 'Google Health eşitlendi.'
+          ? (snapshot!.hasData
+              ? 'Google Health eşitlendi.'
+              : 'Google Health bağlı, henüz veri yok.')
           : snapshot?.message ?? 'Google Health eşitlenemedi.',
     );
   }
@@ -169,11 +199,13 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
           AppColors.textMuted,
           'Derlemeye GOOGLE_IOS_CLIENT_ID verilmedi.',
         ),
-      GoogleLinkStatus.disconnected => (
-          'Bağlı değil',
-          AppColors.textMuted,
-          'Fitbit verilerin Google hesabından okunur.',
-        ),
+      GoogleLinkStatus.disconnected => link.message == null
+          ? (
+              'Bağlı değil',
+              AppColors.textMuted,
+              'Fitbit verilerin Google hesabından okunur.',
+            )
+          : ('Bağlı değil', AppColors.warning, link.message),
       GoogleLinkStatus.connecting => (
           'Bağlanıyor…',
           AppColors.textMuted,
@@ -205,6 +237,13 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
           key: const Key('settings-google-connect'),
           onPressed: busy ? null : _connect,
           child: const Text('Google\'a yeniden bağlan'),
+        ),
+      // Hesap bağlı ama Apple Sağlık seçili: tek dokunuşla kaynağa geçilir.
+      if (link.status == GoogleLinkStatus.connected && !googleSelected)
+        TextButton(
+          key: const Key('settings-google-select'),
+          onPressed: busy ? null : _select,
+          child: const Text('Kaynak olarak seç'),
         ),
       if (link.status == GoogleLinkStatus.connected)
         TextButton(

@@ -217,6 +217,47 @@ void main() {
   });
 
   group('readToday / readPastDays', () {
+    test('yeni Google hesabı: boş yanıtlar bağlı ve veri yok sayılır',
+        () async {
+      final fresh = GoogleHealthSource(
+        link: link,
+        api: GoogleHealthApi(
+          accessToken: link.accessToken,
+          client: MockClient((_) async => http.Response('{}', 200)),
+        ),
+      );
+      final snapshot = await fresh.readToday(now: now);
+      expect(snapshot.status, HealthStatus.ok);
+      expect(snapshot.hasData, isFalse);
+      expect(link.failures, isEmpty);
+    });
+
+    test('profil yok (400 ACCOUNT_NOT_LINKED): yeniden bağlan + açıklama',
+        () async {
+      final unlinked = GoogleHealthSource(
+        link: link,
+        api: GoogleHealthApi(
+          accessToken: link.accessToken,
+          client: MockClient((_) async => http.Response(
+                jsonEncode({
+                  'error': {
+                    'code': 400,
+                    'status': 'FAILED_PRECONDITION',
+                    'details': [
+                      {'reason': 'ACCOUNT_NOT_LINKED'},
+                    ],
+                  },
+                }),
+                400,
+              )),
+        ),
+      );
+      final snapshot = await unlinked.readToday(now: now);
+      expect(snapshot.status, HealthStatus.reconnect);
+      expect(snapshot.message, contains('Fitbit'));
+      expect(link.failures.single.kind, GoogleHealthErrorKind.accountNotLinked);
+    });
+
     test('bugün: adım, aktif kalori ve 18:00 penceresinde birleşik uyku',
         () async {
       final snapshot = await source.readToday(now: now);

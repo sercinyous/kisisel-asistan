@@ -160,6 +160,24 @@ void main() {
       isNull,
       reason: 'Apple seçiliyken "Şimdi eşitle" kapalı',
     );
+
+    // Bağlı hesap tek dokunuşla etkin kaynak yapılır.
+    final select = find.byKey(const Key('settings-google-select'));
+    expect(select, findsOneWidget);
+    await tester.ensureVisible(select);
+    await tester.pumpAndSettle();
+    await tester.tap(select);
+    await tester.pumpAndSettle();
+
+    expect(container.read(healthSourceProvider), HealthSourceKind.googleHealth);
+    expect(find.byKey(const Key('settings-google-select')), findsNothing);
+    expect(find.byKey(const Key('google-source-passive-note')), findsNothing);
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const Key('settings-google-sync')))
+          .onPressed,
+      isNotNull,
+    );
     expect(tester.takeException(), isNull);
   });
 

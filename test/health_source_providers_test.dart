@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/google_auth.dart';
 import 'package:kisisel_asistan/core/services/health_service.dart';
@@ -23,6 +27,8 @@ void main() {
   late FakeHealthService healthKit;
   late FakeGoogleAuthClient auth;
   late FakeGoogleHealthSource? google;
+  late http.Response Function(http.Request) googleServer;
+  late List<String> googleRequests;
 
   HealthDayReading reading(DateTime day, int steps, int kcal, int sleep) => (
         day: day,
@@ -51,6 +57,8 @@ void main() {
     );
     auth = FakeGoogleAuthClient(email: 'ben@gmail.com', signedIn: true);
     google = null;
+    googleRequests = [];
+    googleServer = (_) => http.Response(jsonEncode({'healthUserId': 'u'}), 200);
   });
 
   ProviderContainer make({
@@ -71,6 +79,12 @@ void main() {
         initialGoogleLinkProvider.overrideWithValue(prefs),
         googleClientIdProvider.overrideWithValue(clientId),
         googleAuthClientProvider.overrideWithValue(auth),
+        googleHealthHttpClientProvider.overrideWithValue(
+          MockClient((request) async {
+            googleRequests.add(request.url.path);
+            return googleServer(request);
+          }),
+        ),
         googleHealthSourceProvider.overrideWith(
           (ref) => google = FakeGoogleHealthSource(
             link: ref.watch(googleConnectionProvider.notifier),
@@ -233,5 +247,47 @@ void main() {
     final snapshot = await container.read(healthTodayProvider.future);
     expect(snapshot.status, HealthStatus.notConnected);
     expect(rowOf(today).steps, 5200, reason: 'kayıtlı değerler silinmez');
+  });
+
+  test('profili olmayan Google hesabı bağlı sayılmaz, mesaj döner', () async {
+    auth.signedIn = false;
+    googleServer = (_) => http.Response(
+          jsonEncode({
+            'error': {
+              'code': 400,
+              'status': 'FAILED_PRECONDITION',
+              'details': [
+                {'reason': 'ACCOUNT_NOT_LINKED'},
+              ],
+            },
+          }),
+          400,
+        );
+    final container = make(prefs: const GoogleLinkPrefs());
+
+    final error = await connectGoogleHealth(container);
+
+    expect(error, contains('Fitbit'));
+    expect(googleRequests, ['/v4/users/me/identity']);
+    final link = container.read(googleConnectionProvider);
+    expect(link.status, GoogleLinkStatus.disconnected);
+    expect(link.email, isNull);
+    expect(link.message, contains('Fitbit'));
+    expect(auth.disconnectCalls, 1);
+
+    // Profil kurulduktan sonra yeniden bağlanma başarılı olur.
+    googleServer = (_) => http.Response(jsonEncode({'healthUserId': 'u'}), 200);
+    expect(await connectGoogleHealth(container), isNull);
+    expect(container.read(googleConnectionProvider).status,
+        GoogleLinkStatus.connected);
+  });
+
+  test('kimlik isteği geçici hata verirse bağlantı korunur', () async {
+    auth.signedIn = false;
+    googleServer = (_) => http.Response('', 503);
+    final container = make(prefs: const GoogleLinkPrefs());
+    expect(await connectGoogleHealth(container), isNull);
+    expect(container.read(googleConnectionProvider).status,
+        GoogleLinkStatus.connected);
   });
 }
