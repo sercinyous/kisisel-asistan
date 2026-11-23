@@ -69,4 +69,26 @@ void main() {
     expect(r.nothingLogged, isFalse);
     expect(r.gap(GapMetric.protein).headline, 'Protein 45 g eksik');
   });
+
+  test('yükleme bitmeden yapılan seçim saklı değerle ezilmez', () async {
+    SharedPreferences.setMockInitialValues(
+        {fatLossRateKey: 'one', fatLossExpenditureKey: 2000});
+    final rate = FatLossRateNotifier();
+    final exp = ManualExpenditureNotifier();
+    addTearDown(rate.dispose);
+    addTearDown(exp.dispose);
+    await rate.set(FatLossRate.half);
+    await exp.set(3500);
+    await Future<void>.delayed(Duration.zero);
+    expect(rate.state, FatLossRate.half);
+    expect(exp.state, 3500);
+  });
+
+  test('saklı değer seçim yoksa okunur', () async {
+    SharedPreferences.setMockInitialValues({fatLossRateKey: 'one'});
+    final rate = FatLossRateNotifier();
+    addTearDown(rate.dispose);
+    await Future<void>.delayed(Duration.zero);
+    expect(rate.state, FatLossRate.one);
+  });
 }
