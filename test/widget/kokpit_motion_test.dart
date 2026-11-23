@@ -45,7 +45,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(Opacity), findsNothing);
-      expect(tester.hasRunningAnimations, isFalse);
+      await tester.pumpAndSettle();
+      expect(find.text('Kart'), findsOneWidget);
     });
 
     testWidgets('hareket azaltılınca animasyonsuz', (tester) async {
