@@ -39,6 +39,8 @@ import 'features/kokpit/data/kokpit_repository.dart';
 import 'features/operations/data/notes_repository.dart';
 import 'features/operations/data/tasks_repository.dart';
 import 'demo/demo_reminders.dart';
+import 'demo/demo_stories.dart';
+import 'features/stories/data/stories_repository.dart';
 import 'features/reminders/data/reminders_repository.dart';
 import 'features/reports/data/reports_repository.dart';
 import 'features/reports/data/weekly_checkin_repository.dart';
@@ -110,6 +112,8 @@ Future<void> main() async {
         notificationServiceProvider
             .overrideWithValue(FakeNotificationService()),
         friendsRepositoryProvider.overrideWithValue(DemoFriendsRepository()),
+        storiesRepositoryProvider
+            .overrideWithValue(demoStoriesRepository(DateTime.now())),
         // Tarayıcıda fotoğraf seçilemez: yalnızca maskot ve baş harfler.
         avatarPhotoSupportedProvider.overrideWithValue(false),
         avatarPhotoStoreProvider

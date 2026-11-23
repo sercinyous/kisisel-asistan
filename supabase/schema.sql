@@ -4490,3 +4490,155 @@ begin
 end;
 $$;
 -- END goal_mode
+
+-- BEGIN stories
+-- =====================================================================
+-- Otomatik story'ler: arkadaşlara 24 saat görünen başarılar ve tepkiler.
+--   * user_settings.share_stories: "Başarılarımı story olarak paylaş";
+--     varsayılan KAPALI. Kapalıyken friend_stories'e satır eklenemez
+--     (politika) ve kapatılınca mevcut story'ler silinir (tetikleyici).
+--     İstemci sütun yoksa bunu yazmaz (eski şema koruması).
+--   * friend_stories: sahip tam yetki; arkadaşlar yalnızca süresi
+--     dolmamış satırları okur. payload küçük bir nesnedir (en çok 512 bayt;
+--     yalnızca sayı/etiket — ad ve avatar my_friends()'ten gelir).
+--     Aynı tür + gün için tek satır (istemci tekrar yazarsa çakışma).
+--   * story_reactions: yalnızca arkadaş, yalnızca görebildiği bir story'ye
+--     (👏 🔥 💪) tepki verir; tepkiyi sahip ve tepki veren okur.
+--   Hesap silinince iki tablo da auth.users kaskatıyla temizlenir.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists share_stories boolean not null default false;
+
+create table if not exists public.friend_stories (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  kind        text not null check (kind in
+                ('streak_7', 'streak_14', 'streak_30', 'weekly_goal', 'workout', 'weight_goal')),
+  day         date not null,
+  payload     jsonb not null default '{}'::jsonb
+                check (jsonb_typeof(payload) = 'object' and pg_column_size(payload) <= 512),
+  created_at  timestamptz not null default now(),
+  expires_at  timestamptz not null default now() + interval '24 hours',
+  constraint friend_stories_once_per_day unique (user_id, kind, day)
+);
+create index if not exists friend_stories_expires_idx
+  on public.friend_stories (user_id, expires_at);
+
+create table if not exists public.story_reactions (
+  story_id    uuid not null references public.friend_stories (id) on delete cascade,
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  emoji       text not null check (emoji in ('👏', '🔥', '💪')),
+  created_at  timestamptz not null default now(),
+  primary key (story_id, user_id)
+);
+create index if not exists story_reactions_user_idx on public.story_reactions (user_id);
+
+alter table public.friend_stories enable row level security;
+alter table public.story_reactions enable row level security;
+
+-- Zamanlar istemciden alınmaz: görünürlük her zaman ekleme anından 24 saat.
+create or replace function public.friend_stories_stamp()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  new.created_at := now();
+  new.expires_at := now() + interval '24 hours';
+  return new;
+end;
+$$;
+drop trigger if exists friend_stories_stamp on public.friend_stories;
+create trigger friend_stories_stamp before insert on public.friend_stories
+  for each row execute function public.friend_stories_stamp();
+
+-- Paylaşım kapatılınca yayımlanmış story'ler (ve tepkileri) hemen silinir.
+create or replace function public.share_stories_off_purge()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if old.share_stories and not new.share_stories then
+    delete from public.friend_stories s where s.user_id = new.user_id;
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.share_stories_off_purge() from public, anon, authenticated;
+drop trigger if exists user_settings_share_stories_purge on public.user_settings;
+create trigger user_settings_share_stories_purge
+  after update of share_stories on public.user_settings
+  for each row execute function public.share_stories_off_purge();
+
+-- İki kullanıcı arkadaş mı? friendships RLS'i yalnızca üyeye satır gösterir;
+-- politikalarda çağıran kişi her zaman çiftin bir ucudur.
+create or replace function public.story_friends(p_a uuid, p_b uuid)
+returns boolean
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from public.friendships f
+    where f.user_a = least(p_a, p_b) and f.user_b = greatest(p_a, p_b)
+  );
+$$;
+revoke all on function public.story_friends(uuid, uuid) from public, anon;
+grant execute on function public.story_friends(uuid, uuid) to authenticated;
+
+drop policy if exists friend_stories_owner_all on public.friend_stories;
+create policy friend_stories_owner_all on public.friend_stories
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1 from public.user_settings us
+      where us.user_id = (select auth.uid()) and us.share_stories
+    )
+  );
+
+drop policy if exists friend_stories_friend_select on public.friend_stories;
+create policy friend_stories_friend_select on public.friend_stories
+  for select to authenticated
+  using (
+    expires_at > now()
+    and public.story_friends((select auth.uid()), user_id)
+  );
+
+drop policy if exists story_reactions_insert on public.story_reactions;
+create policy story_reactions_insert on public.story_reactions
+  for insert to authenticated
+  with check (
+    (select auth.uid()) = user_id
+    and exists (
+      select 1 from public.friend_stories s
+      where s.id = story_id
+        and s.user_id <> (select auth.uid())
+        and s.expires_at > now()
+        and public.story_friends((select auth.uid()), s.user_id)
+    )
+  );
+
+drop policy if exists story_reactions_select on public.story_reactions;
+create policy story_reactions_select on public.story_reactions
+  for select to authenticated
+  using (
+    (select auth.uid()) = user_id
+    or exists (
+      select 1 from public.friend_stories s
+      where s.id = story_id and s.user_id = (select auth.uid())
+    )
+  );
+
+drop policy if exists story_reactions_delete on public.story_reactions;
+create policy story_reactions_delete on public.story_reactions
+  for delete to authenticated
+  using ((select auth.uid()) = user_id);
+
+revoke all on table public.friend_stories, public.story_reactions from anon;
+grant select, insert, delete on table public.friend_stories to authenticated;
+grant select, insert, delete on table public.story_reactions to authenticated;
+-- END stories

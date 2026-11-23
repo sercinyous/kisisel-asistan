@@ -12,6 +12,8 @@ import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/water_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../../core/services/health_service.dart';
+import '../../stories/presentation/stories_providers.dart';
+import '../../stories/presentation/stories_row.dart';
 import 'kokpit_day_view.dart';
 import 'kokpit_format.dart';
 import 'kokpit_motion.dart';
@@ -27,6 +29,7 @@ class KokpitScreen extends ConsumerWidget {
     ref.invalidate(upcomingRemindersProvider);
     ref.invalidate(todayNutritionProvider);
     ref.invalidate(waterTodayProvider);
+    ref.invalidate(friendStoryGroupsProvider);
     // HealthKit yeniden okunup yedeklenir.
     unawaited(
       resyncHealthKit(ProviderScope.containerOf(ref.context, listen: false)),
@@ -65,6 +68,8 @@ class KokpitScreen extends ConsumerWidget {
           ),
           children: [
             KokpitEntrance(index: 0, child: KokpitGreetingCard(now: now)),
+            const SizedBox(height: AppSpacing.grid),
+            const StoriesRow(),
             const SizedBox(height: AppSpacing.grid),
             const KokpitDayView(),
           ],

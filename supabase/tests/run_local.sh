@@ -82,6 +82,8 @@ run -d faz4b -f "$HERE/friend_leaderboard_test.sql" >/dev/null
 echo "tamam: arkadaş sıralaması (friend_leaderboard)"
 run -d faz4b -f "$HERE/friend_scope_test.sql" >/dev/null
 echo "tamam: arkadaş paylaşım kapsamı ve sağlık kaynağı (friend_scope_test)"
+run -d faz4b -f "$HERE/stories_test.sql" >/dev/null
+echo "tamam: story'ler, tepkiler ve paylaşım anahtarı (stories_test)"
 run -d faz4b -f "$HERE/account_delete_test.sql" >/dev/null
 echo "tamam: hesap silme sonrası public şemada satır kalmıyor (account_delete_test)"
 run -d faz4b -f "$HERE/app_errors_test.sql" >/dev/null
@@ -169,6 +171,7 @@ run -d upgrade -f "$HERE/friend_scope_test.sql" >/dev/null
 run -d upgrade -f "$HERE/report_claim_test.sql" >/dev/null
 run -d upgrade -f "$HERE/reminders_test.sql" >/dev/null
 run -d upgrade -f "$HERE/faz5_health_extras_test.sql" >/dev/null
+run -d upgrade -f "$HERE/stories_test.sql" >/dev/null
 echo "tamam: Faz 4B testleri sürüm 2'den yükseltilmiş veritabanında da geçti"
 
 echo "== 4) sürüm 3 → güncel yükseltme =="
@@ -203,6 +206,7 @@ else
   run -d upgrade3 -f "$HERE/faz5_onboarding_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/reminders_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/faz5_health_extras_test.sql" >/dev/null
+  run -d upgrade3 -f "$HERE/stories_test.sql" >/dev/null
   run -d upgrade3 -c "select 1 from public.body_measurements, public.progress_photos limit 0" >/dev/null
   run -d upgrade3 -At -c "select weekly_rate || targets_source from public.user_settings limit 1" >/dev/null
   echo "tamam: Faz 4B testleri sürüm 3'ten yükseltilmiş veritabanında da geçti"
