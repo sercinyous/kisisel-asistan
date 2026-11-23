@@ -33,7 +33,7 @@ class _OpsCalendarScreenState extends ConsumerState<OpsCalendarScreen> {
     final theme = Theme.of(context);
     return Theme(
       data: theme.copyWith(
-        colorScheme: theme.colorScheme.copyWith(primary: AppColors.ops),
+        colorScheme: theme.colorScheme.copyWith(primary: AppColors.accent),
       ),
       child: Scaffold(
         backgroundColor: AppColors.background,

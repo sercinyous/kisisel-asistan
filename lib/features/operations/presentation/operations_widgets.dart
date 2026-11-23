@@ -42,7 +42,7 @@ Future<OpsFilterPick?> showOpsFilterSheet(
           key: ValueKey('ops-filter-option-${value ?? 'all'}'),
           title: Text(label),
           trailing: isSelected
-              ? Icon(Icons.check_outlined, color: AppColors.ops)
+              ? Icon(Icons.check_outlined, color: AppColors.accent)
               : null,
           onTap: () => Navigator.of(context).pop(OpsFilterPick(value)),
         );
@@ -99,9 +99,9 @@ class OpsGroupCard extends StatelessWidget {
     final header = Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.cardPadding,
-        action == null ? 12 : 4,
-        action == null ? AppSpacing.cardPadding : 8,
-        action == null ? 12 : 4,
+        action == null ? 12 : 2,
+        action == null ? AppSpacing.cardPadding : 4,
+        action == null ? 4 : 0,
       ),
       child: Row(
         children: [
@@ -110,13 +110,17 @@ class OpsGroupCard extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleSmall,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: AppColors.textPrimary),
             ),
           ),
           Text(
             '$count',
-            style: theme.textTheme.labelMedium
-                ?.copyWith(color: AppColors.textMuted),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
           ),
           if (onHeaderTap != null) ...[
             const SizedBox(width: 4),
@@ -140,9 +144,8 @@ class OpsGroupCard extends StatelessWidget {
           else
             InkWell(onTap: onHeaderTap, child: header),
           if (!collapsed && children.isNotEmpty) ...[
-            const Divider(height: 1),
             ...children,
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
           ],
         ],
       ),

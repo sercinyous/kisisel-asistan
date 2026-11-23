@@ -150,7 +150,6 @@ class _NoteCard extends StatelessWidget {
     final theme = Theme.of(context);
     return BentoCard(
       onTap: onEdit,
-      tint: note.isPinned ? AppColors.ops : null,
       padding: const EdgeInsets.fromLTRB(AppSpacing.cardPadding, 8, 0, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +161,8 @@ class _NoteCard extends StatelessWidget {
                   note.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: AppColors.textPrimary),
                 ),
               ),
               IconButton(
@@ -173,8 +173,10 @@ class _NoteCard extends StatelessWidget {
                   note.isPinned
                       ? Icons.push_pin_rounded
                       : Icons.push_pin_outlined,
-                  size: 20,
-                  color: note.isPinned ? AppColors.ops : AppColors.textMuted,
+                  size: 18,
+                  color: note.isPinned
+                      ? AppColors.textPrimary
+                      : AppColors.textMuted,
                 ),
               ),
               const SizedBox(width: 4),
@@ -199,8 +201,11 @@ class _NoteCard extends StatelessWidget {
                   note.category,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelMedium
-                      ?.copyWith(color: AppColors.ops),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),

@@ -163,7 +163,12 @@ class TasksView extends ConsumerWidget {
 
     List<Widget> rows(List<TaskItem> items) => [
           for (final (index, task) in items.indexed) ...[
-            if (index > 0) const Divider(indent: 52, height: 1),
+            if (index > 0)
+              const Divider(
+                indent: AppSpacing.cardPadding,
+                endIndent: AppSpacing.cardPadding,
+                height: 1,
+              ),
             row(task),
           ],
         ];
@@ -293,20 +298,27 @@ class _TaskRow extends StatelessWidget {
     final when = task.scheduledAt;
     final overdue =
         !task.isDone && when != null && when.isBefore(DateTime.now());
-    final muted =
-        theme.textTheme.labelMedium?.copyWith(color: AppColors.textSecondary);
+    final muted = TextStyle(
+      fontSize: AppType.caption,
+      height: 1.3,
+      color: AppColors.textSecondary,
+    );
 
     return InkWell(
       onTap: onEdit,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 4, AppSpacing.cardPadding, 4),
+        padding: const EdgeInsets.fromLTRB(2, 2, AppSpacing.cardPadding, 2),
         child: Row(
           children: [
             Checkbox(
               key: ValueKey('task-check-${task.id}'),
               value: task.isDone,
               onChanged: (_) => onToggle(),
-              activeColor: AppColors.ops,
+              activeColor: AppColors.accent,
+              checkColor: AppColors.onAccent,
+              shape: const CircleBorder(),
+              side: BorderSide(color: AppColors.textMuted, width: 1.5),
+              visualDensity: VisualDensity.compact,
             ),
             Expanded(
               child: Column(
@@ -317,6 +329,7 @@ class _TaskRow extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
                       color: task.isDone ? AppColors.textMuted : null,
                       decoration:
                           task.isDone ? TextDecoration.lineThrough : null,
@@ -343,7 +356,7 @@ class _TaskRow extends StatelessWidget {
                           TextSpan(
                             text: ' · ${AppDates.relativeDayTime(when)}',
                             style: overdue
-                                ? TextStyle(color: AppColors.danger)
+                                ? TextStyle(color: AppColors.negative)
                                 : null,
                           ),
                         if (task.priority == 'high')

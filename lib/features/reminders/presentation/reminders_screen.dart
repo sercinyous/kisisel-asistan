@@ -174,11 +174,6 @@ class _ReminderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.alarm_outlined,
-                color: r.enabled ? AppColors.accent : AppColors.textMuted,
-              ),
-              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,17 +208,16 @@ class _ReminderCard extends StatelessWidget {
           Row(
             children: [
               if (r.isRepeating) ...[
-                Icon(
-                  Icons.local_fire_department_outlined,
-                  size: 18,
-                  color: streak > 0 ? AppColors.warning : AppColors.textMuted,
-                ),
-                const SizedBox(width: AppSpacing.xs),
                 Text(
                   streak > 0 ? '$streak gün seri' : 'Seri yok',
                   key: ValueKey('reminder-streak-${r.id}'),
-                  style: theme.textTheme.labelMedium
-                      ?.copyWith(color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: AppType.caption,
+                    fontWeight: FontWeight.w600,
+                    color: streak > 0
+                        ? AppColors.positive
+                        : AppColors.textSecondary,
+                  ),
                 ),
               ],
               const Spacer(),

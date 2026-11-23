@@ -23,7 +23,7 @@ class TaskDashboardGrid extends StatelessWidget {
     final change = stats.weekChangePercent;
     final summaryColor = change == null || change == 0
         ? AppColors.textSecondary
-        : (change > 0 ? AppColors.fitness : AppColors.danger);
+        : (change > 0 ? AppColors.positive : AppColors.negative);
     final rate = stats.completionRate;
     final best = stats.bestWeekday;
 
@@ -31,7 +31,6 @@ class TaskDashboardGrid extends StatelessWidget {
       children: [
         BentoCell(
           child: BentoCard(
-            tint: AppColors.ops,
             child: Row(
               children: [
                 Icon(
@@ -60,7 +59,7 @@ class TaskDashboardGrid extends StatelessWidget {
                 BentoLabel(
                   icon: Icons.bar_chart_outlined,
                   label: 'Haftalık tamamlanan',
-                  color: AppColors.ops,
+                  color: AppColors.accent,
                   trailing: 'Bu hafta ${stats.thisWeek}',
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -74,7 +73,7 @@ class TaskDashboardGrid extends StatelessWidget {
           child: _StatCard(
             icon: Icons.task_alt_outlined,
             label: 'Tamamlama',
-            color: AppColors.fitness,
+            color: AppColors.accent,
             value: rate == null ? '—' : '%${(rate * 100).round()}',
             caption: rate == null
                 ? 'Planlı görev yok'
@@ -166,7 +165,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             value,
-            style: theme.textTheme.headlineMedium
+            style: theme.textTheme.titleLarge
                 ?.copyWith(color: AppColors.textPrimary),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -203,7 +202,7 @@ class _WeeklyBarChart extends StatelessWidget {
     final theme = Theme.of(context);
     final top = weeks.fold<int>(0, (m, w) => math.max(m, w.count));
     final maxY = top == 0 ? 1.0 : top * 1.15;
-    final color = AppColors.ops;
+    final color = AppColors.accent;
     final labelStyle =
         theme.textTheme.labelSmall?.copyWith(color: AppColors.textMuted);
     final dayFormat = DateFormat('d MMM', AppDates.locale);
@@ -368,7 +367,7 @@ class _CategoryBars extends StatelessWidget {
     final theme = Theme.of(context);
     final total = categories.fold<int>(0, (s, e) => s + e.value);
     final palette = [
-      AppColors.ops,
+      AppColors.accent,
       AppColors.accent,
       AppColors.nutrition,
       AppColors.fitness,

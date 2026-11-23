@@ -57,7 +57,7 @@ class OperationsScreen extends ConsumerWidget {
 
     return Theme(
       data: theme.copyWith(
-        colorScheme: theme.colorScheme.copyWith(primary: AppColors.ops),
+        colorScheme: theme.colorScheme.copyWith(primary: AppColors.accent),
       ),
       child: SafeArea(
         bottom: false,
@@ -102,7 +102,7 @@ class OperationsScreen extends ConsumerWidget {
                     ),
                     color: filter == null
                         ? AppColors.textSecondary
-                        : AppColors.ops,
+                        : AppColors.accent,
                     onPressed: () async {
                       final picked = await showOpsFilterSheet(
                         context,
@@ -117,7 +117,7 @@ class OperationsScreen extends ConsumerWidget {
                     key: const ValueKey('ops-add'),
                     tooltip: 'Ekle',
                     icon: const Icon(Icons.add_outlined),
-                    color: AppColors.ops,
+                    color: AppColors.textPrimary,
                     onPressed: () => _add(context, segment),
                   ),
                 ],
