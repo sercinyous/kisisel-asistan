@@ -163,7 +163,7 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
             border: Border(top: BorderSide(color: AppColors.border)),
           ),
           child: SafeArea(
@@ -303,7 +303,7 @@ class _Header extends StatelessWidget {
           height: 40,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppRadii.inner),
           ),
           child: Icon(mode.icon, color: color),
         ),
@@ -362,7 +362,7 @@ class _OtherDomainBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       decoration: BoxDecoration(
         color: AppColors.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
       ),
       child: Column(
@@ -430,7 +430,7 @@ class _SavedNotice extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.accent.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
       ),
       child: Row(
@@ -508,9 +508,9 @@ class _InputSection extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 8),
             child: Material(
               color: AppColors.surfaceHigh,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadii.inner),
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadii.inner),
                 onTap: enabled ? () => onExample(example) : null,
                 child: Padding(
                   padding:
@@ -681,7 +681,7 @@ class _PreviewTile extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
       decoration: BoxDecoration(
         color: AppColors.surfaceHigh,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
@@ -751,7 +751,7 @@ class _ErrorBanner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.danger.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
         border: Border.all(color: AppColors.danger.withValues(alpha: 0.4)),
       ),
       child: Row(

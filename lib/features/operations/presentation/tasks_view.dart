@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../settings/presentation/settings_providers.dart';
@@ -329,8 +330,7 @@ class _TaskRow extends StatelessWidget {
                           alignment: PlaceholderAlignment.middle,
                           child: Padding(
                             padding: const EdgeInsets.only(right: 6),
-                            child: Icon(
-                              Icons.circle,
+                            child: RitimDot(
                               size: 6,
                               color: categoryColor,
                             ),

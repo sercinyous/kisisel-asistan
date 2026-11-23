@@ -231,7 +231,7 @@ class _HealthCardBody extends ConsumerWidget {
                         child: Text(
                           thousands.format(remaining.abs()),
                           style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: -0.5,
                             color:
                                 over ? AppColors.danger : AppColors.textPrimary,

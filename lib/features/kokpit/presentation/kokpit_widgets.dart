@@ -100,7 +100,7 @@ class KokpitBar extends StatelessWidget {
     super.key,
     required this.value,
     required this.color,
-    this.height = 8,
+    this.height = 6,
   });
 
   /// 0..1 aralığına kırpılır.
@@ -111,7 +111,7 @@ class KokpitBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(height / 2),
+      borderRadius: BorderRadius.circular(AppRadii.bar),
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0, end: value.clamp(0, 1).toDouble()),
         duration: const Duration(milliseconds: 500),
@@ -119,7 +119,7 @@ class KokpitBar extends StatelessWidget {
         builder: (_, animated, __) => LinearProgressIndicator(
           value: animated,
           minHeight: height,
-          backgroundColor: AppColors.surfaceHigh,
+          backgroundColor: AppColors.track,
           valueColor: AlwaysStoppedAnimation<Color>(color),
         ),
       ),

@@ -342,7 +342,7 @@ class _DayOfMonthCell extends StatelessWidget {
       label: 'Ayın $day. günü',
       excludeSemantics: true,
       child: Material(
-        color: selected ? scheme.primary : AppColors.surfaceHigh,
+        color: selected ? scheme.primary : AppColors.selection,
         borderRadius: BorderRadius.circular(AppRadii.chip),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -355,7 +355,7 @@ class _DayOfMonthCell extends StatelessWidget {
                 // Sabit hücre: metin ölçeği büyüse de taşmasın.
                 textScaler: TextScaler.noScaling,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: AppType.chipValue,
                   fontWeight: FontWeight.w600,
                   color: selected ? scheme.onPrimary : AppColors.textPrimary,
                 ),

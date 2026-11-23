@@ -97,7 +97,7 @@ class OperationsScreen extends ConsumerWidget {
                     icon: Icon(
                       filter == null
                           ? Icons.filter_list_rounded
-                          : Icons.filter_list_alt,
+                          : Icons.filter_alt_rounded,
                     ),
                     color: filter == null
                         ? AppColors.textSecondary

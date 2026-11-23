@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart' show KokpitCheckBox;
 import '../../routines/data/routines_repository.dart';
@@ -496,8 +497,7 @@ class _RoutineRow extends StatelessWidget {
               check,
               const SizedBox(width: 4),
             ] else ...[
-              Icon(
-                Icons.circle,
+              RitimDot(
                 size: 6,
                 color: active
                     ? AppColors.forRoutineCategory(routine.category)
