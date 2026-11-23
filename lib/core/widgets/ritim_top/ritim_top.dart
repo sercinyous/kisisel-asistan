@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
@@ -17,7 +18,8 @@ enum RitimTopMode {
   idle,
 }
 
-/// Uygulama simgesindeki nane rengi topaç; yükleme ve varış animasyonu.
+/// Uygulama simgesindeki topaç; yükleme ve varış animasyonu. [color]
+/// verilmezse simgedeki gibi gün batımı koni, neon halka ve altın sap çizilir.
 ///
 /// Hareket azaltma açıksa (`MediaQuery.disableAnimations`) her kipte durağan
 /// duruş çizilir; [RitimTopMode.settle] yine de [onDone] çağırır.
@@ -36,7 +38,7 @@ class RitimTop extends StatefulWidget {
   /// Kare kenarı (mantıksal piksel).
   final double size;
 
-  /// Verilmezse ana vurgu ([AppColors.accent]).
+  /// Verilirse tek renk; verilmezse Vice City simge renkleri.
   final Color? color;
 
   /// Verilmezse dönerken "Yükleniyor"; öbür kiplerde süs sayılır.
@@ -134,13 +136,45 @@ class _RitimTopState extends State<RitimTop>
         painter: _RitimTopPainter(
           progress: _controller,
           mode: reduced ? RitimTopMode.idle : widget.mode,
-          color: widget.color ?? AppColors.accent,
+          color: widget.color ?? AppColors.neonTeal,
+          vice: widget.color == null
+              ? RitimTopColors(
+                  cone: AppColors.sunset,
+                  ring: AppColors.neonTeal,
+                  handle: [AppColors.sunsetStart, AppColors.sunsetMid],
+                )
+              : null,
         ),
       ),
     );
     if (label == null) return ExcludeSemantics(child: paint);
     return Semantics(label: label, child: paint);
   }
+}
+
+/// Simge renkleri: koni ve sap dikey geçiş, halka düz neon.
+@immutable
+class RitimTopColors {
+  const RitimTopColors({
+    required this.cone,
+    required this.ring,
+    required this.handle,
+  });
+
+  final List<Color> cone;
+  final Color ring;
+  final List<Color> handle;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RitimTopColors &&
+      listEquals(other.cone, cone) &&
+      other.ring == ring &&
+      listEquals(other.handle, handle);
+
+  @override
+  int get hashCode =>
+      Object.hash(Object.hashAll(cone), ring, Object.hashAll(handle));
 }
 
 /// Bir karedeki duruş; önizleme sayfasındaki hesapla aynıdır.
@@ -227,11 +261,28 @@ class _RitimTopPainter extends CustomPainter {
     required this.progress,
     required this.mode,
     required this.color,
+    this.vice,
   }) : super(repaint: progress);
 
   final Animation<double> progress;
   final RitimTopMode mode;
   final Color color;
+  final RitimTopColors? vice;
+
+  Paint _fill(Path path, List<Color>? colors, Color fallback) {
+    final paint = Paint()
+      ..color = fallback.withValues(alpha: 1)
+      ..isAntiAlias = true;
+    if (colors != null) {
+      final b = path.getBounds();
+      paint.shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: colors,
+      ).createShader(b);
+    }
+    return paint;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -274,15 +325,16 @@ class _RitimTopPainter extends CustomPainter {
       ..scale(pose.scale * (1 + pose.stretch), pose.scale * (1 - pose.stretch))
       ..translate(-tip.dx, -tip.dy);
 
-    final fill = Paint()
-      ..color = color.withValues(alpha: 1)
-      ..isAntiAlias = true;
+    final v = vice;
     canvas
-      ..drawPath(RitimTopGeometry.cone, fill)
-      ..drawPath(RitimTopGeometry.ring, fill);
+      ..drawPath(
+          RitimTopGeometry.cone, _fill(RitimTopGeometry.cone, v?.cone, color))
+      ..drawPath(RitimTopGeometry.ring,
+          _fill(RitimTopGeometry.ring, null, v?.ring ?? color));
     if (pose.highlight > 0) _paintHighlight(canvas, pose);
     canvas
-      ..drawPath(RitimTopGeometry.handle, fill)
+      ..drawPath(RitimTopGeometry.handle,
+          _fill(RitimTopGeometry.handle, v?.handle, color))
       ..restore();
 
     if (layered) canvas.restore();
@@ -319,5 +371,6 @@ class _RitimTopPainter extends CustomPainter {
   bool shouldRepaint(_RitimTopPainter oldDelegate) =>
       oldDelegate.mode != mode ||
       oldDelegate.color != color ||
+      oldDelegate.vice != vice ||
       oldDelegate.progress != progress;
 }

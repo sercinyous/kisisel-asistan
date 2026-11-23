@@ -453,10 +453,8 @@ void main() {
         scaffoldColor(tester, find.byType(Scaffold)),
         AppPalette.light.background,
       );
-      expect(
-        tester.widget<Icon>(find.byIcon(Icons.dashboard_rounded)).color,
-        AppPalette.light.accent,
-      );
+      expect(find.byKey(const ValueKey('sign-in-vice-hero')), findsOneWidget);
+      expect(AppColors.sunsetEnd, AppPalette.light.sunsetEnd);
     });
 
     testWidgets('ConfigErrorApp verilen tercihi uygular', (tester) async {

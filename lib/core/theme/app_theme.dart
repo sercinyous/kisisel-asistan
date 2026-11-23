@@ -38,6 +38,11 @@ class AppPalette {
     required this.navSelected,
     required this.selection,
     required this.track,
+    required this.sunsetStart,
+    required this.sunsetMid,
+    required this.sunsetEnd,
+    required this.neonTeal,
+    required this.nightPurple,
   });
 
   final Brightness brightness;
@@ -114,6 +119,21 @@ class AppPalette {
   /// İlerleme çubuğu/halkası izi ve boş gün noktası (opak).
   final Color track;
 
+  // Vice City esintileri (uygulama simgesi): yalnızca açılış/giriş, selamlama
+  // kartı kenarı, kutlama patlaması, tamamlanan halka ve logo işaretinde.
+  // Üzerlerine metin yazılmaz; yüzeye karşı en az 3:1 (grafik öğe, WCAG 1.4.11).
+
+  /// Gün batımı geçişi: sarı → mercan → macenta.
+  final Color sunsetStart;
+  final Color sunsetMid;
+  final Color sunsetEnd;
+
+  /// Turkuaz neon (simgedeki halka).
+  final Color neonTeal;
+
+  /// Gece moru (simge zemini); yalnızca düşük alfa ile karıştırılarak.
+  final Color nightPurple;
+
   bool get isDark => brightness == Brightness.dark;
 
   /// Durum çubuğu ikonları: koyu temada açık, açık temada koyu.
@@ -166,6 +186,11 @@ class AppPalette {
     navSelected: Color.from(alpha: 0.14, red: 1, green: 1, blue: 1),
     selection: Color.from(alpha: 0.14, red: 1, green: 1, blue: 1), // --sel
     track: Color(0xFF26262B), // --track
+    sunsetStart: Color(0xFFFFE45C),
+    sunsetMid: Color(0xFFFF8A4C),
+    sunsetEnd: Color(0xFFFF2E97),
+    neonTeal: Color(0xFF19E3D6),
+    nightPurple: Color(0xFF2A0F55),
   );
 
   /// Beyaz tema: önizlemenin açık bloğu. Vurgular beyaz zeminde AA (4.5)
@@ -204,6 +229,11 @@ class AppPalette {
     navSelected: Color.from(alpha: 0.07, red: 0, green: 0, blue: 0),
     selection: Color.from(alpha: 0.07, red: 0, green: 0, blue: 0), // --sel
     track: Color(0xFFD8D8E0), // --track (yüzeyde seçilebilir)
+    sunsetStart: Color(0xFFA87400), // simge sarısı, açıkta 3:1+
+    sunsetMid: Color(0xFFD2501C),
+    sunsetEnd: Color(0xFFCC1674),
+    neonTeal: Color(0xFF0B8580),
+    nightPurple: Color(0xFF2A0F55),
   );
 }
 
@@ -245,6 +275,19 @@ abstract final class AppColors {
   static Color get navSelected => palette.navSelected;
   static Color get selection => palette.selection;
   static Color get track => palette.track;
+
+  static Color get sunsetStart => palette.sunsetStart;
+  static Color get sunsetMid => palette.sunsetMid;
+  static Color get sunsetEnd => palette.sunsetEnd;
+  static Color get neonTeal => palette.neonTeal;
+  static Color get nightPurple => palette.nightPurple;
+
+  /// Gün batımı şeridi (sarı → mercan → macenta).
+  static List<Color> get sunset => [sunsetStart, sunsetMid, sunsetEnd];
+
+  /// Kutlama patlaması renkleri: gün batımı + neon.
+  static List<Color> get celebration =>
+      [sunsetStart, sunsetMid, sunsetEnd, neonTeal];
 
   static Color forRoutineCategory(String category) => switch (category) {
         'operasyon' => ops,

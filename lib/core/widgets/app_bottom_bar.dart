@@ -69,45 +69,45 @@ class AppBottomBar extends StatelessWidget {
         child: Center(
           heightFactor: 1,
           child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: radius,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                height: height,
-                padding: const EdgeInsets.all(padding),
-                decoration: BoxDecoration(
-                  color: AppColors.glass,
-                  borderRadius: radius,
-                  border: Border.all(
-                    color: AppColors.glassBorder,
-                    width: 0.8,
-                  ),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.shadow,
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    tab(0),
-                    tab(1),
-                    _Slot(child: _CreateButton(onTap: onCreate)),
-                    tab(2),
-                    tab(3),
-                  ],
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: radius,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                child: Container(
+                  height: height,
+                  padding: const EdgeInsets.all(padding),
+                  decoration: BoxDecoration(
+                    color: AppColors.glass,
+                    borderRadius: radius,
+                    border: Border.all(
+                      color: AppColors.glassBorder,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      tab(0),
+                      tab(1),
+                      _Slot(child: _CreateButton(onTap: onCreate)),
+                      tab(2),
+                      tab(3),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         ),
       ),
     );

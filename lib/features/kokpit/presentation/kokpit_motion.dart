@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -171,7 +172,11 @@ class KokpitCelebrateState extends State<KokpitCelebrate>
         final t = _controller.value;
         final scale = 1 + 0.18 * math.sin(t * math.pi);
         return CustomPaint(
-          foregroundPainter: _BurstPainter(progress: t, color: widget.color),
+          foregroundPainter: _BurstPainter(
+            progress: t,
+            color: widget.color,
+            sparks: AppColors.celebration,
+          ),
           child: Transform.scale(scale: scale, child: child),
         );
       },
@@ -180,10 +185,17 @@ class KokpitCelebrateState extends State<KokpitCelebrate>
 }
 
 class _BurstPainter extends CustomPainter {
-  _BurstPainter({required this.progress, required this.color});
+  _BurstPainter({
+    required this.progress,
+    required this.color,
+    required this.sparks,
+  });
 
   final double progress;
   final Color color;
+
+  /// Kıvılcım renkleri (gün batımı + neon); sırayla dağıtılır.
+  final List<Color> sparks;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -197,8 +209,10 @@ class _BurstPainter extends CustomPainter {
       ..strokeWidth = 2 * fade + 0.5
       ..color = color.withValues(alpha: 0.6 * fade);
     canvas.drawCircle(center, base + base * 0.9 * eased, ring);
-    final dot = Paint()..color = color.withValues(alpha: 0.9 * fade);
+    final dot = Paint();
     for (var i = 0; i < 8; i++) {
+      final spark = sparks.isEmpty ? color : sparks[i % sparks.length];
+      dot.color = spark.withValues(alpha: 0.9 * fade);
       final a = i * math.pi / 4;
       final r = base + base * 1.3 * eased;
       canvas.drawCircle(
@@ -211,7 +225,9 @@ class _BurstPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BurstPainter old) =>
-      old.progress != progress || old.color != color;
+      old.progress != progress ||
+      old.color != color ||
+      !listEquals(old.sparks, sparks);
 }
 
 // ------------------------------------------------------------ günün bölümü

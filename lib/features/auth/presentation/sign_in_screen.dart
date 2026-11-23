@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_top/ritim_top.dart';
+import '../../../core/widgets/sunset_stripe.dart';
 import 'sign_in_controller.dart';
 
 /// Giriş ekranı: "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
@@ -65,8 +67,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(Icons.dashboard_rounded,
-                      size: 44, color: AppColors.accent),
+                  const _ViceHero(),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
                     'Ritim',
@@ -226,6 +227,42 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Giriş başlığı: gece moru hale içinde simge renklerinde topaç ve gün
+/// batımı şeridi (Vice City esintisi; zemin pastel kalır).
+class _ViceHero extends StatelessWidget {
+  const _ViceHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('sign-in-vice-hero'),
+      children: [
+        SizedBox.square(
+          dimension: 112,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  AppColors.nightPurple.withValues(alpha: 0.35),
+                  AppColors.sunsetEnd.withValues(alpha: 0.10),
+                  AppColors.background.withValues(alpha: 0),
+                ],
+                stops: const [0, 0.6, 1],
+              ),
+            ),
+            child: const Center(
+              child: RitimTop(mode: RitimTopMode.idle, size: 72),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        const SunsetStripe(),
+      ],
     );
   }
 }

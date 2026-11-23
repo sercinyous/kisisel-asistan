@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/sunset_stripe.dart';
 import '../../friends/presentation/friends_button.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/water_providers.dart';
@@ -98,6 +99,8 @@ class KokpitGreetingCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SunsetStripe(key: ValueKey('kokpit-greeting-sunset')),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
