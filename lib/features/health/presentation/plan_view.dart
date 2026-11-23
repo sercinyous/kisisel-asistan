@@ -1,0 +1,1282 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/bento.dart';
+import '../../settings/domain/user_settings.dart';
+import '../../settings/presentation/profile_goals_page.dart';
+import '../../settings/presentation/settings_providers.dart';
+import '../domain/checkin.dart';
+import '../domain/energy_balance.dart';
+import '../domain/fat_loss_plan.dart';
+import '../domain/fat_loss_rate.dart';
+import 'health_format.dart';
+import 'health_widgets.dart';
+import 'providers/targets_providers.dart';
+import 'trend_providers.dart' show trendClockProvider;
+import 'weight_sheets.dart';
+
+const String planDisclaimer =
+    'Bilgilendirme amaçlıdır; tıbbi tavsiye değildir.';
+
+const String planApproxNote =
+    'Yaklaşık değerler; pişmiş 100 g besin değerleriyle hesaplandı.';
+
+const String menuUnderNote =
+    'Menü hedefin altında; porsiyonları biraz artırabilirsin.';
+
+const String supplementDisclaimer =
+    'Genel bilgilendirmedir; takviye başlamadan önce doktoruna/eczacına '
+    'danış. Hamilelik, emzirme ve kronik hastalıkta farklıdır.';
+
+const String magnesiumSupplementText =
+    'Takviye genelde 200–350 mg; takviyeden günde 350 mg\'ı aşma.';
+
+const String planExpenditureError = '1200–6000 arası gir';
+
+/// Her tempo seçeneğinin bugünkü ayar ve kiloyla sonucu (Tempo listesinde
+/// her seçeneğin kalorisi gösterilir).
+final tempoOptionsProvider =
+    FutureProvider<Map<FatLossRate, ResolvedTargets>>((ref) async {
+  final settings = await ref.watch(userSettingsProvider.future);
+  final weight = await ref.watch(latestWeightProvider.future);
+  final now = ref.watch(trendClockProvider)();
+  return {
+    for (final r in FatLossRate.values)
+      r: resolveTargets(
+        settings: settings.copyWith(weeklyRate: r),
+        latestWeightKg: weight?.weightKg,
+        age: ageFromSettings(settings, now),
+        sex: Sex.tryParse(settings.sex),
+      ),
+  };
+});
+
+Color rateHealthColor(RateHealth h) => switch (h) {
+      RateHealth.sustainable => AppColors.accent,
+      RateHealth.fast => AppColors.warning,
+      RateHealth.aggressive => AppColors.danger,
+    };
+
+/// Motor sonucunu "Ne kadar sağlıklı?" metinlerinin biçimine çevirir.
+FatLossRateResult rateResultOf(ResolvedTargets r) => FatLossRateResult(
+      rate: r.rate,
+      targets: r.asFatLossTargets,
+      floorKcal: r.floorKcal,
+      clampedToFloor: r.clamped,
+      actualKgPerWeek: r.kgPerWeek,
+      proteinReduced: r.proteinReduced,
+      fatReduced: r.fatReduced,
+      carbsBelowMin: r.carbsG < FatLossRateRules.carbsMinG,
+    );
+
+/// Sağlık > Plan: hedef, günlük hedefler, tempo, açıklama, rehber, ölçü günü
+/// ve elle ayar bağlantısı.
+class PlanView extends ConsumerWidget {
+  const PlanView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final resolved = ref.watch(resolvedTargetsProvider);
+    return resolved.when(
+      skipLoadingOnReload: true,
+      skipLoadingOnRefresh: true,
+      loading: () => const HealthCardLoading(height: 240),
+      error: (_, __) => BentoGrid(children: [
+        BentoCell(
+          child: BentoCard(
+            key: const Key('plan-retry'),
+            child: HealthCompactMessage(
+              text: 'Plan yüklenemedi.',
+              onRetry: () => ref
+                ..invalidate(userSettingsProvider)
+                ..invalidate(resolvedTargetsProvider),
+            ),
+          ),
+        ),
+      ]),
+      data: (r) => _PlanBody(resolved: r),
+    );
+  }
+}
+
+class _PlanBody extends ConsumerWidget {
+  const _PlanBody({required this.resolved});
+
+  final ResolvedTargets resolved;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BentoGrid(children: [
+          BentoCell(child: _GoalCard(resolved: resolved)),
+          BentoCell(child: _TargetsCard(resolved: resolved)),
+          if (!resolved.locked)
+            BentoCell(child: _TempoCard(resolved: resolved)),
+          BentoCell(child: _WhyCard(resolved: resolved)),
+          BentoCell(child: _GuideCard(resolved: resolved)),
+          const BentoCell(child: _CheckinCard()),
+          BentoCell(
+            child: BentoCard(
+              key: const Key('plan-manual-link'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                    builder: (_) => const ProfileGoalsPage()),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.tune_rounded, color: AppColors.textSecondary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Hedefleri elle ayarla',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: AppColors.textMuted),
+                ],
+              ),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        Text(
+          planDisclaimer,
+          textAlign: TextAlign.center,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: AppColors.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+/// Renkli küçük rozet.
+class PlanBadge extends StatelessWidget {
+  const PlanBadge({super.key, required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(AppRadii.chip),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      );
+}
+
+class _WarningLine extends StatelessWidget {
+  const _WarningLine({super.key, required this.text, this.color});
+
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? AppColors.warning;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 18, color: c),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: c),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------- Hedefim
+
+class _GoalCard extends ConsumerWidget {
+  const _GoalCard({required this.resolved});
+
+  final ResolvedTargets resolved;
+
+  Future<void> _apply(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final write = await ref
+          .read(planControllerProvider)
+          .applyPlan(PlanTrigger.suggestionApplied);
+      messenger.showSnackBar(SnackBar(
+        content: Text(write?.message ?? 'Hedeflerin plana göre ayarlandı'),
+      ));
+    } catch (_) {
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Hedefler güncellenemedi.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final settings = ref.watch(settingsOrDefaultProvider);
+    final targets = ref.watch(targetsProvider);
+    final suggestion = ref.watch(planSuggestionProvider).valueOrNull;
+    final hasWeight = ref.watch(latestWeightProvider).valueOrNull != null;
+    final manual = targets.source == TargetsSource.manual;
+    final updated = targets.updatedAt;
+    final source = manual
+        ? 'Elle ayarlandı'
+        : 'Otomatik (kiloya göre)'
+            '${updated == null ? '' : ' · ${DateFormat('d MMM', 'tr_TR').format(updated.toLocal())}'}';
+    final tempo = resolved.locked
+        ? 'Dengeli beslenme'
+        : resolved.mode == TargetsMode.maintain
+            ? 'Koruma'
+            : resolved.rate.label;
+    return BentoCard(
+      key: const Key('plan-goal'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BentoLabel(
+            icon: Icons.flag_rounded,
+            label: 'Hedefim',
+            color: AppColors.accent,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${HealthFormat.plain(resolved.weightKg)} → '
+            '${HealthFormat.plain(settings.targetWeightKg)} kg',
+            key: const Key('plan-goal-weights'),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            tempo,
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: PlanBadge(
+              key: const Key('plan-source'),
+              text: source,
+              color: manual ? AppColors.warning : AppColors.accent,
+            ),
+          ),
+          if (!hasWeight) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Henüz tartı yok; hesap başlangıç kilonla yapıldı.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textMuted),
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('plan-add-weight'),
+                onPressed: () => WeightFormSheet.show(context),
+                icon: const Icon(Icons.monitor_weight_outlined, size: 18),
+                label: const Text('Tartıl'),
+              ),
+            ),
+          ],
+          if (suggestion != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              key: const Key('plan-suggestion'),
+              children: [
+                Expanded(
+                  child: Text(
+                    'Kilona göre önerilen ${formatTr(suggestion.kcal)} kcal',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                FilledButton.tonal(
+                  key: const Key('plan-suggestion-apply'),
+                  onPressed: () => _apply(context, ref),
+                  child: const Text('Uygula'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------- Günlük hedefler
+
+class _TargetsCard extends ConsumerWidget {
+  const _TargetsCard({required this.resolved});
+
+  final ResolvedTargets resolved;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final t = ref.watch(targetsProvider);
+    final deficit = t.source == TargetsSource.manual
+        ? resolved.expenditure.kcal - t.kcal
+        : resolved.deficit;
+    return BentoCard(
+      key: const Key('plan-targets'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BentoLabel(
+            icon: Icons.local_fire_department_outlined,
+            label: 'Günlük hedeflerin',
+            color: AppColors.nutrition,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                formatTr(t.kcal),
+                key: const Key('plan-kcal'),
+                style: theme.textTheme.displaySmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text('kcal',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: AppColors.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _Macro(
+                  label: 'Protein',
+                  grams: t.proteinG,
+                  color: AppColors.fitness),
+              _Macro(
+                  label: 'Karb', grams: t.carbsG, color: AppColors.nutrition),
+              _Macro(label: 'Yağ', grams: t.fatG, color: AppColors.warning),
+              _Macro(
+                  label: 'Lif', grams: resolved.fiberG, color: AppColors.water),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Adım ${HealthFormat.count(t.steps)} · Uyku '
+            '${t.sleepMinutes ~/ 60} sa'
+            '${t.sleepMinutes % 60 == 0 ? '' : ' ${t.sleepMinutes % 60} dk'}',
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          if (deficit > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Hedef açık: ${formatTr(deficit)} kcal/gün',
+              key: const Key('plan-deficit'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          for (final w in resolved.warnings)
+            _WarningLine(
+              key: Key('plan-warning-${resolved.warnings.indexOf(w)}'),
+              text: w,
+              color: w == SafeTargets.lockedMessage
+                  ? AppColors.textSecondary
+                  : null,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Macro extends StatelessWidget {
+  const _Macro({required this.label, required this.grams, required this.color});
+
+  final String label;
+  final int grams;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${formatTr(grams)} g',
+            style: theme.textTheme.titleMedium
+                ?.copyWith(color: color, fontWeight: FontWeight.w700),
+          ),
+          Text(label,
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------ Tempo
+
+class _TempoCard extends ConsumerWidget {
+  const _TempoCard({required this.resolved});
+
+  final ResolvedTargets resolved;
+
+  Future<void> _select(
+      BuildContext context, WidgetRef ref, FatLossRate rate) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final write = await ref
+          .read(planControllerProvider)
+          .applyPlan(PlanTrigger.rateChanged, rate: rate);
+      if (write != null) {
+        messenger.showSnackBar(SnackBar(content: Text(write.message)));
+      }
+    } catch (_) {
+      messenger
+          .showSnackBar(const SnackBar(content: Text('Tempo kaydedilemedi.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final options = ref.watch(tempoOptionsProvider).valueOrNull;
+    final selected = resolved.rate;
+    final info = rateInfo(rateResultOf(resolved));
+    return BentoCard(
+      key: const Key('plan-tempo'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BentoLabel(
+            icon: Icons.speed_rounded,
+            label: 'Tempo',
+            color: AppColors.fitness,
+          ),
+          const SizedBox(height: 8),
+          for (final r in FatLossRate.values)
+            _TempoOption(
+              rate: r,
+              result: options?[r],
+              selected: r == selected,
+              onTap: r == selected ? null : () => _select(context, ref, r),
+            ),
+          if (selected.warning != null)
+            _WarningLine(
+              key: const Key('plan-rate-warning'),
+              text: selected.warning!,
+              color: AppColors.danger,
+            ),
+          const SizedBox(height: 12),
+          Text(
+            'Ne kadar sağlıklı?',
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final p in info.pros)
+            _Bullet(text: p, color: AppColors.accent, sign: '+'),
+          for (final c in info.cons)
+            _Bullet(text: c, color: AppColors.warning, sign: '−'),
+        ],
+      ),
+    );
+  }
+}
+
+class _TempoOption extends StatelessWidget {
+  const _TempoOption({
+    required this.rate,
+    required this.result,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final FatLossRate rate;
+  final ResolvedTargets? result;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final r = result;
+    final health = r?.health;
+    final pct = r == null || r.kgPerWeek <= 0
+        ? null
+        : ratePercentOfBodyWeight(r.kgPerWeek, r.weightKg);
+    final sub = r == null
+        ? null
+        : [
+            '${formatTr(r.kcal)} kcal',
+            if (r.kgPerWeek > 0)
+              '≈ ${formatTrDecimal2(r.kgPerWeek)} kg/hafta'
+                  '${pct == null ? '' : ' · %${formatTrDecimal2(pct)}'}',
+            if (r.clamped) 'tabana takıldı',
+          ].join(' · ');
+    return Semantics(
+      selected: selected,
+      button: true,
+      inMutuallyExclusiveGroup: true,
+      child: Material(
+        key: Key('plan-rate-${rate.name}'),
+        color: selected
+            ? AppColors.accent.withValues(alpha: 0.12)
+            : AppColors.surface.withValues(alpha: 0),
+        borderRadius: BorderRadius.circular(AppRadii.inner),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_off_rounded,
+                  color: selected ? AppColors.accent : AppColors.textMuted,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rate.label,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight:
+                              selected ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                      ),
+                      if (sub != null)
+                        Text(
+                          sub,
+                          key: Key('plan-rate-${rate.name}-sub'),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                    ],
+                  ),
+                ),
+                if (health != null) ...[
+                  const SizedBox(width: 8),
+                  PlanBadge(
+                    key: Key('plan-rate-${rate.name}-badge'),
+                    text: health.label,
+                    color: rateHealthColor(health),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Bullet extends StatelessWidget {
+  const _Bullet({required this.text, required this.color, required this.sign});
+
+  final String text;
+  final Color color;
+  final String sign;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = Theme.of(context).textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 18,
+            child: Text(sign,
+                style:
+                    body?.copyWith(color: color, fontWeight: FontWeight.w700)),
+          ),
+          Expanded(
+            child:
+                Text(text, style: body?.copyWith(color: AppColors.textPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------- Açılır kartlar
+
+/// Başlığa dokununca açılıp kapanan kart.
+class _Collapsible extends StatefulWidget {
+  const _Collapsible({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final Color color;
+  final Widget child;
+
+  @override
+  State<_Collapsible> createState() => _CollapsibleState();
+}
+
+class _CollapsibleState extends State<_Collapsible> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BentoCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            button: true,
+            expanded: _open,
+            child: InkWell(
+              key: Key(
+                  '${(widget.key as ValueKey<String>?)?.value ?? 'plan'}-toggle'),
+              onTap: () => setState(() => _open = !_open),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.cardPadding),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: BentoLabel(
+                        icon: widget.icon,
+                        label: widget.title,
+                        color: widget.color,
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: _open ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(Icons.expand_more_rounded,
+                          color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: _open
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.cardPadding,
+                        0, AppSpacing.cardPadding, AppSpacing.cardPadding),
+                    child: widget.child,
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------ Neden bu sayılar?
+
+String _expenditureSourceText(ExpenditureSource s) => switch (s) {
+      ExpenditureSource.manual => 'senin girdiğin değer',
+      ExpenditureSource.health => 'bazal + sağlık uygulamasındaki aktif kalori',
+      ExpenditureSource.estimate => 'profilinden (bazal × hareket) tahmin',
+      ExpenditureSource.fallback => 'profil eksik olduğu için varsayılan değer',
+    };
+
+class _WhyCard extends ConsumerWidget {
+  const _WhyCard({required this.resolved});
+
+  final ResolvedTargets resolved;
+
+  Future<void> _edit(BuildContext context, WidgetRef ref) async {
+    final value = await showDialog<int>(
+      context: context,
+      builder: (_) => ExpenditureDialog(initial: resolved.expenditure.kcal),
+    );
+    if (value != null) {
+      await ref.read(planControllerProvider).setExpenditureManual(value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final e = resolved.expenditure;
+    final body =
+        theme.textTheme.bodyMedium?.copyWith(color: AppColors.textPrimary);
+    final kgText = HealthFormat.kg(resolved.weightKg);
+    final deficitText = switch (resolved.mode) {
+      TargetsMode.classic =>
+        'Klasik formül kilonun 26 katını verir (${formatTr(resolved.kcal)} kcal); '
+            'bu, günde ${formatTr(resolved.deficit)} kcal açık demek.',
+      TargetsMode.rate =>
+        'Seçtiğin hız için günde ${formatTr(resolved.deficit)} kcal açık gerekir '
+            '(1 kg yağ ≈ 7.700 kcal). Hedef ${formatTr(resolved.floorKcal)} '
+            'kcal tabanının altına inmez.',
+      TargetsMode.maintain =>
+        'Hedef kilon şimdiki kilondan düşük değil; harcaman kadar yemen önerilir.',
+      TargetsMode.locked => SafeTargets.lockedMessage,
+    };
+    final manual = e.source == ExpenditureSource.manual;
+    return _Collapsible(
+      key: const ValueKey('plan-why'),
+      icon: Icons.help_outline_rounded,
+      title: 'Neden bu sayılar?',
+      color: AppColors.textSecondary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Günlük harcaman yaklaşık ${formatTr(e.kcal)} kcal '
+            '(${_expenditureSourceText(e.source)}).',
+            key: const Key('plan-why-expenditure'),
+            style: body,
+          ),
+          const SizedBox(height: 8),
+          Text(deficitText, key: const Key('plan-why-deficit'), style: body),
+          const SizedBox(height: 8),
+          Text(
+            'Protein ${formatTr(resolved.proteinG)} g ($kgText kg için); açıkta '
+            'kas kaybını azaltır. Makrolar hiçbir zaman kalori hedefini aşmaz.',
+            style: body,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              TextButton.icon(
+                key: const Key('plan-edit-expenditure'),
+                onPressed: () => _edit(context, ref),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Harcamayı elle gir'),
+              ),
+              if (manual)
+                TextButton(
+                  key: const Key('plan-reset-expenditure'),
+                  onPressed: () => ref
+                      .read(planControllerProvider)
+                      .setExpenditureManual(null),
+                  child: const Text('Tahmine dön'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Günlük harcama girişi; denetleyicinin sahibi bu durum nesnesidir, böylece
+/// diyalog kapanış animasyonu sırasında da denetleyici geçerli kalır.
+class ExpenditureDialog extends StatefulWidget {
+  const ExpenditureDialog({super.key, required this.initial});
+
+  final int initial;
+
+  @override
+  State<ExpenditureDialog> createState() => _ExpenditureDialogState();
+}
+
+class _ExpenditureDialogState extends State<ExpenditureDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: '${widget.initial}');
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null ||
+        value < UserSettings.expenditureManualMin ||
+        value > UserSettings.expenditureManualMax) {
+      setState(() => _error = planExpenditureError);
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Günlük harcama'),
+      content: TextField(
+        key: const Key('plan-expenditure-field'),
+        controller: _controller,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        autofocus: true,
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(suffixText: 'kcal', errorText: _error),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Vazgeç'),
+        ),
+        FilledButton(
+          key: const Key('plan-expenditure-save'),
+          onPressed: _submit,
+          child: const Text('Kaydet'),
+        ),
+      ],
+    );
+  }
+}
+
+// ----------------------------------------------------------------- Rehber
+
+class _GuideCard extends ConsumerWidget {
+  const _GuideCard({required this.resolved});
+
+  final ResolvedTargets resolved;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsOrDefaultProvider);
+    final t = ref.watch(targetsProvider);
+    // Rehber kaydedilmiş hedeflere göre ölçeklenir (elle ayar dahil).
+    final targets = FatLossTargets(
+      weightKg: resolved.weightKg,
+      kcal: t.kcal,
+      proteinG: t.proteinG,
+      fatG: t.fatG,
+      fiberG: resolved.fiberG,
+      carbsG: t.carbsG,
+    );
+    return _Collapsible(
+      key: const ValueKey('plan-guide'),
+      icon: Icons.menu_book_outlined,
+      title: 'Rehber',
+      color: AppColors.nutrition,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _EquivalentsSection(targets: targets),
+          const _GuideDivider(),
+          _MenuSection(targets: targets, mealCount: settings.mealCount),
+          const _GuideDivider(),
+          _SupplementSection(
+            targets: targets,
+            sex: Sex.tryParse(settings.sex),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuideDivider extends StatelessWidget {
+  const _GuideDivider();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Divider(height: 1, thickness: 0.5, color: AppColors.border),
+      );
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Text(
+          text,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      );
+}
+
+class _EquivalentsSection extends StatefulWidget {
+  const _EquivalentsSection({required this.targets});
+
+  final FatLossTargets targets;
+
+  @override
+  State<_EquivalentsSection> createState() => _EquivalentsSectionState();
+}
+
+class _EquivalentsSectionState extends State<_EquivalentsSection> {
+  FatLossMacro _macro = FatLossMacro.protein;
+  int _meals = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final amounts = equivalentsFor(widget.targets, _macro, meals: _meals);
+    final grams = widget.targets.gramsFor(_macro);
+    return Column(
+      key: const Key('plan-equivalents'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Besin karşılıkları'),
+        SegmentedButton<FatLossMacro>(
+          showSelectedIcon: false,
+          segments: [
+            for (final m in FatLossMacro.values)
+              ButtonSegment(value: m, label: Text(m.label)),
+          ],
+          selected: {_macro},
+          onSelectionChanged: (s) => setState(() => _macro = s.first),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+                child: Text('Öğün sayısı', style: theme.textTheme.bodyMedium)),
+            SegmentedButton<int>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 1, label: Text('1')),
+                ButtonSegment(value: 2, label: Text('2')),
+                ButtonSegment(value: 3, label: Text('3')),
+              ],
+              selected: {_meals},
+              onSelectionChanged: (s) => setState(() => _meals = s.first),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          _meals == 1
+              ? 'Günlük ${formatTr(grams)} g ${_macro.label.toLowerCase()} için tek başına:'
+              : 'Öğün başına ${formatTr(grams / _meals)} g ${_macro.label.toLowerCase()} için tek başına:',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 6),
+        for (final a in amounts)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Text(a.label, style: theme.textTheme.bodyLarge),
+          ),
+      ],
+    );
+  }
+}
+
+class _MenuSection extends ConsumerWidget {
+  const _MenuSection({required this.targets, required this.mealCount});
+
+  final FatLossTargets targets;
+  final int mealCount;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final menu = scaledMenu(mealCount, targets);
+    final totals = menuTotals(menu);
+    final under = menuUnderTarget(menu, targets);
+    final t = targets;
+    return Column(
+      key: const Key('plan-menu'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Örnek menü'),
+        SegmentedButton<int>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: 2, label: Text('2 öğün')),
+            ButtonSegment(value: 3, label: Text('3 öğün')),
+          ],
+          selected: {mealCount},
+          onSelectionChanged: (s) =>
+              ref.read(planControllerProvider).setMealCount(s.first),
+        ),
+        for (final meal in menu) ...[
+          const SizedBox(height: 12),
+          Text(
+            meal.name,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            meal.items.map((i) => i.label).join(' · '),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Text(
+          'Toplam ${formatTr(totals.kcal)} kcal · P ${formatTr(totals.protein)} g · '
+          'Y ${formatTr(totals.fat)} g · K ${formatTr(totals.carbs)} g · '
+          'Lif ${formatTr(totals.fiber)} g',
+          key: const Key('plan-menu-total'),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Hedef ${formatTr(t.kcal)} kcal · P ${formatTr(t.proteinG)} g · '
+          'Y ${formatTr(t.fatG)} g · K ${formatTr(t.carbsG)} g · '
+          'Lif ${formatTr(t.fiberG)} g',
+          key: const Key('plan-menu-target'),
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: AppColors.textSecondary),
+        ),
+        if (under) ...[
+          const SizedBox(height: 4),
+          Text(menuUnderNote,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.warning)),
+        ],
+        const SizedBox(height: 4),
+        Text(planApproxNote,
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: AppColors.textMuted)),
+      ],
+    );
+  }
+}
+
+class _SupplementSection extends StatelessWidget {
+  const _SupplementSection({required this.targets, required this.sex});
+
+  final FatLossTargets targets;
+  final Sex? sex;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final guide = supplementGuide(
+      weightKg: targets.weightKg,
+      sex: sex,
+      kcal: targets.kcal,
+    );
+    final title = theme.textTheme.titleSmall?.copyWith(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.w700,
+    );
+    final body =
+        theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary);
+    Widget item(String key, String head, String text, {bool hot = false}) =>
+        Padding(
+          key: Key('supplement-$key'),
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(head,
+                  style:
+                      hot ? title?.copyWith(color: AppColors.warning) : title),
+              const SizedBox(height: 2),
+              Text(text, style: body),
+            ],
+          ),
+        );
+    return Column(
+      key: const Key('plan-supplements'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _SectionTitle('Takviyeler'),
+        item(
+            'd3',
+            'D3 vitamini',
+            '1.000–2.000 IU/gün (üst sınır 4.000 IU; kan değeri ölçtürmeden '
+                'yüksek doz alma). Yağlı öğünle al.'),
+        item(
+            'magnesium',
+            'Magnezyum',
+            '${guide.magnesiumText}. $magnesiumSupplementText Sitrat/'
+                'bisglisinat, akşam. Böbrek hastalığında doktora sor.'),
+        item(
+            'omega3',
+            'Omega-3 (EPA+DHA)',
+            '250–500 mg/gün. Haftada 2 porsiyon yağlı balık yemiyorsan '
+                'takviye. Kan sulandırıcı kullanıyorsan doktora sor.'),
+        item(
+          'multivitamin',
+          guide.multivitaminHighlighted
+              ? 'Multivitamin · önerilir'
+              : 'Multivitamin',
+          guide.multivitaminHighlighted
+              ? 'Günde 1. Kalorin 1.500 kcal\'nin altında; besin eksikliği '
+                  'riskine karşı özellikle önerilir.'
+              : 'Günde 1; kalori 1.500 kcal\'nin altına inerse özellikle '
+                  'önerilir.',
+          hot: guide.multivitaminHighlighted,
+        ),
+        item(
+            'water',
+            'Su',
+            '≈ ${formatTr(recommendedWaterMl(targets.weightKg))} ml/gün '
+                '(kilo × 35 ml, en çok 4.000 ml); yiyecek ve içecek dahil; '
+                'kalp/böbrek hastalığında doktora sor.'),
+        item(
+            'fiber',
+            'Lif',
+            'En az 25 g; hedefin: ${formatTr(targets.fiberG)} g. Sebze, '
+                'baklagil ve tam tahıl.'),
+        Text(
+          supplementDisclaimer,
+          key: const Key('supplement-disclaimer'),
+          style:
+              theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------- Ölçü ve fotoğraf günü
+
+class _CheckinCard extends ConsumerWidget {
+  const _CheckinCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final settings = ref.watch(settingsOrDefaultProvider);
+    final now = ref.watch(trendClockProvider)();
+    final controller = ref.read(planControllerProvider);
+    final weekly = settings.checkinCadence == CheckinCadence.weekly;
+    return BentoCard(
+      key: const Key('plan-checkin'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BentoLabel(
+            icon: Icons.straighten_rounded,
+            label: 'Ölçü ve fotoğraf günü',
+            color: AppColors.fitness,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            checkinScheduleLine(settings, now),
+            key: const Key('plan-checkin-line'),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<CheckinCadence>(
+            key: const Key('plan-checkin-cadence'),
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(
+                  value: CheckinCadence.weekly, label: Text('Haftalık')),
+              ButtonSegment(
+                  value: CheckinCadence.monthly, label: Text('Aylık')),
+            ],
+            selected: {settings.checkinCadence},
+            onSelectionChanged: (s) =>
+                controller.setCheckinSchedule(cadence: s.first),
+          ),
+          const SizedBox(height: 12),
+          if (weekly)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (var d = 1; d <= 7; d++)
+                  ChoiceChip(
+                    key: Key('plan-checkin-weekday-$d'),
+                    label: Text(trWeekdayNames[d - 1].substring(0, 3)),
+                    tooltip: trWeekdayNames[d - 1],
+                    selected: settings.checkinWeekday == d,
+                    onSelected: (_) =>
+                        controller.setCheckinSchedule(weekday: d),
+                  ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Ayın günü', style: theme.textTheme.bodyMedium),
+                ),
+                DropdownButton<int>(
+                  key: const Key('plan-checkin-monthday'),
+                  value: settings.checkinMonthday,
+                  items: [
+                    for (var d = 1; d <= UserSettings.checkinMonthdayMax; d++)
+                      DropdownMenuItem(value: d, child: Text('$d')),
+                  ],
+                  onChanged: (d) {
+                    if (d != null) controller.setCheckinSchedule(monthday: d);
+                  },
+                ),
+              ],
+            ),
+          const SizedBox(height: 4),
+          SwitchListTile.adaptive(
+            key: const Key('plan-checkin-reminder'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Hatırlatma (09:00)'),
+            value: settings.checkinReminder,
+            onChanged: (v) => controller.setCheckinSchedule(reminder: v),
+          ),
+        ],
+      ),
+    );
+  }
+}

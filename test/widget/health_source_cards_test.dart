@@ -57,15 +57,15 @@ void main() {
         (tester) async {
       await harness.pump(tester, textScale: 1.3, overrides: googleOverrides());
 
-      expect(find.text('7.321'), findsOneWidget);
+      expect(find.textContaining('7.321 /'), findsOneWidget);
       expect(find.textContaining('HealthKit'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('Apple seçiliyken HealthKit verisi gösterilir', (tester) async {
       await harness.pump(tester);
-      expect(find.text('Adım'), findsOneWidget);
-      expect(find.text('—'), findsNothing);
+      expect(find.textContaining(' adım'), findsOneWidget);
+      expect(find.text('Adım verisi yok'), findsNothing);
     });
 
     testWidgets('oturum dolmuşsa yeniden bağlan mesajı ve düğmesi',
@@ -80,7 +80,7 @@ void main() {
       await tester.tap(find.text('Yeniden bağlan'));
       await tester.pumpAndSettle();
       expect(auth.connectCalls, 1);
-      expect(find.text('7.321'), findsOneWidget);
+      expect(find.textContaining('7.321 /'), findsOneWidget);
     });
 
     testWidgets('bağlı değilken "Bağlan" düğmesi', (tester) async {

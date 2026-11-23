@@ -17,7 +17,8 @@ class MyAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsOrDefaultProvider);
-    final user = ref.watch(authSessionProvider.select((s) => s.valueOrNull?.user));
+    final user =
+        ref.watch(authSessionProvider.select((s) => s.valueOrNull?.user));
     return RitimAvatar(
       choice: settings.avatar,
       name: (name ?? '').trim().isNotEmpty ? name : settings.displayName,

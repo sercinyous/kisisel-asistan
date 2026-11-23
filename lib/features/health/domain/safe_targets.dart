@@ -236,9 +236,9 @@ final RegExp _aiFastingPattern = RegExp(
   r'kahvaltıyı atla|akşam yemeğini atla|hiç yeme|aç kal',
   caseSensitive: false,
 );
-final RegExp _aiKcalPattern =
-    RegExp(r'(\d{1,2}(?:[.\s]\d{3})|\d{3,4})\s*(?:kcal|kalori)',
-        caseSensitive: false);
+final RegExp _aiKcalPattern = RegExp(
+    r'(\d{1,2}(?:[.\s]\d{3})|\d{3,4})\s*(?:kcal|kalori)',
+    caseSensitive: false);
 final RegExp _aiKgPerWeekPattern = RegExp(
   r'(\d+(?:[,.]\d+)?)\s*kg\s*(?:/|\s*(?:her\s+)?)(?:hafta|haftada)',
   caseSensitive: false,

@@ -77,7 +77,8 @@ class RitimAvatar extends ConsumerWidget {
           : _network(context, url, onError: () {
               if (!_failedUrls.add(url)) return;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (context.mounted) ref.invalidate(avatarPhotoUrlProvider(key));
+                if (context.mounted)
+                  ref.invalidate(avatarPhotoUrlProvider(key));
               });
             }),
     );

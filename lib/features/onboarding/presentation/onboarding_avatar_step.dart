@@ -81,8 +81,8 @@ class _OnboardingAvatarStepState extends ConsumerState<OnboardingAvatarStep> {
                   key: const Key('onboarding-avatar-camera'),
                   onPressed: _busy
                       ? null
-                      : () => _run(() =>
-                          actions.pickPhoto(AvatarPhotoSource.camera)),
+                      : () => _run(
+                          () => actions.pickPhoto(AvatarPhotoSource.camera)),
                   icon: const Icon(Icons.photo_camera_rounded),
                   label: const Text('Fotoğraf çek'),
                 ),
@@ -93,8 +93,8 @@ class _OnboardingAvatarStepState extends ConsumerState<OnboardingAvatarStep> {
                   key: const Key('onboarding-avatar-gallery'),
                   onPressed: _busy
                       ? null
-                      : () => _run(() =>
-                          actions.pickPhoto(AvatarPhotoSource.gallery)),
+                      : () => _run(
+                          () => actions.pickPhoto(AvatarPhotoSource.gallery)),
                   icon: const Icon(Icons.photo_library_rounded),
                   label: const Text('Galeriden seç'),
                 ),
@@ -107,9 +107,8 @@ class _OnboardingAvatarStepState extends ConsumerState<OnboardingAvatarStep> {
           child: MascotGrid(
             selectedId:
                 avatar.kind == AvatarKind.mascot ? avatar.mascotId : null,
-            onSelect: _busy
-                ? null
-                : (id) => _run(() => actions.chooseMascot(id)),
+            onSelect:
+                _busy ? null : (id) => _run(() => actions.chooseMascot(id)),
           ),
         ),
         Align(

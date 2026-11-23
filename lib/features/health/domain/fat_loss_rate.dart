@@ -46,6 +46,7 @@ enum FatLossRate {
 /// Hız modlarının sabitleri.
 abstract final class FatLossRateRules {
   static const int kcalFloor = 1200;
+
   /// Kalori yetmezse protein kg × 1,6'ya kadar iner; her durumda en çok
   /// 220 g.
   static const double proteinMinPerKg = 1.6;
@@ -98,8 +99,7 @@ class FatLossRateResult {
 
   /// Klasik formül 1.200 kcal tabanının altında kalori veriyor.
   bool get classicBelowFloor =>
-      rate == FatLossRate.classic &&
-      targets.kcal < FatLossRateRules.kcalFloor;
+      rate == FatLossRate.classic && targets.kcal < FatLossRateRules.kcalFloor;
 
   /// Makro indirimlerinin açıklaması; indirim yoksa `null`.
   String? get macroNote {
@@ -147,8 +147,7 @@ FatLossRateResult computeRateTargets({
       carbsBelowMin: false,
     );
   }
-  final raw =
-      (expenditureKcal - r * FatLossRules.kcalPerKgFat / 7).round();
+  final raw = (expenditureKcal - r * FatLossRules.kcalPerKgFat / 7).round();
   final clamped = raw < floor;
   final kcal = clamped ? floor : raw;
   final macros = rateMacros(weightKg: weightKg, kcal: kcal);

@@ -73,10 +73,11 @@ class SignInController extends Notifier<SignInState> {
     required String password,
   }) =>
       _run(SignInMethod.password, () async {
-        final signedIn = await ref.read(signInBackendProvider).signUpWithPassword(
-              email: email.trim(),
-              password: password,
-            );
+        final signedIn =
+            await ref.read(signInBackendProvider).signUpWithPassword(
+                  email: email.trim(),
+                  password: password,
+                );
         return signedIn ? null : confirmationSentMessage;
       });
 

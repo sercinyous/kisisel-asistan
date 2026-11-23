@@ -334,9 +334,9 @@ class UserSettings {
       checkinCadence: CheckinCadence.parse(map['checkin_cadence']),
       checkinWeekday:
           _profileInt(map['checkin_weekday'], 1, 7) ?? d.checkinWeekday,
-      checkinMonthday: _profileInt(map['checkin_monthday'], 1,
-              checkinMonthdayMax) ??
-          d.checkinMonthday,
+      checkinMonthday:
+          _profileInt(map['checkin_monthday'], 1, checkinMonthdayMax) ??
+              d.checkinMonthday,
       checkinReminder: map['checkin_reminder'] as bool? ?? d.checkinReminder,
       hidePhotos: map['hide_photos'] as bool? ?? d.hidePhotos,
     );

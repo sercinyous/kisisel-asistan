@@ -40,7 +40,10 @@ const Map<String, dynamic> _meal = {
   'carbs_g': 0,
   'fat_g': 7,
 };
-const Map<String, dynamic> _workout = {'workout_type': 'weights', 'title': 'Ağırlık'};
+const Map<String, dynamic> _workout = {
+  'workout_type': 'weights',
+  'title': 'Ağırlık'
+};
 const Map<String, dynamic> _weight = {'weight_kg': 83.9};
 
 /// Bekleyen bildirimleri cihaz gibi tutar: resync hepsini siler.
@@ -76,7 +79,8 @@ class _PendingNotifications extends FakeNotificationService {
 class _RefreshCounter {
   int _count = 0;
 
-  void track<T>(ProviderContainer container, ProviderListenable<AsyncValue<T>> provider) {
+  void track<T>(
+      ProviderContainer container, ProviderListenable<AsyncValue<T>> provider) {
     container.listen<AsyncValue<T>>(
       provider,
       (_, next) {
@@ -317,14 +321,16 @@ void main() {
       };
     }
 
-    Future<bool> parseAndSave(QuickAddMode mode, Map<String, dynamic> json) async {
+    Future<bool> parseAndSave(
+        QuickAddMode mode, Map<String, dynamic> json) async {
       respond(mode, json);
       final controller = controllerFor(mode);
       await controller.parse('metin');
       return controller.save();
     }
 
-    test('iş kaydı (görev + rutin): rutinler, hatırlatmalar, ay ve bildirimler tazelenir',
+    test(
+        'iş kaydı (görev + rutin): rutinler, hatırlatmalar, ay ve bildirimler tazelenir',
         () async {
       late bool ok;
       final refreshed = await refreshedAfter(() async {
@@ -367,7 +373,8 @@ void main() {
           'tasks': [_task],
         }),
       );
-      expect(refreshed, {'upcomingReminders', 'monthOverview', 'notificationSync'});
+      expect(refreshed,
+          {'upcomingReminders', 'monthOverview', 'notificationSync'});
     });
 
     test('yalnızca not: hiçbir Kokpit sağlayıcısı tazelenmez', () async {
@@ -380,7 +387,8 @@ void main() {
       expect(stateOf(QuickAddMode.work).savedCount, 1);
     });
 
-    test('öğün: beslenme özeti ve ay tazelenir, iş tarafı tazelenmez', () async {
+    test('öğün: beslenme özeti ve ay tazelenir, iş tarafı tazelenmez',
+        () async {
       final refreshed = await refreshedAfter(
         () => parseAndSave(QuickAddMode.health, {
           'nutrition': [_meal],
@@ -469,7 +477,12 @@ void main() {
       expect(state.status, QuickAddStatus.preview);
       expect(state.entry!.totalCount, 2);
       expect(state.errorMessage, contains('hiçbir kayıt yazılmadı'));
-      expect(harness.notifications.scheduled, isEmpty);
+      // Sağlık dürtüleri kayıttan bağımsız planlanır; iş hatırlatması yok.
+      expect(
+        harness.notifications.scheduled
+            .where((s) => !s.taskId.startsWith('health:')),
+        isEmpty,
+      );
     });
 
     test('PostgrestException mesajı kullanıcıya iletilir', () async {
@@ -528,8 +541,8 @@ void main() {
         Map<String, dynamic> task, {
         required int minutes,
       }) async {
-        harness.settings.settings = const UserSettings.defaults()
-            .copyWith(eventRemindMinutes: minutes);
+        harness.settings.settings =
+            const UserSettings.defaults().copyWith(eventRemindMinutes: minutes);
         respond(QuickAddMode.work, {
           'tasks': [task],
         });
@@ -621,7 +634,8 @@ void main() {
     });
   });
 
-  test('iki görev planlanırken çıkış yapılırsa eski hesabın hiçbir bildirimi '
+  test(
+      'iki görev planlanırken çıkış yapılırsa eski hesabın hiçbir bildirimi '
       'kalmaz', () async {
     final notifications = _PendingNotifications();
     final h = QuickAddHarness(
@@ -655,7 +669,8 @@ void main() {
     expect(notifications.scheduled.map((r) => r.title),
         isNot(contains('İkinci randevu')),
         reason: 'ikinci görev çıkıştan sonra planlanmaz');
-    expect(notifications.pending.values, isNot(contains('Ayşe ile vardiya planı')));
+    expect(notifications.pending.values,
+        isNot(contains('Ayşe ile vardiya planı')));
     expect(notifications.pending.values, isNot(contains('İkinci randevu')));
   });
 }

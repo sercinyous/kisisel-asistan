@@ -2,33 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/bento.dart';
-import 'activity_cards.dart';
-import 'energy_card.dart';
+import 'body/body_view.dart';
 import 'health_providers.dart';
-import 'fat_loss_screen.dart';
 import 'health_segment.dart';
 import 'healthkit_card.dart';
-import 'meals_section.dart';
-import 'nutrition_day_card.dart';
-import 'water_card.dart';
-import 'week_summary_card.dart';
-import 'weight_card.dart';
-import 'workouts_section.dart';
+import 'plan_view.dart';
+import 'providers/targets_providers.dart' show latestWeightProvider;
+import 'providers/week_deficit_providers.dart' show healthDaysProvider;
+import 'today/today_view.dart';
 
 export 'health_segment.dart' show HealthSegment, healthSegmentProvider;
 
-/// Sağlık sekmesi: üstte Özet / Beslenme / Hareket seçimi; her görünüm
-/// yaklaşık bir ekran. Kaynak (HealthKit / Google Health) yalnızca sorun
-/// varken tek satır uyarı olarak görünür.
+/// Sağlık sekmesi: üstte Bugün / Vücut / Plan seçimi. Kaynak (HealthKit /
+/// Google Health) yalnızca sorun varken tek satır uyarı olarak görünür.
 ///
 /// Başka bir ekrandan belirli görünümü açmak için [healthSegmentProvider]
-/// ayarlanır (ör. Kokpit'ten Beslenme).
+/// ayarlanır (ör. Kokpit'ten Plan).
 class HealthScreen extends ConsumerWidget {
   const HealthScreen({super.key});
 
   Future<void> _refresh(ProviderContainer container) async {
     invalidateHealthData(container);
+    container
+      ..invalidate(healthDaysProvider)
+      ..invalidate(latestWeightProvider);
     await resyncHealthKit(container);
   }
 
@@ -81,9 +78,9 @@ class HealthScreen extends ConsumerWidget {
                   children: [
                     const HealthSourceBanner(),
                     switch (segment) {
-                      HealthSegment.summary => const _SummaryView(),
-                      HealthSegment.nutrition => const _NutritionView(),
-                      HealthSegment.movement => const _MovementView(),
+                      HealthSegment.today => const TodayView(),
+                      HealthSegment.body => const BodyView(),
+                      HealthSegment.plan => const PlanView(),
                     },
                   ],
                 ),
@@ -94,63 +91,6 @@ class HealthScreen extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _SummaryView extends StatelessWidget {
-  const _SummaryView();
-
-  @override
-  Widget build(BuildContext context) => const BentoGrid(
-        children: [
-          BentoCell(child: WeightCard()),
-          BentoCell(child: EnergyNetCard()),
-          BentoCell(child: WeekSummaryCard()),
-        ],
-      );
-}
-
-class _NutritionView extends StatelessWidget {
-  const _NutritionView();
-
-  @override
-  Widget build(BuildContext context) => const Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BentoGrid(
-            children: [
-              BentoCell(child: NutritionDayCard()),
-              BentoCell(child: WaterCard()),
-            ],
-          ),
-          MealsSection(),
-          SizedBox(height: AppSpacing.grid),
-          BentoGrid(
-            children: [
-              BentoCell(child: CaloriesWeekCard()),
-              BentoCell(child: FatLossEntryCard()),
-            ],
-          ),
-        ],
-      );
-}
-
-class _MovementView extends StatelessWidget {
-  const _MovementView();
-
-  @override
-  Widget build(BuildContext context) => const Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BentoGrid(
-            children: [
-              BentoCell(child: WorkoutWeekCard()),
-              BentoCell(span: 1, child: StepsWeekCard()),
-              BentoCell(span: 1, child: SleepWeekCard()),
-            ],
-          ),
-          WorkoutsSection(),
-        ],
-      );
 }
 
 /// Kapsül biçimli üçlü seçim; seçili parça vurgu rengiyle doludur.

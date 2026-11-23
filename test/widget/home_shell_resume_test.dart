@@ -215,13 +215,16 @@ void main() {
     health.log.clear();
     await backgroundAndResume(tester);
 
+    // Seri ve haftalık açık kartları da (healthDaysProvider) aynı tabloları
+    // kendi pencereleriyle okur; her kaynak en az bir kez yeniden okunmalı.
     int reads(String name) => health.log.where((e) => e == name).length;
-    expect(reads('weights'), 2,
-        reason: 'kilo serisi (grafik) + 8 haftalık seri (hedefe varış)');
-    // Özet görünümü: antrenman günlüğü ve öğün listesi başka görünümlerde.
-    expect(reads('workouts'), 1, reason: 'haftalık plan');
-    expect(reads('meals'), 0, reason: 'öğün listesi Beslenme görünümünde');
-    expect(reads('metrics'), 1, reason: '7 günlük adım');
+    expect(reads('weights'), greaterThanOrEqualTo(1),
+        reason: 'kilo serisi (son tartı)');
+    // Bugün görünümü: haftalık antrenman sayısı ve öğün listesi burada.
+    expect(reads('workouts'), greaterThanOrEqualTo(1), reason: 'haftalık plan');
+    expect(reads('meals'), greaterThanOrEqualTo(1),
+        reason: 'öğün listesi Bugün görünümünde');
+    expect(reads('metrics'), greaterThanOrEqualTo(1), reason: '7 günlük adım');
     expect(reads('upsert'), 1, reason: 'HealthKit yeniden okundu');
     expect(reads('upsert-days'), 1, reason: 'geçmiş günler yeniden yazıldı');
     expect(
@@ -229,12 +232,19 @@ void main() {
       lessThan(health.log.indexOf('metrics')),
       reason: 'adım grafiği, HealthKit yedeği yazıldıktan sonra okunmalı',
     );
-    // Beslenme görünümü yeni kaydı gösteriyor (öğün grubu açılınca).
-    container.read(healthSegmentProvider.notifier).state =
-        HealthSegment.nutrition;
+    // Bugün görünümü yeni kaydı gösteriyor (öğün grubu açılınca).
+    container.read(healthSegmentProvider.notifier).state = HealthSegment.today;
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('meal-group-snack')));
+    final group = find.byKey(const ValueKey('meal-group-snack'));
+    await tester.ensureVisible(group);
     await tester.pumpAndSettle();
+    await tester.tap(group);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('meal-gece')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.byKey(const ValueKey('meal-gece')), findsOneWidget);
   });
 

@@ -33,7 +33,10 @@ class ReportsFriendsRow extends ConsumerWidget {
         icon: Icons.people_alt_rounded,
         label: 'Arkadaşlar · bu hafta $rank. sıradasın',
         trailing: FriendAvatarStack(
-          entries: [for (final e in entries!) if (!e.isSelf) e],
+          entries: [
+            for (final e in entries!)
+              if (!e.isSelf) e
+          ],
         ),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const FriendsScreen()),

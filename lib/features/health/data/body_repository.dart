@@ -185,7 +185,8 @@ class MemoryBodyRepository implements BodyRepository {
 
   @override
   Future<BodyMeasurement> upsertMeasurement(BodyMeasurement m) async {
-    final day = DateTime(m.measuredOn.year, m.measuredOn.month, m.measuredOn.day);
+    final day =
+        DateTime(m.measuredOn.year, m.measuredOn.month, m.measuredOn.day);
     final index = measurements.indexWhere((e) => e.measuredOn == day);
     final saved = BodyMeasurement(
       id: index >= 0 ? measurements[index].id : 'm${_nextId++}',

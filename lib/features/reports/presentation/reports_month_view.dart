@@ -9,6 +9,7 @@ import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../settings/presentation/settings_providers.dart';
+import 'reports_health.dart';
 import 'reports_state.dart';
 import 'reports_widgets.dart';
 
@@ -65,6 +66,7 @@ class ReportsMonthView extends ConsumerWidget {
           ),
           data: (value) => ReportsMonthSummary(overview: value),
         ),
+        ReportsMeasurementMonthCard(month: selected),
       ],
     );
   }

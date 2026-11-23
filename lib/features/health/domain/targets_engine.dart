@@ -151,11 +151,10 @@ ResolvedTargets resolveTargets({
   int? age,
   Sex? sex,
 }) {
-  final weight = latestWeightKg != null &&
-          latestWeightKg.isFinite &&
-          latestWeightKg > 0
-      ? latestWeightKg
-      : settings.startWeightKg;
+  final weight =
+      latestWeightKg != null && latestWeightKg.isFinite && latestWeightKg > 0
+          ? latestWeightKg
+          : settings.startWeightKg;
   final basal = settingsBasal(settings, weightKg: weight, age: age, sex: sex);
   final expenditure = planExpenditure(
     manualKcal: settings.expenditureKcalManual,

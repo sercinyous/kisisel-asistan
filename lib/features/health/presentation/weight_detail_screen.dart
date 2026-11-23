@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
-import 'fat_loss_screen.dart';
 import 'weight_card.dart';
 import 'weight_eta_card.dart';
 
@@ -30,7 +29,6 @@ class WeightDetailScreen extends StatelessWidget {
           children: [
             BentoCell(child: WeightHistoryCard()),
             BentoCell(child: WeightEtaCard()),
-            BentoCell(child: FatLossEntryCard()),
           ],
         ),
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/notification_health.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../../core/theme/app_theme.dart';
@@ -181,6 +182,8 @@ class _NotificationsFormState extends ConsumerState<_NotificationsForm> {
                   _permissionCard(),
                   const SizedBox(height: AppSpacing.grid),
                   _preferencesCard(),
+                  const SizedBox(height: AppSpacing.grid),
+                  const _HealthNudgesCard(),
                 ],
               ),
             ),
@@ -302,6 +305,45 @@ class _NotificationsFormState extends ConsumerState<_NotificationsForm> {
               'Başlangıç ve bitiş aynı olduğu için sessiz saat uygulanmaz.',
             ),
         ],
+      ],
+    );
+  }
+}
+
+/// Sağlık dürtüleri: cihazda saklanır, değişince plan hemen yenilenir.
+/// Ölçü günü hatırlatması Sağlık › Plan'daki "Ölçü ve fotoğraf günü"
+/// ayarındadır.
+class _HealthNudgesCard extends ConsumerWidget {
+  const _HealthNudgesCard();
+
+  static const _subtitles = {
+    HealthNudgeKind.meals: '20:30 · O gün hiç öğün girilmediyse.',
+    HealthNudgeKind.steps: '19:00 · Adım hedefine az kaldıysa.',
+    HealthNudgeKind.weekly: 'Pazar 21:00 · Haftanın kalori açığı ve işler.',
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final disabled =
+        ref.watch(healthNudgePrefsProvider).valueOrNull ?? const {};
+    return SettingsSection(
+      icon: Icons.favorite_rounded,
+      title: 'Sağlık dürtüleri',
+      color: AppColors.fitness,
+      children: [
+        for (final kind in _subtitles.keys)
+          SettingsSwitchRow(
+            key: Key('settings-health-nudge-${kind.name}'),
+            title: kind.label,
+            subtitle: _subtitles[kind]!,
+            value: !disabled.contains(kind),
+            onChanged: (v) =>
+                ref.read(healthNudgePrefsProvider.notifier).setEnabled(kind, v),
+          ),
+        const SettingsHint(
+          'Günde en fazla 2 sağlık bildirimi gelir. Ölçü günü hatırlatması '
+          'Sağlık › Plan bölümünden açılıp kapatılır.',
+        ),
       ],
     );
   }

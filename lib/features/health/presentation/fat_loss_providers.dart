@@ -68,9 +68,8 @@ class ManualModeNotifier extends Notifier<bool> {
 
   Future<void> set(bool manual) async {
     state = manual;
-    await ref
-        .read(planControllerProvider)
-        .setExpenditureManual(manual ? ref.read(manualExpenditureProvider) : null);
+    await ref.read(planControllerProvider).setExpenditureManual(
+        manual ? ref.read(manualExpenditureProvider) : null);
   }
 }
 

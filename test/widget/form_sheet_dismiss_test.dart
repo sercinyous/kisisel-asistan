@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kisisel_asistan/features/health/presentation/weight_card.dart';
+import 'package:kisisel_asistan/features/health/data/body_repository.dart';
+import 'package:kisisel_asistan/features/health/presentation/body/body_view.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
@@ -134,6 +135,7 @@ void main() {
           routinesRepositoryProvider.overrideWithValue(routines),
           notesRepositoryProvider.overrideWithValue(notes),
           healthRepositoryProvider.overrideWithValue(health),
+          bodyRepositoryProvider.overrideWithValue(MemoryBodyRepository()),
         ],
         child: MaterialApp(
           theme: AppTheme.dark,
@@ -190,7 +192,8 @@ void main() {
     );
   }
 
-  final forms = <String, (String, Future<void> Function(WidgetTester), int Function())>{
+  final forms =
+      <String, (String, Future<void> Function(WidgetTester), int Function())>{
     'görev': (
       'İşler',
       (tester) async {
@@ -223,7 +226,6 @@ void main() {
     'öğün': (
       'Sağlık',
       (tester) async {
-        await tapVisible(tester, find.text('Beslenme'));
         await tapVisible(tester, find.text('Öğün ekle'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Elle gir'));
@@ -235,17 +237,16 @@ void main() {
     'antrenman': (
       'Sağlık',
       (tester) async {
-        await tapVisible(tester, find.text('Hareket'));
-        await tapVisible(tester, find.widgetWithText(TextButton, 'Ekle').last);
-        await tester.enterText(
-            find.byKey(const Key('workout-duration')), '30');
+        await tapVisible(tester, find.byKey(const Key('move-workout-add')));
+        await tester.enterText(find.byKey(const Key('workout-duration')), '30');
       },
       () => health.workouts.length,
     ),
     'kilo': (
       'Sağlık',
       (tester) async {
-        await tapVisible(tester, find.byType(WeightCard));
+        await tapVisible(tester, find.text('Vücut'));
+        await tapVisible(tester, find.byType(BodyWeightCard));
         await tapVisible(tester, find.text('Kilo ekle'));
         await tester.enterText(find.byKey(const Key('weight-kg')), '82,9');
       },
@@ -297,7 +298,8 @@ void main() {
     });
   }
 
-  testWidgets('not formu kayıt sürerken dışına dokunularak kapatılırsa ana kabuk kapanmaz',
+  testWidgets(
+      'not formu kayıt sürerken dışına dokunularak kapatılırsa ana kabuk kapanmaz',
       (tester) async {
     await pumpShell(tester, 'İşler');
     await forms['not']!.$2(tester);
@@ -315,8 +317,7 @@ void main() {
     expectShellAlive();
   });
 
-  testWidgets(
-      'AI giriş: kayıt, sayfa kapanırken biterse ana kabuk kapanmaz',
+  testWidgets('AI giriş: kayıt, sayfa kapanırken biterse ana kabuk kapanmaz',
       (tester) async {
     await pumpShell(tester, 'İşler');
     harness.repository.gate = gate;

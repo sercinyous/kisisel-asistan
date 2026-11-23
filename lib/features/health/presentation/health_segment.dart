@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Sağlık sekmesinin alt görünümleri.
+/// Sağlık sekmesinin alt görünümleri: Bugün · Vücut · Plan.
 enum HealthSegment {
-  summary('Özet'),
-  nutrition('Beslenme'),
-  movement('Hareket');
+  today('Bugün'),
+  body('Vücut'),
+  plan('Plan');
 
   const HealthSegment(this.label);
 
@@ -12,7 +12,6 @@ enum HealthSegment {
 }
 
 /// Sağlık sekmesinde seçili alt görünüm. Başka ekranlar (ör. Kokpit) bunu
-/// [HealthSegment.nutrition] yapıp Sağlık sekmesine geçerek Beslenme'yi
-/// doğrudan açabilir.
+/// ayarlayıp Sağlık sekmesine geçerek istenen görünümü doğrudan açabilir.
 final healthSegmentProvider =
-    StateProvider<HealthSegment>((ref) => HealthSegment.summary);
+    StateProvider<HealthSegment>((ref) => HealthSegment.today);

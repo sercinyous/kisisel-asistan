@@ -12,7 +12,8 @@ Uint8List squareAvatarJpeg(Uint8List input, {int size = avatarPixelSize}) {
     throw const FormatException('Görüntü okunamadı.');
   }
   final oriented = _stripExif(img.bakeOrientation(decoded));
-  final side = oriented.width < oriented.height ? oriented.width : oriented.height;
+  final side =
+      oriented.width < oriented.height ? oriented.width : oriented.height;
   final square = img.copyCrop(
     oriented,
     x: (oriented.width - side) ~/ 2,

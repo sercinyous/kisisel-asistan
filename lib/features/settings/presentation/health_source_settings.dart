@@ -224,74 +224,74 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
     return HealthSourceDim(
       active: googleSelected,
       child: Column(
-      key: const Key('settings-google-row'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(
-                Icons.watch_rounded,
-                size: 20,
-                color: AppColors.textSecondary,
+        key: const Key('settings-google-row'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  Icons.watch_rounded,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text('Google Health (Fitbit)',
-                            style: theme.textTheme.bodyLarge),
-                      ),
-                      const SizedBox(width: 8),
-                      HealthSourceStateBadge(
-                        key: const Key('google-source-state'),
-                        active: googleSelected,
-                      ),
-                    ],
-                  ),
-                  if (!googleSelected)
-                    Text(
-                      'Pasif: Apple Sağlık seçili, Google Health\'tan veri okunmuyor.',
-                      key: const Key('google-source-passive-note'),
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: AppColors.textMuted),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text('Google Health (Fitbit)',
+                              style: theme.textTheme.bodyLarge),
+                        ),
+                        const SizedBox(width: 8),
+                        HealthSourceStateBadge(
+                          key: const Key('google-source-state'),
+                          active: googleSelected,
+                        ),
+                      ],
                     ),
-                  Text(
-                    status,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        theme.textTheme.bodySmall?.copyWith(color: statusColor),
-                  ),
-                  if (detail != null)
+                    if (!googleSelected)
+                      Text(
+                        'Pasif: Apple Sağlık seçili, Google Health\'tan veri okunmuyor.',
+                        key: const Key('google-source-passive-note'),
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
                     Text(
-                      detail,
+                      status,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall
-                          ?.copyWith(color: AppColors.textMuted),
+                          ?.copyWith(color: statusColor),
                     ),
-                ],
+                    if (detail != null)
+                      Text(
+                        detail,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-        if (actions.isNotEmpty)
-          Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 4,
-              children: actions,
-            ),
+            ],
           ),
-      ],
-    ),
+          if (actions.isNotEmpty)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 4,
+                children: actions,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

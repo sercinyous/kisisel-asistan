@@ -115,8 +115,7 @@ class PlanController {
 
   DateTime _now() => _ref.read(trendClockProvider)();
 
-  Future<UserSettings> _settings() =>
-      _ref.read(userSettingsProvider.future);
+  Future<UserSettings> _settings() => _ref.read(userSettingsProvider.future);
 
   Future<UserSettings> _save(UserSettings next) =>
       _ref.read(userSettingsProvider.notifier).save(next);
@@ -131,9 +130,10 @@ class PlanController {
     double? weightKg,
   }) async {
     final current = await _settings();
-    final settings = rate == null ? current : current.copyWith(weeklyRate: rate);
-    final weight = weightKg ??
-        (await _ref.read(latestWeightProvider.future))?.weightKg;
+    final settings =
+        rate == null ? current : current.copyWith(weeklyRate: rate);
+    final weight =
+        weightKg ?? (await _ref.read(latestWeightProvider.future))?.weightKg;
     final now = _now();
     final resolved = resolveTargets(
       settings: settings,

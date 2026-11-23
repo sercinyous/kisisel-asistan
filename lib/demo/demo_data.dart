@@ -1056,7 +1056,8 @@ List<BodyMeasurement> demoMeasurements(DateTime today) {
         id: 'bm-$week',
         measuredOn: AppDates.addDays(thisMonday, -7 * week),
         values: {
-          BodyField.waist: roundCm(89 + week * 0.42 + (week % 3 == 0 ? 0.3 : 0)),
+          BodyField.waist:
+              roundCm(89 + week * 0.42 + (week % 3 == 0 ? 0.3 : 0)),
           BodyField.hip: roundCm(101 + week * 0.25),
           BodyField.chest: roundCm(103 + week * 0.15),
           BodyField.arm: roundCm(35.5 - week * 0.02),

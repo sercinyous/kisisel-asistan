@@ -61,7 +61,9 @@ class SupabaseAvatarPhotoStore implements AvatarPhotoStore {
 
   @override
   Future<void> remove() async {
-    await _client.storage.from(avatarBucket).remove([avatarObjectPath(_userId)]);
+    await _client.storage
+        .from(avatarBucket)
+        .remove([avatarObjectPath(_userId)]);
   }
 
   @override
@@ -151,13 +153,13 @@ final avatarImagePickerProvider = Provider<AvatarImagePicker>(
     final XFile? file;
     try {
       file = await ImagePicker().pickImage(
-      source: source == AvatarPhotoSource.camera
-          ? ImageSource.camera
-          : ImageSource.gallery,
-      preferredCameraDevice: CameraDevice.front,
-      maxWidth: 2048,
-      maxHeight: 2048,
-      imageQuality: 92,
+        source: source == AvatarPhotoSource.camera
+            ? ImageSource.camera
+            : ImageSource.gallery,
+        preferredCameraDevice: CameraDevice.front,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 92,
       );
     } on PlatformException catch (e) {
       if (e.code == 'camera_access_denied' || e.code == 'photo_access_denied') {

@@ -203,12 +203,7 @@ abstract final class FatLossFoods {
 
   /// Gram birimli zeytinyağı (2 öğünlük menüde gram olarak yazılır).
   static const oliveOilGrams = FatLossFood(
-      name: 'Zeytinyağı',
-      kcal: 884,
-      protein: 0,
-      fat: 100,
-      carbs: 0,
-      fiber: 0);
+      name: 'Zeytinyağı', kcal: 884, protein: 0, fat: 100, carbs: 0, fiber: 0);
   static const walnut = FatLossFood(
       name: 'Ceviz', kcal: 654, protein: 15, fat: 65, carbs: 14, fiber: 6.7);
   static const almond = FatLossFood(
@@ -515,8 +510,8 @@ List<Meal> trimToTarget(List<Meal> meals, int targetKcal, {int? fatTargetG}) {
         for (var i = 0; i < meals.length; i++) Meal(meals[i].name, items[i]),
       ]);
 
-  (int, int)? pick(bool Function(FatLossFood) allowed,
-      double Function(MenuItem) score) {
+  (int, int)? pick(
+      bool Function(FatLossFood) allowed, double Function(MenuItem) score) {
     (int, int)? best;
     var bestScore = 0.0;
     for (var m = 0; m < items.length; m++) {

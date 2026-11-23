@@ -1052,7 +1052,8 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<UserSettings> saveAvatar(AvatarChoice avatar) async {
     if (saveError != null) throw saveError!;
     savedAvatars.add(avatar);
-    final next = (settings ?? const UserSettings.defaults()).copyWith(avatar: avatar);
+    final next =
+        (settings ?? const UserSettings.defaults()).copyWith(avatar: avatar);
     settings = next;
     return next;
   }

@@ -7,8 +7,7 @@ import '../../../settings/presentation/settings_providers.dart';
 import '../../data/health_repository.dart';
 import '../../domain/energy_balance.dart';
 import '../../domain/streaks.dart';
-import '../energy_providers.dart'
-    show EnergyWindow, energyWeightLookbackDays;
+import '../energy_providers.dart' show EnergyWindow, energyWeightLookbackDays;
 import '../trend_providers.dart' show trendClockProvider;
 import 'targets_providers.dart';
 
@@ -133,9 +132,8 @@ final weekDeficitProvider =
     FutureProvider.family<WeekDeficit, DateTime>((ref, weekStart) async {
   final start = AppDates.weekStart(weekStart);
   final now = ref.watch(trendClockProvider)();
-  final health = await ref.watch(healthDaysProvider(
-          (from: start, to: AppDates.addDays(start, 6)))
-      .future);
+  final health = await ref.watch(
+      healthDaysProvider((from: start, to: AppDates.addDays(start, 6))).future);
   final resolved = await ref.watch(resolvedTargetsProvider.future);
   return computeWeekDeficit(
     weekStart: start,

@@ -111,8 +111,7 @@ class StreakStatus {
 
 /// Kayıt günü: ≥ 2 öğün ya da alınan ≥ hedefin %50'si.
 bool isLoggingDay(StreakDay d, StreakTargets t) =>
-    d.mealCount >= 2 ||
-    (d.mealCount > 0 && d.intakeKcal >= t.kcalTarget * 0.5);
+    d.mealCount >= 2 || (d.mealCount > 0 && d.intakeKcal >= t.kcalTarget * 0.5);
 
 /// Adım günü: adım ≥ hedef.
 bool isStepsDay(StreakDay d, StreakTargets t) =>
@@ -143,12 +142,12 @@ List<StreakStatus> computeStreaks({
   };
   return [
     if (includeSteps)
-      _streak(StreakKind.steps, byDay, todayOnly,
-          (d) => isStepsDay(d, targets)),
-    _streak(StreakKind.logging, byDay, todayOnly,
-        (d) => isLoggingDay(d, targets)),
-    _streak(StreakKind.deficit, byDay, todayOnly,
-        (d) => isDeficitDay(d, targets)),
+      _streak(
+          StreakKind.steps, byDay, todayOnly, (d) => isStepsDay(d, targets)),
+    _streak(
+        StreakKind.logging, byDay, todayOnly, (d) => isLoggingDay(d, targets)),
+    _streak(
+        StreakKind.deficit, byDay, todayOnly, (d) => isDeficitDay(d, targets)),
   ];
 }
 
@@ -248,8 +247,7 @@ class WeekDeficit {
   final int targetKcal;
 
   /// Kapalı günler + bugün (şu ana kadar) toplamı.
-  double get totalKcal =>
-      days.fold(0.0, (sum, d) => sum + (d.deficit ?? 0));
+  double get totalKcal => days.fold(0.0, (sum, d) => sum + (d.deficit ?? 0));
 
   /// ≈ kg = toplam / 7.700.
   double get kg => totalKcal / FatLossRules.kcalPerKgFat;

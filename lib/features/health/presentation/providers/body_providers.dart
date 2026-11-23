@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/date_utils.dart';
@@ -35,8 +37,8 @@ final photoUrlProvider =
     FutureProvider.autoDispose.family<String?, String>((ref, path) {
   final link = ref.keepAlive();
   // İmza 10 dakikada biter; 9 dakika sonra yeniden imzalanır.
-  final timer = Future<void>.delayed(const Duration(minutes: 9), link.close);
-  ref.onDispose(() => timer.ignore());
+  final timer = Timer(const Duration(minutes: 9), link.close);
+  ref.onDispose(timer.cancel);
   return ref.watch(bodyRepositoryProvider).signedUrl(path);
 });
 

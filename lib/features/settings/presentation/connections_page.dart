@@ -42,8 +42,10 @@ class ConnectionsPage extends ConsumerWidget {
         ref.watch(healthSourceProvider) == HealthSourceKind.appleHealth;
 
     final (healthText, healthColor) = !appleActive
-        ? ('Pasif: Google Health seçili, Apple Sağlık\'tan veri okunmuyor.',
-            AppColors.textMuted)
+        ? (
+            'Pasif: Google Health seçili, Apple Sağlık\'tan veri okunmuyor.',
+            AppColors.textMuted
+          )
         : health.when(
             skipLoadingOnRefresh: false,
             loading: () => ('Kontrol ediliyor…', AppColors.textMuted),

@@ -20,6 +20,9 @@ enum PlannedKind {
 
   /// Tek seferlik görev/randevu hatırlatması.
   task,
+
+  /// Sağlık dürtüsü (öğün, adım, ölçü günü, haftalık özet); günde en çok 2.
+  healthNudge,
 }
 
 enum PlannedRepeat { none, daily, weekly }
