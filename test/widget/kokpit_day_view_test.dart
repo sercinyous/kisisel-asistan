@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_motion.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/operations/domain/task_item.dart';
@@ -217,6 +218,21 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('1 / 2'), findsOneWidget);
       expect(find.text('1 iş kaldı'), findsOneWidget);
+    });
+
+    testWidgets('rutin işaretlenince kutu kutlama darbesi oynatır',
+        (tester) async {
+      await harness.pump(tester);
+      await harness.tapRow(tester, 'Gelen kutusu kontrolü');
+      final row = find.ancestor(
+        of: find.text('Gelen kutusu kontrolü'),
+        matching: find.byType(InkWell),
+      );
+      final state = tester.state<KokpitCelebrateState>(
+        find.descendant(of: row.first, matching: find.byType(KokpitCelebrate)),
+      );
+      expect(state.celebrations, 1);
+      expect(state.playing, isFalse);
     });
   });
 

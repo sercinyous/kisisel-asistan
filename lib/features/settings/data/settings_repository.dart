@@ -40,6 +40,8 @@ class SettingsRepository {
       healthPlanColumns: row.containsKey('weekly_rate'),
       // Hedef türü sütunları (`goal_mode`, `gain_rate`) yoksa yazılmaz.
       goalModeColumns: row.containsKey('goal_mode'),
+      // Story paylaşım sütunu yoksa yazılmaz ve paylaşım kapalı sayılır.
+      shareStoriesColumn: row.containsKey('share_stories'),
     );
   }
 

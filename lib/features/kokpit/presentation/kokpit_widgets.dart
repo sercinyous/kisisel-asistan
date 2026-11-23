@@ -4,20 +4,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../operations/data/tasks_repository.dart';
 import '../../operations/domain/task_item.dart';
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
 import 'kokpit_format.dart';
+import 'kokpit_motion.dart';
 import 'kokpit_providers.dart';
 
 // Gün ve Ay görünümlerinin paylaştığı görsel parçalar.
 
 class KokpitSectionHeader extends StatelessWidget {
-  const KokpitSectionHeader({super.key, required this.title, this.trailing});
+  const KokpitSectionHeader({
+    super.key,
+    required this.title,
+    this.trailing,
+    this.accent,
+  });
 
   final String title;
   final String? trailing;
+
+  /// Bölümün alan rengi (işler sky, sağlık mint…); başlığın önünde nokta.
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +35,10 @@ class KokpitSectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
+          if (accent != null) ...[
+            RitimDot(color: accent, size: 8),
+            const SizedBox(width: 8),
+          ],
           Expanded(
             child: Text(
               title,
@@ -120,11 +134,15 @@ class KokpitBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reduce = kokpitReduceMotion(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.bar),
       child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: value.clamp(0, 1).toDouble()),
-        duration: const Duration(milliseconds: 500),
+        tween: Tween(
+          begin: reduce ? value.clamp(0, 1).toDouble() : 0,
+          end: value.clamp(0, 1).toDouble(),
+        ),
+        duration: reduce ? Duration.zero : KokpitMotion.fill,
         curve: Curves.easeOutCubic,
         builder: (_, animated, __) => LinearProgressIndicator(
           value: animated,
@@ -156,7 +174,9 @@ class KokpitCheckBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final fill = enabled ? color : AppColors.textMuted;
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: kokpitReduceMotion(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 180),
       width: 20,
       height: 20,
       decoration: BoxDecoration(

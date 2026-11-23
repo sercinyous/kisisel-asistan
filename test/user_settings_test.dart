@@ -78,6 +78,7 @@ void main() {
         'hide_photos': false,
         'goal_mode': 'fat_loss',
         'gain_rate': 'slow',
+        'share_stories': false,
       });
     });
 

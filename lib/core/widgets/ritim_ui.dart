@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -479,6 +480,7 @@ class RitimRing extends StatelessWidget {
           stroke: stroke,
           color: color ?? AppColors.accent,
           track: AppColors.track,
+          complete: value >= 1 ? AppColors.sunset : null,
         ),
         child: Center(child: child),
       ),
@@ -492,12 +494,16 @@ class _RingPainter extends CustomPainter {
     required this.stroke,
     required this.color,
     required this.track,
+    this.complete,
   });
 
   final double value;
   final double stroke;
   final Color color;
   final Color track;
+
+  /// %100'de halkayı gün batımı geçişiyle süpüren renkler.
+  final List<Color>? complete;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -513,15 +519,27 @@ class _RingPainter extends CustomPainter {
         -math.pi / 2,
         math.pi * 2 * value,
         false,
-        paint..color = color,
+        _arcPaint(paint, rect),
       );
     }
+  }
+
+  Paint _arcPaint(Paint paint, Rect rect) {
+    final c = complete;
+    if (c == null) return paint..color = color;
+    return paint
+      ..color = c.first
+      ..shader = SweepGradient(
+        colors: [...c, c.first],
+        transform: const GradientRotation(-math.pi / 2),
+      ).createShader(rect);
   }
 
   @override
   bool shouldRepaint(_RingPainter old) =>
       old.value != value ||
       old.color != color ||
+      !listEquals(old.complete, complete) ||
       old.track != track ||
       old.stroke != stroke;
 }

@@ -21,6 +21,7 @@ import 'notifications_page.dart';
 import 'privacy_screen.dart';
 import 'profile_goals_page.dart';
 import 'settings_providers.dart';
+import 'share_stories_card.dart';
 
 /// Hesap menüsü: altı alt sayfa ve küçük yardım/çıkış grubu. Her alt sayfa
 /// kendi içinde kaydeder.
@@ -249,6 +250,8 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
               ]),
             ),
           ),
+          const SizedBox(height: AppSpacing.section),
+          const ShareStoriesCard(),
         ],
       ),
     );

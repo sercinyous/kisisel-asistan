@@ -21,6 +21,7 @@ import '../../reports/presentation/weekly_checkin_card.dart';
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
 import 'kokpit_health_card.dart';
+import 'kokpit_motion.dart';
 import 'kokpit_providers.dart';
 import 'kokpit_widgets.dart';
 
@@ -41,12 +42,12 @@ class KokpitDayView extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        KokpitHealthCard(),
+        KokpitEntrance(index: 1, child: KokpitHealthCard()),
         _HealthStatusMessage(),
         SizedBox(height: AppSpacing.grid),
-        _StatsRow(),
+        KokpitEntrance(index: 2, child: _StatsRow()),
         SizedBox(height: AppSpacing.grid),
-        _TodaySection(),
+        KokpitEntrance(index: 3, child: _TodaySection()),
         SizedBox(height: AppSpacing.grid),
         WeeklyCheckinCard(bottomSpacing: 0),
       ],
@@ -156,7 +157,7 @@ List<KokpitTodayItem> kokpitTodayItems({
 
 /// Kokpit kartlarının paylaştığı bugünün listesi; ikisi de yüklenene kadar
 /// `null`.
-List<KokpitTodayItem>? _watchTodayItems(WidgetRef ref) {
+List<KokpitTodayItem>? watchKokpitTodayItems(WidgetRef ref) {
   final routines = ref.watch(todayOccurrencesProvider).valueOrNull?.daily;
   final tasks = ref.watch(upcomingRemindersProvider).valueOrNull;
   final now = ref.watch(kokpitClockProvider);
@@ -170,11 +171,10 @@ List<KokpitTodayItem>? _watchTodayItems(WidgetRef ref) {
     routines: routines,
     tasks: tasks,
     now: now,
-    checkin: checkin != null &&
-            checkin.isCheckinDay &&
-            (checkin.done || !dismissed)
-        ? KokpitCheckinItem(done: checkin.done)
-        : null,
+    checkin:
+        checkin != null && checkin.isCheckinDay && (checkin.done || !dismissed)
+            ? KokpitCheckinItem(done: checkin.done)
+            : null,
   );
 }
 
@@ -217,8 +217,9 @@ class _StatsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items =
-        _watchTodayItems(ref)?.where((i) => i is! KokpitCheckinItem).toList();
+    final items = watchKokpitTodayItems(ref)
+        ?.where((i) => i is! KokpitCheckinItem)
+        .toList();
     final done = items?.where((i) => i.done).length ?? 0;
     final total = items?.length ?? 0;
     final left = total - done;
@@ -231,8 +232,9 @@ class _StatsRow extends ConsumerWidget {
             child: _StatCard(
               icon: Icons.checklist_outlined,
               label: 'Günlük işler',
-              color: AppColors.positive,
-              value: items == null ? '—' : '$done / $total',
+              color: AppColors.ops,
+              done: items == null ? null : done,
+              total: total,
               caption: items == null
                   ? ''
                   : left == 0
@@ -255,7 +257,8 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
-    required this.value,
+    required this.done,
+    required this.total,
     required this.caption,
     required this.progress,
     this.onTap,
@@ -264,36 +267,59 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  final String value;
+
+  /// Tamamlanan sayısı; yüklenene kadar `null`.
+  final int? done;
+  final int total;
   final String caption;
   final double? progress;
   final VoidCallback? onTap;
 
+  Widget _valueText(String text) => Text(
+        text,
+        maxLines: 1,
+        style: TextStyle(
+          fontSize: AppType.value,
+          fontWeight: FontWeight.w700,
+          height: 1.25,
+          color: AppColors.textPrimary,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final value = done == null ? '—' : '$done / $total';
     return BentoCard(
       onTap: onTap,
+      tint: color,
       child: Semantics(
         label: '$label: $value${caption.isEmpty ? '' : ', $caption'}',
         excludeSemantics: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BentoLabel(label: label, trailing: 'Aç ›'),
+            Row(
+              children: [
+                RitimDot(color: color, size: 8),
+                const SizedBox(width: 8),
+                Expanded(child: BentoLabel(label: label, trailing: 'Aç ›')),
+              ],
+            ),
             const SizedBox(height: AppSpacing.sm),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: AppType.value,
-                  fontWeight: FontWeight.w700,
-                  height: 1.25,
-                  color: AppColors.textPrimary,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+              child: KokpitCelebrate(
+                key: const ValueKey('kokpit-tasks-celebrate'),
+                active: done != null && total > 0 && done == total,
+                color: color,
+                child: done == null
+                    ? _valueText('—')
+                    : KokpitCountUp(
+                        value: done!,
+                        builder: (_, v) => _valueText('$v / $total'),
+                      ),
               ),
             ),
             if (caption.isNotEmpty)
@@ -310,7 +336,7 @@ class _StatCard extends StatelessWidget {
             const Spacer(),
             if (progress != null) ...[
               const SizedBox(height: AppSpacing.s),
-              KokpitBar(value: progress!, color: color, height: 4),
+              KokpitBar(value: progress!, color: color, height: 6),
             ],
           ],
         ),
@@ -403,7 +429,7 @@ class _TodaySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final routines = ref.watch(todayOccurrencesProvider);
     final tasks = ref.watch(upcomingRemindersProvider);
-    final items = _watchTodayItems(ref);
+    final items = watchKokpitTodayItems(ref);
     final now = ref.watch(kokpitClockProvider);
 
     final Widget body;
@@ -448,6 +474,7 @@ class _TodaySection extends ConsumerWidget {
           children: [
             KokpitSectionHeader(
               title: 'Bugünün işleri',
+              accent: AppColors.ops,
               trailing: '$doneCount / $countable tamam',
             ),
             for (final (index, item) in shown.indexed) ...[
@@ -461,7 +488,7 @@ class _TodaySection extends ConsumerWidget {
                       time: item.time,
                       now: now,
                       done: item.done,
-color: AppColors.positive,
+                      color: AppColors.ops,
                       onTap: () => _toggleOccurrence(context, ref, occurrence),
                     ),
                   ),
@@ -473,7 +500,7 @@ color: AppColors.positive,
                       time: item.time,
                       now: now,
                       done: false,
-                      color: AppColors.positive,
+                      color: AppColors.ops,
                       onTap: () => completeKokpitTask(context, task),
                     ),
                   ),
@@ -483,7 +510,7 @@ color: AppColors.positive,
                     time: null,
                     now: now,
                     done: item.done,
-                    color: AppColors.positive,
+                    color: AppColors.ops,
                     icon: Icons.straighten_outlined,
                     onTap: () => CheckinFlowScreen.open(context),
                   ),
@@ -572,7 +599,11 @@ class _TodayTile extends StatelessWidget {
                   ),
                 )
               else
-                KokpitCheckBox(checked: done, color: color),
+                KokpitCelebrate(
+                  active: done,
+                  color: color,
+                  child: KokpitCheckBox(checked: done, color: color),
+                ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

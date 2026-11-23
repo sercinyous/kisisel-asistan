@@ -350,7 +350,11 @@ void main() {
             .descendant(
               of: find.descendant(
                 of: find.byType(KokpitScreen, skipOffstage: false),
-                matching: find.byType(BentoCard, skipOffstage: false),
+                // Renkli (tint/gradient) kartlar değil, düz zeminli kart.
+                matching: find.byWidgetPredicate(
+                  (w) => w is BentoCard && w.tint == null && w.gradient == null,
+                  skipOffstage: false,
+                ),
                 skipOffstage: false,
               ),
               matching: find.byType(Material, skipOffstage: false),
@@ -449,10 +453,8 @@ void main() {
         scaffoldColor(tester, find.byType(Scaffold)),
         AppPalette.light.background,
       );
-      expect(
-        tester.widget<Icon>(find.byIcon(Icons.dashboard_rounded)).color,
-        AppPalette.light.accent,
-      );
+      expect(find.byKey(const ValueKey('sign-in-vice-hero')), findsOneWidget);
+      expect(AppColors.sunsetEnd, AppPalette.light.sunsetEnd);
     });
 
     testWidgets('ConfigErrorApp verilen tercihi uygular', (tester) async {

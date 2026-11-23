@@ -123,6 +123,8 @@ class UserSettings {
     this.goalMode = GoalMode.fatLoss,
     this.gainRate = GainRate.slow,
     this.goalModeColumns = true,
+    this.shareStories = false,
+    this.shareStoriesColumn = true,
   });
 
   const UserSettings.defaults()
@@ -165,7 +167,9 @@ class UserSettings {
         healthPlanColumns = true,
         goalMode = GoalMode.fatLoss,
         gainRate = GainRate.slow,
-        goalModeColumns = true;
+        goalModeColumns = true,
+        shareStories = false,
+        shareStoriesColumn = true;
 
   /// Elle girilen günlük harcamanın sınırları (schema.sql check).
   static const int expenditureManualMin = 1200;
@@ -281,6 +285,14 @@ class UserSettings {
   /// [toMap] `goal_mode`/`gain_rate` yazmaz.
   final bool goalModeColumns;
 
+  /// "Başarılarımı story olarak paylaş" (`share_stories`); varsayılan kapalı.
+  /// Kapalıyken arkadaşlara hiçbir başarı satırı yazılmaz.
+  final bool shareStories;
+
+  /// Satır `share_stories` sütununu taşıyor mu? Şema henüz yükseltilmemişse
+  /// [toMap] bu sütunu yazmaz.
+  final bool shareStoriesColumn;
+
   /// Etkin görev kategorileri tanımı (kapalılar dahil).
   List<TaskCategory> get taskCategories =>
       taskCategoriesRaw ?? TaskCategory.defaults;
@@ -358,6 +370,7 @@ class UserSettings {
               d.checkinMonthday,
       checkinReminder: map['checkin_reminder'] as bool? ?? d.checkinReminder,
       hidePhotos: map['hide_photos'] as bool? ?? d.hidePhotos,
+      shareStories: map['share_stories'] as bool? ?? false,
     );
   }
 
@@ -440,6 +453,7 @@ class UserSettings {
           'goal_mode': goalMode.dbValue,
           'gain_rate': gainRate.dbValue,
         },
+        if (shareStoriesColumn) 'share_stories': shareStories,
       };
 
   UserSettings copyWith({
@@ -489,6 +503,8 @@ class UserSettings {
     GoalMode? goalMode,
     GainRate? gainRate,
     bool? goalModeColumns,
+    bool? shareStories,
+    bool? shareStoriesColumn,
   }) =>
       UserSettings(
         startWeightKg: startWeightKg ?? this.startWeightKg,
@@ -538,5 +554,7 @@ class UserSettings {
         goalMode: goalMode ?? this.goalMode,
         gainRate: gainRate ?? this.gainRate,
         goalModeColumns: goalModeColumns ?? this.goalModeColumns,
+        shareStories: shareStories ?? this.shareStories,
+        shareStoriesColumn: shareStoriesColumn ?? this.shareStoriesColumn,
       );
 }

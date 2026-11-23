@@ -47,6 +47,15 @@ insert into public.friend_requests (from_user, target_email, target_user)
           'fa500000-0000-0000-0000-000000000001');
 insert into public.app_errors (user_id, message) values ('fa500000-0000-0000-0000-000000000001', 'hata');
 insert into public.feedback (user_id, message) values ('fa500000-0000-0000-0000-000000000001', 'not');
+update public.user_settings set share_stories = true
+  where user_id in ('fa500000-0000-0000-0000-000000000001', 'fa500000-0000-0000-0000-000000000002');
+insert into public.friend_stories (user_id, kind, day)
+  values ('fa500000-0000-0000-0000-000000000001', 'streak_7', current_date);
+insert into public.friend_stories (user_id, kind, day)
+  values ('fa500000-0000-0000-0000-000000000002', 'workout', current_date);
+insert into public.story_reactions (story_id, user_id, emoji)
+  select id, 'fa500000-0000-0000-0000-000000000001', '🔥' from public.friend_stories
+  where user_id = 'fa500000-0000-0000-0000-000000000002';
 
 -- 3) Edge Function'ın açık silmeleri + auth kullanıcısının silinmesi.
 delete from public.friendships
