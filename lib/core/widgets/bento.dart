@@ -134,54 +134,73 @@ class BentoCard extends StatelessWidget {
   }
 }
 
-/// Bento kartı başlığı: küçük ikon + etiket (+ isteğe bağlı sağ metin).
+/// Bento kartı başlığı: solda mürekkep renginde başlık, sağda küçük gri
+/// meta/eylem metni (ör. "2 öğün", "Detay ›"). Önizlemedeki gibi ikon
+/// çizilmez; [icon] geriye dönük uyumluluk için kabul edilir.
 class BentoLabel extends StatelessWidget {
   const BentoLabel({
     super.key,
-    required this.icon,
+    this.icon,
     required this.label,
     Color? color,
     this.trailing,
+    this.onTrailingTap,
+    this.trailingColor,
   }) : _color = color;
 
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final Color? _color;
   final String? trailing;
 
-  /// Verilmezse etkin temanın ikincil metin rengi.
+  /// Verilirse sağ metin dokunulabilir bir eyleme dönüşür.
+  final VoidCallback? onTrailingTap;
+
+  /// Sağ metnin rengi; verilmezse ikincil metin rengi.
+  final Color? trailingColor;
+
+  /// Alan rengi (yalnızca veri/durum için; başlıkta kullanılmaz).
   Color get color => _color ?? AppColors.textSecondary;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        // Başlık mürekkep renginde; alan rengi yalnızca ince ikonda kalır.
-        Icon(icon, size: 14, color: color.withValues(alpha: 0.85)),
-        const SizedBox(width: 5),
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: AppColors.textPrimary,
-              fontSize: AppType.cardTitle,
-              fontWeight: FontWeight.w600,
+    final meta = trailing;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: AppType.cardTitle,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
             ),
           ),
-        ),
-        if (trailing != null)
-          Text(
-            trailing!,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontSize: AppType.caption,
-              fontWeight: FontWeight.w500,
+          if (meta != null)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onTrailingTap,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(
+                  meta,
+                  style: TextStyle(
+                    color: trailingColor ?? AppColors.textSecondary,
+                    fontSize: AppType.caption,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
+                ),
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

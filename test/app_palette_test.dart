@@ -131,8 +131,8 @@ void main() {
       expect(p.accent, const Color(0xFF7EE0C3));
       expect(p.ops, const Color(0xFF8CC8FF));
       expect(p.fitness, const Color(0xFFFFB59A));
-      expect(p.nutrition, const Color(0xFFF3DD8A));
-      expect(p.warning, const Color(0xFFF3DD8A));
+      expect(p.nutrition, const Color(0xFF7EE0C3));
+      expect(p.warning, const Color(0xFFFFB59A));
       expect(p.danger, const Color(0xFFFF8FA3));
       expect(p.onAccent, const Color(0xFF0A0A0A));
     });

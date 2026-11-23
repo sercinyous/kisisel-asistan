@@ -138,10 +138,10 @@ class AppPalette {
     accent: Color(0xFF7EE0C3), // --mint
     ops: Color(0xFF8CC8FF), // --sky
     fitness: Color(0xFFFFB59A), // --peach
-    nutrition: Color(0xFFF3DD8A), // --butter
+    nutrition: Color(0xFF7EE0C3), // --mint (kalori halkası)
     sleep: Color(0xFFB9A7FF), // --lav
     water: Color(0xFF8CC8FF), // --sky
-    warning: Color(0xFFF3DD8A), // --butter
+    warning: Color(0xFFFFB59A), // --peach
     danger: Color(0xFFFF8FA3), // --rose
     onAccent: Color(0xFF0A0A0A), // --onacc
     onPrimary: Color(0xFF0A0A0A),
@@ -182,10 +182,10 @@ class AppPalette {
     accent: Color(0xFF147A60), // --mint #1f9e7d, AA
     ops: Color(0xFF2468AE), // --sky #2f7fcf, AA
     fitness: Color(0xFFB04E26), // --peach #d9693f, AA
-    nutrition: Color(0xFF7D6208), // --butter #a6830f, AA
+    nutrition: Color(0xFF147A60), // --mint, AA
     sleep: Color(0xFF6E57D8), // --lav
     water: Color(0xFF2468AE), // --sky
-    warning: Color(0xFF7D6208), // --butter
+    warning: Color(0xFFB04E26), // --peach, AA
     danger: Color(0xFFC0304E), // --rose #cf3f5c, AA
     onAccent: Color(0xFFFFFFFF), // --onacc
     onPrimary: Color(0xFFFFFFFF),
@@ -229,6 +229,9 @@ abstract final class AppColors {
   static Color get nutrition => palette.nutrition; // beslenme
   static Color get sleep => palette.sleep; // uyku
   static Color get water => palette.water; // su
+  static Color get protein => palette.sleep; // protein çubuğu (lavanta)
+  static Color get positive => palette.accent; // iyi yönde değişim (mint)
+  static Color get negative => palette.fitness; // kötü yönde değişim (şeftali)
   static Color get warning => palette.warning;
   static Color get danger => palette.danger;
 
@@ -304,6 +307,7 @@ abstract final class AppSpacing {
 /// Önizlemenin yazı ölçeği (SF Pro / sistem fontu). Boyutlar ve kalınlıklar
 /// tek yerden; renkler temadan gelir.
 abstract final class AppType {
+  static const double value = 16; // metrik değeri 700
   static const double screenTitle = 22; // .title 700
   static const double cardTitle = 12.5; // .h 600
   static const double body = 12.5;
@@ -360,15 +364,15 @@ abstract final class AppTheme {
     final textTheme = bt
         .apply(bodyColor: p.textPrimary, displayColor: p.textPrimary)
         .copyWith(
-          displaySmall: t(bt.displaySmall, 34, FontWeight.w700, ls: -0.8),
-          headlineLarge: t(bt.headlineLarge, 30, FontWeight.w700, ls: -0.6),
-          headlineMedium: t(bt.headlineMedium, 26, FontWeight.w700, ls: -0.5),
+          displaySmall: t(bt.displaySmall, 28, FontWeight.w700, ls: -0.8),
+          headlineLarge: t(bt.headlineLarge, 26, FontWeight.w700, ls: -0.6),
+          headlineMedium: t(bt.headlineMedium, 24, FontWeight.w700, ls: -0.5),
           headlineSmall: t(bt.headlineSmall, 22, FontWeight.w700, ls: -0.44),
-          titleLarge: t(bt.titleLarge, 20, FontWeight.w700, ls: -0.3),
-          titleMedium: t(bt.titleMedium, 15, FontWeight.w600, ls: -0.1),
-          titleSmall: t(bt.titleSmall, 13, FontWeight.w600),
-          bodyLarge: t(bt.bodyLarge, 15, FontWeight.w400, height: 1.4),
-          bodyMedium: t(bt.bodyMedium, 13, FontWeight.w400, height: 1.4),
+          titleLarge: t(bt.titleLarge, 17, FontWeight.w700, ls: -0.2),
+          titleMedium: t(bt.titleMedium, 14, FontWeight.w600),
+          titleSmall: t(bt.titleSmall, AppType.cardTitle, FontWeight.w600),
+          bodyLarge: t(bt.bodyLarge, 13.5, FontWeight.w400, height: 1.4),
+          bodyMedium: t(bt.bodyMedium, AppType.body, FontWeight.w400, height: 1.4),
           bodySmall: t(bt.bodySmall, AppType.caption, FontWeight.w400,
               color: p.textSecondary, height: 1.35),
           labelLarge: t(bt.labelLarge, AppType.body, FontWeight.w600),
@@ -382,7 +386,7 @@ abstract final class AppTheme {
       borderRadius: BorderRadius.circular(AppRadii.pill),
     );
     final innerRadius = BorderRadius.circular(AppRadii.inner);
-    const buttonText = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+    const buttonText = TextStyle(fontSize: 13, fontWeight: FontWeight.w600);
 
     return base.copyWith(
       textTheme: textTheme,
@@ -458,7 +462,7 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size.fromHeight(40),
           backgroundColor: p.accent,
           foregroundColor: p.onAccent,
           shape: pillShape,
@@ -467,7 +471,7 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size.fromHeight(40),
           foregroundColor: p.textPrimary,
           backgroundColor: p.selection,
           side: BorderSide.none,

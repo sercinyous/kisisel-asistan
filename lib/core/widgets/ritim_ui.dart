@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
+import 'bento.dart';
 
 /// Kart zemininde, 3 px iç boşluklu bölmeli kontrol. Seçili parça yarı
 /// saydam seçim dolgusu ve birincil metinle; diğerleri ikincil metinle çizilir.
@@ -81,23 +82,31 @@ class RitimSegmented<T> extends StatelessWidget {
   }
 }
 
-/// Seçim dolgulu küçük bilgi kutusu: kalın değer + ince etiket.
+/// Seçim dolgulu küçük bilgi kutusu: kalın değer + ince etiket ve isteğe
+/// bağlı renkli durum satırı (ör. "✓ bugün" mint, "• bekliyor" gri).
 class RitimChipTile extends StatelessWidget {
   const RitimChipTile({
     super.key,
     required this.value,
     required this.label,
     this.valueColor,
+    this.status,
+    this.statusColor,
     this.onTap,
   });
 
   final String value;
   final String label;
   final Color? valueColor;
+  final String? status;
+
+  /// Durum satırının rengi; verilmezse ikincil metin rengi.
+  final Color? statusColor;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final st = status;
     return Material(
       color: AppColors.selection,
       borderRadius: BorderRadius.circular(AppRadii.chip),
@@ -131,9 +140,213 @@ class RitimChipTile extends StatelessWidget {
                   color: AppColors.textSecondary,
                 ),
               ),
+              if (st != null)
+                Text(
+                  st,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: AppType.caption,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                    color: statusColor ?? AppColors.textSecondary,
+                  ),
+                ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// [RitimChipTile]'ları 2 sütunlu ızgarada (boşluk 6) dizer.
+class RitimChipGrid extends StatelessWidget {
+  const RitimChipGrid({super.key, required this.children, this.columns = 2});
+
+  final List<Widget> children;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    const gap = 6.0;
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i += columns) {
+      if (i > 0) rows.add(const SizedBox(height: gap));
+      rows.add(
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var j = 0; j < columns; j++) ...[
+                if (j > 0) const SizedBox(width: gap),
+                Expanded(
+                  child: i + j < children.length
+                      ? children[i + j]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: rows,
+    );
+  }
+}
+
+/// Kart içi liste satırı: solda başlık (+ gri alt metin), sağa yaslı değer
+/// ve isteğe bağlı renkli fark (mint/şeftali). Satırlar arasında ince çizgi.
+class RitimListRow extends StatelessWidget {
+  const RitimListRow({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.value,
+    this.delta,
+    this.deltaColor,
+    this.leading,
+    this.showDivider = true,
+    this.onTap,
+  });
+
+  final String title;
+  final String? subtitle;
+  final String? value;
+  final String? delta;
+
+  /// Fark rengi; ör. [AppColors.positive] ya da [AppColors.negative].
+  final Color? deltaColor;
+  final Widget? leading;
+
+  /// Üstte ayırıcı çizgi çizilir (ilk satırda false verin).
+  final bool showDivider;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = subtitle;
+    final v = value;
+    final d = delta;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: showDivider
+            ? Border(top: BorderSide(color: AppColors.border))
+            : null,
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              if (leading != null) ...[
+                leading!,
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: AppType.body,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    if (sub != null)
+                      Text(
+                        sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: AppType.caption,
+                          height: 1.3,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (v != null || d != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (v != null)
+                      Text(
+                        v,
+                        style: TextStyle(
+                          fontSize: AppType.body,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    if (d != null)
+                      Text(
+                        d,
+                        style: TextStyle(
+                          fontSize: AppType.caption,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                          color: deltaColor ?? AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kart içi bölüm başlığı + içerik: başlık kartın içinde, sağda küçük gri
+/// eylem/meta. Kartın dışında büyük başlık kullanılmaz.
+class RitimSectionCard extends StatelessWidget {
+  const RitimSectionCard({
+    super.key,
+    required this.title,
+    required this.child,
+    this.trailing,
+    this.onTrailingTap,
+    this.onTap,
+  });
+
+  final String title;
+  final String? trailing;
+  final VoidCallback? onTrailingTap;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BentoCard(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BentoLabel(
+            label: title,
+            trailing: trailing,
+            onTrailingTap: onTrailingTap,
+          ),
+          const SizedBox(height: 6),
+          child,
+        ],
       ),
     );
   }
@@ -171,7 +384,7 @@ class RitimPillButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
