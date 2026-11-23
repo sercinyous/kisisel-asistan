@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_theme.dart';
+import 'ritim_icons.dart';
 
 /// Yüzen cam kapsül biçiminde, etiketsiz 5 slotlu alt navigasyon.
 ///
-/// Slotlar: Kokpit · Operasyon · **+** (AI giriş) · Sağlık · Raporlar.
+/// Slotlar: Kokpit · İşler · **+** (AI giriş) · Sağlık · İçgörü.
+/// İkonlar [RitimLineIcon]: ince (1.8), yuvarlak uçlu çizgi.
 /// [currentIndex] dört sekmeyi (0..3) gösterir; ortadaki + bir sekme değildir.
 /// İçerik barın arkasından akar (Scaffold.extendBody) ve bulanık görünür;
 /// seçili sekme, ikonun arkasındaki açık renkli kapsülle belirtilir.
@@ -31,14 +33,10 @@ class AppBottomBar extends StatelessWidget {
   static const double bottomGap = 8;
 
   static const List<_BarItem> _items = [
-    _BarItem('Kokpit', Icons.grid_view_outlined, Icons.grid_view_rounded),
-    _BarItem(
-      'İşler',
-      Icons.check_circle_outline_rounded,
-      Icons.check_circle_rounded,
-    ),
-    _BarItem('Sağlık', Icons.favorite_border_rounded, Icons.favorite_rounded),
-    _BarItem('İçgörü', Icons.bar_chart_outlined, Icons.bar_chart_rounded),
+    _BarItem('Kokpit', RitimGlyph.grid),
+    _BarItem('İşler', RitimGlyph.list),
+    _BarItem('Sağlık', RitimGlyph.heart),
+    _BarItem('İçgörü', RitimGlyph.chart),
   ];
 
   void _select(int index) {
@@ -69,15 +67,15 @@ class AppBottomBar extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: AppColors.shadow,
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: ClipRRect(
             borderRadius: radius,
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Container(
                 height: height,
                 padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -108,11 +106,10 @@ class AppBottomBar extends StatelessWidget {
 }
 
 class _BarItem {
-  const _BarItem(this.label, this.icon, this.selectedIcon);
+  const _BarItem(this.label, this.glyph);
 
   final String label;
-  final IconData icon;
-  final IconData selectedIcon;
+  final RitimGlyph glyph;
 }
 
 class _TabButton extends StatelessWidget {
@@ -152,14 +149,11 @@ class _TabButton extends StatelessWidget {
                     : AppColors.navSelected.withValues(alpha: 0),
                 borderRadius: BorderRadius.circular(26),
               ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 160),
-                child: Icon(
-                  selected ? item.selectedIcon : item.icon,
-                  key: ValueKey<bool>(selected),
-                  size: 28,
-                  color: AppColors.textPrimary,
-                ),
+              // Seçili sekme dolu ikonla değil, arkadaki kapsülle belirtilir.
+              child: RitimLineIcon(
+                item.glyph,
+                size: 24,
+                color: AppColors.textPrimary,
               ),
             ),
           ),
@@ -191,10 +185,13 @@ class _CreateButton extends StatelessWidget {
           child: Center(
             child: SizedBox(
               height: 52,
-              child: Icon(
-                Icons.add_circle_outline_rounded,
-                size: 32,
-                color: AppColors.accent,
+              child: Center(
+                child: RitimLineIcon(
+                  RitimGlyph.plus,
+                  size: 26,
+                  strokeWidth: 2,
+                  color: AppColors.accent,
+                ),
               ),
             ),
           ),

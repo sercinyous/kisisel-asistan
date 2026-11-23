@@ -86,13 +86,13 @@ class BentoCard extends StatelessWidget {
     final radius = BorderRadius.circular(AppRadii.card);
     final color = tint == null
         ? AppColors.surface
-        : Color.alphaBlend(tint!.withValues(alpha: 0.10), AppColors.surface);
+        : Color.alphaBlend(tint!.withValues(alpha: 0.08), AppColors.surface);
 
     return Material(
       color: color,
       shape: RoundedRectangleBorder(
         borderRadius: radius,
-        side: BorderSide(color: AppColors.border, width: 0.5),
+        side: BorderSide(color: AppColors.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -127,21 +127,28 @@ class BentoLabel extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 6),
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 5),
         Expanded(
           child: Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelLarge?.copyWith(color: color),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: color,
+              fontSize: AppType.cardTitle,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         if (trailing != null)
           Text(
             trailing!,
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: AppColors.textMuted),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: AppType.caption,
+              fontWeight: FontWeight.w500,
+            ),
           ),
       ],
     );
