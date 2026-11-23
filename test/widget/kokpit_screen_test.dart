@@ -466,6 +466,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Sabah tartı ve kilo kaydı'));
       await tester.pump();
+      // Sayaç yeni değere kısa bir sayma animasyonuyla geçer.
+      await tester.pump(const Duration(milliseconds: 450));
       expect(find.text('1 / 5'), findsOneWidget);
 
       routines.toggleGate!.completeError(Exception('ağ yok'));

@@ -147,7 +147,7 @@ class KokpitGreetingCard extends ConsumerWidget {
                       ? Icons.check_circle_outline_rounded
                       : Icons.checklist_rounded,
                   color: AppColors.ops,
-                  label: left == 0 ? 'Bugünün işleri bitti' : '$left iş kaldı',
+                  label: left == 0 ? 'Bugünün işleri bitti' : 'Açık iş: $left',
                 ),
               if (sleep != null)
                 _StatusChip(

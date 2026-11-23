@@ -42,6 +42,7 @@ void main() {
         _host(const KokpitEntrance(index: 3, child: Text('Kart'))),
       );
       expect(find.byType(Opacity), findsOneWidget);
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byType(Opacity), findsNothing);
       expect(tester.hasRunningAnimations, isFalse);

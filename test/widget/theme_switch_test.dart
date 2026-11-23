@@ -350,7 +350,11 @@ void main() {
             .descendant(
               of: find.descendant(
                 of: find.byType(KokpitScreen, skipOffstage: false),
-                matching: find.byType(BentoCard, skipOffstage: false),
+                // Renkli (tint/gradient) kartlar değil, düz zeminli kart.
+                matching: find.byWidgetPredicate(
+                  (w) => w is BentoCard && w.tint == null && w.gradient == null,
+                  skipOffstage: false,
+                ),
                 skipOffstage: false,
               ),
               matching: find.byType(Material, skipOffstage: false),
