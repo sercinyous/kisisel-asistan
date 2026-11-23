@@ -4050,7 +4050,8 @@ begin
           monthly_remind_time, event_remind_minutes, quiet_hours_enabled,
           quiet_start, quiet_end, team_members, height_cm, birth_year, sex,
           display_name, work_description, task_categories, activity_level,
-          timezone, onboarded_at)
+          timezone, onboarded_at, weekly_rate, targets_source,
+          targets_updated_at)
        = (select r.start_weight_kg, r.target_weight_kg, r.daily_calories,
                  r.daily_protein_g, r.daily_carbs_g, r.daily_fat_g, r.daily_steps,
                  r.sleep_minutes, r.notifications_enabled, r.routine_notifications,
@@ -4059,7 +4060,10 @@ begin
                  coalesce(r.team_members, '{}'), r.height_cm, r.birth_year, r.sex,
                  r.display_name, r.work_description, r.task_categories,
                  r.activity_level, coalesce(v_tz, s.timezone),
-                 coalesce(r.onboarded_at, now())
+                 coalesce(r.onboarded_at, now()),
+                 coalesce(r.weekly_rate, s.weekly_rate),
+                 coalesce(r.targets_source, s.targets_source),
+                 coalesce(r.targets_updated_at, s.targets_updated_at)
           from jsonb_populate_record(s, v_settings) r)
    where s.user_id = v_uid
   returning s.* into v_row;

@@ -24,13 +24,20 @@ class SettingsRepository {
   /// sütunu hiç yoktur (anahtar satırda bulunmaz; sütun var ama boşsa anahtar
   /// `null` ile gelir): mevcut hesap, SQL güncellemesi çalışana kadar kılavuza
   /// zorlanmasın diye kurulumu bitmiş sayılır.
+  ///
+  /// Sağlık v2 sütunları (`weekly_rate` …) yoksa şema henüz yükseltilmemiştir:
+  /// ayarlar bu sütunları yazmaz ([UserSettings.healthPlanColumns]).
   static UserSettings parseRow(Map<String, dynamic> row) {
-    if (row.containsKey('onboarded_at')) return UserSettings.fromMap(row);
-    return UserSettings.fromMap({
-      ...row,
-      'onboarded_at':
-          row['updated_at'] ?? DateTime.now().toUtc().toIso8601String(),
-    });
+    final parsed = row.containsKey('onboarded_at')
+        ? UserSettings.fromMap(row)
+        : UserSettings.fromMap({
+            ...row,
+            'onboarded_at':
+                row['updated_at'] ?? DateTime.now().toUtc().toIso8601String(),
+          });
+    return row.containsKey('weekly_rate')
+        ? parsed
+        : parsed.copyWith(healthPlanColumns: false);
   }
 
   String get _userId {
