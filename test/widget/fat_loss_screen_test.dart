@@ -359,4 +359,86 @@ void main() {
       expect(find.byType(FatLossScreen), findsOneWidget);
     });
   });
+
+  group('haftalık hız', () {
+    Finder inCard(String key, Finder f) =>
+        find.descendant(of: find.byKey(Key(key)), matching: f);
+
+    testWidgets('hız değişince kalori, makro, menü ve öğün açığı güncellenir',
+        (tester) async {
+      await _pump(tester, weights: [_weight(84)]);
+      expect(find.text('2.184'), findsOneWidget);
+      expect(find.byKey(const Key('fat-loss-rate-classic-info')), findsOneWidget);
+      final chip = find.byKey(const Key('fat-loss-rate-half'));
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      // 3000 − 550 = 2450; P 168, Y 68, K 291, lif 34.
+      expect(find.text('2.450'), findsOneWidget);
+      expect(find.text('68 g'), findsOneWidget);
+      expect(find.text('291 g'), findsOneWidget);
+      expect(
+          find.text('Hedef 2.450 kcal · P 168 g · Y 68 g · K 291 g · Lif 34 g'),
+          findsOneWidget);
+      expect(inCard('fat-loss-today', find.textContaining('2.450')),
+          findsWidgets);
+      expect(find.text('≈ 0,50 kg/hafta'), findsOneWidget);
+      expect(inCard('fat-loss-rate-card', find.text('Sürdürülebilir')),
+          findsOneWidget);
+      expect(find.byKey(const Key('fat-loss-rate-classic-info')), findsNothing);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(fatLossRateKey), 'half');
+
+      await tester.tap(find.byKey(const Key('fat-loss-rate-threeQuarter')));
+      await tester.pumpAndSettle();
+      expect(find.text('2.175'), findsOneWidget);
+      expect(inCard('fat-loss-rate-card', find.text('Hızlı')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('fat-loss-apply')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('2.175 kcal'), findsWidgets);
+    });
+
+    testWidgets('saklanan 1 kg seçimi, taban notu, agresif ve multivitamin',
+        (tester) async {
+      await _pump(tester, weights: [
+        _weight(60)
+      ], prefs: {
+        fatLossRateKey: 'one',
+        fatLossExpenditureKey: 1900,
+      });
+      expect(find.text('1.200'), findsOneWidget);
+      expect(find.byKey(const Key('fat-loss-rate-floor')), findsOneWidget);
+      expect(find.text(rateFloorNote(700 * 7 / 7700)), findsOneWidget);
+      expect(inCard('fat-loss-rate-card', find.text('Agresif')),
+          findsOneWidget);
+      expect(find.text(rateWaterNote), findsOneWidget);
+      expect(find.text('Multivitamin · önerilir'), findsOneWidget);
+      expect(find.text(supplementDisclaimer), findsOneWidget);
+    });
+
+    testWidgets('vitamin kartı cinsiyete göre magnezyum', (tester) async {
+      await _pump(tester, weights: [_weight(84)], settings: _profile());
+      expect(inCard('supplement-magnesium', find.textContaining('Erkek: 400')),
+          findsOneWidget);
+      expect(find.text('Multivitamin'), findsOneWidget);
+      expect(inCard('supplement-water', find.textContaining('2.950 ml')),
+          findsOneWidget);
+    });
+
+    testWidgets('kadın ve belirsiz profil', (tester) async {
+      await _pump(tester,
+          weights: [_weight(60)],
+          settings: _profile().copyWith(sex: 'female'));
+      expect(inCard('supplement-magnesium', find.textContaining('Kadın: 310')),
+          findsOneWidget);
+    });
+
+    testWidgets('profil yoksa iki magnezyum değeri', (tester) async {
+      await _pump(tester, weights: [_weight(84)]);
+      final f = inCard('supplement-magnesium',
+          find.textContaining('Kadın 310–320 mg, erkek 400–420'));
+      expect(f, findsOneWidget);
+    });
+  });
 }

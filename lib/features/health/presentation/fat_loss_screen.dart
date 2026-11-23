@@ -22,6 +22,15 @@ const String fatLossExpenditureError = '1200–6000 arası gir';
 const String fatLossApproxNote =
     'Yaklaşık değerler; pişmiş 100 g besin değerleriyle hesaplandı.';
 
+const String supplementDisclaimer =
+    'Genel bilgilendirmedir; takviye başlamadan önce doktoruna/eczacına '
+    'danış. Hamilelik, emzirme ve kronik hastalıkta farklıdır.';
+
+/// Hız modu kalori tabanına takıldığında gösterilen not.
+String rateFloorNote(double actualKgPerWeek) =>
+    'Bu hız için kalori tabanına takıldı; gerçek hız '
+    '≈${formatTrDecimal2(actualKgPerWeek)} kg/hafta.';
+
 /// Uygulamanın kalori sınırı nedeniyle değişen kaydın açıklaması.
 String fatLossClampNote(int kcal) =>
     'Uygulamanın sınırı nedeniyle ${formatTr(kcal)} kcal olarak kaydedilecek.';
@@ -130,9 +139,11 @@ class _PlanBody extends StatelessWidget {
         BentoGrid(children: [
           const BentoCell(child: TodayGapCard()),
           BentoCell(child: _TargetsCard(state: state)),
+          BentoCell(child: FatLossRateCard(state: state)),
           BentoCell(child: _WeeklyCard(state: state)),
           BentoCell(child: _EquivalentsCard(targets: state.targets)),
           BentoCell(child: _MenuCard(targets: state.targets)),
+          BentoCell(child: SupplementCard(state: state)),
         ]),
         const SizedBox(height: 16),
         Text(
@@ -841,6 +852,257 @@ class FatLossGapLine extends ConsumerWidget {
             Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+Color _healthColor(RateHealth h) => switch (h) {
+      RateHealth.sustainable => AppColors.accent,
+      RateHealth.fast => AppColors.warning,
+      RateHealth.aggressive => AppColors.danger,
+    };
+
+/// Haftalık hız seçimi ve "Ne kadar sağlıklı?" açıklaması.
+class FatLossRateCard extends ConsumerWidget {
+  const FatLossRateCard({super.key, required this.state});
+
+  final FatLossPlanState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final result = state.rateResult;
+    final rate = result.rate;
+    final kg = state.weight.weightKg;
+    final weeklyKg = result.actualKgPerWeek;
+    final health = classifyRate(weeklyKg, kg);
+    final pct = ratePercentOfBodyWeight(weeklyKg, kg);
+    final info = rateInfo(rate);
+    final body = theme.textTheme.bodyMedium;
+    final muted =
+        theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted);
+    return BentoCard(
+      key: const Key('fat-loss-rate-card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          BentoLabel(
+            icon: Icons.speed_outlined,
+            label: 'Haftalık hız',
+            color: AppColors.fitness,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final r in FatLossRate.values)
+                ChoiceChip(
+                  key: Key('fat-loss-rate-${r.name}'),
+                  label: Text(r.label),
+                  selected: r == rate,
+                  onSelected: (_) =>
+                      ref.read(fatLossRateProvider.notifier).set(r),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Ne kadar sağlıklı?',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: 6),
+          if (weeklyKg > 0)
+            Row(
+              children: [
+                Container(
+                  key: const Key('fat-loss-rate-badge'),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _healthColor(health).withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(AppRadii.chip),
+                  ),
+                  child: Text(
+                    health.label,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: _healthColor(health),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '≈ ${formatTrDecimal2(weeklyKg)} kg/hafta · vücut '
+                    'ağırlığının %${formatTrDecimal2(pct)}',
+                    key: const Key('fat-loss-rate-pct'),
+                    style: body?.copyWith(color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            )
+          else
+            Text('Bu harcamayla kilo kaybı beklenmez.',
+                style: body?.copyWith(color: AppColors.textSecondary)),
+          if (rate == FatLossRate.classic) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Klasik: kilonun 26 katı sabit kalori '
+              '(${formatTr(state.targets.kcal)} kcal). Harcamana göre tahmini '
+              'hız ≈${formatTrDecimal2(weeklyKg)} kg/hafta.',
+              key: const Key('fat-loss-rate-classic-info'),
+              style: body?.copyWith(color: AppColors.textPrimary),
+            ),
+          ],
+          if (result.clampedToFloor) ...[
+            const SizedBox(height: 6),
+            Text(
+              rateFloorNote(weeklyKg),
+              key: const Key('fat-loss-rate-floor'),
+              style: body?.copyWith(color: AppColors.warning),
+            ),
+          ],
+          if (result.fatReduced || result.carbsBelowMin) ...[
+            const SizedBox(height: 6),
+            Text(
+              result.carbsBelowMin
+                  ? 'Karbonhidrat 50 g\'ın altında kaldı; yağ en alt sınırda '
+                      '(kg × 0,6). Bu kaloriyle uzun süre devam etme.'
+                  : 'Karbonhidrat en az 50 g kalsın diye yağ azaltıldı.',
+              key: const Key('fat-loss-rate-carbs'),
+              style: body?.copyWith(color: AppColors.warning),
+            ),
+          ],
+          const SizedBox(height: 8),
+          for (final p in info.pros)
+            _Bullet(text: p, color: AppColors.accent, sign: '+'),
+          for (final c in info.cons)
+            _Bullet(text: c, color: AppColors.warning, sign: '−'),
+          if (info.note != null) ...[
+            const SizedBox(height: 6),
+            Text(info.note!,
+                key: const Key('fat-loss-rate-water'), style: muted),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Bullet extends StatelessWidget {
+  const _Bullet({required this.text, required this.color, required this.sign});
+
+  final String text;
+  final Color color;
+  final String sign;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = Theme.of(context).textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 18,
+            child: Text(sign,
+                style: body?.copyWith(
+                    color: color, fontWeight: FontWeight.w700)),
+          ),
+          Expanded(
+            child: Text(text,
+                style: body?.copyWith(color: AppColors.textPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Diyette günlük vitamin/mineral" bilgi kartı.
+class SupplementCard extends StatelessWidget {
+  const SupplementCard({super.key, required this.state});
+
+  final FatLossPlanState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final guide = supplementGuide(
+      weightKg: state.weight.weightKg,
+      sex: state.sex,
+      kcal: state.targets.kcal,
+    );
+    final title = theme.textTheme.titleSmall?.copyWith(
+      color: AppColors.textPrimary,
+      fontWeight: FontWeight.w700,
+    );
+    final body =
+        theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary);
+    Widget item(String key, String head, String text, {bool hot = false}) =>
+        Padding(
+          key: Key('supplement-$key'),
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(head,
+                  style: hot ? title?.copyWith(color: AppColors.warning) : title),
+              const SizedBox(height: 2),
+              Text(text, style: body),
+            ],
+          ),
+        );
+    return BentoCard(
+      key: const Key('supplement-card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          BentoLabel(
+            icon: Icons.medication_outlined,
+            label: 'Diyette günlük vitamin/mineral',
+            color: AppColors.nutrition,
+          ),
+          const SizedBox(height: 12),
+          item('d3', 'D3 vitamini',
+              '1.000–2.000 IU/gün (üst sınır 4.000 IU; kan değeri ölçtürmeden '
+              'yüksek doz alma). Yağlı öğünle al.'),
+          item('magnesium', 'Magnezyum',
+              '${guide.magnesiumText}. Takviye genelde 200–400 mg '
+              '(sitrat/bisglisinat), akşam. Böbrek hastalığında doktora sor.'),
+          item('omega3', 'Omega-3 (EPA+DHA)',
+              '250–500 mg/gün. Haftada 2 porsiyon yağlı balık yemiyorsan '
+              'takviye. Kan sulandırıcı kullanıyorsan doktora sor.'),
+          item(
+            'multivitamin',
+            guide.multivitaminHighlighted
+                ? 'Multivitamin · önerilir'
+                : 'Multivitamin',
+            guide.multivitaminHighlighted
+                ? 'Günde 1. Kalorin 1.500 kcal\'nin altında; besin eksikliği '
+                    'riskine karşı özellikle önerilir.'
+                : 'Günde 1; kalori 1.500 kcal\'nin altına inerse özellikle '
+                    'önerilir.',
+            hot: guide.multivitaminHighlighted,
+          ),
+          item('water', 'Su',
+              '≈ ${formatTr(guide.waterMl)} ml/gün (kilo × 35 ml).'),
+          item('protein', 'Protein',
+              'Günlük ${formatTr(state.targets.proteinG)} gramlık hedefi '
+              'öğünlere böl; kas kaybını azaltır.'),
+          item('fiber', 'Lif', '25–30 g/gün; sebze, baklagil ve tam tahıl.'),
+          Text(
+            supplementDisclaimer,
+            key: const Key('supplement-disclaimer'),
+            style:
+                theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+          ),
+        ],
       ),
     );
   }
