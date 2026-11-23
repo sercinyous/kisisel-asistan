@@ -477,7 +477,6 @@ abstract final class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: p.accent,
           shape: pillShape,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
