@@ -204,12 +204,12 @@ class _NotificationsFormState extends ConsumerState<_NotificationsForm> {
           : ('Kapalı · iPhone Ayarlar > Bildirimler', AppColors.warning),
     );
     return SettingsSection(
-      icon: Icons.notifications_active_rounded,
+      icon: Icons.notifications_active_outlined,
       title: 'İzin',
       color: AppColors.ops,
       children: [
         SettingsStatusRow(
-          icon: Icons.phone_iphone_rounded,
+          icon: Icons.phone_iphone_outlined,
           title: 'Bildirim izni',
           status: text,
           statusColor: color,
@@ -225,7 +225,7 @@ class _NotificationsFormState extends ConsumerState<_NotificationsForm> {
   Widget _preferencesCard() {
     final on = _enabled;
     return SettingsSection(
-      icon: Icons.notifications_rounded,
+      icon: Icons.notifications_outlined,
       title: 'Hatırlatmalar',
       color: AppColors.ops,
       children: [

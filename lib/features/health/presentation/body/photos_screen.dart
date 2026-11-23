@@ -54,7 +54,7 @@ class _PhotosScreenState extends ConsumerState<PhotosScreen> {
           children: [
             for (final p in PhotoPose.values)
               ListTile(
-                leading: const Icon(Icons.accessibility_new_rounded),
+                leading: const Icon(Icons.accessibility_new_outlined),
                 title: Text(p.label),
                 onTap: () => Navigator.of(context).pop(p),
               ),
@@ -92,7 +92,7 @@ class _PhotosScreenState extends ConsumerState<PhotosScreen> {
                   TextButton.icon(
                     key: const Key('photo-delete'),
                     onPressed: () => Navigator.of(context).pop(true),
-                    icon: Icon(Icons.delete_outline_rounded,
+                    icon: Icon(Icons.delete_outline_outlined,
                         color: AppColors.danger),
                     label:
                         Text('Sil', style: TextStyle(color: AppColors.danger)),

@@ -50,12 +50,12 @@ class HealthSourcePicker extends ConsumerWidget {
           style: SegmentedButton.styleFrom(
             backgroundColor: AppColors.surface,
             foregroundColor: AppColors.textSecondary,
-            selectedBackgroundColor: AppColors.surfaceHigh,
-            selectedForegroundColor: AppColors.accent,
+            selectedBackgroundColor: AppColors.selection,
+            selectedForegroundColor: AppColors.textPrimary,
             disabledForegroundColor: AppColors.textMuted,
             side: BorderSide(color: AppColors.border),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadii.inner),
+              borderRadius: BorderRadius.circular(AppRadii.segment),
             ),
           ),
         ),
@@ -233,7 +233,7 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Icon(
-                  Icons.watch_rounded,
+                  Icons.watch_outlined,
                   size: 20,
                   color: AppColors.textSecondary,
                 ),

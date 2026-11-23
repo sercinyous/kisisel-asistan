@@ -41,7 +41,7 @@ class ReportPeriodSwitcher extends StatelessWidget {
         IconButton(
           onPressed: onPrevious,
           tooltip: previousTooltip,
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(Icons.chevron_left_outlined),
           color: AppColors.textSecondary,
         ),
         Expanded(
@@ -319,7 +319,7 @@ class ReportAiCard extends ConsumerWidget {
             const SizedBox(height: 14),
           ],
           BentoLabel(
-            icon: Icons.auto_awesome_rounded,
+            icon: Icons.auto_awesome_outlined,
             label: title,
             color: AppColors.accent,
             trailing: 'AI',
@@ -364,7 +364,7 @@ class ReportAiCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  Icons.error_outline_rounded,
+                  Icons.error_outline_outlined,
                   size: 18,
                   color: AppColors.danger,
                 ),
@@ -438,7 +438,7 @@ class ReportRefreshButton extends ConsumerWidget {
                 color: AppColors.accent,
               ),
             )
-          : const Icon(Icons.refresh_rounded, size: 22),
+          : const Icon(Icons.refresh_outlined, size: 22),
     );
   }
 }

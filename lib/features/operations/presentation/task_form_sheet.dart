@@ -256,7 +256,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         ),
         const OpsFieldLabel('Tarih ve saat'),
         OpsPickerRow(
-          icon: Icons.event_rounded,
+          icon: Icons.event_outlined,
           label: date == null
               ? 'Tarih seç'
               : DateFormat('d MMM y, EEE', AppDates.locale).format(date),
@@ -266,7 +266,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         if (date != null) ...[
           const SizedBox(height: 8),
           OpsPickerRow(
-            icon: Icons.schedule_rounded,
+            icon: Icons.schedule_outlined,
             label: formatTimeOfDay(_time),
             onTap: _pickTime,
           ),

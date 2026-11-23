@@ -74,7 +74,7 @@ class _CompareViewState extends ConsumerState<CompareView> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s),
-              child: Icon(Icons.arrow_forward_rounded,
+              child: Icon(Icons.arrow_forward_outlined,
                   size: 18, color: AppColors.textMuted),
             ),
             Expanded(
@@ -180,7 +180,7 @@ class _DateChip extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.expand_more_rounded,
+              Icon(Icons.expand_more_outlined,
                   size: 18, color: AppColors.textSecondary),
             ],
           ),
@@ -274,7 +274,7 @@ class _Diff extends StatelessWidget {
           horizontal: AppSpacing.cardPadding, vertical: AppSpacing.md),
       child: Row(
         children: [
-          Icon(Icons.compare_arrows_rounded, size: 18, color: AppColors.accent),
+          Icon(Icons.compare_arrows_outlined, size: 18, color: AppColors.accent),
           const SizedBox(width: AppSpacing.s),
           Expanded(
             child: Text(parts.join(' · '), style: theme.textTheme.bodyMedium),

@@ -77,7 +77,7 @@ class ConnectionsPage extends ConsumerWidget {
         padding: settingsListPadding,
         children: [
           SettingsSection(
-            icon: Icons.link_rounded,
+            icon: Icons.link_outlined,
             title: 'Sağlık verisi',
             color: AppColors.nutrition,
             children: [

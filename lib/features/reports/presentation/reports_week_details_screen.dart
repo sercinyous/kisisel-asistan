@@ -54,14 +54,14 @@ class ReportsWeekDetailsScreen extends ConsumerWidget {
           report.when(
             loading: () => const KokpitSkeletonCard(height: 240),
             error: (_, __) => KokpitInlineMessage(
-              icon: Icons.cloud_off_rounded,
+              icon: Icons.cloud_off_outlined,
               message: 'Haftalık rapor yüklenemedi.',
               actionLabel: 'Tekrar dene',
               onAction: () => ref.invalidate(weeklyReportProvider(week)),
             ),
             data: (value) => value == null
                 ? const KokpitInlineMessage(
-                    icon: Icons.insights_rounded,
+                    icon: Icons.insights_outlined,
                     message: 'Bu hafta için rapor henüz oluşmadı.',
                   )
                 : _NumbersGrid(metrics: value.metrics),
@@ -71,7 +71,7 @@ class ReportsWeekDetailsScreen extends ConsumerWidget {
           history.when(
             loading: () => const KokpitSkeletonCard(height: 120),
             error: (_, __) => KokpitInlineMessage(
-              icon: Icons.cloud_off_rounded,
+              icon: Icons.cloud_off_outlined,
               message: 'Geçmiş haftalar yüklenemedi.',
               actionLabel: 'Tekrar dene',
               onAction: () => ref.invalidate(weeklyReportListProvider),
@@ -83,12 +83,12 @@ class ReportsWeekDetailsScreen extends ConsumerWidget {
               ];
               if (others.isEmpty) {
                 return const KokpitInlineMessage(
-                  icon: Icons.history_rounded,
+                  icon: Icons.history_outlined,
                   message: 'Henüz başka haftalık rapor yok.',
                 );
               }
               return ReportListCard(
-                icon: Icons.insights_rounded,
+                icon: Icons.insights_outlined,
                 entries: [
                   for (final item in others)
                     ReportListEntry(
@@ -130,7 +130,7 @@ class _NumbersGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: ReportRateCard(
-            icon: Icons.task_alt_rounded,
+            icon: Icons.task_alt_outlined,
             label: 'İş',
             color: AppColors.accent,
             rate: m.workRate,
@@ -141,7 +141,7 @@ class _NumbersGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: ReportRateCard(
-            icon: Icons.fitness_center_rounded,
+            icon: Icons.fitness_center_outlined,
             label: 'Form',
             color: AppColors.fitness,
             rate: m.formRate,

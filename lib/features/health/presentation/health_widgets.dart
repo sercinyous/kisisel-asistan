@@ -397,14 +397,14 @@ class HealthWhenPicker extends StatelessWidget {
       children: [
         if (onDate != null) ...[
           OpsPickerRow(
-            icon: Icons.event_rounded,
+            icon: Icons.event_outlined,
             label: healthFormDate(date),
             onTap: () => _pickDate(context),
           ),
           const SizedBox(height: 8),
         ],
         OpsPickerRow(
-          icon: Icons.schedule_rounded,
+          icon: Icons.schedule_outlined,
           label: formatTimeOfDay(time),
           onTap: () => _pickTime(context),
         ),

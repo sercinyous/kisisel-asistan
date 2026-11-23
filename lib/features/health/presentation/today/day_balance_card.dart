@@ -51,7 +51,7 @@ class DayBalanceCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.donut_large_rounded,
+            icon: Icons.donut_large_outlined,
             label: 'Günün dengesi',
             color: AppColors.nutrition,
             trailing: 'hedef ${HealthFormat.count(targets.kcal)} kcal',
@@ -271,7 +271,7 @@ class _GapLine extends ConsumerWidget {
       child: Row(
         children: [
           Icon(
-            report.allDone ? Icons.check_circle_rounded : Icons.flag_rounded,
+            report.allDone ? Icons.check_circle_rounded : Icons.flag_outlined,
             size: 18,
             color: report.allDone
                 ? AppColors.accent
@@ -312,7 +312,7 @@ class _Notice extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.warning_amber_rounded,
+              Icon(Icons.warning_amber_outlined,
                   size: 18, color: AppColors.warning),
               const SizedBox(width: 8),
               Expanded(
@@ -370,7 +370,7 @@ class WaterRow extends ConsumerWidget {
         final notifier = ref.read(waterProvider.notifier);
         return Row(
           children: [
-            Icon(Icons.water_drop_rounded, size: 18, color: AppColors.water),
+            Icon(Icons.water_drop_outlined, size: 18, color: AppColors.water),
             const SizedBox(width: 8),
             Expanded(
               child: Semantics(
@@ -419,15 +419,27 @@ class WaterRow extends ConsumerWidget {
                   ? () =>
                       _run(context, notifier.undo, 'Son kayıt geri alınamadı.')
                   : null,
-              icon: const Icon(Icons.remove_rounded),
-              color: AppColors.textSecondary,
+              icon: const Icon(Icons.remove_outlined, size: 18),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.selection,
+                foregroundColor: AppColors.textPrimary,
+                disabledBackgroundColor: AppColors.selection,
+                fixedSize: const Size.square(34),
+                minimumSize: const Size.square(34),
+              ),
             ),
             IconButton.filledTonal(
               key: const Key('day-water-plus'),
               tooltip: '$waterGlassMl ml su ekle',
               onPressed: () => _run(context, () => notifier.add(waterGlassMl),
                   'Su kaydı eklenemedi.'),
-              icon: const Icon(Icons.add_rounded),
+              icon: const Icon(Icons.add_outlined, size: 18),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
+                fixedSize: const Size.square(34),
+                minimumSize: const Size.square(34),
+              ),
             ),
           ],
         );

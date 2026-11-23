@@ -33,7 +33,7 @@ class MovementTiles extends ConsumerWidget {
         span: 1,
         child: _Tile(
           key: const Key('move-steps'),
-          icon: Icons.directions_walk_rounded,
+          icon: Icons.directions_walk_outlined,
           label: 'Adım',
           color: AppColors.ops,
           value: steps == null ? '—' : HealthFormat.count(steps),
@@ -49,7 +49,7 @@ class MovementTiles extends ConsumerWidget {
         span: 1,
         child: _Tile(
           key: const Key('move-sleep'),
-          icon: Icons.bedtime_rounded,
+          icon: Icons.bedtime_outlined,
           label: 'Uyku',
           color: AppColors.sleep,
           value: sleep == null ? '—' : KokpitFormat.sleep(sleep),
@@ -65,7 +65,7 @@ class MovementTiles extends ConsumerWidget {
         span: 1,
         child: _Tile(
           key: const Key('move-workouts'),
-          icon: Icons.fitness_center_rounded,
+          icon: Icons.fitness_center_outlined,
           label: 'Antrenman',
           color: AppColors.fitness,
           value: week == null
@@ -84,7 +84,7 @@ class MovementTiles extends ConsumerWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             onPressed: () => WorkoutFormSheet.show(context),
-            icon: const Icon(Icons.add_rounded, size: 18),
+            icon: const Icon(Icons.add_outlined, size: 18),
             label: const Text('Ekle'),
           ),
         ),
@@ -93,7 +93,7 @@ class MovementTiles extends ConsumerWidget {
         span: 1,
         child: _Tile(
           key: const Key('move-weekly'),
-          icon: Icons.insights_rounded,
+          icon: Icons.insights_outlined,
           label: 'Haftalık detay',
           color: AppColors.accent,
           value: '7 · 30 · 90',
@@ -146,7 +146,7 @@ class _Tile extends StatelessWidget {
               value,
               style: theme.textTheme.titleLarge?.copyWith(
                 color: AppColors.textPrimary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

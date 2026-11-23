@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import 'reports_providers.dart';
 
@@ -55,7 +56,7 @@ class ReportDailyCompletionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.bar_chart_rounded,
+            icon: Icons.bar_chart_outlined,
             label: 'Günlük tamamlama',
             color: AppColors.ops,
           ),
@@ -169,7 +170,7 @@ class _Legend extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.circle, size: 10, color: color),
+        RitimDot(color: color),
         const SizedBox(width: 6),
         Text(
           label,

@@ -36,7 +36,7 @@ class _BodyPhotoImageState extends ConsumerState<BodyPhotoImage> {
     Widget image = url.when(
       skipLoadingOnRefresh: true,
       loading: () => BodyPhotoPlaceholder(
-        icon: Icons.hourglass_empty_rounded,
+        icon: Icons.hourglass_empty_outlined,
         radius: widget.radius,
       ),
       error: (_, __) => BodyPhotoPlaceholder(

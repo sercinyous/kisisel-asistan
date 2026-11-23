@@ -74,7 +74,7 @@ class SettingsLoadError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off_rounded, color: AppColors.textMuted),
+            Icon(Icons.cloud_off_outlined, color: AppColors.textMuted),
             const SizedBox(height: 12),
             Text(
               'Hesap bilgileri yüklenemedi.',
@@ -358,7 +358,7 @@ class SettingsTimeRow extends StatelessWidget {
         const SizedBox(width: 8),
         TextButton.icon(
           onPressed: onTap,
-          icon: const Icon(Icons.schedule_rounded, size: 18),
+          icon: const Icon(Icons.schedule_outlined, size: 18),
           label: Text(
             value.format(),
             style: const TextStyle(

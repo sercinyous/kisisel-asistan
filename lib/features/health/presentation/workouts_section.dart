@@ -11,11 +11,11 @@ import 'health_widgets.dart';
 import 'workout_form_sheet.dart';
 
 IconData _workoutIcon(String workoutType) => switch (workoutType) {
-      'weights' => Icons.fitness_center_rounded,
-      'kickboxing' => Icons.sports_mma_rounded,
-      'running' => Icons.directions_run_rounded,
-      'football' => Icons.sports_soccer_rounded,
-      _ => Icons.bolt_rounded,
+      'weights' => Icons.fitness_center_outlined,
+      'kickboxing' => Icons.sports_mma_outlined,
+      'running' => Icons.directions_run_outlined,
+      'football' => Icons.sports_soccer_outlined,
+      _ => Icons.bolt_outlined,
     };
 
 const String _deleteTitle = 'Antrenman silinsin mi?';
@@ -76,7 +76,7 @@ class _WorkoutsSectionState extends ConsumerState<WorkoutsSection> {
           skipLoadingOnRefresh: true,
           loading: () => const KokpitSkeletonCard(height: 112),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Antrenmanlar yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(recentWorkoutsProvider),
@@ -84,7 +84,7 @@ class _WorkoutsSectionState extends ConsumerState<WorkoutsSection> {
           data: (items) {
             if (items.isEmpty) {
               return const KokpitInlineMessage(
-                icon: Icons.fitness_center_rounded,
+                icon: Icons.fitness_center_outlined,
                 message: 'Son $recentWorkoutsDays günde antrenman kaydı yok.',
               );
             }

@@ -134,7 +134,7 @@ class AppPalette {
     border: Color(0xFF222226), // --card-line
     textPrimary: Color(0xFFF4F4F6), // --ink
     textSecondary: Color(0xFF8E8E96), // --sub
-    textMuted: Color(0xFF75757E),
+    textMuted: Color(0xFF85858E), // AA 4.5+ kartta
     accent: Color(0xFF7EE0C3), // --mint
     ops: Color(0xFF8CC8FF), // --sky
     fitness: Color(0xFFFFB59A), // --peach
@@ -178,7 +178,7 @@ class AppPalette {
     border: Color(0xFFE4E4EA), // --card-line
     textPrimary: Color(0xFF141418), // --ink
     textSecondary: Color(0xFF5F5F68), // --sub (AA için bir ton koyu)
-    textMuted: Color(0xFF7A7A84),
+    textMuted: Color(0xFF6A6A73), // AA 4.5+ yüzeylerde
     accent: Color(0xFF147A60), // --mint #1f9e7d, AA
     ops: Color(0xFF2468AE), // --sky #2f7fcf, AA
     fitness: Color(0xFFB04E26), // --peach #d9693f, AA
@@ -203,7 +203,7 @@ class AppPalette {
     glassBorder: Color.from(alpha: 0.08, red: 0, green: 0, blue: 0),
     navSelected: Color.from(alpha: 0.07, red: 0, green: 0, blue: 0),
     selection: Color.from(alpha: 0.07, red: 0, green: 0, blue: 0), // --sel
-    track: Color(0xFFE2E2E8), // --track
+    track: Color(0xFFD8D8E0), // --track (yüzeyde seçilebilir)
   );
 }
 
@@ -413,6 +413,8 @@ abstract final class AppTheme {
         modalBackgroundColor: p.surface,
         surfaceTintColor: Colors.transparent,
         showDragHandle: false,
+        dragHandleColor: p.track,
+        dragHandleSize: const Size(36, 4),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
@@ -482,7 +484,8 @@ abstract final class AppTheme {
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           visualDensity: VisualDensity.compact,
-          side: WidgetStatePropertyAll(BorderSide(color: p.border)),
+          // Bölücü çizgi yok: seçim yalnızca yarı saydam dolguyla belirtilir.
+          side: const WidgetStatePropertyAll(BorderSide.none),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: innerRadius),
           ),

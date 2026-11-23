@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import 'body/body_view.dart';
 import 'health_providers.dart';
 import 'health_segment.dart';
@@ -96,7 +97,7 @@ class HealthScreen extends ConsumerWidget {
   }
 }
 
-/// Kapsül biçimli üçlü seçim; seçili parça vurgu rengiyle doludur.
+/// Kart zeminli üçlü seçim; seçili parça yarı saydam seçim dolgusuyla.
 class _SegmentBar extends StatelessWidget {
   const _SegmentBar({required this.selected, required this.onSelected});
 
@@ -105,57 +106,11 @@ class _SegmentBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: AppColors.surface,
-      shape: StadiumBorder(
-        side: BorderSide(color: AppColors.border, width: 0.5),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            for (final segment in HealthSegment.values)
-              Expanded(
-                child: Semantics(
-                  selected: segment == selected,
-                  button: true,
-                  child: Material(
-                    key: Key('health-segment-${segment.name}'),
-                    color: segment == selected
-                        ? AppColors.accent
-                        : AppColors.surface.withValues(alpha: 0),
-                    shape: const StadiumBorder(),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => onSelected(segment),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 44),
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              segment.label,
-                              maxLines: 1,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: segment == selected
-                                    ? AppColors.onAccent
-                                    : AppColors.textSecondary,
-                                fontWeight: segment == selected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+    return RitimSegmented<HealthSegment>(
+      segments: {for (final s in HealthSegment.values) s: s.label},
+      selected: selected,
+      onChanged: onSelected,
+      itemKey: (s) => Key('health-segment-${s.name}'),
     );
   }
 }

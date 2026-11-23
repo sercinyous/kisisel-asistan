@@ -83,7 +83,7 @@ class _OnboardingAvatarStepState extends ConsumerState<OnboardingAvatarStep> {
                       ? null
                       : () => _run(
                           () => actions.pickPhoto(AvatarPhotoSource.camera)),
-                  icon: const Icon(Icons.photo_camera_rounded),
+                  icon: const Icon(Icons.photo_camera_outlined),
                   label: const Text('Fotoğraf çek'),
                 ),
               ),
@@ -95,7 +95,7 @@ class _OnboardingAvatarStepState extends ConsumerState<OnboardingAvatarStep> {
                       ? null
                       : () => _run(
                           () => actions.pickPhoto(AvatarPhotoSource.gallery)),
-                  icon: const Icon(Icons.photo_library_rounded),
+                  icon: const Icon(Icons.photo_library_outlined),
                   label: const Text('Galeriden seç'),
                 ),
               ),

@@ -16,7 +16,7 @@ enum CheckinStep {
   weigh('Tartı', 'Sabah, aç karnına, tuvaletten sonra.',
       Icons.monitor_weight_outlined),
   tape('Mezura', 'Bel, kalça ve diğerleri; nefes verince ölç.',
-      Icons.straighten_rounded),
+      Icons.straighten_outlined),
   photo('Fotoğraf', 'Ön, yan, arka; aynı ışık ve mesafe.',
       Icons.photo_camera_outlined);
 
@@ -88,7 +88,7 @@ class _CheckinFlowScreenState extends ConsumerState<CheckinFlowScreen> {
         leading: IconButton(
           tooltip: 'Kapat',
           onPressed: () => Navigator.of(context).maybePop(),
-          icon: const Icon(Icons.close_rounded),
+          icon: const Icon(Icons.close_outlined),
         ),
       ),
       body: ListView(
@@ -287,8 +287,8 @@ class _Done extends StatelessWidget {
                 children: [
                   Icon(
                     states[s] == CheckinStepState.done
-                        ? Icons.check_rounded
-                        : Icons.remove_rounded,
+                        ? Icons.check_outlined
+                        : Icons.remove_outlined,
                     size: 16,
                     color: states[s] == CheckinStepState.done
                         ? AppColors.accent

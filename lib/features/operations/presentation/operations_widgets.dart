@@ -42,7 +42,7 @@ Future<OpsFilterPick?> showOpsFilterSheet(
           key: ValueKey('ops-filter-option-${value ?? 'all'}'),
           title: Text(label),
           trailing: isSelected
-              ? Icon(Icons.check_rounded, color: AppColors.ops)
+              ? Icon(Icons.check_outlined, color: AppColors.ops)
               : null,
           onTap: () => Navigator.of(context).pop(OpsFilterPick(value)),
         );
@@ -121,7 +121,7 @@ class OpsGroupCard extends StatelessWidget {
           if (onHeaderTap != null) ...[
             const SizedBox(width: 4),
             Icon(
-              collapsed ? Icons.expand_more_rounded : Icons.expand_less_rounded,
+              collapsed ? Icons.expand_more_outlined : Icons.expand_less_outlined,
               size: 20,
               color: AppColors.textMuted,
             ),
@@ -246,7 +246,7 @@ class OpsMessage extends StatelessWidget {
             const SizedBox(height: 8),
             TextButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded, size: 20),
+              icon: const Icon(Icons.refresh_outlined, size: 20),
               label: const Text('Tekrar dene'),
             ),
           ],
@@ -267,7 +267,7 @@ class OpsItemMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<bool>(
       tooltip: 'Seçenekler',
-      icon: Icon(Icons.more_vert_rounded, color: AppColors.textMuted),
+      icon: Icon(Icons.more_vert_outlined, color: AppColors.textMuted),
       onSelected: (edit) => edit ? onEdit() : onDelete(),
       itemBuilder: (context) => const [
         PopupMenuItem(value: true, child: Text('Düzenle')),
@@ -378,7 +378,7 @@ class OpsSheetFrame extends StatelessWidget {
                     tooltip: 'Kapat',
                     onPressed:
                         saving ? null : () => Navigator.of(context).pop(false),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_outlined),
                   ),
                 ],
               ),
@@ -457,7 +457,7 @@ class OpsPickerRow extends StatelessWidget {
           IconButton(
             tooltip: 'Temizle',
             onPressed: onClear,
-            icon: Icon(Icons.close_rounded, color: AppColors.textMuted),
+            icon: Icon(Icons.close_outlined, color: AppColors.textMuted),
           ),
       ],
     );

@@ -610,7 +610,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     key: const Key('onboarding-close'),
                     tooltip: 'Kapat',
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_outlined),
                   )
                 else
                   TextButton(
@@ -623,12 +623,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           if (!widget.replay)
             ClipRRect(
-              borderRadius: BorderRadius.circular(2),
+              borderRadius: BorderRadius.circular(AppRadii.bar),
               child: LinearProgressIndicator(
                 key: const Key('onboarding-progress'),
                 value: (_step.index + fraction) / stepCount,
                 minHeight: 4,
-                backgroundColor: AppColors.surfaceHigh,
+                backgroundColor: AppColors.track,
                 color: AppColors.accent,
               ),
             ),

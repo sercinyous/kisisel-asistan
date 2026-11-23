@@ -137,7 +137,7 @@ class KokpitHealthCard extends ConsumerWidget {
       skipLoadingOnRefresh: true,
       loading: () => const KokpitSkeletonCard(height: 168),
       error: (_, __) => KokpitInlineMessage(
-        icon: Icons.cloud_off_rounded,
+        icon: Icons.cloud_off_outlined,
         message: 'Beslenme özeti yüklenemedi.',
         actionLabel: 'Tekrar dene',
         onAction: () => ref.invalidate(todayNutritionProvider),
@@ -310,7 +310,7 @@ class _StepsLine extends StatelessWidget {
         Row(
           children: [
             Icon(
-              Icons.directions_walk_rounded,
+              Icons.directions_walk_outlined,
               size: 14,
               color: AppColors.fitness,
             ),
@@ -362,7 +362,7 @@ class _StreakLine extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.local_fire_department_rounded,
+            Icons.local_fire_department_outlined,
             size: 16,
             color: AppColors.warning,
           ),
@@ -434,7 +434,7 @@ class KokpitWaterTile extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.water_drop_rounded, size: 14, color: AppColors.water),
+              Icon(Icons.water_drop_outlined, size: 14, color: AppColors.water),
               const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
@@ -486,7 +486,7 @@ class KokpitWaterTile extends ConsumerWidget {
                               notifier.undo,
                               'Su kaydı geri alınamadı.',
                             ),
-                    icon: const Icon(Icons.remove_rounded),
+                    icon: const Icon(Icons.remove_outlined),
                     color: AppColors.water,
                     style: IconButton.styleFrom(
                       side: BorderSide(color: AppColors.border),
@@ -504,8 +504,8 @@ class KokpitWaterTile extends ConsumerWidget {
                               'Su kaydı eklenemedi.',
                             ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.water.withValues(alpha: 0.16),
-                      foregroundColor: AppColors.water,
+                      backgroundColor: AppColors.selection,
+                      foregroundColor: AppColors.textPrimary,
                       minimumSize: const Size(0, 36),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       shape: const StadiumBorder(),

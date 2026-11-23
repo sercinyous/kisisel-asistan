@@ -79,7 +79,7 @@ class ReportsDailyView extends ConsumerWidget {
         report.when(
           loading: () => const KokpitSkeletonCard(height: 320),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Günlük rapor yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(dailyReportProvider(selected)),
@@ -93,7 +93,7 @@ class ReportsDailyView extends ConsumerWidget {
         recent.when(
           loading: () => const KokpitSkeletonCard(height: 120),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Son günlerin raporları yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(dailyReportListProvider),
@@ -105,12 +105,12 @@ class ReportsDailyView extends ConsumerWidget {
             ];
             if (others.isEmpty) {
               return const KokpitInlineMessage(
-                icon: Icons.history_rounded,
+                icon: Icons.history_outlined,
                 message: 'Son 7 günde başka rapor yok.',
               );
             }
             return ReportListCard(
-              icon: Icons.today_rounded,
+              icon: Icons.today_outlined,
               entries: [
                 for (final item in others)
                   ReportListEntry(
@@ -166,7 +166,7 @@ class _DailyReportGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: ReportRateCard(
-            icon: Icons.task_alt_rounded,
+            icon: Icons.task_alt_outlined,
             label: 'İş',
             color: AppColors.ops,
             rate: m.workRate,
@@ -177,7 +177,7 @@ class _DailyReportGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: ReportRateCard(
-            icon: Icons.fitness_center_rounded,
+            icon: Icons.fitness_center_outlined,
             label: 'Form',
             color: AppColors.fitness,
             rate: m.formRate,
@@ -191,7 +191,7 @@ class _DailyReportGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.restaurant_rounded,
+                  icon: Icons.restaurant_outlined,
                   label: 'Beslenme',
                   color: AppColors.nutrition,
                 ),

@@ -193,7 +193,7 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
             theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
       ),
       trailing:
-          Icon(Icons.add_circle_outline_rounded, color: AppColors.nutrition),
+          Icon(Icons.add_circle_outline_outlined, color: AppColors.nutrition),
       onTap: () => _open(food),
     );
   }
@@ -266,13 +266,13 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
                 decoration: InputDecoration(
                   labelText: 'Besin ara',
                   hintText: 'ör. yumurta, muz, ayran',
-                  prefixIcon: const Icon(Icons.search_rounded),
+                  prefixIcon: const Icon(Icons.search_outlined),
                   suffixIcon: query.isEmpty
                       ? null
                       : IconButton(
                           tooltip: 'Aramayı temizle',
                           onPressed: () => setState(_search.clear),
-                          icon: const Icon(Icons.close_rounded),
+                          icon: const Icon(Icons.close_outlined),
                         ),
                 ),
                 onChanged: (_) => setState(() {}),
@@ -610,7 +610,7 @@ class _FoodAmountSheetState extends ConsumerState<FoodAmountSheet> {
               key: const Key('amount-dec'),
               tooltip: 'Azalt',
               onPressed: _canStep(-1) ? () => _step(-1) : null,
-              icon: const Icon(Icons.remove_circle_outline_rounded),
+              icon: const Icon(Icons.remove_circle_outline_outlined),
             ),
             Expanded(
               child: index != null
@@ -635,7 +635,7 @@ class _FoodAmountSheetState extends ConsumerState<FoodAmountSheet> {
               key: const Key('amount-inc'),
               tooltip: 'Artır',
               onPressed: _canStep(1) ? () => _step(1) : null,
-              icon: const Icon(Icons.add_circle_outline_rounded),
+              icon: const Icon(Icons.add_circle_outline_outlined),
             ),
           ],
         ),

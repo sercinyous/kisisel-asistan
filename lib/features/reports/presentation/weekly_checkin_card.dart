@@ -100,7 +100,7 @@ class _CheckinBodyState extends ConsumerState<_CheckinBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.emoji_emotions_rounded,
+            icon: Icons.emoji_emotions_outlined,
             label: 'Haftalık check-in',
             color: AppColors.accent,
             trailing: 'kaydedildi',
@@ -135,7 +135,7 @@ class _CheckinBodyState extends ConsumerState<_CheckinBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BentoLabel(
-          icon: Icons.emoji_emotions_rounded,
+          icon: Icons.emoji_emotions_outlined,
           label: 'Hafta nasıldı?',
           color: AppColors.accent,
           trailing: 'haftalık check-in',

@@ -13,7 +13,11 @@ class RitimSegmented<T> extends StatelessWidget {
     required this.segments,
     required this.selected,
     required this.onChanged,
+    this.itemKey,
   });
+
+  /// Parça başına test/erişim anahtarı (isteğe bağlı).
+  final Key Function(T value)? itemKey;
 
   /// Değer → etiket.
   final Map<T, String> segments;
@@ -34,6 +38,7 @@ class RitimSegmented<T> extends StatelessWidget {
           for (final MapEntry(key: value, value: label) in segments.entries)
             Expanded(
               child: Semantics(
+                key: itemKey?.call(value),
                 button: true,
                 selected: value == selected,
                 child: GestureDetector(
@@ -321,7 +326,7 @@ class RitimBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: c == null ? AppColors.selection : c.withValues(alpha: 0.16),
+        color: c == null ? AppColors.selection : c.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Text(

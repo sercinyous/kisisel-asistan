@@ -264,7 +264,7 @@ class OnboardingTargetsStep extends StatelessWidget {
           child: TextButton.icon(
             key: const Key('onboarding-targets-reset'),
             onPressed: onReset,
-            icon: const Icon(Icons.restart_alt_rounded, size: 18),
+            icon: const Icon(Icons.restart_alt_outlined, size: 18),
             label: const Text('Önerilene dön'),
           ),
         ),

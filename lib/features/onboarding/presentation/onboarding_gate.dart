@@ -77,7 +77,7 @@ class _SettingsLoadError extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.cloud_off_rounded,
+                Icon(Icons.cloud_off_outlined,
                     size: 40, color: AppColors.textMuted),
                 const SizedBox(height: 12),
                 Text(

@@ -101,7 +101,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, color: AppColors.danger),
+                    Icon(Icons.warning_amber_outlined, color: AppColors.danger),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
@@ -126,7 +126,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
-                          Icons.remove_rounded,
+                          Icons.remove_outlined,
                           size: 18,
                           color: AppColors.textMuted,
                         ),
@@ -187,7 +187,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                       color: AppColors.onAccent,
                     ),
                   )
-                : const Icon(Icons.delete_forever_rounded),
+                : const Icon(Icons.delete_forever_outlined),
             label: Text(_busy ? 'Siliniyor…' : 'Hesabımı kalıcı olarak sil'),
           ),
         ],

@@ -189,7 +189,7 @@ class _WeightHistorySheetState extends ConsumerState<WeightHistorySheet> {
                 IconButton(
                   tooltip: 'Kapat',
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_outlined),
                 ),
               ],
             ),
@@ -208,7 +208,7 @@ class _WeightHistorySheetState extends ConsumerState<WeightHistorySheet> {
               skipLoadingOnRefresh: true,
               loading: () => const OpsLoading(),
               error: (_, __) => OpsMessage(
-                icon: Icons.cloud_off_rounded,
+                icon: Icons.cloud_off_outlined,
                 text: 'Kilo ölçümleri yüklenemedi.',
                 onRetry: () => ref.invalidate(weightSeriesProvider),
               ),
@@ -240,7 +240,7 @@ class _WeightHistorySheetState extends ConsumerState<WeightHistorySheet> {
                                 tooltip: 'Sil',
                                 onPressed: () => _delete(entry),
                                 icon: Icon(
-                                  Icons.delete_outline_rounded,
+                                  Icons.delete_outline_outlined,
                                   color: AppColors.textMuted,
                                 ),
                               ),

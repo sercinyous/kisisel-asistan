@@ -143,7 +143,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                         const SizedBox(height: AppSpacing.md),
                         FilledButton.icon(
                           onPressed: _sending ? null : _send,
-                          icon: const Icon(Icons.person_add_alt_1_rounded),
+                          icon: const Icon(Icons.person_add_alt_1_outlined),
                           label:
                               Text(_sending ? 'Gönderiliyor…' : 'İstek gönder'),
                         ),
@@ -162,7 +162,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          Icons.visibility_rounded,
+                          Icons.visibility_outlined,
                           size: 20,
                           color: AppColors.textSecondary,
                         ),
@@ -247,7 +247,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       IconButton(
                         tooltip: 'Reddet',
                         color: AppColors.danger,
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(Icons.close_outlined),
                         onPressed: () => _run(() => ref
                             .read(friendsRepositoryProvider)
                             .respond(r.id, accept: false)),
@@ -255,7 +255,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                       IconButton(
                         tooltip: 'Kabul et',
                         color: AppColors.accent,
-                        icon: const Icon(Icons.check_rounded),
+                        icon: const Icon(Icons.check_outlined),
                         onPressed: () => _run(() => ref
                             .read(friendsRepositoryProvider)
                             .respond(r.id, accept: true)),
@@ -372,7 +372,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           SizedBox(
             width: 26,
             child: medal != null
-                ? Icon(Icons.emoji_events_rounded, size: 18, color: medal)
+                ? Icon(Icons.emoji_events_outlined, size: 18, color: medal)
                 : Text(
                     '${index + 1}',
                     textAlign: TextAlign.center,
@@ -416,7 +416,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           if (!e.isSelf)
             PopupMenuButton<String>(
               tooltip: 'Seçenekler',
-              icon: Icon(Icons.more_vert_rounded,
+              icon: Icon(Icons.more_vert_outlined,
                   size: 20, color: AppColors.textMuted),
               onSelected: (_) => _confirmLeave(e),
               itemBuilder: (_) => [

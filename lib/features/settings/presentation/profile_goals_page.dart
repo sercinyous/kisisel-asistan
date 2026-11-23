@@ -396,7 +396,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
                                   ),
                                 ),
                                 child: Icon(
-                                  Icons.edit_rounded,
+                                  Icons.edit_outlined,
                                   size: 16,
                                   color: AppColors.onAccent,
                                 ),
@@ -425,7 +425,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.danger,
                       ),
-                      icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                      icon: const Icon(Icons.delete_forever_outlined, size: 18),
                       label: const Text('Hesabımı sil'),
                     ),
                   ),
@@ -450,7 +450,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
         _birthYear.text.trim().isEmpty ||
         _sex == null;
     return SettingsSection(
-      icon: Icons.badge_rounded,
+      icon: Icons.badge_outlined,
       title: 'Profil',
       color: AppColors.fitness,
       children: [
@@ -559,7 +559,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
 
   Widget _goalsCard() {
     return SettingsSection(
-      icon: Icons.flag_rounded,
+      icon: Icons.flag_outlined,
       title: 'Hedefler',
       color: AppColors.accent,
       children: [
@@ -575,7 +575,7 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
               }
               openHealth(context, ref, HealthSegment.plan);
             },
-            icon: const Icon(Icons.insights_rounded, size: 18),
+            icon: const Icon(Icons.insights_outlined, size: 18),
             label: const Text('Plan\'ı gör'),
           ),
         ),

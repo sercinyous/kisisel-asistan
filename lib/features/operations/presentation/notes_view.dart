@@ -86,7 +86,7 @@ class NotesView extends ConsumerWidget {
             loading: () => const [OpsLoading()],
             error: (_, __) => [
               OpsMessage(
-                icon: Icons.cloud_off_rounded,
+                icon: Icons.cloud_off_outlined,
                 text: 'Notlar yüklenemedi.',
                 onRetry: () => ref.invalidate(opsNotesProvider),
               ),

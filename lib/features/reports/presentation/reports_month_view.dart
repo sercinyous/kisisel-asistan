@@ -59,7 +59,7 @@ class ReportsMonthView extends ConsumerWidget {
         overview.when(
           loading: () => const KokpitSkeletonCard(height: 320),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Ay özeti yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(monthOverviewProvider(selected)),
@@ -104,7 +104,7 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.repeat_rounded,
+                icon: Icons.repeat_outlined,
                 color: AppColors.accent,
                 label: 'Rutinler',
                 value: routinePercent == null
@@ -118,7 +118,7 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.task_alt_rounded,
+                icon: Icons.task_alt_outlined,
                 color: AppColors.ops,
                 label: 'Görevler',
                 value: taskPercent == null
@@ -132,7 +132,7 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.directions_walk_rounded,
+                icon: Icons.directions_walk_outlined,
                 color: AppColors.fitness,
                 label: 'Ort. adım',
                 value: health.avgSteps == null
@@ -144,7 +144,7 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.bedtime_rounded,
+                icon: Icons.bedtime_outlined,
                 color: AppColors.ops,
                 label: 'Ort. uyku',
                 value: KokpitFormat.sleep(health.avgSleepMinutes),
@@ -154,7 +154,7 @@ class ReportsMonthSummary extends ConsumerWidget {
             BentoCell(
               span: 1,
               child: _MonthStatCard(
-                icon: Icons.local_fire_department_rounded,
+                icon: Icons.local_fire_department_outlined,
                 color: AppColors.nutrition,
                 label: 'Ort. kalori',
                 value: avgCalories == null

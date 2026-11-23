@@ -35,7 +35,7 @@ class WeightHistoryCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.monitor_weight_rounded,
+            icon: Icons.monitor_weight_outlined,
             label: 'Kilo',
             color: AppColors.accent,
             trailing: 'son $window gün',

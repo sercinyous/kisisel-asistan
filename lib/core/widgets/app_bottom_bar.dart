@@ -25,8 +25,13 @@ class AppBottomBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onCreate;
 
+  /// Slot ölçüsü ve kapsülün iç boşluğu; kapsül içeriği kadar geniştir.
+  static const double slotWidth = 42;
+  static const double slotHeight = 34;
+  static const double padding = 6;
+
   /// Kapsülün yüksekliği.
-  static const double height = 64;
+  static const double height = slotHeight + padding * 2;
 
   /// Kapsülün ekran kenarlarından ve alttan boşluğu.
   static const double margin = 16;
@@ -46,7 +51,7 @@ class AppBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget tab(int index) => Expanded(
+    Widget tab(int index) => _Slot(
           child: _TabButton(
             item: _items[index],
             selected: currentIndex == index,
@@ -61,7 +66,9 @@ class AppBottomBar extends StatelessWidget {
       minimum: const EdgeInsets.only(bottom: bottomGap),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(margin, 0, margin, bottomGap),
-        child: DecoratedBox(
+        child: Center(
+          heightFactor: 1,
+          child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: radius,
             boxShadow: [
@@ -78,7 +85,7 @@ class AppBottomBar extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Container(
                 height: height,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.all(padding),
                 decoration: BoxDecoration(
                   color: AppColors.glass,
                   borderRadius: radius,
@@ -88,10 +95,11 @@ class AppBottomBar extends StatelessWidget {
                   ),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     tab(0),
                     tab(1),
-                    Expanded(child: _CreateButton(onTap: onCreate)),
+                    _Slot(child: _CreateButton(onTap: onCreate)),
                     tab(2),
                     tab(3),
                   ],
@@ -100,9 +108,26 @@ class AppBottomBar extends StatelessWidget {
             ),
           ),
         ),
+        ),
       ),
     );
   }
+}
+
+class _Slot extends StatelessWidget {
+  const _Slot({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: SizedBox(
+          width: AppBottomBar.slotWidth,
+          height: AppBottomBar.slotHeight,
+          child: child,
+        ),
+      );
 }
 
 class _BarItem {
@@ -140,19 +165,20 @@ class _TabButton extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
-              height: 52,
-              margin: const EdgeInsets.symmetric(horizontal: 2),
+              width: AppBottomBar.slotWidth,
+              height: AppBottomBar.slotHeight,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.navSelected
                     : AppColors.navSelected.withValues(alpha: 0),
-                borderRadius: BorderRadius.circular(26),
+                borderRadius:
+                    BorderRadius.circular(AppBottomBar.slotHeight / 2),
               ),
               // Seçili sekme dolu ikonla değil, arkadaki kapsülle belirtilir.
               child: RitimLineIcon(
                 item.glyph,
-                size: 24,
+                size: 20,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -183,16 +209,10 @@ class _CreateButton extends StatelessWidget {
             onTap();
           },
           child: Center(
-            child: SizedBox(
-              height: 52,
-              child: Center(
-                child: RitimLineIcon(
-                  RitimGlyph.plus,
-                  size: 26,
-                  strokeWidth: 2,
-                  color: AppColors.accent,
-                ),
-              ),
+            child: RitimLineIcon(
+              RitimGlyph.plus,
+              size: 20,
+              color: AppColors.textPrimary,
             ),
           ),
         ),

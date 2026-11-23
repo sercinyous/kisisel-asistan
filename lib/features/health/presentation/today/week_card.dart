@@ -35,7 +35,7 @@ class WeekCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.calendar_view_week_rounded,
+            icon: Icons.calendar_view_week_outlined,
             label: 'Bu hafta',
             color: AppColors.accent,
             trailing: week.valueOrNull == null
@@ -92,7 +92,7 @@ class WeekCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: _Average(
-                  icon: Icons.directions_walk_rounded,
+                  icon: Icons.directions_walk_outlined,
                   color: AppColors.ops,
                   label: 'Ort. adım',
                   value: steps == null ? '—' : HealthFormat.count(steps),
@@ -101,7 +101,7 @@ class WeekCard extends ConsumerWidget {
               ),
               Expanded(
                 child: _Average(
-                  icon: Icons.bedtime_rounded,
+                  icon: Icons.bedtime_outlined,
                   color: AppColors.sleep,
                   label: 'Ort. uyku',
                   value: sleep == null ? '—' : KokpitFormat.sleep(sleep),

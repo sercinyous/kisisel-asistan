@@ -6,8 +6,8 @@ import '../domain/quick_add_mode.dart';
 /// Giriş alanlarının arayüzdeki simge ve rengi.
 extension QuickAddModeStyle on QuickAddMode {
   IconData get icon => switch (this) {
-        QuickAddMode.work => Icons.work_outline_rounded,
-        QuickAddMode.health => Icons.monitor_heart_rounded,
+        QuickAddMode.work => Icons.work_outline_outlined,
+        QuickAddMode.health => Icons.monitor_heart_outlined,
       };
 
   Color get color => switch (this) {

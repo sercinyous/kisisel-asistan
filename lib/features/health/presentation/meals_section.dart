@@ -13,9 +13,9 @@ import 'health_widgets.dart';
 import 'meal_form_sheet.dart';
 
 IconData _mealIcon(String mealType) => switch (mealType) {
-      'breakfast' => Icons.wb_sunny_rounded,
+      'breakfast' => Icons.wb_sunny_outlined,
       'lunch' => Icons.light_mode_outlined,
-      'dinner' => Icons.nightlight_round,
+      'dinner' => Icons.nightlight_outlined,
       _ => Icons.cookie_outlined,
     };
 
@@ -79,12 +79,17 @@ class MealsSection extends ConsumerWidget {
                 key: const Key('meal-add'),
                 onPressed: () => FoodPickerSheet.show(context),
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.nutrition,
-                  foregroundColor: AppColors.onAccent,
-                  minimumSize: const Size(healthMinTouch, healthMinTouch),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  backgroundColor: AppColors.selection,
+                  foregroundColor: AppColors.textPrimary,
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  textStyle: TextStyle(
+                    fontSize: AppType.chip,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                icon: const Icon(Icons.add_rounded, size: 20),
+                icon: const Icon(Icons.add_outlined, size: 15),
                 label: const Text('Öğün ekle'),
               ),
             ],
@@ -94,7 +99,7 @@ class MealsSection extends ConsumerWidget {
           skipLoadingOnRefresh: true,
           loading: () => const KokpitSkeletonCard(height: 168),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Öğünler yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(dayNutritionLogsProvider),
@@ -184,7 +189,7 @@ class _MealGroupTileState extends State<_MealGroupTile> {
               ? IconButton(
                   tooltip: '$label ekle',
                   onPressed: widget.onAdd,
-                  icon: const Icon(Icons.add_rounded),
+                  icon: const Icon(Icons.add_outlined),
                   color: AppColors.nutrition,
                 )
               : IconButton(
@@ -192,8 +197,8 @@ class _MealGroupTileState extends State<_MealGroupTile> {
                   onPressed: () => setState(() => _expanded = !_expanded),
                   icon: Icon(
                     expanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
+                        ? Icons.expand_less_outlined
+                        : Icons.expand_more_outlined,
                   ),
                   color: AppColors.textSecondary,
                 ),
@@ -230,7 +235,7 @@ class _MealGroupTileState extends State<_MealGroupTile> {
                   minimumSize: const Size(healthMinTouch, healthMinTouch),
                   foregroundColor: AppColors.nutrition,
                 ),
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const Icon(Icons.add_outlined, size: 18),
                 label: Text('$label için kalem ekle'),
               ),
             ),

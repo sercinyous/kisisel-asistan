@@ -210,7 +210,7 @@ class RoutinesView extends ConsumerWidget {
       action: IconButton(
         key: const ValueKey('ops-reminder-add'),
         tooltip: 'Hatırlatıcı ekle',
-        icon: Icon(Icons.add_rounded, color: AppColors.ops),
+        icon: Icon(Icons.add_outlined, color: AppColors.ops),
         onPressed: () => ReminderFormSheet.show(context),
       ),
       children: reminders.when(
@@ -218,7 +218,7 @@ class RoutinesView extends ConsumerWidget {
         loading: () => const [OpsLoading()],
         error: (_, __) => [
           OpsMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             text: 'Hatırlatıcılar yüklenemedi.',
             onRetry: () => ref.invalidate(remindersProvider),
           ),
@@ -291,7 +291,7 @@ class RoutinesView extends ConsumerWidget {
             loading: () => const [OpsLoading()],
             error: (_, __) => [
               OpsMessage(
-                icon: Icons.cloud_off_rounded,
+                icon: Icons.cloud_off_outlined,
                 text: 'Rutinler yüklenemedi.',
                 onRetry: () => ref.invalidate(opsRoutinesProvider),
               ),
@@ -304,7 +304,7 @@ class RoutinesView extends ConsumerWidget {
               if (visible.isEmpty) {
                 return [
                   OpsMessage(
-                    icon: Icons.repeat_rounded,
+                    icon: Icons.repeat_outlined,
                     text: filter == null
                         ? 'Henüz rutin yok. + ile tekrarlayan iş oluştur.'
                         : '$filter kapsamında rutin yok.',
@@ -568,7 +568,7 @@ class _ReminderRow extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              Icons.alarm_rounded,
+              Icons.alarm_outlined,
               size: 18,
               color: enabled ? AppColors.ops : AppColors.textMuted,
             ),

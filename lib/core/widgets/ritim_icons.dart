@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 /// İnce, yuvarlak uçlu çizgi ikonlar (24×24 görünüm kutusu, çizgi 1.8).
 ///
 /// Alt bar gibi markaya ait yüzeyler bu ikonları kullanır. Diğer yerlerde
-/// Material ikonlarının `_rounded` / `_outlined` çeşitleri kullanılır; dolu
-/// (`Icons.x` düz) çeşitler yalnızca seçili durumu belirtmek için kullanılmaz.
+/// aynı ince çizgi diline uyan Material `_outlined` çeşitleri kullanılır;
+/// `_rounded` dolu çeşitler yalnızca durum belirten yerlerde (tamamlandı,
+/// favori) ya da çizgi çeşidi olmayan ikonlarda kalır.
 enum RitimGlyph { grid, list, plus, heart, chart }
 
 class RitimLineIcon extends StatelessWidget {

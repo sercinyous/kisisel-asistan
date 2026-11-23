@@ -5,6 +5,7 @@ import '../../../core/services/health_source.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import '../data/health_repository.dart';
 import '../domain/fat_loss_plan.dart' show formatTrDecimal2;
@@ -213,15 +214,11 @@ class _WeeklyDetailScreenState extends ConsumerState<WeeklyDetailScreen> {
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-            child: SegmentedButton<int>(
+            child: RitimSegmented<int>(
               key: const Key('weekly-range'),
-              showSelectedIcon: false,
-              segments: [
-                for (final r in weeklyDetailRanges)
-                  ButtonSegment(value: r, label: Text('$r gün')),
-              ],
-              selected: {_range},
-              onSelectionChanged: (s) => setState(() => _range = s.first),
+              segments: {for (final r in weeklyDetailRanges) r: '$r gün'},
+              selected: _range,
+              onChanged: (r) => setState(() => _range = r),
             ),
           ),
           const SizedBox(height: AppSpacing.grid),
@@ -309,7 +306,7 @@ class _DetailBody extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               BentoLabel(
-                icon: Icons.insights_rounded,
+                icon: Icons.insights_outlined,
                 label: label,
                 color: color,
                 trailing: 'son ${days.length} gün',
@@ -380,7 +377,7 @@ class _DetailBody extends ConsumerWidget {
                   key: const Key('weekly-deficit-too-high'),
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.warning_amber_rounded,
+                    Icon(Icons.warning_amber_outlined,
                         size: 18, color: AppColors.warning),
                     const SizedBox(width: 6),
                     Expanded(
@@ -406,7 +403,7 @@ class _DetailBody extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.list_alt_rounded,
+                  icon: Icons.list_alt_outlined,
                   label: 'Günler',
                   color: color,
                 ),

@@ -36,8 +36,8 @@ class TaskDashboardGrid extends StatelessWidget {
               children: [
                 Icon(
                   change != null && change < 0
-                      ? Icons.trending_down_rounded
-                      : Icons.trending_up_rounded,
+                      ? Icons.trending_down_outlined
+                      : Icons.trending_up_outlined,
                   color: summaryColor,
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -58,7 +58,7 @@ class TaskDashboardGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.bar_chart_rounded,
+                  icon: Icons.bar_chart_outlined,
                   label: 'Haftalık tamamlanan',
                   color: AppColors.ops,
                   trailing: 'Bu hafta ${stats.thisWeek}',
@@ -72,7 +72,7 @@ class TaskDashboardGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: _StatCard(
-            icon: Icons.task_alt_rounded,
+            icon: Icons.task_alt_outlined,
             label: 'Tamamlama',
             color: AppColors.fitness,
             value: rate == null ? '—' : '%${(rate * 100).round()}',
@@ -85,7 +85,7 @@ class TaskDashboardGrid extends StatelessWidget {
         BentoCell(
           span: 1,
           child: _StatCard(
-            icon: Icons.schedule_rounded,
+            icon: Icons.schedule_outlined,
             label: 'Geciken',
             color:
                 stats.overdueCount > 0 ? AppColors.danger : AppColors.textMuted,
@@ -99,7 +99,7 @@ class TaskDashboardGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.calendar_view_week_rounded,
+                  icon: Icons.calendar_view_week_outlined,
                   label: 'En verimli gün',
                   color: AppColors.accent,
                   trailing: best == null ? null : turkishWeekday(best),
@@ -116,7 +116,7 @@ class TaskDashboardGrid extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 BentoLabel(
-                  icon: Icons.donut_small_rounded,
+                  icon: Icons.donut_small_outlined,
                   label: 'Kategori dağılımı',
                   color: AppColors.nutrition,
                 ),

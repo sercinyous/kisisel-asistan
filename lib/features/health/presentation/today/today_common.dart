@@ -295,7 +295,7 @@ class KcalRing extends StatelessWidget {
                     center,
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   if (caption != null)

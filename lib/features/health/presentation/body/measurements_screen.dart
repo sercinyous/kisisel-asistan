@@ -83,7 +83,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
             key: const Key('measurements-add'),
             tooltip: 'Ölç',
             onPressed: () => MeasurementFormSheet.show(context),
-            icon: const Icon(Icons.add_rounded),
+            icon: const Icon(Icons.add_outlined),
           ),
         ],
       ),
@@ -189,7 +189,7 @@ class _MeasurementsScreenState extends ConsumerState<MeasurementsScreen> {
                         trailing: IconButton(
                           tooltip: 'Sil',
                           onPressed: () => _delete(m),
-                          icon: Icon(Icons.delete_outline_rounded,
+                          icon: Icon(Icons.delete_outline_outlined,
                               color: AppColors.textMuted),
                         ),
                       ),
@@ -218,7 +218,7 @@ class _Empty extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.straighten_rounded, size: 40, color: AppColors.accent),
+            Icon(Icons.straighten_outlined, size: 40, color: AppColors.accent),
             const SizedBox(height: AppSpacing.m),
             Text('Henüz ölçüm yok.', style: theme.textTheme.titleMedium),
             const SizedBox(height: AppSpacing.m),

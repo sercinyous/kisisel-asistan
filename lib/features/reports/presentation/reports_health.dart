@@ -125,7 +125,7 @@ class ReportsHealthWeekCard extends ConsumerWidget {
       // Sağlık verisi okunamazsa rapor ekranı kalabalıklaşmasın: kart
       // yalnızca açıklama satırına iner (yenileme Sağlık sekmesinde).
       error: (_, __) => const KokpitInlineMessage(
-        icon: Icons.cloud_off_rounded,
+        icon: Icons.cloud_off_outlined,
         message: 'Haftalık açık şu an okunamadı.',
       ),
       data: (week) {
@@ -141,7 +141,7 @@ class ReportsHealthWeekCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               BentoLabel(
-                icon: Icons.local_fire_department_rounded,
+                icon: Icons.local_fire_department_outlined,
                 label: surplus ? 'Haftalık fazla' : 'Haftalık açık',
                 color: AppColors.nutrition,
                 trailing: isCurrent ? 'şu ana kadar' : null,
@@ -294,7 +294,7 @@ class ReportsMeasurementMonthCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             BentoLabel(
-              icon: Icons.straighten_rounded,
+              icon: Icons.straighten_outlined,
               label: 'Ölçü değişimi',
               color: AppColors.accent,
             ),
@@ -342,8 +342,8 @@ class _DeltaChip extends StatelessWidget {
         neutral || !good ? AppColors.textSecondary : AppColors.fitness;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppRadii.chip),
+        color: color.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(

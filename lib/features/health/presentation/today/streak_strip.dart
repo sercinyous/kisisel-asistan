@@ -9,10 +9,10 @@ import '../streak_detail_screen.dart';
 import 'today_common.dart';
 
 IconData streakIcon(StreakKind kind) => switch (kind) {
-      StreakKind.steps => Icons.directions_walk_rounded,
-      StreakKind.logging => Icons.edit_note_rounded,
-      StreakKind.deficit => Icons.local_fire_department_rounded,
-      StreakKind.target => Icons.track_changes_rounded,
+      StreakKind.steps => Icons.directions_walk_outlined,
+      StreakKind.logging => Icons.edit_note_outlined,
+      StreakKind.deficit => Icons.local_fire_department_outlined,
+      StreakKind.target => Icons.track_changes_outlined,
     };
 
 Color streakColor(StreakKind kind) => switch (kind) {
@@ -38,7 +38,7 @@ class StreakStrip extends ConsumerWidget {
     ];
     return BentoCard(
       key: const Key('streak-strip'),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: const EdgeInsets.all(8),
       onTap: () => StreakDetailScreen.open(context),
       child: chips.isEmpty
           ? SizedBox(
@@ -58,14 +58,23 @@ class StreakStrip extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < chips.length; i++) ...[
-                    if (i > 0)
-                      VerticalDivider(
-                        width: 12,
-                        thickness: 0.5,
-                        color: AppColors.border,
-                      ),
+                    if (i > 0) const SizedBox(width: 6),
                     Expanded(
-                        flex: i == chips.length - 1 ? 2 : 1, child: chips[i]),
+                      flex: i == chips.length - 1 ? 2 : 1,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.selection,
+                          borderRadius: BorderRadius.circular(AppRadii.chip),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          child: chips[i],
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -116,7 +125,7 @@ class _StreakChip extends StatelessWidget {
               '${status.current} gün',
               style: theme.textTheme.titleMedium?.copyWith(
                 color: AppColors.textPrimary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -124,7 +133,7 @@ class _StreakChip extends StatelessWidget {
           Row(
             children: [
               if (done)
-                Icon(Icons.check_rounded, size: 14, color: color)
+                Icon(Icons.check_outlined, size: 14, color: color)
               else
                 Container(
                   width: 7,
@@ -177,7 +186,7 @@ class _WeekChip extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.calendar_view_week_rounded,
+              Icon(Icons.calendar_view_week_outlined,
                   size: 16, color: AppColors.fitness),
               const SizedBox(width: 4),
               Text(
@@ -198,7 +207,7 @@ class _WeekChip extends StatelessWidget {
                 color: week.hasData && total < 0 && !week.surplusGoal
                     ? AppColors.warning
                     : AppColors.textPrimary,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),

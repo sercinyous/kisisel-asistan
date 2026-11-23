@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../settings/domain/user_settings.dart';
 import '../../settings/presentation/profile_goals_page.dart';
 import '../../settings/presentation/settings_providers.dart';
@@ -153,7 +154,7 @@ class _PlanBody extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.tune_rounded, color: AppColors.textSecondary),
+                  Icon(Icons.tune_outlined, color: AppColors.textSecondary),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -164,7 +165,7 @@ class _PlanBody extends ConsumerWidget {
                           ),
                     ),
                   ),
-                  Icon(Icons.chevron_right, color: AppColors.textMuted),
+                  Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
                 ],
               ),
             ),
@@ -194,7 +195,7 @@ class PlanBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.16),
+          color: color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(AppRadii.chip),
         ),
         child: Padding(
@@ -290,7 +291,7 @@ class _GoalCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.flag_rounded,
+            icon: Icons.flag_outlined,
             label: 'Hedefim',
             color: AppColors.accent,
           ),
@@ -301,7 +302,7 @@ class _GoalCard extends ConsumerWidget {
             key: const Key('plan-goal-weights'),
             style: theme.textTheme.headlineSmall?.copyWith(
               color: AppColors.textPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 2),
@@ -403,7 +404,7 @@ class _GoalModeCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.alt_route_rounded,
+            icon: Icons.alt_route_outlined,
             label: 'Hedef türü',
             color: AppColors.fitness,
           ),
@@ -495,7 +496,7 @@ class _GoalOption extends StatelessWidget {
                 Icon(
                   selected
                       ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_off_rounded,
+                      : Icons.radio_button_off_outlined,
                   color: selected ? AppColors.accent : AppColors.textMuted,
                 ),
                 const SizedBox(width: 10),
@@ -508,7 +509,7 @@ class _GoalOption extends StatelessWidget {
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight:
-                              selected ? FontWeight.w800 : FontWeight.w600,
+                              selected ? FontWeight.w700 : FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -587,7 +588,7 @@ class _TargetsCard extends ConsumerWidget {
                 key: const Key('plan-kcal'),
                 style: theme.textTheme.displaySmall?.copyWith(
                   color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(width: 6),
@@ -719,7 +720,7 @@ class _TempoCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.speed_rounded,
+            icon: Icons.speed_outlined,
             label: 'Tempo',
             color: AppColors.fitness,
           ),
@@ -806,7 +807,7 @@ class _TempoOption extends StatelessWidget {
                 Icon(
                   selected
                       ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_off_rounded,
+                      : Icons.radio_button_off_outlined,
                   color: selected ? AppColors.accent : AppColors.textMuted,
                 ),
                 const SizedBox(width: 10),
@@ -819,7 +820,7 @@ class _TempoOption extends StatelessWidget {
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight:
-                              selected ? FontWeight.w800 : FontWeight.w600,
+                              selected ? FontWeight.w700 : FontWeight.w600,
                         ),
                       ),
                       if (sub != null)
@@ -932,7 +933,7 @@ class _CollapsibleState extends State<_Collapsible> {
                     AnimatedRotation(
                       turns: _open ? 0.5 : 0,
                       duration: const Duration(milliseconds: 200),
-                      child: Icon(Icons.expand_more_rounded,
+                      child: Icon(Icons.expand_more_outlined,
                           color: AppColors.textMuted),
                     ),
                   ],
@@ -1039,7 +1040,7 @@ class _WhyCard extends ConsumerWidget {
     final manual = e.source == ExpenditureSource.manual;
     return _Collapsible(
       key: const ValueKey('plan-why'),
-      icon: Icons.help_outline_rounded,
+      icon: Icons.help_outline_outlined,
       title: 'Neden bu sayılar?',
       color: AppColors.textSecondary,
       child: Column(
@@ -1337,15 +1338,11 @@ class _MenuSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionTitle('Örnek menü'),
-        SegmentedButton<int>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: 2, label: Text('2 öğün')),
-            ButtonSegment(value: 3, label: Text('3 öğün')),
-          ],
-          selected: {mealCount},
-          onSelectionChanged: (s) => guardedPlanWrite(context,
-              () => ref.read(planControllerProvider).setMealCount(s.first)),
+        RitimSegmented<int>(
+          segments: const {2: '2 öğün', 3: '3 öğün'},
+          selected: mealCount,
+          onChanged: (n) => guardedPlanWrite(context,
+              () => ref.read(planControllerProvider).setMealCount(n)),
         ),
         for (final meal in menu) ...[
           const SizedBox(height: 12),
@@ -1422,7 +1419,7 @@ class _WaterTargetAction extends ConsumerWidget {
                 ref.read(waterTodayProvider.notifier).setTarget(recommendedMl),
           ),
           icon:
-              Icon(Icons.water_drop_rounded, size: 18, color: AppColors.water),
+              Icon(Icons.water_drop_outlined, size: 18, color: AppColors.water),
           label: Text('Hedefi ${formatWaterMl(recommendedMl)} yap '
               '(şu an ${formatWaterMl(current)})'),
         ),
@@ -1539,7 +1536,7 @@ class _CheckinCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.straighten_rounded,
+            icon: Icons.straighten_outlined,
             label: 'Ölçü ve fotoğraf günü',
             color: AppColors.fitness,
           ),
@@ -1551,18 +1548,15 @@ class _CheckinCard extends ConsumerWidget {
                 ?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<CheckinCadence>(
+          RitimSegmented<CheckinCadence>(
             key: const Key('plan-checkin-cadence'),
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(
-                  value: CheckinCadence.weekly, label: Text('Haftalık')),
-              ButtonSegment(
-                  value: CheckinCadence.monthly, label: Text('Aylık')),
-            ],
-            selected: {settings.checkinCadence},
-            onSelectionChanged: (s) => guardedPlanWrite(
-                context, () => controller.setCheckinSchedule(cadence: s.first)),
+            segments: const {
+              CheckinCadence.weekly: 'Haftalık',
+              CheckinCadence.monthly: 'Aylık',
+            },
+            selected: settings.checkinCadence,
+            onChanged: (c) => guardedPlanWrite(
+                context, () => controller.setCheckinSchedule(cadence: c)),
           ),
           const SizedBox(height: 12),
           if (weekly)

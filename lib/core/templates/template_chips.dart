@@ -49,7 +49,7 @@ class TemplateChips<T> extends StatelessWidget {
                     ),
                     child: ActionChip(
                       key: Key('template-$index'),
-                      avatar: const Icon(Icons.add_rounded, size: 16),
+                      avatar: const Icon(Icons.add_outlined, size: 16),
                       label: Text(labelOf(template)),
                       onPressed: () => onSelected(template),
                     ),

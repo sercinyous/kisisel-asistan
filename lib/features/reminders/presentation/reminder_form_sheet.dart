@@ -164,7 +164,7 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
         const OpsFieldLabel('Saat'),
         OpsPickerRow(
           key: const Key('reminder-time'),
-          icon: Icons.schedule_rounded,
+          icon: Icons.schedule_outlined,
           label: _time.format(),
           onTap: _saving ? null : _pickTime,
         ),
@@ -177,7 +177,7 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
         if (_repeat == ReminderRepeat.once) ...[
           const OpsFieldLabel('Tarih'),
           OpsPickerRow(
-            icon: Icons.event_rounded,
+            icon: Icons.event_outlined,
             label: onDate == null
                 ? 'Tarih seç'
                 : '${onDate.day.toString().padLeft(2, '0')}.'

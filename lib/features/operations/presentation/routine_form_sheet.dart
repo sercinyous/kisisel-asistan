@@ -264,7 +264,7 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
             runSpacing: 4,
             children: [
               ActionChip(
-                avatar: const Icon(Icons.done_all_rounded, size: 18),
+                avatar: const Icon(Icons.done_all_outlined, size: 18),
                 label: const Text('Her gün'),
                 onPressed: () => setState(() {
                   _days = {...Routine.everyDay};
@@ -292,7 +292,7 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
         ],
         const OpsFieldLabel('Saat (isteğe bağlı)'),
         OpsPickerRow(
-          icon: Icons.schedule_rounded,
+          icon: Icons.schedule_outlined,
           label: time == null ? 'Saat seç' : formatTimeOfDay(time),
           onTap: _pickTime,
           onClear: time == null ? null : () => setState(() => _time = null),

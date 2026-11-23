@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import 'reports_daily_view.dart';
@@ -119,27 +120,15 @@ class ReportsScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 16),
-            SegmentedButton<ReportsView>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: ReportsView.daily, label: Text('Gün')),
-                ButtonSegment(value: ReportsView.weekly, label: Text('Hafta')),
-                ButtonSegment(value: ReportsView.monthly, label: Text('Ay')),
-              ],
-              selected: {view},
-              onSelectionChanged: (selection) => ref
-                  .read(reportsViewProvider.notifier)
-                  .state = selection.first,
-              style: SegmentedButton.styleFrom(
-                backgroundColor: AppColors.surface,
-                foregroundColor: AppColors.textSecondary,
-                selectedBackgroundColor: AppColors.surfaceHigh,
-                selectedForegroundColor: AppColors.accent,
-                side: BorderSide(color: AppColors.border),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.inner),
-                ),
-              ),
+            RitimSegmented<ReportsView>(
+              segments: const {
+                ReportsView.daily: 'Gün',
+                ReportsView.weekly: 'Hafta',
+                ReportsView.monthly: 'Ay',
+              },
+              selected: view,
+              onChanged: (value) =>
+                  ref.read(reportsViewProvider.notifier).state = value,
             ),
             const SizedBox(height: 12),
             switch (view) {

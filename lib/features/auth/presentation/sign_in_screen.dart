@@ -89,7 +89,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           : () => ref
                               .read(signInControllerProvider.notifier)
                               .signInWithGoogle(),
-                      icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
+                      icon: const Icon(Icons.g_mobiledata_outlined, size: 28),
                       label: Text(
                         state.busy == SignInMethod.google
                             ? 'Google ile giriş yapılıyor…'

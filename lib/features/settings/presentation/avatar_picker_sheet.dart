@@ -186,7 +186,7 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
             if (photoSupported) ...[
               _ActionTile(
                 key: const Key('avatar-camera'),
-                icon: Icons.photo_camera_rounded,
+                icon: Icons.photo_camera_outlined,
                 label: 'Fotoğraf çek',
                 onTap: _busy
                     ? null
@@ -197,7 +197,7 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
               ),
               _ActionTile(
                 key: const Key('avatar-gallery'),
-                icon: Icons.photo_library_rounded,
+                icon: Icons.photo_library_outlined,
                 label: 'Galeriden seç',
                 onTap: _busy
                     ? null
@@ -210,7 +210,7 @@ class _AvatarPickerSheetState extends ConsumerState<AvatarPickerSheet> {
             if (avatar.kind != AvatarKind.initials)
               _ActionTile(
                 key: const Key('avatar-remove'),
-                icon: Icons.person_off_rounded,
+                icon: Icons.person_off_outlined,
                 label: 'Kaldır',
                 color: AppColors.danger,
                 onTap: _busy

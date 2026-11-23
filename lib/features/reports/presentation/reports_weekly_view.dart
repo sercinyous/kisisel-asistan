@@ -80,7 +80,7 @@ class ReportsWeeklyView extends ConsumerWidget {
         report.when(
           loading: () => const KokpitSkeletonCard(height: 320),
           error: (_, __) => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: 'Haftalık rapor yüklenemedi.',
             actionLabel: 'Tekrar dene',
             onAction: () => ref.invalidate(weeklyReportProvider(selected)),
@@ -101,7 +101,7 @@ class ReportsWeeklyView extends ConsumerWidget {
         const SizedBox(height: AppSpacing.grid),
         ReportLinkRow(
           key: const ValueKey('reports-details'),
-          icon: Icons.table_chart_rounded,
+          icon: Icons.table_chart_outlined,
           label: 'Ayrıntılar',
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(

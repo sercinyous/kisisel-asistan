@@ -66,7 +66,7 @@ void main() {
 
       test('soluk metin en az 3', () {
         expect(contrast(p.textMuted, p.background), greaterThanOrEqualTo(3));
-        expect(contrast(p.textMuted, p.surface), greaterThanOrEqualTo(3));
+        expect(contrast(p.textMuted, p.surface), greaterThanOrEqualTo(4.5));
         expect(contrast(p.textMuted, p.surfaceHigh), greaterThanOrEqualTo(3));
       });
 
@@ -127,7 +127,7 @@ void main() {
       expect(p.border, const Color(0xFF222226));
       expect(p.textPrimary, const Color(0xFFF4F4F6));
       expect(p.textSecondary, const Color(0xFF8E8E96));
-      expect(p.textMuted, const Color(0xFF75757E));
+      expect(p.textMuted, const Color(0xFF85858E));
       expect(p.accent, const Color(0xFF7EE0C3));
       expect(p.ops, const Color(0xFF8CC8FF));
       expect(p.fitness, const Color(0xFFFFB59A));

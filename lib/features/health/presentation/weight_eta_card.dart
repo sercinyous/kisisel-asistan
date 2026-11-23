@@ -23,7 +23,7 @@ class WeightEtaCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(
-            icon: Icons.flag_rounded,
+            icon: Icons.flag_outlined,
             label: 'Hedefe tahmini varış',
             color: AppColors.accent,
             trailing: 'son 8 hafta',

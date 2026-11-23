@@ -61,7 +61,7 @@ class RemindersScreen extends ConsumerWidget {
           IconButton(
             key: const Key('reminders-add'),
             tooltip: 'Hatırlatıcı ekle',
-            icon: const Icon(Icons.add_rounded),
+            icon: const Icon(Icons.add_outlined),
             onPressed: () => ReminderFormSheet.show(context),
           ),
         ],
@@ -70,7 +70,7 @@ class RemindersScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => Center(
           child: OpsMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             text: 'Hatırlatıcılar yüklenemedi.',
             onRetry: () => ref.invalidate(remindersProvider),
           ),
@@ -98,7 +98,7 @@ class RemindersScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       BentoLabel(
-                        icon: Icons.alarm_add_rounded,
+                        icon: Icons.alarm_add_outlined,
                         label: 'Henüz hatırlatıcı yok',
                         color: AppColors.accent,
                       ),
@@ -175,7 +175,7 @@ class _ReminderCard extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.alarm_rounded,
+                Icons.alarm_outlined,
                 color: r.enabled ? AppColors.accent : AppColors.textMuted,
               ),
               const SizedBox(width: AppSpacing.md),
@@ -214,7 +214,7 @@ class _ReminderCard extends StatelessWidget {
             children: [
               if (r.isRepeating) ...[
                 Icon(
-                  Icons.local_fire_department_rounded,
+                  Icons.local_fire_department_outlined,
                   size: 18,
                   color: streak > 0 ? AppColors.warning : AppColors.textMuted,
                 ),
@@ -247,7 +247,7 @@ class _ReminderCard extends StatelessWidget {
                         style: FilledButton.styleFrom(
                           minimumSize: const Size(0, 40),
                         ),
-                        icon: const Icon(Icons.check_rounded),
+                        icon: const Icon(Icons.check_outlined),
                         label: const Text('Yaptım'),
                       ),
               IconButton(
@@ -255,7 +255,7 @@ class _ReminderCard extends StatelessWidget {
                 tooltip: 'Sil',
                 onPressed: onDelete,
                 icon: Icon(
-                  Icons.delete_outline_rounded,
+                  Icons.delete_outline_outlined,
                   color: AppColors.textMuted,
                 ),
               ),

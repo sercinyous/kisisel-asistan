@@ -5,22 +5,22 @@ import '../domain/task_category.dart';
 
 /// Kategori simge anahtarını ikona çevirir.
 IconData taskCategoryIcon(String key) => switch (key) {
-      'work' => Icons.work_rounded,
-      'group' => Icons.groups_rounded,
-      'payments' => Icons.payments_rounded,
-      'person' => Icons.person_rounded,
-      'school' => Icons.school_rounded,
-      'sport' => Icons.fitness_center_rounded,
-      'home' => Icons.home_rounded,
+      'work' => Icons.work_outlined,
+      'group' => Icons.groups_outlined,
+      'payments' => Icons.payments_outlined,
+      'person' => Icons.person_outlined,
+      'school' => Icons.school_outlined,
+      'sport' => Icons.fitness_center_outlined,
+      'home' => Icons.home_outlined,
       'health' => Icons.favorite_rounded,
-      'project' => Icons.folder_rounded,
-      'shopping' => Icons.shopping_cart_rounded,
-      'family' => Icons.family_restroom_rounded,
-      'growth' => Icons.self_improvement_rounded,
-      'travel' => Icons.flight_rounded,
-      'pet' => Icons.pets_rounded,
-      'car' => Icons.directions_car_rounded,
-      _ => Icons.lightbulb_rounded,
+      'project' => Icons.folder_outlined,
+      'shopping' => Icons.shopping_cart_outlined,
+      'family' => Icons.family_restroom_outlined,
+      'growth' => Icons.self_improvement_outlined,
+      'travel' => Icons.flight_outlined,
+      'pet' => Icons.pets_outlined,
+      'car' => Icons.directions_car_outlined,
+      _ => Icons.lightbulb_outlined,
     };
 
 /// Renk anahtarını (AppColors rol adı) etkin paletten okur; her build'de

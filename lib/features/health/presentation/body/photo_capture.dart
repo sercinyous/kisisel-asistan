@@ -162,7 +162,7 @@ class _PhotoCaptureSheetState extends ConsumerState<PhotoCaptureSheet> {
                           Image.memory(bytes, fit: BoxFit.cover)
                         else
                           const BodyPhotoPlaceholder(
-                            icon: Icons.accessibility_new_rounded,
+                            icon: Icons.accessibility_new_outlined,
                             radius: AppRadii.card,
                           ),
                         if (previous != null)

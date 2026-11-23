@@ -178,7 +178,7 @@ class TasksView extends ConsumerWidget {
             loading: () => const [OpsLoading()],
             error: (_, __) => [
               OpsMessage(
-                icon: Icons.cloud_off_rounded,
+                icon: Icons.cloud_off_outlined,
                 text: 'Görevler yüklenemedi.',
                 onRetry: () => ref.invalidate(opsTasksProvider),
               ),
@@ -191,7 +191,7 @@ class TasksView extends ConsumerWidget {
               if (visible.isEmpty) {
                 return [
                   OpsMessage(
-                    icon: Icons.task_alt_rounded,
+                    icon: Icons.task_alt_outlined,
                     text: filter == null
                         ? 'Açık görev yok. + ile yeni görev oluştur.'
                         : '$filter kategorisinde açık görev yok.',

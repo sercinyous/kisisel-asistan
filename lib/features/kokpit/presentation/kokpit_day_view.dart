@@ -228,7 +228,7 @@ class _StatsRow extends ConsumerWidget {
         children: [
           Expanded(
             child: _StatCard(
-              icon: Icons.checklist_rounded,
+              icon: Icons.checklist_outlined,
               label: 'Günlük işler',
               color: AppColors.ops,
               value: items == null ? '—' : '$done / $total',
@@ -347,7 +347,7 @@ class _HealthStatusMessage extends ConsumerWidget {
       skipLoadingOnRefresh: true,
       loading: () => null,
       error: (_, __) => KokpitInlineMessage(
-        icon: Icons.heart_broken_rounded,
+        icon: Icons.heart_broken_outlined,
         message: '${source.shortLabel} verisi okunamadı.',
         actionLabel: 'Tekrar dene',
         onAction: resync,
@@ -355,13 +355,13 @@ class _HealthStatusMessage extends ConsumerWidget {
       data: (snapshot) => switch (snapshot.status) {
         HealthStatus.ok => null,
         HealthStatus.unavailable => KokpitInlineMessage(
-            icon: Icons.phonelink_off_rounded,
+            icon: Icons.phonelink_off_outlined,
             message: snapshot.message ??
                 'Adım, uyku ve aktif kalori yalnızca iPhone\'da '
                     'HealthKit üzerinden okunur.',
           ),
         HealthStatus.denied => KokpitInlineMessage(
-            icon: Icons.favorite_border_rounded,
+            icon: Icons.favorite_border_outlined,
             message: 'HealthKit erişimi verilmedi. Sağlık uygulaması > '
                 'Paylaşım > Uygulamalar bölümünden izin verebilirsin.',
             actionLabel: 'Bağlan',
@@ -371,8 +371,8 @@ class _HealthStatusMessage extends ConsumerWidget {
         HealthStatus.reconnect =>
           KokpitInlineMessage(
             icon: snapshot.status == HealthStatus.reconnect
-                ? Icons.sync_problem_rounded
-                : Icons.link_off_rounded,
+                ? Icons.sync_problem_outlined
+                : Icons.link_off_outlined,
             message: snapshot.message ?? 'Google Health bağlı değil.',
             actionLabel: snapshot.status == HealthStatus.reconnect
                 ? 'Yeniden bağlan'
@@ -380,7 +380,7 @@ class _HealthStatusMessage extends ConsumerWidget {
             onAction: () => _connectGoogle(context),
           ),
         HealthStatus.failed => KokpitInlineMessage(
-            icon: Icons.cloud_off_rounded,
+            icon: Icons.cloud_off_outlined,
             message: snapshot.message ??
                 '${snapshot.source.shortLabel} verisi okunamadı.',
             actionLabel: 'Tekrar dene',
@@ -422,14 +422,14 @@ class _TodaySection extends ConsumerWidget {
     final Widget body;
     if (routines.hasError && routines.valueOrNull == null) {
       body = KokpitInlineMessage(
-        icon: Icons.cloud_off_rounded,
+        icon: Icons.cloud_off_outlined,
         message: 'Rutinler yüklenemedi.',
         actionLabel: 'Tekrar dene',
         onAction: () => ref.invalidate(todayOccurrencesProvider),
       );
     } else if (tasks.hasError && tasks.valueOrNull == null) {
       body = KokpitInlineMessage(
-        icon: Icons.cloud_off_rounded,
+        icon: Icons.cloud_off_outlined,
         message: 'Görevler yüklenemedi.',
         actionLabel: 'Tekrar dene',
         onAction: () => ref.invalidate(upcomingRemindersProvider),
@@ -438,7 +438,7 @@ class _TodaySection extends ConsumerWidget {
       body = const KokpitSkeletonCard(height: 220);
     } else if (items.isEmpty) {
       body = const KokpitInlineMessage(
-        icon: Icons.event_available_rounded,
+        icon: Icons.event_available_outlined,
         message: 'Bugün için rutin ya da görev yok. Ortadaki + ile '
             'tek cümleyle ekleyebilirsin.',
       );
@@ -494,7 +494,7 @@ class _TodaySection extends ConsumerWidget {
                     now: now,
                     done: item.done,
                     color: AppColors.accent,
-                    icon: Icons.straighten_rounded,
+                    icon: Icons.straighten_outlined,
                     onTap: () => CheckinFlowScreen.open(context),
                   ),
               },

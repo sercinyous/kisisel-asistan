@@ -206,7 +206,7 @@ class _Stat extends StatelessWidget {
             value,
             style: theme.textTheme.headlineSmall?.copyWith(
               color: AppColors.textPrimary,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -261,7 +261,7 @@ class _WeeksBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BentoLabel(
-          icon: Icons.calendar_view_week_rounded,
+          icon: Icons.calendar_view_week_outlined,
           label: surplus ? 'Haftalık fazla' : 'Haftalık açık',
           color: AppColors.fitness,
           trailing: 'son 8 hafta',

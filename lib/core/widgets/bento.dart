@@ -71,6 +71,7 @@ class BentoCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.tint,
+    this.gradient,
   });
 
   final Widget child;
@@ -81,9 +82,38 @@ class BentoCard extends StatelessWidget {
   /// Kartı hafifçe renklendirir (ör. vurgulanan metrik).
   final Color? tint;
 
+  /// Verilirse kart zemini bu renkler arasında soldan sağa hafif geçişle
+  /// boyanır (ör. ölçü günü banner'ı: mint → lavanta).
+  final List<Color>? gradient;
+
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(AppRadii.card);
+    final g = gradient;
+    if (g != null) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: AppColors.border),
+          gradient: LinearGradient(
+            colors: [
+              for (final c in g)
+                Color.alphaBlend(c.withValues(alpha: 0.14), AppColors.surface),
+            ],
+          ),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(padding: padding, child: child),
+          ),
+        ),
+      );
+    }
     final color = tint == null
         ? AppColors.surface
         : Color.alphaBlend(tint!.withValues(alpha: 0.08), AppColors.surface);
@@ -127,7 +157,8 @@ class BentoLabel extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(icon, size: 15, color: color),
+        // Başlık mürekkep renginde; alan rengi yalnızca ince ikonda kalır.
+        Icon(icon, size: 14, color: color.withValues(alpha: 0.85)),
         const SizedBox(width: 5),
         Expanded(
           child: Text(
@@ -135,7 +166,7 @@ class BentoLabel extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelLarge?.copyWith(
-              color: color,
+              color: AppColors.textPrimary,
               fontSize: AppType.cardTitle,
               fontWeight: FontWeight.w600,
             ),

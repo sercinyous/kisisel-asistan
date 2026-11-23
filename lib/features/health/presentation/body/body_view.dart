@@ -57,7 +57,7 @@ class CheckinBanner extends ConsumerWidget {
     if (state.showBanner && !dismissed) {
       return BentoCard(
         key: const Key('checkin-banner'),
-        tint: AppColors.accent,
+        gradient: [AppColors.accent, AppColors.sleep],
         padding: const EdgeInsets.fromLTRB(
             AppSpacing.cardPadding, AppSpacing.m, AppSpacing.s, AppSpacing.m),
         child: Row(
@@ -69,7 +69,7 @@ class CheckinBanner extends ConsumerWidget {
                 color: AppColors.accent.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.straighten_rounded, color: AppColors.accent),
+              child: Icon(Icons.straighten_outlined, color: AppColors.accent),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -86,9 +86,18 @@ class CheckinBanner extends ConsumerWidget {
                 ],
               ),
             ),
+            const SizedBox(width: AppSpacing.s),
             FilledButton(
               key: const Key('checkin-start'),
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 30),
+                tapTargetSize: MaterialTapTargetSize.padded,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                textStyle: TextStyle(
+                  fontSize: AppType.chip,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               onPressed: () => CheckinFlowScreen.open(context),
               child: const Text('Başla'),
             ),
@@ -97,7 +106,7 @@ class CheckinBanner extends ConsumerWidget {
               tooltip: 'Bugün gösterme',
               onPressed: () =>
                   ref.read(checkinDismissedProvider.notifier).dismiss(today),
-              icon: Icon(Icons.close_rounded,
+              icon: Icon(Icons.close_outlined,
                   size: 18, color: AppColors.textMuted),
             ),
           ],
@@ -115,8 +124,8 @@ class CheckinBanner extends ConsumerWidget {
         children: [
           Icon(
             state.isCheckinDay && state.done
-                ? Icons.check_circle_outline_rounded
-                : Icons.event_repeat_rounded,
+                ? Icons.check_circle_outline_outlined
+                : Icons.event_repeat_outlined,
             size: 16,
             color: AppColors.textMuted,
           ),
@@ -374,7 +383,7 @@ class BodyMeasurementsCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _CardHeader(
-            icon: Icons.straighten_rounded,
+            icon: Icons.straighten_outlined,
             title: 'Ölçüler',
             color: AppColors.ops,
             actionKey: const Key('body-measure'),
@@ -398,8 +407,9 @@ class BodyMeasurementsCard extends ConsumerWidget {
               }
               return Column(
                 children: [
-                  for (final s in rows)
+                  for (final (i, s) in rows.indexed)
                     _MeasurementRow(
+                      divider: i < rows.length - 1,
                       summary: s,
                       onTap: () =>
                           MeasurementsScreen.open(context, field: s.field),
@@ -415,9 +425,16 @@ class BodyMeasurementsCard extends ConsumerWidget {
 }
 
 class _MeasurementRow extends StatelessWidget {
-  const _MeasurementRow({required this.summary, required this.onTap});
+  const _MeasurementRow({
+    required this.summary,
+    required this.onTap,
+    this.divider = true,
+  });
 
   final BodyFieldSummary summary;
+
+  /// Satırın altına 1 px kart çizgisi çizilir (son satır hariç).
+  final bool divider;
   final VoidCallback onTap;
 
   @override
@@ -433,8 +450,14 @@ class _MeasurementRow extends StatelessWidget {
         key: Key('body-field-${s.field.name}'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.chip),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: healthMinTouch),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 32),
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            border: divider
+                ? Border(bottom: BorderSide(color: AppColors.border))
+                : null,
+          ),
           child: Row(
             children: [
               SizedBox(

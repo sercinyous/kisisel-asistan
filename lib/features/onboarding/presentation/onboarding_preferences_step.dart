@@ -61,7 +61,7 @@ class OnboardingPreferencesStep extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               BentoLabel(
-                icon: Icons.notifications_rounded,
+                icon: Icons.notifications_outlined,
                 label: 'Hatırlatmalar',
                 color: AppColors.accent,
               ),
@@ -100,7 +100,7 @@ class OnboardingPreferencesStep extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               BentoLabel(
-                icon: Icons.bedtime_rounded,
+                icon: Icons.bedtime_outlined,
                 label: 'Sessiz saatler',
                 color: AppColors.fitness,
               ),
@@ -115,7 +115,7 @@ class OnboardingPreferencesStep extends StatelessWidget {
                 ListTile(
                   key: const Key('onboarding-quiet-start'),
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.nightlight_round),
+                  leading: const Icon(Icons.bedtime_outlined),
                   title: const Text('Başlangıç'),
                   trailing: Text(quietStart.format(),
                       style: theme.textTheme.titleMedium),
@@ -124,7 +124,7 @@ class OnboardingPreferencesStep extends StatelessWidget {
                 ListTile(
                   key: const Key('onboarding-quiet-end'),
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.wb_sunny_rounded),
+                  leading: const Icon(Icons.wb_sunny_outlined),
                   title: const Text('Bitiş'),
                   trailing: Text(quietEnd.format(),
                       style: theme.textTheme.titleMedium),
