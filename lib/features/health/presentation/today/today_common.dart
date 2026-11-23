@@ -43,13 +43,13 @@ abstract final class TodayFormat {
 
   /// Pazartesiden başlayan kısa gün adları.
   static const List<String> weekdayShort = [
-    'Pt',
-    'Sa',
-    'Ça',
-    'Pe',
-    'Cu',
-    'Ct',
-    'Pz',
+    'Pzt',
+    'Sal',
+    'Çar',
+    'Per',
+    'Cum',
+    'Cmt',
+    'Paz',
   ];
 
   /// Pazartesiden başlayan tam gün adları.

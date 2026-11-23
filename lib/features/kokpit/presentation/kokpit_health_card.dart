@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/health_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../health/presentation/health_segment.dart';
 import '../../health/presentation/providers/streaks_providers.dart';
 import '../../health/presentation/providers/targets_providers.dart';
@@ -207,34 +208,9 @@ class _HealthCardBody extends ConsumerWidget {
                   value: ratio,
                   color: AppColors.nutrition,
                   overColor: AppColors.danger,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          thousands.format(remaining.abs()),
-                          style: TextStyle(
-                            fontSize: AppType.value,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color:
-                                over ? AppColors.danger : AppColors.textPrimary,
-                            fontFeatures: const [
-                              FontFeature.tabularFigures(),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Text(
-                        over ? 'fazla' : 'kalan',
-                        style: TextStyle(
-                          fontSize: AppType.micro,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                  size: 60,
+                  stroke: 7,
+                  child: const SizedBox.shrink(),
                 ),
                 const SizedBox(width: AppSpacing.section),
                 Expanded(
@@ -246,9 +222,9 @@ class _HealthCardBody extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: AppType.value,
+                          fontSize: AppType.body,
                           fontWeight: FontWeight.w700,
-                          height: 1.25,
+                          height: 1.3,
                           color:
                               over ? AppColors.negative : AppColors.textPrimary,
                         ),
@@ -274,7 +250,7 @@ class _HealthCardBody extends ConsumerWidget {
               ],
             ),
             if (streakLine != null) ...[
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.s),
               _StreakLine(line: streakLine),
             ],
           ],
@@ -320,7 +296,7 @@ class _StepsLine extends StatelessWidget {
         const SizedBox(height: 4),
         KokpitBar(
           value: value == null || target <= 0 ? 0 : value / target,
-          color: AppColors.protein,
+          color: AppColors.water,
           height: 4,
         ),
       ],
@@ -335,37 +311,16 @@ class _StreakLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.selection,
-        borderRadius: BorderRadius.circular(AppRadii.chip),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'Seriler',
-            style: TextStyle(
-              fontSize: AppType.chip,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.s),
-          Expanded(
-            child: Text(
-              line,
-              key: const ValueKey('kokpit-streak-line'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: AppType.chipValue,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
-        ],
+    return Text(
+      'Seriler: $line',
+      key: const ValueKey('kokpit-streak-line'),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: AppType.caption,
+        height: 1.3,
+        color: AppColors.textSecondary,
+        fontFeatures: const [FontFeature.tabularFigures()],
       ),
     );
   }
@@ -417,24 +372,8 @@ class KokpitWaterTile extends ConsumerWidget {
         children: [
           const BentoLabel(label: 'Su'),
           const SizedBox(height: AppSpacing.sm),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              today == null
-                  ? (failed ? 'Yüklenemedi' : '—')
-                  : '${kokpitLiters(today.totalMl)} / '
-                      '${kokpitLiters(today.targetMl)} L',
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: AppType.value,
-                fontWeight: FontWeight.w700,
-                height: 1.25,
-                color: AppColors.textPrimary,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
+          if (today != null)
+            _WaterDots(totalMl: today.totalMl, targetMl: today.targetMl),
           const Spacer(),
           const SizedBox(height: AppSpacing.s),
           if (failed)
@@ -445,30 +384,40 @@ class KokpitWaterTile extends ConsumerWidget {
           else
             Row(
               children: [
-                SizedBox.square(
-                  dimension: 30,
-                  child: IconButton.outlined(
-                    tooltip: 'Son su kaydını geri al',
-                    padding: EdgeInsets.zero,
-                    iconSize: 16,
-                    onPressed: today == null || today.logs.isEmpty
-                        ? null
-                        : () => _run(
-                              context,
-                              notifier.undo,
-                              'Su kaydı geri alınamadı.',
-                            ),
-                    icon: const Icon(Icons.remove_outlined),
-                    color: AppColors.textPrimary,
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.selection,
-                      side: BorderSide.none,
+                Expanded(
+                  child: Text(
+                    today == null
+                        ? '—'
+                        : '${kokpitLiters(today.totalMl)} / '
+                            '${kokpitLiters(today.targetMl)} L',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: AppType.caption,
+                      height: 1.3,
+                      color: AppColors.textSecondary,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.s),
-                Expanded(
-                  child: FilledButton.tonal(
+                if (today != null && today.logs.isNotEmpty) ...[
+                  RitimPillButton(
+                    key: const ValueKey('kokpit-water-undo'),
+                    label: '−',
+                    ghost: true,
+                    onPressed: () => _run(
+                      context,
+                      notifier.undo,
+                      'Su kaydı geri alınamadı.',
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
+                Tooltip(
+                  message: '$stepMl ml su ekle',
+                  child: RitimPillButton(
+                    key: const ValueKey('kokpit-water-add'),
+                    label: '+',
                     onPressed: today == null
                         ? null
                         : () => _run(
@@ -476,24 +425,39 @@ class KokpitWaterTile extends ConsumerWidget {
                               () => notifier.add(stepMl),
                               'Su kaydı eklenemedi.',
                             ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.onAccent,
-                      minimumSize: const Size(0, 30),
-                      textStyle: const TextStyle(
-                        fontSize: AppType.chip,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: const FittedBox(child: Text('+ 250 ml')),
                   ),
                 ),
               ],
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Bardak başına bir nokta: dolu bardaklar mavi, kalanlar iz rengi.
+class _WaterDots extends StatelessWidget {
+  const _WaterDots({required this.totalMl, required this.targetMl});
+
+  final int totalMl;
+  final int targetMl;
+
+  @override
+  Widget build(BuildContext context) {
+    const glassMl = 250;
+    final target = targetMl > 0 ? targetMl : 2000;
+    final glasses = math.max(1, math.min(12, (target / glassMl).ceil()));
+    final filled = (totalMl / glassMl).floor();
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (var i = 0; i < glasses; i++)
+          RitimDot(
+            size: 8,
+            color: i < filled ? AppColors.water : AppColors.track,
+          ),
+      ],
     );
   }
 }

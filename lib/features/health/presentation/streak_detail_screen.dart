@@ -234,7 +234,7 @@ class _WeeksBody extends StatelessWidget {
           ],
           highlightIndex: weeks.length - 1,
           target: target > 0 ? target.toDouble() : null,
-          height: 130,
+          height: 90,
           semanticsLabel: surplus
               ? 'Son 8 haftanın kalori fazlası'
               : 'Son 8 haftanın kalori açığı',

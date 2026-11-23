@@ -43,7 +43,7 @@ class WeekCard extends ConsumerWidget {
           const SizedBox(height: 8),
           week.when(
             skipLoadingOnRefresh: true,
-            loading: () => const HealthCardLoading(height: 150),
+            loading: () => const HealthCardLoading(height: 110),
             error: (_, __) => HealthCompactMessage(
               text: 'Haftalık açık yüklenemedi.',
               onRetry: () => ref.invalidate(currentWeekDeficitProvider),
@@ -58,7 +58,7 @@ class WeekCard extends ConsumerWidget {
                     color: AppColors.accent,
                     labels: TodayFormat.weekdayShort,
                     highlightIndex: todayIndex < 0 ? null : todayIndex,
-                    height: 96,
+                    height: 64,
                     semanticsLabel:
                         'Bu haftanın günlük ${TodayFormat.weekTitle(w)}',
                   ),
@@ -85,74 +85,27 @@ class WeekCard extends ConsumerWidget {
               );
             },
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _Average(
-                  icon: Icons.directions_walk_outlined,
-                  color: AppColors.ops,
-                  label: 'Ort. adım',
-                  value: steps == null ? '—' : HealthFormat.count(steps),
-                  valueKey: const Key('week-avg-steps'),
+          const SizedBox(height: 8),
+          DefaultTextStyle.merge(
+            style: muted,
+            child: Wrap(
+              children: [
+                const Text('Ort. '),
+                Text(
+                  steps == null ? '—' : HealthFormat.count(steps),
+                  key: const Key('week-avg-steps'),
                 ),
-              ),
-              Expanded(
-                child: _Average(
-                  icon: Icons.bedtime_outlined,
-                  color: AppColors.sleep,
-                  label: 'Ort. uyku',
-                  value: sleep == null ? '—' : KokpitFormat.sleep(sleep),
-                  valueKey: const Key('week-avg-sleep'),
+                const Text(' adım · '),
+                Text(
+                  sleep == null ? '—' : KokpitFormat.sleep(sleep),
+                  key: const Key('week-avg-sleep'),
                 ),
-              ),
-            ],
+                const Text(' uyku'),
+              ],
+            ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _Average extends StatelessWidget {
-  const _Average({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.value,
-    required this.valueKey,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String value;
-  final Key valueKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: AppColors.textMuted)),
-              Text(
-                value,
-                key: valueKey,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

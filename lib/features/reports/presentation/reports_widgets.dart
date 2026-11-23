@@ -470,7 +470,7 @@ class ReportScorePair extends StatelessWidget {
           child: _Score(
             label: 'Form',
             rate: formRate,
-            color: AppColors.fitness,
+            color: AppColors.sleep,
           ),
         ),
       ],

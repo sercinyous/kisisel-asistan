@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/bento.dart';
+import '../../../../core/widgets/ritim_ui.dart';
 import '../../../settings/presentation/settings_providers.dart';
 import '../providers/body_providers.dart';
 import '../weight_sheets.dart';
@@ -111,26 +112,37 @@ class _CheckinFlowScreenState extends ConsumerState<CheckinFlowScreen> {
     final header = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Adım $number / ${CheckinStep.values.length}',
-          style: theme.textTheme.labelMedium?.copyWith(color: AppColors.accent),
+        BentoLabel(
+          label: 'Kontrol · $number/${CheckinStep.values.length}',
+          trailing: step.label,
         ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(step.label, style: theme.textTheme.headlineSmall),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           step.hint,
           style: theme.textTheme.bodyMedium
               ?.copyWith(color: AppColors.textSecondary),
         ),
-        const SizedBox(height: AppSpacing.l),
+        const SizedBox(height: AppSpacing.md),
       ],
     );
-    final skip = TextButton(
-      key: const Key('checkin-skip'),
-      onPressed: () => _complete(CheckinStepState.skipped),
-      child: const Text('Atla'),
-    );
+    Widget footer(String label, VoidCallback? onPrimary) => Row(
+          children: [
+            RitimPillButton(
+              key: const Key('checkin-skip'),
+              label: 'Atla',
+              ghost: true,
+              onPressed: () => _complete(CheckinStepState.skipped),
+            ),
+            const Spacer(),
+            Flexible(
+              child: RitimPillButton(
+                key: const Key('checkin-primary'),
+                label: label,
+                onPressed: onPrimary,
+              ),
+            ),
+          ],
+        );
 
     switch (step) {
       case CheckinStep.weigh:
@@ -141,17 +153,10 @@ class _CheckinFlowScreenState extends ConsumerState<CheckinFlowScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               header,
-              Center(
-                child: Icon(step.icon, size: 56, color: AppColors.accent),
+              footer(
+                step == CheckinStep.weigh ? 'Tartıl' : 'Ölç',
+                step == CheckinStep.weigh ? _weigh : _tape,
               ),
-              const SizedBox(height: AppSpacing.l),
-              FilledButton(
-                key: const Key('checkin-primary'),
-                onPressed: step == CheckinStep.weigh ? _weigh : _tape,
-                child: Text(step == CheckinStep.weigh ? 'Tartıl' : 'Ölç'),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              skip,
             ],
           ),
         );
@@ -183,18 +188,11 @@ class _CheckinFlowScreenState extends ConsumerState<CheckinFlowScreen> {
                   style: theme.textTheme.bodyMedium
                       ?.copyWith(color: AppColors.textSecondary),
                 ),
-              const SizedBox(height: AppSpacing.l),
-              FilledButton(
-                key: const Key('checkin-primary'),
-                onPressed: todays.isEmpty
-                    ? null
-                    : () => _complete(CheckinStepState.done),
-                child: Text(todays.isEmpty
-                    ? 'Fotoğraf çekmek için poza dokun'
-                    : 'Bitir (${todays.length}/3)'),
+              const SizedBox(height: AppSpacing.md),
+              footer(
+                todays.isEmpty ? 'Poza dokun' : 'Bitir (${todays.length}/3)',
+                todays.isEmpty ? null : () => _complete(CheckinStepState.done),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              skip,
             ],
           ),
         );
@@ -210,7 +208,6 @@ class _Progress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       children: [
         for (final step in CheckinStep.values) ...[
@@ -223,23 +220,14 @@ class _Progress extends StatelessWidget {
                   duration: const Duration(milliseconds: 250),
                   height: 4,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
                     color: switch (states[step]!) {
                       CheckinStepState.done => AppColors.accent,
                       CheckinStepState.skipped => AppColors.textMuted,
                       CheckinStepState.pending => step.index == index
                           ? AppColors.accent.withValues(alpha: 0.4)
-                          : AppColors.border,
+                          : AppColors.track,
                     },
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  step.label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: step.index == index
-                        ? AppColors.textPrimary
-                        : AppColors.textMuted,
                   ),
                 ),
               ],

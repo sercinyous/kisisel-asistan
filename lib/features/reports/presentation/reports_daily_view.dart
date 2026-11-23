@@ -168,7 +168,7 @@ class _DailyReportGrid extends StatelessWidget {
           child: ReportRateCard(
             icon: Icons.task_alt_outlined,
             label: 'İş',
-            color: AppColors.ops,
+            color: AppColors.accent,
             rate: m.workRate,
             caption: 'Görev ${m.tasksDone} / ${m.tasksTotal} · '
                 'Rutin ${m.routinesDone} / ${m.routinesPlanned}',
@@ -179,7 +179,7 @@ class _DailyReportGrid extends StatelessWidget {
           child: ReportRateCard(
             icon: Icons.fitness_center_outlined,
             label: 'Form',
-            color: AppColors.fitness,
+            color: AppColors.sleep,
             rate: m.formRate,
             caption: 'Antrenman ${m.workoutsDone} / ${m.workoutsPlanned} · '
                 '$proteinNote',

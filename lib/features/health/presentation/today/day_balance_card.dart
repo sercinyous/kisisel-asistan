@@ -184,16 +184,28 @@ class DayDeficitLine extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            deficit >= 0
-                ? 'Kalori açığı (şu ana kadar): ${TodayFormat.deficit(deficit)}'
-                : 'Kalori fazlası (şu ana kadar): ${TodayFormat.deficit(deficit)}',
+          Text.rich(
+            TextSpan(
+              text: deficit >= 0
+                  ? 'Kalori açığı (şu ana kadar): '
+                  : 'Kalori fazlası (şu ana kadar): ',
+              children: [
+                TextSpan(
+                  text: TodayFormat.deficit(deficit),
+                  style: TextStyle(
+                    color: deficit >= 0
+                        ? AppColors.accent
+                        : surplusGoal
+                            ? AppColors.textPrimary
+                            : AppColors.warning,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
             key: const Key('day-deficit'),
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: deficit >= 0 || surplusGoal
-                  ? AppColors.textPrimary
-                  : AppColors.warning,
-              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
               height: 1.3,
             ),
           ),

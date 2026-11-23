@@ -188,9 +188,7 @@ void main() {
 
   Color scaffoldColor(WidgetTester tester, Finder scaffold) => tester
       .widget<Material>(
-        find
-            .descendant(of: scaffold, matching: find.byType(Material))
-            .first,
+        find.descendant(of: scaffold, matching: find.byType(Material)).first,
       )
       .color!;
 
@@ -240,7 +238,8 @@ void main() {
 
     testWidgets('durum çubuğu ikonları temaya göre değişir', (tester) async {
       await pumpApp(tester, home: const _ConstProbe());
-      expect(rootOverlayStyle(tester).statusBarIconBrightness, Brightness.light);
+      expect(
+          rootOverlayStyle(tester).statusBarIconBrightness, Brightness.light);
 
       await select(tester, AppThemeMode.light);
       expect(rootOverlayStyle(tester).statusBarIconBrightness, Brightness.dark);
@@ -250,7 +249,12 @@ void main() {
     testWidgets(
         'Ayarlar açıkken tema değişince gezinme, kaydırma ve form korunur',
         (tester) async {
-      await pumpApp(tester, home: const HomeShell(), overrides: demoOverrides());
+      await pumpApp(tester,
+          home: const HomeShell(), overrides: demoOverrides());
+      // Sıkı yoğunlukta Kokpit kısa; kaydırılabilsin diye ekran alçaltılır.
+      tester.view.physicalSize = Size(tester.view.physicalSize.width,
+          tester.view.physicalSize.height * 0.7);
+      await tester.pumpAndSettle();
 
       // Kokpit listesi biraz kaydırılır, ardından Ayarlar üstüne açılır.
       final kokpitList = find.descendant(
@@ -274,7 +278,8 @@ void main() {
       expect(find.byType(ProfileGoalsPage), findsOneWidget);
 
       // Kaydedilmemiş bir düzenleme ve kaydırılmış bir liste.
-      await tester.enterText(find.byKey(const Key('settings-calories')), '2345');
+      await tester.enterText(
+          find.byKey(const Key('settings-calories')), '2345');
       await tester.pump();
       final settingsList = find.descendant(
         of: find.byType(ProfileGoalsPage),
@@ -413,7 +418,8 @@ void main() {
 
       ColoredBox box() =>
           tester.widget<ColoredBox>(find.byKey(const Key('probe-box')));
-      expect(box().color, AppPalette.dark.background, reason: 'varsayılan koyu');
+      expect(box().color, AppPalette.dark.background,
+          reason: 'varsayılan koyu');
 
       await select(tester, AppThemeMode.light);
       tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;

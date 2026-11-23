@@ -398,6 +398,7 @@ class BodyMeasurementsCard extends ConsumerWidget {
                   for (final (i, s) in rows.indexed)
                     _MeasurementRow(
                       divider: i < rows.length - 1,
+                      labels: i == 0,
                       summary: s,
                       onTap: () =>
                           MeasurementsScreen.open(context, field: s.field),
@@ -417,9 +418,13 @@ class _MeasurementRow extends StatelessWidget {
     required this.summary,
     required this.onTap,
     this.divider = true,
+    this.labels = true,
   });
 
   final BodyFieldSummary summary;
+
+  /// Fark etiketleri ("başlangıçtan", "geçen") yalnızca ilk satırda yazılır.
+  final bool labels;
 
   /// Satırın altına 1 px kart çizgisi çizilir (son satır hariç).
   final bool divider;
@@ -458,16 +463,24 @@ class _MeasurementRow extends StatelessWidget {
               const Spacer(),
               if (s.fromStart != null)
                 Text(
-                  '${BodyFormat.delta(s.fromStart!)} başlangıçtan',
+                  labels
+                      ? '${BodyFormat.delta(s.fromStart!)} başlangıçtan'
+                      : BodyFormat.delta(s.fromStart!),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: bodyDeltaColor(s.field, s.fromStart),
                     fontFeatures: tabular,
                   ),
                 ),
               if (s.fromPrevious != null) ...[
-                const SizedBox(width: AppSpacing.s),
                 Text(
-                  '${BodyFormat.delta(s.fromPrevious!)} geçen',
+                  ' · ',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textMuted),
+                ),
+                Text(
+                  labels
+                      ? '${BodyFormat.delta(s.fromPrevious!)} geçen'
+                      : BodyFormat.delta(s.fromPrevious!),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.textPrimary,
                     fontFeatures: tabular,
@@ -505,6 +518,7 @@ class BodyPhotosCard extends ConsumerWidget {
                 (checkins.valueOrNull?.length ?? 0) >= 2 ? 'Karşılaştır' : null,
             onAction: () => PhotosScreen.open(context, compare: true),
           ),
+          const SizedBox(height: 6),
           checkins.when(
             skipLoadingOnRefresh: true,
             loading: () => const HealthCardLoading(height: 120),

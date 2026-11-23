@@ -125,7 +125,9 @@ class OpsGroupCard extends StatelessWidget {
           if (onHeaderTap != null) ...[
             const SizedBox(width: 4),
             Icon(
-              collapsed ? Icons.expand_more_outlined : Icons.expand_less_outlined,
+              collapsed
+                  ? Icons.expand_more_outlined
+                  : Icons.expand_less_outlined,
               size: 20,
               color: AppColors.textMuted,
             ),
@@ -374,7 +376,7 @@ class OpsSheetFrame extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge,
+                      style: theme.textTheme.titleSmall,
                     ),
                   ),
                   IconButton(

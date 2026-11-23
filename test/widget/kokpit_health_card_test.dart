@@ -59,17 +59,16 @@ void main() {
     expect(find.text('Kalan 550 kcal'), findsOneWidget);
     expect(find.text('1.450 / 2.000 kcal'), findsOneWidget);
     expect(find.text('8.432 / 8.000 adım'), findsOneWidget);
-    expect(find.text('Adım 7 · Kayıt 12 · Açık 4'), findsOneWidget);
+    expect(find.text('Seriler: Adım 7 · Kayıt 12 · Açık 4'), findsOneWidget);
     expect(find.byType(KokpitRing), findsOneWidget);
     expect(find.text('Ölçü ve fotoğraf günü · ~3 dk'), findsNothing);
   });
 
-  testWidgets('hedef aşılınca halka "fazla" der', (tester) async {
+  testWidgets('hedef aşılınca başlık "fazla" der', (tester) async {
     harness.kokpit.nutrition = const NutritionSummary(calories: 2350);
     await harness
         .pump(tester, overrides: [streaks(const []), checkin(day: false)]);
     expect(find.text('350 kcal fazla'), findsOneWidget);
-    expect(find.text('fazla'), findsOneWidget);
     expect(find.byKey(const ValueKey('kokpit-streak-line')), findsNothing,
         reason: 'seri yoksa satır yok');
   });
@@ -118,7 +117,7 @@ void main() {
     await harness
         .pump(tester, overrides: [streaks(const []), checkin(day: false)]);
     expect(find.text('Su'), findsOneWidget);
-    await tester.tap(find.text('+ 250 ml'));
+    await tester.tap(find.byKey(const ValueKey('kokpit-water-add')));
     await tester.pumpAndSettle();
     expect(find.textContaining('0,25 /'), findsOneWidget);
   });

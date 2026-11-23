@@ -118,7 +118,7 @@ class ReportsMonthSummary extends ConsumerWidget {
               span: 1,
               child: _MonthStatCard(
                 icon: Icons.task_alt_outlined,
-                color: AppColors.ops,
+                color: AppColors.accent,
                 label: 'Görevler',
                 value: taskPercent == null
                     ? KokpitFormat.none
@@ -132,7 +132,7 @@ class ReportsMonthSummary extends ConsumerWidget {
               span: 1,
               child: _MonthStatCard(
                 icon: Icons.directions_walk_outlined,
-                color: AppColors.fitness,
+                color: AppColors.sleep,
                 label: 'Ort. adım',
                 value: health.avgSteps == null
                     ? KokpitFormat.none
@@ -144,7 +144,7 @@ class ReportsMonthSummary extends ConsumerWidget {
               span: 1,
               child: _MonthStatCard(
                 icon: Icons.bedtime_outlined,
-                color: AppColors.ops,
+                color: AppColors.accent,
                 label: 'Ort. uyku',
                 value: KokpitFormat.sleep(health.avgSleepMinutes),
                 caption: 'Hedef ${KokpitFormat.sleep(targets.sleepMinutes)}',

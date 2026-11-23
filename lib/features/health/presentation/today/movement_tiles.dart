@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/health_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/bento.dart';
+import '../../../../core/widgets/ritim_ui.dart';
 import '../../../kokpit/presentation/kokpit_format.dart';
 import '../../../kokpit/presentation/kokpit_providers.dart';
 import '../health_format.dart';
@@ -54,9 +55,6 @@ class MovementTiles extends ConsumerWidget {
           color: AppColors.sleep,
           value: sleep == null ? '—' : KokpitFormat.sleep(sleep),
           sub: 'dün gece',
-          progress: sleep == null || targets.sleepMinutes <= 0
-              ? null
-              : sleep / targets.sleepMinutes,
           onTap: () =>
               WeeklyDetailScreen.open(context, metric: WeeklyMetric.sleep),
         ),
@@ -76,16 +74,11 @@ class MovementTiles extends ConsumerWidget {
           sub: 'bu hafta',
           onTap: () =>
               WeeklyDetailScreen.open(context, metric: WeeklyMetric.workouts),
-          action: TextButton.icon(
+          action: RitimPillButton(
             key: const Key('move-workout-add'),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(0, 36),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+            label: 'Ekle',
+            ghost: true,
             onPressed: () => WorkoutFormSheet.show(context),
-            icon: const Icon(Icons.add_outlined, size: 18),
-            label: const Text('Ekle'),
           ),
         ),
       ),
@@ -138,7 +131,7 @@ class _Tile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           BentoLabel(label: label),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,

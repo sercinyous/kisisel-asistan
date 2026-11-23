@@ -36,8 +36,9 @@ Future<Color?> _pumpLine(WidgetTester tester, GoalMode goal) async {
   ));
   await tester.pumpAndSettle();
   final text = tester.widget<Text>(find.byKey(const Key('day-deficit')));
-  expect(text.data, startsWith('Kalori fazlası (şu ana kadar)'));
-  return text.style?.color;
+  final span = text.textSpan! as TextSpan;
+  expect(span.toPlainText(), startsWith('Kalori fazlası (şu ana kadar)'));
+  return (span.children!.single as TextSpan).style?.color;
 }
 
 void main() {

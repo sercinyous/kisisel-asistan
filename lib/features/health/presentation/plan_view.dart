@@ -185,15 +185,17 @@ class _PlanBody extends ConsumerWidget {
 
 /// Renkli küçük rozet.
 class PlanBadge extends StatelessWidget {
-  const PlanBadge({super.key, required this.text, required this.color});
+  const PlanBadge({super.key, required this.text, this.color});
 
   final String text;
-  final Color color;
+
+  /// Verilmezse gri seçim dolgusu ve ikincil metin.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
+          color: color?.withValues(alpha: 0.10) ?? AppColors.selection,
           borderRadius: BorderRadius.circular(AppRadii.chip),
         ),
         child: Padding(
@@ -201,8 +203,8 @@ class PlanBadge extends StatelessWidget {
           child: Text(
             text,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
+                  color: color ?? AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
                 ),
           ),
         ),
@@ -313,7 +315,7 @@ class _GoalCard extends ConsumerWidget {
             child: PlanBadge(
               key: const Key('plan-source'),
               text: source,
-              color: manual ? AppColors.warning : AppColors.accent,
+              color: manual ? AppColors.warning : null,
             ),
           ),
           if (!hasWeight) ...[
@@ -569,46 +571,25 @@ class _TargetsCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          BentoLabel(
-            icon: Icons.local_fire_department_outlined,
-            label: 'Günlük hedeflerin',
-            color: AppColors.nutrition,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+          const BentoLabel(label: 'Günlük hedeflerin'),
+          const SizedBox(height: 8),
+          RitimChipGrid(
             children: [
-              Text(
-                formatTr(t.kcal),
+              RitimChipTile(
                 key: const Key('plan-kcal'),
-                style: theme.textTheme.displaySmall?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
+                label: 'Kalori',
+                value: '${formatTr(t.kcal)} kcal',
               ),
-              const SizedBox(width: 6),
-              Text('kcal',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(color: AppColors.textSecondary)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _Macro(
-                  label: 'Protein',
-                  grams: t.proteinG,
-                  color: AppColors.protein),
-              _Macro(
-                  label: 'Karb', grams: t.carbsG, color: AppColors.nutrition),
-              _Macro(label: 'Yağ', grams: t.fatG, color: AppColors.warning),
-              _Macro(
-                  label: 'Lif', grams: resolved.fiberG, color: AppColors.water),
+              RitimChipTile(
+                  label: 'Protein', value: '${formatTr(t.proteinG)} g'),
+              RitimChipTile(
+                  label: 'Karbonhidrat', value: '${formatTr(t.carbsG)} g'),
+              RitimChipTile(label: 'Yağ', value: '${formatTr(t.fatG)} g'),
             ],
           ),
           const SizedBox(height: 10),
           Text(
+            'Lif ${formatTr(resolved.fiberG)} g · '
             'Adım ${HealthFormat.count(t.steps)} · Uyku '
             '${t.sleepMinutes ~/ 60} sa'
             '${t.sleepMinutes % 60 == 0 ? '' : ' ${t.sleepMinutes % 60} dk'}',
@@ -645,34 +626,6 @@ class _TargetsCard extends ConsumerWidget {
               text: w,
               color: w == resolved.lockedText ? AppColors.textSecondary : null,
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Macro extends StatelessWidget {
-  const _Macro({required this.label, required this.grams, required this.color});
-
-  final String label;
-  final int grams;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${formatTr(grams)} g',
-            style: theme.textTheme.titleMedium
-                ?.copyWith(color: color, fontWeight: FontWeight.w700),
-          ),
-          Text(label,
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );

@@ -340,7 +340,7 @@ class _DetailBody extends ConsumerWidget {
                 labels: labels,
                 highlightIndex: days.length - 1,
                 target: target,
-                height: 150,
+                height: 96,
                 semanticsLabel: '$label grafiği, son ${days.length} gün',
               ),
               if (!short) ...[

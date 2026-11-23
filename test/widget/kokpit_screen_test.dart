@@ -214,7 +214,6 @@ void main() {
       // Tek Sağlık kartı: kalan halkası, yenen/hedef, adım çubuğu.
       expect(find.text('Sağlık'), findsOneWidget);
       expect(find.text('Kalan 550 kcal'), findsOneWidget);
-      expect(find.text('550'), findsOneWidget);
       expect(find.text('1.450 / 2.000 kcal'), findsOneWidget);
       expect(find.text('8.432 / 8.000 adım'), findsOneWidget);
       expect(find.text('Protein'), findsNothing, reason: 'makro yok');

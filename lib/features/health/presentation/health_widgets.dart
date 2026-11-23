@@ -271,7 +271,15 @@ class HealthWeekdayLabel extends StatelessWidget {
   const HealthWeekdayLabel(this.day, {super.key, this.highlight = false});
 
   /// Pazartesi'den Pazar'a.
-  static const List<String> _short = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+  static const List<String> _short = [
+    'Pzt',
+    'Sal',
+    'Çar',
+    'Per',
+    'Cum',
+    'Cmt',
+    'Paz'
+  ];
 
   final DateTime day;
   final bool highlight;

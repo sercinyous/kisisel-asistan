@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/templates/task_templates.dart';
 import '../../../core/templates/template_chips.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/tasks_repository.dart';
 import '../domain/task_category.dart';
@@ -231,16 +232,14 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
           onSelected: (value) => setState(() => _category = value),
         ),
         const OpsFieldLabel('Öncelik'),
-        SegmentedButton<String>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: 'low', label: Text('Düşük')),
-            ButtonSegment(value: 'medium', label: Text('Orta')),
-            ButtonSegment(value: 'high', label: Text('Yüksek')),
-          ],
-          selected: {_priority},
-          onSelectionChanged: (selection) =>
-              setState(() => _priority = selection.first),
+        RitimSegmented<String>(
+          segments: const {
+            'low': 'Düşük',
+            'medium': 'Orta',
+            'high': 'Yüksek',
+          },
+          selected: _priority,
+          onChanged: (value) => setState(() => _priority = value),
         ),
         const OpsFieldLabel('İlgili kişi'),
         OpsChoiceWrap<String?>(

@@ -366,13 +366,14 @@ abstract final class AppTheme {
         .copyWith(
           displaySmall: t(bt.displaySmall, 28, FontWeight.w700, ls: -0.8),
           headlineLarge: t(bt.headlineLarge, 26, FontWeight.w700, ls: -0.6),
-          headlineMedium: t(bt.headlineMedium, 24, FontWeight.w700, ls: -0.5),
+          headlineMedium: t(bt.headlineMedium, 22, FontWeight.w700, ls: -0.5),
           headlineSmall: t(bt.headlineSmall, 22, FontWeight.w700, ls: -0.44),
           titleLarge: t(bt.titleLarge, 17, FontWeight.w700, ls: -0.2),
           titleMedium: t(bt.titleMedium, 14, FontWeight.w600),
           titleSmall: t(bt.titleSmall, AppType.cardTitle, FontWeight.w600),
           bodyLarge: t(bt.bodyLarge, 13.5, FontWeight.w400, height: 1.4),
-          bodyMedium: t(bt.bodyMedium, AppType.body, FontWeight.w400, height: 1.4),
+          bodyMedium:
+              t(bt.bodyMedium, AppType.body, FontWeight.w400, height: 1.4),
           bodySmall: t(bt.bodySmall, AppType.caption, FontWeight.w400,
               color: p.textSecondary, height: 1.35),
           labelLarge: t(bt.labelLarge, AppType.body, FontWeight.w600),

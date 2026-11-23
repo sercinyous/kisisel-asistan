@@ -165,8 +165,8 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             value,
-            style: theme.textTheme.titleLarge
-                ?.copyWith(color: AppColors.textPrimary),
+            style: theme.textTheme.titleMedium?.copyWith(
+                color: AppColors.textPrimary, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -306,7 +306,7 @@ class _WeekdayStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final top = counts.fold<int>(0, math.max);
-    const short = ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'];
+    const short = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     return SizedBox(
       height: 90,
       child: Row(

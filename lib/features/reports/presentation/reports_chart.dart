@@ -58,15 +58,15 @@ class ReportDailyCompletionCard extends StatelessWidget {
           BentoLabel(
             icon: Icons.bar_chart_outlined,
             label: 'Günlük tamamlama',
-            color: AppColors.ops,
+            color: AppColors.accent,
           ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 16,
             runSpacing: 4,
             children: [
-              _Legend(color: AppColors.ops, label: 'İş'),
-              _Legend(color: AppColors.fitness, label: 'Form'),
+              _Legend(color: AppColors.accent, label: 'İş'),
+              _Legend(color: AppColors.sleep, label: 'Form'),
             ],
           ),
           if (days.isEmpty)
@@ -141,8 +141,8 @@ class ReportDailyCompletionCard extends StatelessWidget {
                                 x: index,
                                 barsSpace: _rodGap,
                                 barRods: [
-                                  _rod(day.workRate, AppColors.ops),
-                                  _rod(day.formRate, AppColors.fitness),
+                                  _rod(day.workRate, AppColors.accent),
+                                  _rod(day.formRate, AppColors.sleep),
                                 ],
                               ),
                           ],
