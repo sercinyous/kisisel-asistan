@@ -111,6 +111,8 @@ run -d avatar -f "$SCHEMA"
 run -d avatar -f "$SCHEMA"
 run -d avatar -f "$HERE/avatar_test.sql" >/dev/null
 echo "tamam: avatar (avatar_test)"
+run -d avatar -f "$HERE/health_v2_test.sql" >/dev/null
+echo "tamam: sağlık v2 (health_v2_test: ölçüler, fotoğraflar, body_photos)"
 
 echo "== 2) rapor fonksiyonları ve yetkiler =="
 run -d fresh -f "$HERE/reports_test.sql"
@@ -201,6 +203,8 @@ else
   run -d upgrade3 -f "$HERE/faz5_onboarding_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/reminders_test.sql" >/dev/null
   run -d upgrade3 -f "$HERE/faz5_health_extras_test.sql" >/dev/null
+  run -d upgrade3 -c "select 1 from public.body_measurements, public.progress_photos limit 0" >/dev/null
+  run -d upgrade3 -At -c "select weekly_rate || targets_source from public.user_settings limit 1" >/dev/null
   echo "tamam: Faz 4B testleri sürüm 3'ten yükseltilmiş veritabanında da geçti"
   echo "tamam: sürüm 3 yükseltmesi"
 fi

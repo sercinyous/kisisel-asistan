@@ -19,13 +19,28 @@ enum FatLossRate {
   final double? kgPerWeek;
   final String label;
 
-  /// Saklanan değeri çözer; tanınmayan değer klasiğe düşer.
+  /// `user_settings.weekly_rate` değeri: 'classic', '0.5', '0.75', '1.0'.
+  String get dbValue => switch (this) {
+        FatLossRate.classic => 'classic',
+        FatLossRate.half => '0.5',
+        FatLossRate.threeQuarter => '0.75',
+        FatLossRate.one => '1.0',
+      };
+
+  /// Saklanan değeri çözer (veritabanı değeri ya da eski cihaz tercihindeki
+  /// enum adı); tanınmayan değer klasiğe düşer.
   static FatLossRate parse(String? value) {
     for (final r in FatLossRate.values) {
-      if (r.name == value) return r;
+      if (r.name == value || r.dbValue == value) return r;
     }
     return FatLossRate.classic;
   }
+
+  /// 1 kg/hafta seçilince gösterilen uyarı; diğerlerinde `null`.
+  String? get warning => this == FatLossRate.one
+      ? '1 kg/hafta agresif bir hızdır: kas kaybı, yorgunluk ve besin eksikliği '
+          'riski artar. 2–4 haftadan uzun sürdürmeden önce doktora danış.'
+      : null;
 }
 
 /// Hız modlarının sabitleri.
@@ -333,8 +348,13 @@ class SupplementGuide {
   /// Günlük su: kg × 35 ml (50 ml'ye yuvarlı), en çok 4.000 ml.
   final int waterMl;
 
-  /// Cinsiyete göre toplam magnezyum; bilinmiyorsa iki değer.
+  /// Cinsiyete göre toplam magnezyum; bilinmiyorsa iki değer. Takviye
+  /// sınırı [magnesiumSupplementText] ile ayrıca söylenir.
   final String magnesiumText;
+
+  /// Takviye dozu ve üst sınır (yiyecekten bağımsız).
+  static const String magnesiumSupplementText =
+      'Takviye genelde 200–350 mg; takviyeden günde 350 mg\'ı aşma.';
 
   /// Kalori 1.500'ün altında: multivitamin özellikle önerilir.
   final bool multivitaminHighlighted;

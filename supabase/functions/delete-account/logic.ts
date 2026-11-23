@@ -40,12 +40,18 @@ export function normalizeEmail(email: string | null | undefined): string | null 
 }
 
 /** Silme adımları sırası: önce açık silmeler, en son auth kullanıcısı. */
-export type DeletionStep = "friendships" | "friend_requests" | "avatars" | "auth_user";
+export type DeletionStep =
+  | "friendships"
+  | "friend_requests"
+  | "avatars"
+  | "body_photos"
+  | "auth_user";
 
 export const DELETION_STEPS: readonly DeletionStep[] = [
   "friendships",
   "friend_requests",
   "avatars",
+  "body_photos",
   "auth_user",
 ];
 
@@ -87,6 +93,35 @@ export async function purgeAvatars(
   await bucket.remove([avatarObjectPath(userId)]);
   for (let pass = 0; pass < maxPasses; pass++) {
     const paths = avatarPaths(userId, await bucket.list(userId));
+    if (paths.length === 0) return;
+    const removed = await bucket.remove(paths);
+    if (removed === 0) return;
+  }
+}
+
+/** İlerleme fotoğraflarının özel kovası; yol `<uid>/<YYYY-MM-DD>/<poz>.jpg`. */
+export const BODY_PHOTO_BUCKET = "body_photos";
+
+/**
+ * `body_photos` kovasında `<uid>/` altındaki her şeyi siler: önce tarih
+ * klasörleri listelenir, her klasörün dosyaları silinir; kökte dosya kalırsa o
+ * da silinir. Bir tur hiçbir şey silmezse durur; en fazla [maxPasses] tur.
+ */
+export async function purgeBodyPhotos(
+  bucket: AvatarBucket,
+  userId: string,
+  maxPasses = 20,
+): Promise<void> {
+  for (let pass = 0; pass < maxPasses; pass++) {
+    const top = await bucket.list(userId);
+    const folders = top.filter(
+      (e) => e.id === null && e.name.length > 0 && !e.name.includes("/"),
+    );
+    const paths = avatarPaths(userId, top);
+    for (const folder of folders) {
+      const prefix = `${userId}/${folder.name}`;
+      paths.push(...avatarPaths(prefix, await bucket.list(prefix)));
+    }
     if (paths.length === 0) return;
     const removed = await bucket.remove(paths);
     if (removed === 0) return;

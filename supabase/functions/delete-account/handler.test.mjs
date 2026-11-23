@@ -12,6 +12,7 @@ function setup(overrides = {}) {
     deleteFriendships: async (id) => calls.push(["friendships", id]),
     deleteFriendRequests: async (id, email) => calls.push(["requests", id, email]),
     deleteAvatars: async (id) => calls.push(["avatars", id]),
+    deleteBodyPhotos: async (id) => calls.push(["body_photos", id]),
     deleteAuthUser: async (id) => calls.push(["auth", id]),
     ...overrides,
   };
@@ -34,6 +35,7 @@ test("geçerli istek sırayla siler", async () => {
     ["friendships", "u1"],
     ["requests", "u1", "ali@example.com"],
     ["avatars", "u1"],
+    ["body_photos", "u1"],
     ["auth", "u1"],
   ]);
 });
@@ -84,5 +86,20 @@ test("avatar silme başarısızsa auth kullanıcısı silinmez", async () => {
   assert.deepEqual(calls, [
     ["friendships", "u1"],
     ["requests", "u1", "ali@example.com"],
+  ]);
+});
+
+test("ilerleme fotoğrafı silme başarısızsa auth kullanıcısı silinmez", async () => {
+  const { calls, handler } = setup({
+    deleteBodyPhotos: async () => {
+      throw new Error("storage");
+    },
+  });
+  const res = await handler(req({ confirm: "SİL" }));
+  assert.equal(res.status, 500);
+  assert.deepEqual(calls, [
+    ["friendships", "u1"],
+    ["requests", "u1", "ali@example.com"],
+    ["avatars", "u1"],
   ]);
 });

@@ -56,7 +56,11 @@ select tf.eq('yeni hesabın ayar satırı nötr varsayılanlarla açılır',
     "display_name": null, "work_description": null, "onboarded_at": null,
     "task_categories": null, "health_source": null, "daily_water_ml": 2000,
     "activity_level": null, "avatar_kind": "initials", "avatar_mascot": null,
-    "avatar_color": null, "avatar_version": 0}'::jsonb);
+    "avatar_color": null, "avatar_version": 0,
+    "weekly_rate": "classic", "expenditure_kcal_manual": null, "meal_count": 3,
+    "targets_source": "plan", "targets_updated_at": null, "checkin_cadence": "weekly",
+    "checkin_weekday": 1, "checkin_monthday": 1, "checkin_reminder": true,
+    "hide_photos": false}'::jsonb);
 select tf.eq('yeni hesaba rutin/görev/not/tartı/öğün/ekip yüklenmez',
   (select to_jsonb(
      (select count(*) from public.routines where user_id = :A)

@@ -4178,3 +4178,176 @@ $$;
 revoke all on function public.ensure_user_settings() from public, anon;
 grant execute on function public.ensure_user_settings() to authenticated;
 -- END ensure_user_settings
+
+
+-- =====================================================================
+-- BEGIN health_v2 (Sağlık: hedef motoru, ölçüler, ilerleme fotoğrafları)
+-- — idempotent
+--   * user_settings: haftalık hız, elle harcama, öğün sayısı, hedef kaynağı,
+--     ölçü/fotoğraf günü ve "fotoğrafları gizle" (cihazdaki tercihler buraya
+--     taşındı; tüm cihazlarda aynı).
+--   * body_measurements, progress_photos: yalnızca sahibi (arkadaş politikası
+--     YOK; raporlara ve AI'a girmez).
+--   * Storage `body_photos`: özel kova, yol <uid>/<YYYY-MM-DD>/<poz>.jpg,
+--     yalnızca sahibi okur/yazar/siler. Storage şeması yoksa atlanır.
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists weekly_rate text not null default 'classic',
+  add column if not exists expenditure_kcal_manual integer,
+  add column if not exists meal_count smallint not null default 3,
+  add column if not exists targets_source text not null default 'plan',
+  add column if not exists targets_updated_at timestamptz,
+  add column if not exists checkin_cadence text not null default 'weekly',
+  add column if not exists checkin_weekday smallint not null default 1,
+  add column if not exists checkin_monthday smallint not null default 1,
+  add column if not exists checkin_reminder boolean not null default true,
+  add column if not exists hide_photos boolean not null default false;
+
+do $$
+declare
+  c record;
+begin
+  for c in
+    select * from (values
+      ('user_settings_weekly_rate_check',
+       'check (weekly_rate in (''classic'', ''0.5'', ''0.75'', ''1.0''))'),
+      ('user_settings_expenditure_kcal_manual_check',
+       'check (expenditure_kcal_manual is null or expenditure_kcal_manual between 1200 and 6000)'),
+      ('user_settings_meal_count_check',
+       'check (meal_count between 2 and 3)'),
+      ('user_settings_targets_source_check',
+       'check (targets_source in (''onboarding'', ''plan'', ''manual''))'),
+      ('user_settings_checkin_cadence_check',
+       'check (checkin_cadence in (''weekly'', ''monthly''))'),
+      ('user_settings_checkin_weekday_check',
+       'check (checkin_weekday between 1 and 7)'),
+      ('user_settings_checkin_monthday_check',
+       'check (checkin_monthday between 1 and 28)')
+    ) as t(name, def)
+  loop
+    if not exists (
+      select 1 from pg_constraint
+      where conrelid = 'public.user_settings'::regclass and conname = c.name
+    ) then
+      execute format('alter table public.user_settings add constraint %I %s',
+                     c.name, c.def);
+    end if;
+  end loop;
+end;
+$$;
+
+create table if not exists public.body_measurements (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null default auth.uid()
+               references auth.users (id) on delete cascade,
+  measured_on  date not null,
+  waist_cm     numeric(5,1) check (waist_cm between 20 and 250),
+  hip_cm       numeric(5,1) check (hip_cm between 20 and 250),
+  chest_cm     numeric(5,1) check (chest_cm between 20 and 250),
+  arm_cm       numeric(5,1) check (arm_cm between 20 and 250),
+  thigh_cm     numeric(5,1) check (thigh_cm between 20 and 250),
+  neck_cm      numeric(5,1) check (neck_cm between 20 and 250),
+  note         text check (note is null or char_length(note) <= 500),
+  created_at   timestamptz not null default now(),
+  unique (user_id, measured_on),
+  check (coalesce(waist_cm, hip_cm, chest_cm, arm_cm, thigh_cm, neck_cm) is not null)
+);
+
+alter table public.body_measurements enable row level security;
+
+drop policy if exists body_measurements_select on public.body_measurements;
+drop policy if exists body_measurements_insert on public.body_measurements;
+drop policy if exists body_measurements_update on public.body_measurements;
+drop policy if exists body_measurements_delete on public.body_measurements;
+create policy body_measurements_select on public.body_measurements
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy body_measurements_insert on public.body_measurements
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy body_measurements_update on public.body_measurements
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+create policy body_measurements_delete on public.body_measurements
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+revoke all on table public.body_measurements from anon;
+grant select, insert, update, delete on table public.body_measurements to authenticated;
+
+create table if not exists public.progress_photos (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null default auth.uid()
+                references auth.users (id) on delete cascade,
+  taken_on      date not null,
+  pose          text not null check (pose in ('front', 'side', 'back')),
+  storage_path  text not null,
+  created_at    timestamptz not null default now(),
+  unique (user_id, taken_on, pose),
+  -- Yol satırın sahibine, tarihine ve pozuna bağlıdır (başkasının nesnesine
+  -- işaret edemez).
+  constraint progress_photos_path_check check (
+    storage_path = user_id::text || '/' || to_char(taken_on, 'YYYY-MM-DD')
+                   || '/' || pose || '.jpg')
+);
+
+alter table public.progress_photos enable row level security;
+
+drop policy if exists progress_photos_select on public.progress_photos;
+drop policy if exists progress_photos_insert on public.progress_photos;
+drop policy if exists progress_photos_update on public.progress_photos;
+drop policy if exists progress_photos_delete on public.progress_photos;
+create policy progress_photos_select on public.progress_photos
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy progress_photos_insert on public.progress_photos
+  for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy progress_photos_update on public.progress_photos
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+create policy progress_photos_delete on public.progress_photos
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
+revoke all on table public.progress_photos from anon;
+grant select, insert, update, delete on table public.progress_photos to authenticated;
+
+do $$
+begin
+  if to_regclass('storage.objects') is null or to_regclass('storage.buckets') is null then
+    raise notice 'storage şeması yok: body_photos kovası ve politikaları atlandı';
+    return;
+  end if;
+
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('body_photos', 'body_photos', false, 3145728, array['image/jpeg'])
+  on conflict (id) do update
+    set public = false,
+        file_size_limit = excluded.file_size_limit,
+        allowed_mime_types = excluded.allowed_mime_types;
+
+  drop policy if exists body_photos_select on storage.objects;
+  drop policy if exists body_photos_insert on storage.objects;
+  drop policy if exists body_photos_update on storage.objects;
+  drop policy if exists body_photos_delete on storage.objects;
+
+  create policy body_photos_select on storage.objects
+    for select to authenticated
+    using (bucket_id = 'body_photos'
+           and (storage.foldername(name))[1] = (select auth.uid())::text);
+  create policy body_photos_insert on storage.objects
+    for insert to authenticated
+    with check (bucket_id = 'body_photos'
+                and (storage.foldername(name))[1] = (select auth.uid())::text
+                and name ~ '^[0-9a-f-]{36}/[0-9]{4}-[0-9]{2}-[0-9]{2}/(front|side|back)\.jpg$');
+  create policy body_photos_update on storage.objects
+    for update to authenticated
+    using (bucket_id = 'body_photos'
+           and (storage.foldername(name))[1] = (select auth.uid())::text)
+    with check (bucket_id = 'body_photos'
+                and (storage.foldername(name))[1] = (select auth.uid())::text
+                and name ~ '^[0-9a-f-]{36}/[0-9]{4}-[0-9]{2}-[0-9]{2}/(front|side|back)\.jpg$');
+  create policy body_photos_delete on storage.objects
+    for delete to authenticated
+    using (bucket_id = 'body_photos'
+           and (storage.foldername(name))[1] = (select auth.uid())::text);
+end;
+$$;
+-- END health_v2
