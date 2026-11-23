@@ -7,11 +7,13 @@ import '../../settings/presentation/settings_providers.dart';
 import '../domain/energy_balance.dart';
 import '../../../core/utils/date_utils.dart';
 import '../domain/fat_loss_plan.dart';
+import '../domain/fat_loss_rate.dart';
 import '../domain/meal_gap.dart';
 import 'energy_providers.dart' show energyWeightLookbackDays;
 import 'health_providers.dart';
 
 export '../domain/fat_loss_plan.dart';
+export '../domain/fat_loss_rate.dart';
 export '../domain/meal_gap.dart';
 
 /// Son tartı (son [energyWeightLookbackDays] gün); yoksa `null`. Kilo
@@ -26,6 +28,39 @@ final fatLossWeightProvider = FutureProvider<WeightEntry?>((ref) async {
 
 const String fatLossExpenditureKey = 'fat_loss_expenditure_kcal';
 const String fatLossManualModeKey = 'fat_loss_expenditure_manual';
+const String fatLossRateKey = 'fat_loss_rate';
+
+/// Seçilen haftalık kayıp hızı; cihazda saklanır, varsayılan klasik.
+final fatLossRateProvider =
+    StateNotifierProvider<FatLossRateNotifier, FatLossRate>(
+  (ref) => FatLossRateNotifier(),
+);
+
+class FatLossRateNotifier extends StateNotifier<FatLossRate> {
+  FatLossRateNotifier() : super(FatLossRate.classic) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(fatLossRateKey);
+      if (stored != null && mounted) state = FatLossRate.parse(stored);
+    } on Object {
+      // Saklama kullanılamıyorsa klasik formülle devam edilir.
+    }
+  }
+
+  Future<void> set(FatLossRate rate) async {
+    state = rate;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(fatLossRateKey, rate.name);
+    } on Object {
+      // Kalıcı yazılamazsa seçim bu oturumda geçerli kalır.
+    }
+  }
+}
 
 int clampExpenditure(int kcal) => kcal
     .clamp(FatLossRules.expenditureMin, FatLossRules.expenditureMax)
@@ -107,6 +142,14 @@ typedef FatLossExpenditure = ({
 /// Profilden (Mifflin–St Jeor × hareket katsayısı) harcama; profil eksikse
 /// `null`. Sonuç 1200–6000 kcal aralığına sıkıştırılır.
 int? profileExpenditure(UserSettings settings, double weightKg) {
+  final basal = profileBasal(settings, weightKg);
+  final activity = settings.activityLevel;
+  if (basal == null || activity == null) return null;
+  return clampExpenditure((basal * activity.factor).round());
+}
+
+/// Profilden bazal (Mifflin–St Jeor); profil eksikse `null`.
+double? profileBasal(UserSettings settings, double weightKg) {
   final sex = Sex.tryParse(settings.sex);
   final height = settings.heightCm;
   final birthYear = settings.birthYear;
@@ -115,13 +158,12 @@ int? profileExpenditure(UserSettings settings, double weightKg) {
     return null;
   }
   final age = DateTime.now().year - birthYear;
-  final basal = basalKcal(
+  return basalKcal(
     weightKg: weightKg,
     heightCm: height,
     age: age < 0 ? 0 : age,
     sex: sex,
   );
-  return clampExpenditure((basal * activity.factor).round());
 }
 
 /// Profil tamsa ve elle giriş seçilmediyse profilden; değilse elle girilen.
@@ -146,13 +188,21 @@ FatLossExpenditure resolveExpenditure({
 class FatLossPlanState {
   const FatLossPlanState({
     required this.weight,
-    required this.targets,
+    required this.rateResult,
     required this.expenditure,
+    this.sex,
   });
 
   final WeightEntry weight;
-  final FatLossTargets targets;
+  final FatLossRateResult rateResult;
   final FatLossExpenditure expenditure;
+
+  /// Profildeki cinsiyet; bilinmiyorsa `null`.
+  final Sex? sex;
+
+  /// Seçilen hıza göre hedefler; bütün kartlar bunu kullanır.
+  FatLossTargets get targets => rateResult.targets;
+  FatLossRate get rate => rateResult.rate;
 
   WeeklyLossEstimate get weekly => estimateWeeklyLoss(
         expenditureKcal: expenditure.kcal,
@@ -166,15 +216,22 @@ final fatLossPlanProvider = FutureProvider<FatLossPlanState?>((ref) async {
   final settings = await ref.watch(userSettingsProvider.future);
   final weight = await ref.watch(fatLossWeightProvider.future);
   if (weight == null) return null;
+  final expenditure = resolveExpenditure(
+    settings: settings,
+    weightKg: weight.weightKg,
+    manualKcal: ref.watch(manualExpenditureProvider),
+    manualMode: ref.watch(manualExpenditureModeProvider),
+  );
   return FatLossPlanState(
     weight: weight,
-    targets: computeFatLossTargets(weight.weightKg),
-    expenditure: resolveExpenditure(
-      settings: settings,
+    rateResult: computeRateTargets(
       weightKg: weight.weightKg,
-      manualKcal: ref.watch(manualExpenditureProvider),
-      manualMode: ref.watch(manualExpenditureModeProvider),
+      expenditureKcal: expenditure.kcal,
+      rate: ref.watch(fatLossRateProvider),
+      basalKcal: profileBasal(settings, weight.weightKg),
     ),
+    expenditure: expenditure,
+    sex: Sex.tryParse(settings.sex),
   );
 });
 
