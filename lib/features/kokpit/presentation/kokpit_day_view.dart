@@ -171,11 +171,10 @@ List<KokpitTodayItem>? watchKokpitTodayItems(WidgetRef ref) {
     routines: routines,
     tasks: tasks,
     now: now,
-    checkin: checkin != null &&
-            checkin.isCheckinDay &&
-            (checkin.done || !dismissed)
-        ? KokpitCheckinItem(done: checkin.done)
-        : null,
+    checkin:
+        checkin != null && checkin.isCheckinDay && (checkin.done || !dismissed)
+            ? KokpitCheckinItem(done: checkin.done)
+            : null,
   );
 }
 
@@ -218,8 +217,9 @@ class _StatsRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items =
-        watchKokpitTodayItems(ref)?.where((i) => i is! KokpitCheckinItem).toList();
+    final items = watchKokpitTodayItems(ref)
+        ?.where((i) => i is! KokpitCheckinItem)
+        .toList();
     final done = items?.where((i) => i.done).length ?? 0;
     final total = items?.length ?? 0;
     final left = total - done;
@@ -299,14 +299,20 @@ class _StatCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BentoLabel(label: label, trailing: 'Aç ›'),
+            Row(
+              children: [
+                RitimDot(color: color, size: 8),
+                const SizedBox(width: 8),
+                Expanded(child: BentoLabel(label: label, trailing: 'Aç ›')),
+              ],
+            ),
             const SizedBox(height: AppSpacing.sm),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: KokpitCelebrate(
                 key: const ValueKey('kokpit-tasks-celebrate'),
-                active: total > 0 && done == total,
+                active: done != null && total > 0 && done == total,
                 color: color,
                 child: done == null
                     ? _valueText('—')
@@ -482,7 +488,7 @@ class _TodaySection extends ConsumerWidget {
                       time: item.time,
                       now: now,
                       done: item.done,
-color: AppColors.ops,
+                      color: AppColors.ops,
                       onTap: () => _toggleOccurrence(context, ref, occurrence),
                     ),
                   ),

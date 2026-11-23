@@ -41,12 +41,23 @@ void main() {
       await tester.pumpWidget(
         _host(const KokpitEntrance(index: 3, child: Text('Kart'))),
       );
-      expect(find.byType(Opacity), findsOneWidget);
+      double opacity() => tester
+          .widget<FadeTransition>(
+            find.descendant(
+              of: find.byType(KokpitEntrance),
+              matching: find.byType(FadeTransition),
+            ),
+          )
+          .opacity
+          .value;
+      expect(opacity(), 0);
+      final element = tester.element(find.text('Kart'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(Opacity), findsNothing);
+      expect(opacity(), 1);
       await tester.pumpAndSettle();
-      expect(find.text('Kart'), findsOneWidget);
+      // Animasyon bitince çocuk yeniden kurulmaz.
+      expect(tester.element(find.text('Kart')), same(element));
     });
 
     testWidgets('hareket azaltılınca animasyonsuz', (tester) async {
@@ -56,7 +67,18 @@ void main() {
           reduce: true,
         ),
       );
-      expect(find.byType(Opacity), findsNothing);
+      expect(
+        tester
+            .widget<FadeTransition>(
+              find.descendant(
+                of: find.byType(KokpitEntrance),
+                matching: find.byType(FadeTransition),
+              ),
+            )
+            .opacity
+            .value,
+        1,
+      );
       expect(tester.hasRunningAnimations, isFalse);
     });
   });

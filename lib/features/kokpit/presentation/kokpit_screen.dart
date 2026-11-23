@@ -110,8 +110,8 @@ class KokpitGreetingCard extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: AppType.caption,
                         letterSpacing: 0.6,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -140,7 +140,7 @@ class KokpitGreetingCard extends ConsumerWidget {
                 color: phase.color,
                 label: phase.label,
               ),
-              if (left != null)
+              if (left != null && items!.isNotEmpty)
                 _StatusChip(
                   key: const ValueKey('kokpit-greeting-tasks'),
                   icon: left == 0

@@ -37,7 +37,7 @@ class KokpitEntrance extends StatefulWidget {
 class _KokpitEntranceState extends State<KokpitEntrance>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _curve;
+  late final CurvedAnimation _curve;
   bool _started = false;
 
   @override
@@ -68,26 +68,25 @@ class _KokpitEntranceState extends State<KokpitEntrance>
 
   @override
   void dispose() {
+    _curve.dispose();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _curve,
-      child: widget.child,
-      builder: (_, child) {
-        final t = _curve.value;
-        if (t >= 1) return child!;
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(0, (1 - t) * 14),
-            child: child,
-          ),
-        );
-      },
+    // Ağaç şekli sabit kalır; aksi halde animasyon bitince çocuk yeniden
+    // kurulur ve içindeki dolum/sayma animasyonları baştan başlar.
+    return FadeTransition(
+      opacity: _curve,
+      child: AnimatedBuilder(
+        animation: _curve,
+        child: widget.child,
+        builder: (_, child) => Transform.translate(
+          offset: Offset(0, (1 - _curve.value) * 14),
+          child: child,
+        ),
+      ),
     );
   }
 }
@@ -168,8 +167,8 @@ class KokpitCelebrateState extends State<KokpitCelebrate>
       animation: _controller,
       child: widget.child,
       builder: (_, child) {
+        // Ağaç şekli sabit: dinlenirken ölçek 1, ressam boş çizer.
         final t = _controller.value;
-        if (t == 0 || t == 1) return child!;
         final scale = 1 + 0.18 * math.sin(t * math.pi);
         return CustomPaint(
           foregroundPainter: _BurstPainter(progress: t, color: widget.color),
@@ -188,6 +187,7 @@ class _BurstPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (progress <= 0 || progress >= 1) return;
     final center = size.center(Offset.zero);
     final base = size.shortestSide / 2;
     final eased = Curves.easeOutCubic.transform(progress);

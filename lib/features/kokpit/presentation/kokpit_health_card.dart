@@ -234,7 +234,7 @@ class _HealthCardBody extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: AppType.caption,
                         fontWeight: FontWeight.w700,
-                        color: over ? AppColors.danger : AppColors.nutrition,
+                        color: AppColors.textPrimary,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -252,11 +252,11 @@ class _HealthCardBody extends ConsumerWidget {
                               ? '${thousands.format(v)} kcal fazla'
                               : 'Kalan ${thousands.format(v)} kcal',
                           maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: AppType.body,
-                          fontWeight: FontWeight.w700,
-                          height: 1.3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: AppType.body,
+                            fontWeight: FontWeight.w700,
+                            height: 1.3,
                             color: over
                                 ? AppColors.negative
                                 : AppColors.textPrimary,
