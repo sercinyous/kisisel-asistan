@@ -27,8 +27,9 @@ final fatLossWeightProvider = FutureProvider<WeightEntry?>((ref) async {
 const String fatLossExpenditureKey = 'fat_loss_expenditure_kcal';
 const String fatLossManualModeKey = 'fat_loss_expenditure_manual';
 
-int clampExpenditure(int kcal) =>
-    kcal.clamp(FatLossRules.expenditureMin, FatLossRules.expenditureMax).toInt();
+int clampExpenditure(int kcal) => kcal
+    .clamp(FatLossRules.expenditureMin, FatLossRules.expenditureMax)
+    .toInt();
 
 /// Kullanıcının elle girdiği günlük harcama; cihazda saklanır.
 final manualExpenditureProvider =
@@ -229,5 +230,6 @@ final todayMealGapProvider = FutureProvider<MealGapReport?>((ref) async {
     targets: plan.targets,
     logs: logs,
     mealsPerDay: ref.watch(fatLossMealCountProvider),
+    now: DateTime.now(),
   );
 });

@@ -29,9 +29,8 @@ Future<FakeSettingsRepository> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        healthRepositoryProvider
-            .overrideWithValue(
-                health ?? FakeHealthRepository(weights: [...weights])),
+        healthRepositoryProvider.overrideWithValue(
+            health ?? FakeHealthRepository(weights: [...weights])),
         settingsRepositoryProvider.overrideWithValue(repo),
       ],
       child: MaterialApp(theme: AppTheme.dark, home: const FatLossScreen()),
@@ -152,7 +151,8 @@ void main() {
   testWidgets('profil tamsa harcama profilden; Elle gir saklanır',
       (tester) async {
     await _pump(tester, weights: [_weight(84)], settings: _profile());
-    expect(find.text('Harcama profilinden (bazal × hareket düzeyi) hesaplandı.'),
+    expect(
+        find.text('Harcama profilinden (bazal × hareket düzeyi) hesaplandı.'),
         findsOneWidget);
     // 10×84 + 6,25×180 − 5×30 + 5 = 1820 × 1,55 = 2821.
     expect(find.textContaining('Günlük harcama 2.821 kcal'), findsOneWidget);
@@ -312,8 +312,8 @@ void main() {
       expect(find.byKey(const Key('fat-loss-gap-fiber')), findsOneWidget);
       expect(find.text('veri yok'), findsOneWidget);
 
-      final container = ProviderScope.containerOf(
-          tester.element(find.byType(FatLossScreen)));
+      final container =
+          ProviderScope.containerOf(tester.element(find.byType(FatLossScreen)));
       await health.createNutritionLog(meal('breakfast', 700, 60, 41, 70));
       await health.createNutritionLog(meal('lunch', 700, 63, 41, 70));
       container.invalidate(dayNutritionLogsProvider);
@@ -322,7 +322,8 @@ void main() {
       expect(find.textContaining('Henüz öğün girilmedi'), findsNothing);
       expect(find.text('Protein 45 g eksik'), findsOneWidget);
       expect(find.text('Yağ 10 g fazla'), findsOneWidget);
-      expect(find.textContaining('Akşam yemeğinde: 180 g ton balığı'),
+      expect(
+          find.textContaining(RegExp(r'(yemeğinde|öğünde): \d+ g ton balığı')),
           findsOneWidget);
       expect(find.text(fatLossDisclaimer), findsOneWidget);
       expect(container.read(todayMealGapProvider).value!.summary,
@@ -336,8 +337,8 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           healthRepositoryProvider.overrideWithValue(health),
-          settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository(
-              settings: const UserSettings.defaults())),
+          settingsRepositoryProvider.overrideWithValue(
+              FakeSettingsRepository(settings: const UserSettings.defaults())),
         ],
         child: MaterialApp(
           theme: AppTheme.dark,
@@ -351,8 +352,7 @@ void main() {
       ProviderScope.containerOf(tester.element(find.byType(FatLossGapLine)))
           .invalidate(dayNutritionLogsProvider);
       await tester.pumpAndSettle();
-      expect(find.text('Protein 45 g eksik · Yağ 42 g eksik'),
-          findsOneWidget);
+      expect(find.text('Protein 45 g eksik · Yağ 42 g eksik'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('fat-loss-gap-line')));
       await tester.pumpAndSettle();

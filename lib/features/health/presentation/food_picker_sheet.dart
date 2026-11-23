@@ -12,14 +12,6 @@ import 'health_providers.dart';
 import 'health_widgets.dart';
 import 'meal_form_sheet.dart';
 
-/// Günün saatine göre en olası öğün.
-String mealTypeForHour(int hour) {
-  if (hour < 11) return 'breakfast';
-  if (hour < 16) return 'lunch';
-  if (hour < 22) return 'dinner';
-  return 'snack';
-}
-
 /// Satır özeti: varsayılan porsiyonun ve 100 g'ın kalorisi.
 /// "1 adet (50 g): 78 kcal · 100 g: 156 kcal"
 String foodSummary(FoodItem food) {

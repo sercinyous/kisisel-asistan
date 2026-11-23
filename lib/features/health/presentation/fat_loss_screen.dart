@@ -711,6 +711,7 @@ class TodayGapCard extends ConsumerWidget {
           const SizedBox(height: 12),
           report.when(
             skipLoadingOnRefresh: true,
+            skipLoadingOnReload: true,
             loading: () => const SizedBox(
               height: 48,
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -749,7 +750,7 @@ class _TodayGapBody extends StatelessWidget {
   String _state(MacroGap g) => switch (g.status) {
         GapStatus.deficit => '${formatTr(-g.diff!)} eksik',
         GapStatus.excess => '${formatTr(g.diff!)} fazla',
-        GapStatus.onTarget => 'tamam',
+        GapStatus.onTarget => g.aboveTarget ? 'hedefin üstünde' : 'tamam',
         GapStatus.unknown => 'veri yok',
       };
 
