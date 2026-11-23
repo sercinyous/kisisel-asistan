@@ -45,8 +45,8 @@ class KokpitRing extends StatelessWidget {
     required this.color,
     required this.overColor,
     required this.child,
-    this.size = 92,
-    this.stroke = 9,
+    this.size = 78,
+    this.stroke = 8,
   });
 
   final double value;
@@ -154,7 +154,6 @@ class _HealthCardBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final targets = ref.watch(targetsProvider);
     final health = ref.watch(healthTodayProvider).valueOrNull;
     final steps = health?.status == HealthStatus.ok ? health!.steps : null;
@@ -199,23 +198,8 @@ class _HealthCardBody extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: BentoLabel(
-                    icon: Icons.favorite_rounded,
-                    label: 'Sağlık',
-                    color: AppColors.nutrition,
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: AppColors.textMuted,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
+            const BentoLabel(label: 'Sağlık', trailing: 'Detay ›'),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -230,9 +214,10 @@ class _HealthCardBody extends ConsumerWidget {
                         fit: BoxFit.scaleDown,
                         child: Text(
                           thousands.format(remaining.abs()),
-                          style: theme.textTheme.titleLarge?.copyWith(
+                          style: TextStyle(
+                            fontSize: AppType.value,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
+                            letterSpacing: -0.3,
                             color:
                                 over ? AppColors.danger : AppColors.textPrimary,
                             fontFeatures: const [
@@ -243,13 +228,15 @@ class _HealthCardBody extends ConsumerWidget {
                       ),
                       Text(
                         over ? 'fazla' : 'kalan',
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: AppColors.textMuted),
+                        style: TextStyle(
+                          fontSize: AppType.micro,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.l),
+                const SizedBox(width: AppSpacing.section),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,10 +245,12 @@ class _HealthCardBody extends ConsumerWidget {
                         headline,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: TextStyle(
+                          fontSize: AppType.value,
                           fontWeight: FontWeight.w700,
+                          height: 1.25,
                           color:
-                              over ? AppColors.danger : AppColors.textPrimary,
+                              over ? AppColors.negative : AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -270,12 +259,14 @@ class _HealthCardBody extends ConsumerWidget {
                         '${thousands.format(target)} kcal',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(
+                        style: TextStyle(
+                          fontSize: AppType.body,
+                          height: 1.3,
                           color: AppColors.textSecondary,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.s),
                       _StepsLine(steps: steps, target: targets.steps),
                     ],
                   ),
@@ -301,7 +292,6 @@ class _StepsLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final thousands = KokpitFormat.thousands;
     final value = steps;
     return Column(
@@ -309,12 +299,6 @@ class _StepsLine extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(
-              Icons.directions_walk_outlined,
-              size: 14,
-              color: AppColors.fitness,
-            ),
-            const SizedBox(width: AppSpacing.xs),
             Expanded(
               child: Text(
                 value == null
@@ -323,7 +307,9 @@ class _StepsLine extends StatelessWidget {
                         '${thousands.format(target)} adım',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelMedium?.copyWith(
+                style: TextStyle(
+                  fontSize: AppType.caption,
+                  height: 1.3,
                   color: AppColors.textSecondary,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
@@ -331,11 +317,11 @@ class _StepsLine extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         KokpitBar(
           value: value == null || target <= 0 ? 0 : value / target,
-          color: AppColors.fitness,
-          height: 6,
+          color: AppColors.protein,
+          height: 4,
         ),
       ],
     );
@@ -349,22 +335,20 @@ class _StreakLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.s,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.warning.withValues(alpha: 0.10),
+        color: AppColors.selection,
         borderRadius: BorderRadius.circular(AppRadii.chip),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.local_fire_department_outlined,
-            size: 16,
-            color: AppColors.warning,
+          Text(
+            'Seriler',
+            style: TextStyle(
+              fontSize: AppType.chip,
+              color: AppColors.textSecondary,
+            ),
           ),
           const SizedBox(width: AppSpacing.s),
           Expanded(
@@ -373,9 +357,10 @@ class _StreakLine extends StatelessWidget {
               key: const ValueKey('kokpit-streak-line'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelMedium?.copyWith(
+              style: TextStyle(
+                fontSize: AppType.chipValue,
+                fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -421,33 +406,17 @@ class KokpitWaterTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final water = ref.watch(waterProvider);
     final today = water.valueOrNull;
     final notifier = ref.read(waterProvider.notifier);
     final failed = today == null && water.hasError;
 
     return BentoCard(
-      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.water_drop_outlined, size: 14, color: AppColors.water),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(
-                child: Text(
-                  'Su',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.water,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s),
+          const BentoLabel(label: 'Su'),
+          const SizedBox(height: AppSpacing.sm),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -457,8 +426,11 @@ class KokpitWaterTile extends ConsumerWidget {
                   : '${kokpitLiters(today.totalMl)} / '
                       '${kokpitLiters(today.targetMl)} L',
               maxLines: 1,
-              style: theme.textTheme.titleLarge?.copyWith(
+              style: TextStyle(
+                fontSize: AppType.value,
                 fontWeight: FontWeight.w700,
+                height: 1.25,
+                color: AppColors.textPrimary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -474,11 +446,11 @@ class KokpitWaterTile extends ConsumerWidget {
             Row(
               children: [
                 SizedBox.square(
-                  dimension: 36,
+                  dimension: 30,
                   child: IconButton.outlined(
                     tooltip: 'Son su kaydını geri al',
                     padding: EdgeInsets.zero,
-                    iconSize: 18,
+                    iconSize: 16,
                     onPressed: today == null || today.logs.isEmpty
                         ? null
                         : () => _run(
@@ -487,9 +459,10 @@ class KokpitWaterTile extends ConsumerWidget {
                               'Su kaydı geri alınamadı.',
                             ),
                     icon: const Icon(Icons.remove_outlined),
-                    color: AppColors.water,
+                    color: AppColors.textPrimary,
                     style: IconButton.styleFrom(
-                      side: BorderSide(color: AppColors.border),
+                      backgroundColor: AppColors.selection,
+                      side: BorderSide.none,
                     ),
                   ),
                 ),
@@ -504,9 +477,13 @@ class KokpitWaterTile extends ConsumerWidget {
                               'Su kaydı eklenemedi.',
                             ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.selection,
-                      foregroundColor: AppColors.textPrimary,
-                      minimumSize: const Size(0, 36),
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.onAccent,
+                      minimumSize: const Size(0, 30),
+                      textStyle: const TextStyle(
+                        fontSize: AppType.chip,
+                        fontWeight: FontWeight.w600,
+                      ),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       shape: const StadiumBorder(),
                     ),

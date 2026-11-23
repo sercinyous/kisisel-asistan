@@ -261,7 +261,7 @@ void main() {
       await tester.pumpAndSettle();
       final kokpitOffset =
           tester.state<ScrollableState>(kokpitList.first).position.pixels;
-      expect(kokpitOffset, greaterThan(100));
+      expect(kokpitOffset, greaterThan(20));
 
       // Ayarlar düğmesi kaydırınca ekran dışında kaldı; aynı rota açılır.
       final navigator = tester.state<NavigatorState>(find.byType(Navigator));

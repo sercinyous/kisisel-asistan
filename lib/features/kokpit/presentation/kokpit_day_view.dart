@@ -8,6 +8,7 @@ import '../../../core/services/health_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../health/presentation/body/checkin_flow.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/providers/body_providers.dart';
@@ -42,11 +43,11 @@ class KokpitDayView extends StatelessWidget {
       children: [
         KokpitHealthCard(),
         _HealthStatusMessage(),
-        SizedBox(height: AppSpacing.m),
+        SizedBox(height: AppSpacing.grid),
         _StatsRow(),
-        SizedBox(height: AppSpacing.xl),
+        SizedBox(height: AppSpacing.grid),
         _TodaySection(),
-        SizedBox(height: AppSpacing.l),
+        SizedBox(height: AppSpacing.grid),
         WeeklyCheckinCard(bottomSpacing: 0),
       ],
     );
@@ -230,7 +231,7 @@ class _StatsRow extends ConsumerWidget {
             child: _StatCard(
               icon: Icons.checklist_outlined,
               label: 'Günlük işler',
-              color: AppColors.ops,
+              color: AppColors.positive,
               value: items == null ? '—' : '$done / $total',
               caption: items == null
                   ? ''
@@ -241,7 +242,7 @@ class _StatsRow extends ConsumerWidget {
               onTap: () => _openTab(ref, _operationsTab),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.grid),
           const Expanded(child: KokpitWaterTile()),
         ],
       ),
@@ -270,57 +271,43 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BentoCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(14),
       child: Semantics(
         label: '$label: $value${caption.isEmpty ? '' : ', $caption'}',
         excludeSemantics: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(icon, size: 14, color: color),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.s),
+            BentoLabel(label: label, trailing: 'Aç ›'),
+            const SizedBox(height: AppSpacing.sm),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
                 maxLines: 1,
-                style: theme.textTheme.titleLarge?.copyWith(
+                style: TextStyle(
+                  fontSize: AppType.value,
                   fontWeight: FontWeight.w700,
+                  height: 1.25,
+                  color: AppColors.textPrimary,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),
-            const Spacer(),
-            if (caption.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xs),
+            if (caption.isNotEmpty)
               Text(
                 caption,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: AppColors.textMuted),
+                style: TextStyle(
+                  fontSize: AppType.caption,
+                  height: 1.3,
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ],
+            const Spacer(),
             if (progress != null) ...[
               const SizedBox(height: AppSpacing.s),
               KokpitBar(value: progress!, color: color, height: 4),
@@ -390,7 +377,7 @@ class _HealthStatusMessage extends ConsumerWidget {
     );
     if (message == null) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.m),
+      padding: const EdgeInsets.only(top: AppSpacing.grid),
       child: message,
     );
   }
@@ -453,13 +440,18 @@ class _TodaySection extends ConsumerWidget {
       final hiddenTasks = hidden.whereType<KokpitTaskItem>().length;
       final countable = items.where((i) => i is! KokpitCheckinItem).length;
       final tasksFirst = hiddenTasks * 2 > hidden.length;
+      final doneCount =
+          items.where((i) => i is! KokpitCheckinItem && i.done).length;
       body = BentoCard(
-        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            KokpitSectionHeader(
+              title: 'Bugünün işleri',
+              trailing: '$doneCount / $countable tamam',
+            ),
             for (final (index, item) in shown.indexed) ...[
-              if (index > 0) const Divider(indent: 56, endIndent: 16),
+              if (index > 0) const Divider(height: 1),
               switch (item) {
                 KokpitRoutineItem(:final occurrence) => RoutineRowActions(
                     key: ValueKey(occurrence.completionKey),
@@ -469,9 +461,7 @@ class _TodaySection extends ConsumerWidget {
                       time: item.time,
                       now: now,
                       done: item.done,
-                      color: AppColors.forRoutineCategory(
-                        occurrence.routine.category,
-                      ),
+color: AppColors.positive,
                       onTap: () => _toggleOccurrence(context, ref, occurrence),
                     ),
                   ),
@@ -483,7 +473,7 @@ class _TodaySection extends ConsumerWidget {
                       time: item.time,
                       now: now,
                       done: false,
-                      color: AppColors.forTaskCategory(task.category),
+                      color: AppColors.positive,
                       onTap: () => completeKokpitTask(context, task),
                     ),
                   ),
@@ -493,19 +483,22 @@ class _TodaySection extends ConsumerWidget {
                     time: null,
                     now: now,
                     done: item.done,
-                    color: AppColors.accent,
+                    color: AppColors.positive,
                     icon: Icons.straighten_outlined,
                     onTap: () => CheckinFlowScreen.open(context),
                   ),
               },
             ],
             if (items.length > shown.length) ...[
-              const Divider(height: 1),
-              TextButton(
-                key: const ValueKey('kokpit-today-all'),
-                onPressed: () => _openTodayAll(ref, tasksFirst: tasksFirst),
-                style: TextButton.styleFrom(foregroundColor: AppColors.ops),
-                child: Text('Tümünü gör ($countable)'),
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: RitimPillButton(
+                  key: const ValueKey('kokpit-today-all'),
+                  ghost: true,
+                  label: 'Tümünü gör ($countable)',
+                  onPressed: () => _openTodayAll(ref, tasksFirst: tasksFirst),
+                ),
               ),
             ],
           ],
@@ -513,6 +506,7 @@ class _TodaySection extends ConsumerWidget {
       );
     }
 
+    if (body is BentoCard) return body;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -547,7 +541,6 @@ class _TodayTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final t = time;
     final overdue = !done && t != null && t.isBefore(now);
     final timeText = t == null
@@ -563,30 +556,33 @@ class _TodayTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 9),
           child: Row(
             children: [
               if (icon != null && !done)
                 SizedBox(
-                  width: 26,
-                  height: 26,
+                  width: 20,
+                  height: 20,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.16),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(icon, size: 15, color: color),
+                    child: Icon(icon, size: 12, color: color),
                   ),
                 )
               else
                 KokpitCheckBox(checked: done, color: color),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge?.copyWith(
+                  style: TextStyle(
+                    fontSize: AppType.body,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
                     color: done ? AppColors.textMuted : AppColors.textPrimary,
                     decoration: done ? TextDecoration.lineThrough : null,
                     decorationColor: AppColors.textMuted,
@@ -597,11 +593,12 @@ class _TodayTile extends StatelessWidget {
                 const SizedBox(width: 10),
                 Text(
                   timeText,
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  style: TextStyle(
+                    fontSize: AppType.caption,
                     color: done
                         ? AppColors.textMuted
                         : overdue
-                            ? AppColors.danger
+                            ? AppColors.negative
                             : AppColors.textSecondary,
                     fontWeight: FontWeight.w600,
                     fontFeatures: const [FontFeature.tabularFigures()],

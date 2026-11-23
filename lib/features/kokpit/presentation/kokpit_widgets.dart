@@ -21,17 +21,27 @@ class KokpitSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
-          Expanded(child: Text(title, style: theme.textTheme.titleLarge)),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: AppType.cardTitle,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
           if (trailing != null) ...[
             const SizedBox(width: 12),
             Text(
               trailing!,
-              style: theme.textTheme.labelLarge?.copyWith(
+              style: TextStyle(
+                fontSize: AppType.caption,
+                fontWeight: FontWeight.w500,
                 color: AppColors.textSecondary,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -62,8 +72,8 @@ class KokpitInlineMessage extends StatelessWidget {
     return BentoCard(
       child: Row(
         children: [
-          Icon(icon, color: AppColors.textMuted, size: 20),
-          const SizedBox(width: 12),
+          Icon(icon, color: AppColors.textMuted, size: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
@@ -147,22 +157,22 @@ class KokpitCheckBox extends StatelessWidget {
     final fill = enabled ? color : AppColors.textMuted;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      width: 26,
-      height: 26,
+      width: 20,
+      height: 20,
       decoration: BoxDecoration(
         color: checked ? fill : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(7),
         border: Border.all(
           color: checked
               ? fill
               : enabled
                   ? AppColors.textMuted
                   : AppColors.border,
-          width: 1.6,
+          width: 1.4,
         ),
       ),
       child: checked
-          ? Icon(Icons.check_outlined, size: 18, color: AppColors.onAccent)
+          ? Icon(Icons.check_outlined, size: 14, color: AppColors.onAccent)
           : null,
     );
   }

@@ -263,8 +263,8 @@ void main() {
       expect(find.text('0 / 6'), findsOneWidget);
       await scrollThrough(tester);
       expect(find.text('Tümünü gör (6)'), findsOneWidget);
-      expect(find.byType(Divider), findsNWidgets(5),
-          reason: '5 satır arası 4 ayraç + Tümünü gör ayracı');
+      expect(find.byType(Divider), findsNWidgets(4),
+          reason: '5 satır arası 4 ayraç');
     });
 
     testWidgets('kalori hedefi aşılınca "fazla" yazar', (tester) async {
