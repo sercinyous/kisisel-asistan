@@ -5,11 +5,14 @@ import '../../onboarding/domain/goal_suggestion.dart' show TargetLimits;
 import '../../settings/domain/user_settings.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../domain/energy_balance.dart';
+import '../../../core/utils/date_utils.dart';
 import '../domain/fat_loss_plan.dart';
+import '../domain/meal_gap.dart';
 import 'energy_providers.dart' show energyWeightLookbackDays;
 import 'health_providers.dart';
 
 export '../domain/fat_loss_plan.dart';
+export '../domain/meal_gap.dart';
 
 /// Son tartı (son [energyWeightLookbackDays] gün); yoksa `null`. Kilo
 /// eklenince ya da silinince [weightSeriesProvider] yenilendiği için plan
@@ -210,3 +213,21 @@ FatLossApplyValues fatLossApplyValues(FatLossTargets t) {
     clamped: clamped,
   );
 }
+
+/// Günlük öğün sayısı (2 ya da 3); örnek menü ve "Bugün" kartı paylaşır.
+final fatLossMealCountProvider = StateProvider<int>((ref) => 3);
+
+/// Bugünün öğünleri plan hedefleriyle; plan yoksa `null`. Öğün eklenince,
+/// düzenlenince ya da silinince [dayNutritionLogsProvider] yenilendiği için
+/// kendiliğinden güncellenir.
+final todayMealGapProvider = FutureProvider<MealGapReport?>((ref) async {
+  final plan = await ref.watch(fatLossPlanProvider.future);
+  if (plan == null) return null;
+  final logs = await ref.watch(
+      dayNutritionLogsProvider(AppDates.startOfDay(DateTime.now())).future);
+  return analyzeMealGap(
+    targets: plan.targets,
+    logs: logs,
+    mealsPerDay: ref.watch(fatLossMealCountProvider),
+  );
+});

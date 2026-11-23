@@ -5,6 +5,8 @@ import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/health/presentation/fat_loss_providers.dart';
 import 'package:kisisel_asistan/features/health/presentation/fat_loss_screen.dart';
+import 'package:kisisel_asistan/features/health/presentation/health_providers.dart'
+    show dayNutritionLogsProvider;
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -286,5 +288,75 @@ void main() {
     await tester.tap(find.byKey(const Key('fat-loss-retry')));
     await tester.pumpAndSettle();
     expect(find.text('2.184'), findsOneWidget);
+  });
+
+  group('Bugün kartı', () {
+    NutritionLog meal(String type, double kcal, double p, double f, double c) =>
+        NutritionLog(
+          id: '',
+          foodName: type,
+          mealType: type,
+          calories: kcal,
+          proteinG: p,
+          fatG: f,
+          carbsG: c,
+          eatenAt: DateTime.now(),
+        );
+
+    testWidgets('öğün yokken bilgi, eklenince öneriler ve özet satırı',
+        (tester) async {
+      final health = FakeHealthRepository(weights: [_weight(84)]);
+      await _pump(tester, health: health);
+      expect(find.byKey(const Key('fat-loss-today')), findsOneWidget);
+      expect(find.textContaining('Henüz öğün girilmedi'), findsOneWidget);
+      expect(find.byKey(const Key('fat-loss-gap-fiber')), findsOneWidget);
+      expect(find.text('veri yok'), findsOneWidget);
+
+      final container = ProviderScope.containerOf(
+          tester.element(find.byType(FatLossScreen)));
+      await health.createNutritionLog(meal('breakfast', 700, 60, 41, 70));
+      await health.createNutritionLog(meal('lunch', 700, 63, 41, 70));
+      container.invalidate(dayNutritionLogsProvider);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Henüz öğün girilmedi'), findsNothing);
+      expect(find.text('Protein 45 g eksik'), findsOneWidget);
+      expect(find.text('Yağ 10 g fazla'), findsOneWidget);
+      expect(find.textContaining('Akşam yemeğinde: 180 g ton balığı'),
+          findsOneWidget);
+      expect(find.text(fatLossDisclaimer), findsOneWidget);
+      expect(container.read(todayMealGapProvider).value!.summary,
+          'Protein 45 g eksik · Yağ 10 g fazla');
+    });
+
+    testWidgets('özet satırı öğün eklenince güncellenir ve planı açar',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final health = FakeHealthRepository(weights: [_weight(84)]);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          healthRepositoryProvider.overrideWithValue(health),
+          settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository(
+              settings: const UserSettings.defaults())),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          home: const Scaffold(body: FatLossGapLine()),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Henüz öğün yok · hedef 2.184 kcal'), findsOneWidget);
+
+      await health.createNutritionLog(meal('lunch', 600, 123, 30, 100));
+      ProviderScope.containerOf(tester.element(find.byType(FatLossGapLine)))
+          .invalidate(dayNutritionLogsProvider);
+      await tester.pumpAndSettle();
+      expect(find.text('Protein 45 g eksik · Yağ 42 g eksik'),
+          findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('fat-loss-gap-line')));
+      await tester.pumpAndSettle();
+      expect(find.byType(FatLossScreen), findsOneWidget);
+    });
   });
 }

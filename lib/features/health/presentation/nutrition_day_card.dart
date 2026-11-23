@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../settings/presentation/settings_providers.dart';
+import 'fat_loss_screen.dart';
 import 'health_format.dart';
 import 'health_widgets.dart';
 
@@ -70,6 +71,8 @@ class NutritionDayCard extends ConsumerWidget {
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: AppColors.textSecondary),
                   ),
+                  const SizedBox(height: 4),
+                  const FatLossGapLine(),
                 ],
               );
             },

@@ -128,6 +128,7 @@ class _PlanBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BentoGrid(children: [
+          const BentoCell(child: TodayGapCard()),
           BentoCell(child: _TargetsCard(state: state)),
           BentoCell(child: _WeeklyCard(state: state)),
           BentoCell(child: _EquivalentsCard(targets: state.targets)),
@@ -507,24 +508,18 @@ class _EquivalentsCardState extends State<_EquivalentsCard> {
   }
 }
 
-class _MenuCard extends StatefulWidget {
+class _MenuCard extends ConsumerWidget {
   const _MenuCard({required this.targets});
 
   final FatLossTargets targets;
 
   @override
-  State<_MenuCard> createState() => _MenuCardState();
-}
-
-class _MenuCardState extends State<_MenuCard> {
-  int _meals = 3;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final menu = scaledMenu(_meals, widget.targets);
+    final meals = ref.watch(fatLossMealCountProvider);
+    final menu = scaledMenu(meals, targets);
     final totals = menuTotals(menu);
-    final t = widget.targets;
+    final t = targets;
     return BentoCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,8 +538,9 @@ class _MenuCardState extends State<_MenuCard> {
                 ButtonSegment(value: 2, label: Text('2 öğün')),
                 ButtonSegment(value: 3, label: Text('3 öğün')),
               ],
-              selected: {_meals},
-              onSelectionChanged: (s) => setState(() => _meals = s.first),
+              selected: {meals},
+              onSelectionChanged: (s) =>
+                  ref.read(fatLossMealCountProvider.notifier).state = s.first,
             ),
           ),
           for (final meal in menu) ...[
@@ -688,6 +684,162 @@ class FatLossEntryCard extends ConsumerWidget {
           ),
           Icon(Icons.chevron_right, color: AppColors.textMuted),
         ],
+      ),
+    );
+  }
+}
+
+/// "Bugün": günün öğünleri hedeflere göre; eksikler için besin, fazlalar için
+/// telafi önerisi.
+class TodayGapCard extends ConsumerWidget {
+  const TodayGapCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final report = ref.watch(todayMealGapProvider);
+    return BentoCard(
+      key: const Key('fat-loss-today'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          BentoLabel(
+            icon: Icons.today_outlined,
+            label: 'Bugün',
+            color: AppColors.nutrition,
+          ),
+          const SizedBox(height: 12),
+          report.when(
+            skipLoadingOnRefresh: true,
+            loading: () => const SizedBox(
+              height: 48,
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            error: (_, __) => TextButton(
+              onPressed: () => ref.invalidate(todayMealGapProvider),
+              child: const Text('Bugünün öğünleri yüklenemedi · Tekrar dene'),
+            ),
+            data: (r) => r == null
+                ? const SizedBox.shrink()
+                : _TodayGapBody(report: r, theme: theme),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodayGapBody extends StatelessWidget {
+  const _TodayGapBody({required this.report, required this.theme});
+
+  final MealGapReport report;
+  final ThemeData theme;
+
+  Color _color(GapStatus s) => switch (s) {
+        GapStatus.deficit => AppColors.textSecondary,
+        GapStatus.excess => AppColors.warning,
+        GapStatus.onTarget => AppColors.nutrition,
+        GapStatus.unknown => AppColors.textMuted,
+      };
+
+  String _value(MacroGap g) => g.eaten == null
+      ? 'hedef ${formatTr(g.target)} ${g.metric.unit}'
+      : '${formatTr(g.eaten!)} / ${formatTr(g.target)} ${g.metric.unit}';
+
+  String _state(MacroGap g) => switch (g.status) {
+        GapStatus.deficit => '${formatTr(-g.diff!)} eksik',
+        GapStatus.excess => '${formatTr(g.diff!)} fazla',
+        GapStatus.onTarget => 'tamam',
+        GapStatus.unknown => 'veri yok',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final body = theme.textTheme.bodyMedium;
+    final String? message = report.nothingLogged
+        ? 'Henüz öğün girilmedi. Öğün ekledikçe eksik ve fazlalar burada '
+            'görünür.'
+        : report.allDone
+            ? 'Bugünün hedefleri tamam.'
+            : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final g in report.gaps)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 110,
+                  child: Text(g.metric.label,
+                      style: body?.copyWith(color: AppColors.textPrimary)),
+                ),
+                Expanded(
+                  child: Text(_value(g),
+                      style: body?.copyWith(color: AppColors.textSecondary)),
+                ),
+                Text(
+                  _state(g),
+                  key: Key('fat-loss-gap-${g.metric.name}'),
+                  style: body?.copyWith(
+                    color: _color(g.status),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (message != null) ...[
+          const SizedBox(height: 6),
+          Text(message, style: body?.copyWith(color: AppColors.textSecondary)),
+        ],
+        for (final a in report.advice) ...[
+          const SizedBox(height: 10),
+          Text(
+            a.headline,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: _color(a.status),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(a.detail, style: body?.copyWith(color: AppColors.textPrimary)),
+        ],
+      ],
+    );
+  }
+}
+
+/// Beslenme günü kartının altındaki kısa satır; dokununca plan açılır.
+/// Kilo yoksa görünmez.
+class FatLossGapLine extends ConsumerWidget {
+  const FatLossGapLine({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final report = ref.watch(todayMealGapProvider).valueOrNull;
+    if (report == null) return const SizedBox.shrink();
+    return InkWell(
+      key: const Key('fat-loss-gap-line'),
+      borderRadius: BorderRadius.circular(AppRadii.chip),
+      onTap: () => FatLossScreen.open(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                report.summary,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+          ],
+        ),
       ),
     );
   }

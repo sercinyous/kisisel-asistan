@@ -188,6 +188,31 @@ class DemoData {
           eatenAt: today.add(const Duration(hours: 13, minutes: 5)),
           source: 'ai',
         ),
+        // Yağ yakımı "Bugün" kartı karışık bir gün göstersin: yağ fazla,
+        // protein ve karbonhidrat eksik.
+        NutritionLog(
+          id: 'n-5',
+          mealType: 'lunch',
+          foodName: 'Peynirli börek',
+          quantityText: '1 porsiyon',
+          calories: 420,
+          proteinG: 12,
+          carbsG: 38,
+          fatG: 26,
+          eatenAt: today.add(const Duration(hours: 13, minutes: 5)),
+          source: 'ai',
+        ),
+        NutritionLog(
+          id: 'n-6',
+          mealType: 'snack',
+          foodName: 'Karışık kuruyemiş',
+          quantityText: '60 gr',
+          calories: 370,
+          proteinG: 11,
+          carbsG: 12,
+          fatG: 32,
+          eatenAt: today.add(const Duration(hours: 16, minutes: 30)),
+        ),
       ],
       // Son iki haftanın antrenmanları (plan günlerine göre; birkaçı kaçmış).
       workouts: [
