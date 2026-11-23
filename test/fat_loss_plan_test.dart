@@ -33,35 +33,9 @@ void main() {
   test('Türkçe sayı biçimi', () {
     expect(formatTr(2184), '2.184');
     expect(formatTr(540), '540');
-    expect(formatTrDecimal(0.8), '0,8');
-    expect(formatTrDecimal(84), '84,0');
     expect(formatTrDecimal2(816 * 7 / 7700), '0,74');
     expect(formatTrQuantity(1.5), '1,5');
     expect(formatTrQuantity(3), '3');
-  });
-
-  group('haftalık kayıp', () {
-    test('açık varsa kg/hafta', () {
-      final w = estimateWeeklyLoss(expenditureKcal: 3000, targetKcal: 2184);
-      expect(w.deficitKcal, 816);
-      expect(w.weeklyKg, closeTo(816 * 7 / 7700, 1e-9));
-    });
-
-    test('büyük açıkta kg/hafta', () {
-      final w = estimateWeeklyLoss(expenditureKcal: 3000, targetKcal: 1560);
-      expect(w.weeklyKg, closeTo(1440 * 7 / 7700, 1e-9));
-    });
-
-    test('küçük açıkta kayıp var', () {
-      final w = estimateWeeklyLoss(expenditureKcal: 2600, targetKcal: 2184);
-      expect(w.hasLoss, isTrue);
-    });
-
-    test('açık yoksa kayıp yok', () {
-      final w = estimateWeeklyLoss(expenditureKcal: 2000, targetKcal: 2184);
-      expect(w.hasLoss, isFalse);
-      expect(w.weeklyKg, 0);
-    });
   });
 
   group('besin karşılıkları', () {

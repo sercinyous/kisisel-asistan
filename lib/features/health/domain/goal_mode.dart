@@ -23,9 +23,6 @@ enum GoalMode {
   /// Kalori açığıyla çalışan hedefler (Açık serisi yalnızca yağ yakmada).
   bool get usesDeficitStreak => this == GoalMode.fatLoss;
 
-  /// Kalori fazlasıyla çalışan hedef.
-  bool get isSurplus => this == GoalMode.leanGain;
-
   /// Seçim kartındaki kısa açıklama.
   String get summary => switch (this) {
         GoalMode.fatLoss =>

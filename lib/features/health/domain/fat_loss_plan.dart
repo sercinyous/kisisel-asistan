@@ -40,11 +40,6 @@ abstract final class FatLossRules {
   static const double fiberPer1000Kcal = 14;
   static const double kcalPerKgFat = 7700;
 
-  /// Profil eksikse önerilen günlük harcama (kcal).
-  static const int defaultExpenditure = 3000;
-  static const int expenditureMin = 1200;
-  static const int expenditureMax = 6000;
-
   /// Örnek menülerin hazırlandığı referans kilo.
   static const double referenceKg = 84;
 
@@ -76,34 +71,6 @@ FatLossTargets computeFatLossTargets(double weightKg) {
     carbsG: carbs,
   );
 }
-
-/// Haftalık kayıp tahmini.
-class WeeklyLossEstimate {
-  const WeeklyLossEstimate({
-    required this.expenditureKcal,
-    required this.targetKcal,
-  });
-
-  final int expenditureKcal;
-  final int targetKcal;
-
-  int get deficitKcal => expenditureKcal - targetKcal;
-
-  /// Açık yoksa (≤ 0) kayıp yoktur.
-  bool get hasLoss => deficitKcal > 0;
-
-  double get weeklyKg =>
-      hasLoss ? deficitKcal * 7 / FatLossRules.kcalPerKgFat : 0;
-}
-
-WeeklyLossEstimate estimateWeeklyLoss({
-  required int expenditureKcal,
-  required int targetKcal,
-}) =>
-    WeeklyLossEstimate(
-      expenditureKcal: expenditureKcal,
-      targetKcal: targetKcal,
-    );
 
 enum FatLossMacro {
   protein('Protein'),
@@ -610,15 +577,11 @@ List<Meal> trimToTarget(List<Meal> meals, int targetKcal, {int? fatTargetG}) {
 }
 
 final NumberFormat _trInt = NumberFormat.decimalPattern('tr_TR');
-final NumberFormat _trOneDecimal = NumberFormat('0.0', 'tr_TR');
 final NumberFormat _trTwoDecimals = NumberFormat('0.00', 'tr_TR');
 final NumberFormat _trQuantity = NumberFormat('0.#', 'tr_TR');
 
 /// Türkçe binlik ayraçlı tam sayı: 2184 → "2.184".
 String formatTr(num value) => _trInt.format(value.round());
-
-/// Bir ondalıklı Türkçe sayı: 0.8 → "0,8".
-String formatTrDecimal(double value) => _trOneDecimal.format(value);
 
 /// İki ondalıklı Türkçe sayı: 0.7418 → "0,74".
 String formatTrDecimal2(double value) => _trTwoDecimals.format(value);

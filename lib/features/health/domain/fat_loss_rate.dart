@@ -93,21 +93,6 @@ class FatLossRateResult {
   bool get classicBelowFloor =>
       rate == FatLossRate.classic && targets.kcal < SafeTargets.kcalFloorMin;
 
-  /// Makro indirimlerinin açıklaması; indirim yoksa `null`.
-  String? get macroNote {
-    final parts = <String>[
-      if (proteinReduced)
-        'Kalori sınırlı olduğu için protein ${targets.proteinG} g\'a '
-            'indirildi (kg × 2 yerine; en az kg × 1,6, en çok 220 g).',
-      if (fatReduced)
-        'Karbonhidrat en az 50 g kalsın diye yağ ${targets.fatG} g\'a '
-            'azaltıldı.',
-      if (carbsBelowMin)
-        'Karbonhidrat 50 g\'ın altında kaldı; bu kaloriyle uzun süre devam '
-            'etme.',
-    ];
-    return parts.isEmpty ? null : parts.join(' ');
-  }
 }
 
 /// Haftalık kaybın vücut ağırlığına göre sınıfı.

@@ -27,45 +27,6 @@ abstract final class MealGapRules {
   static const double kcalTolerance = 75;
   static const double gramTolerance = 5;
   static const double fiberTolerance = 3;
-
-  /// Öneri besininin yağ bütçesini aşabileceği pay (g): tavuk göğsü geçer,
-  /// yumurta ve kuruyemiş geçmez.
-  static const double sideFatTolerance = 6;
-
-  /// Fazla kalori ertesi güne en çok bu kadar yayılır.
-  static const int maxNextDayCut = 250;
-
-  /// Hiçbir öneri günlük alımı bunun altına indirmez.
-  static const int minDailyKcal = 1200;
-
-  /// Adım ≈ kcal / (kg × 0,0005).
-  static const double kcalPerStepPerKg = 0.0005;
-
-  /// Yağsız pişirme önerisinde atlanacak zeytinyağı kaşığının yağı (g).
-  static const double oilTablespoonFatG = 13.5;
-
-  /// Bir öneride tek besin en çok bu kadar gram ya da birim olur.
-  static const int maxFoodGrams = 300;
-  static const int maxFoodUnits = 3;
-
-  /// Fazla telafisi sınırları; ötesi birkaç güne yayılır.
-  static const int maxExtraSteps = 10000;
-  static const double maxOilSkipTablespoons = 3;
-  static const double maxCarbCutShare = 0.5;
-
-  /// "Kalori sınırına yakınsın" notu: gerçek kalan kalori bunun altında.
-  static const double nearKcalLimit = 75;
-
-  /// Bir öğüne (ara öğün: [snack]) eklenecek en çok miktar: makrolarda gram,
-  /// kaloride kcal.
-  static double perMealCap(GapMetric metric, {required bool snack}) =>
-      switch (metric) {
-        GapMetric.protein => snack ? 20 : 50,
-        GapMetric.carbs => snack ? 30 : 90,
-        GapMetric.fat => snack ? 10 : 25,
-        GapMetric.fiber => snack ? 5 : 12,
-        GapMetric.kcal => snack ? 250 : 600,
-      };
 }
 
 /// Bir değerin günlük durumu.

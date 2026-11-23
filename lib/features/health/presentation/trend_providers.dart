@@ -101,13 +101,6 @@ class TrendQuery {
 /// sağlayıcıdır; üretimde cihaz saatidir.
 final trendClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 
-/// Metrik için günlük hedef: adım sayısı, uyku dakikası ya da kalori.
-int trendTarget(TrendMetric metric, UserSettings settings) => switch (metric) {
-      TrendMetric.steps => settings.dailySteps,
-      TrendMetric.sleep => settings.sleepMinutes,
-      TrendMetric.calories => settings.dailyCalories,
-    };
-
 /// Ayarlar yüklenemezse varsayılan hedeflerle devam edilir (ekran boş kalmaz).
 Future<UserSettings> _targets(Ref ref) async {
   try {
@@ -136,17 +129,6 @@ final _nutritionWindowProvider =
       .watch(healthRepositoryProvider)
       .fetchNutritionTotals(window.from, AppDates.endOfDay(window.to)),
 );
-
-/// Dönem sonuçlarının önbelleğini boşaltır. Trend ekranı açılırken, geri
-/// plandan dönünce ve "Tekrar dene"de çağrılır; kapsayıcı alır, çünkü
-/// `await` sonrası `WidgetRef` kullanılamaz.
-void invalidateTrendData(ProviderContainer container) {
-  container
-    ..invalidate(trendStatsProvider)
-    ..invalidate(trendProteinStatsProvider)
-    ..invalidate(_metricsWindowProvider)
-    ..invalidate(_nutritionWindowProvider);
-}
 
 /// Bir dönemin hedef tutturma özeti. Veri olmayan gün (adım/uyku değeri 0,
 /// öğün kaydı yok) paydada yer almaz; bugün "devam ediyor" sayılır
@@ -217,34 +199,6 @@ final trendProteinStatsProvider =
     isCurrentPeriod: query.isCurrent(today),
   );
 });
-
-/// Sağlık sekmesi Kalori kartı: bugünle biten 7 gün, eskiden yeniye tam 7
-/// kalem. Öğünü olmayan günün `entryCount`'u 0'dır.
-final weekCaloriesProvider =
-    FutureProvider<List<DailyNutritionTotal>>((ref) async {
-  final today = AppDates.startOfDay(ref.watch(trendClockProvider)());
-  // Öğün eklenip silindiğinde `invalidateHealthData` bugünün öğün listesini
-  // tazeler; kart da onunla birlikte yeniden okunsun diye izlenir.
-  ref.watch(dayNutritionLogsProvider(today));
-  final from = AppDates.addDays(today, -6);
-  final rows = await ref
-      .watch(healthRepositoryProvider)
-      .fetchNutritionTotals(from, AppDates.endOfDay(today));
-  final byDay = {for (final n in rows) AppDates.startOfDay(n.day): n};
-  return [
-    for (var i = 0; i < 7; i++)
-      byDay[AppDates.addDays(from, i)] ??
-          DailyNutritionTotal(day: AppDates.addDays(from, i)),
-  ];
-});
-
-/// Verisi olan (öğünü girilmiş) günlerin kalori ortalaması; hiç veri yoksa
-/// `null`.
-double? averageCalories(Iterable<DailyNutritionTotal> days) {
-  final logged = days.where((d) => d.entryCount > 0).toList();
-  if (logged.isEmpty) return null;
-  return logged.fold<double>(0, (sum, d) => sum + d.calories) / logged.length;
-}
 
 /// Verisi olan günlerin uyku ortalaması (dakika); hiç veri yoksa `null`.
 int? averageSleepMinutes(Iterable<DailyHealthMetric> days) {

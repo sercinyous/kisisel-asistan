@@ -33,9 +33,6 @@ abstract final class SafeTargets {
   static const double maxMealShare = 0.45;
   static const int maxMeatGramsPerMeal = 250;
 
-  /// Eksik satırı en çok bu kadar öneri verir.
-  static const int maxGapSuggestions = 2;
-
   /// Günlük su: kg × 35 ml, en çok 4.000 ml.
   static const int waterMlPerKg = 35;
   static const int waterMaxMl = 4000;

@@ -74,33 +74,6 @@ Map<int, DayMarks> dayMarksFor(
   };
 }
 
-/// Kalemin işaret durumu [completed] olsaydı alacağı hâl. Ay ekranı, yazma
-/// sunucuda onaylanana kadar bu iyimser kopyayı gösterir.
-RoutineOccurrence withCompletion(
-  RoutineOccurrence occurrence,
-  bool completed,
-  DateTime today,
-) {
-  final OccurrenceStatus status;
-  if (completed) {
-    status = OccurrenceStatus.done;
-  } else {
-    final days = occurrence.daysUntilDue(today);
-    status = days > 0
-        ? OccurrenceStatus.upcoming
-        : days == 0
-            ? OccurrenceStatus.dueToday
-            : OccurrenceStatus.overdue;
-  }
-  return RoutineOccurrence(
-    routine: occurrence.routine,
-    periodKey: occurrence.periodKey,
-    dueDate: occurrence.dueDate,
-    completed: completed,
-    status: status,
-  );
-}
-
 /// Tamamlanma yüzdesi (0..100). Planlanan yoksa oran anlamsızdır: `null`.
 int? completionPercent(int done, int planned) =>
     planned <= 0 ? null : (done * 100 / planned).round().clamp(0, 100);
