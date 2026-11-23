@@ -11,7 +11,7 @@ export '../../domain/streaks.dart';
 /// Serilerin geriye baktığı gün sayısı.
 const int streakLookbackDays = 120;
 
-/// Üç seri, düşük alım uyarısı.
+/// Üç seri (yağ yakmada Açık, diğer hedeflerde Hedef), düşük alım uyarısı.
 class StreaksState {
   const StreaksState({required this.streaks, required this.lowIntake});
 
@@ -48,6 +48,7 @@ final streaksProvider = FutureProvider<StreaksState>((ref) async {
     kcalTarget: settings.dailyCalories,
     floorKcal: resolved.floorKcal,
     plannedDeficit: resolved.deficit,
+    goal: resolved.goal,
   );
   return StreaksState(
     streaks: computeStreaks(

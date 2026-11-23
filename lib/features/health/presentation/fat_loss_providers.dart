@@ -111,5 +111,6 @@ final todayMealGapProvider = FutureProvider<MealGapReport?>((ref) async {
     logs: logs,
     mealsPerDay: ref.watch(fatLossMealCountProvider),
     now: DateTime.now(),
+    goal: plan.resolved.goal,
   );
 });

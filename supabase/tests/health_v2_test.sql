@@ -37,6 +37,24 @@ select tf.fails('ayın 29. günü reddedilir', 'authenticated', :U1,
   $q$update public.user_settings set checkin_monthday = 29 returning to_jsonb(1)$q$, '23514');
 select tf.fails('haftanın 0. günü reddedilir', 'authenticated', :U1,
   $q$update public.user_settings set checkin_weekday = 0 returning to_jsonb(1)$q$, '23514');
+select tf.eq('hedef türü varsayılanı yağ yakma, kas yapma temposu yavaş',
+  tf.run('authenticated', :U1,
+    $q$select jsonb_build_array(goal_mode, gain_rate) from public.user_settings$q$),
+  '["fat_loss", "slow"]');
+select tf.eq('sahip hedef türünü ve temposunu yazar',
+  tf.run('authenticated', :U1,
+    $q$update public.user_settings set goal_mode = 'lean_gain', gain_rate = 'standard'
+       returning jsonb_build_array(goal_mode, gain_rate)$q$),
+  '["lean_gain", "standard"]');
+select tf.eq('kas yaparken yağ yakma ve koruma kabul edilir',
+  tf.run('authenticated', :U1,
+    $q$update public.user_settings set goal_mode = 'recomp'
+       returning to_jsonb(goal_mode)$q$),
+  '"recomp"');
+select tf.fails('geçersiz hedef türü reddedilir', 'authenticated', :U1,
+  $q$update public.user_settings set goal_mode = 'bulk' returning to_jsonb(1)$q$, '23514');
+select tf.fails('geçersiz kas yapma temposu reddedilir', 'authenticated', :U1,
+  $q$update public.user_settings set gain_rate = 'fast' returning to_jsonb(1)$q$, '23514');
 select tf.fails('elle harcama aralık dışı reddedilir', 'authenticated', :U1,
   $q$update public.user_settings set expenditure_kcal_manual = 900 returning to_jsonb(1)$q$, '23514');
 

@@ -121,10 +121,16 @@ List<StreakDay> buildHealthDays({
 }
 
 /// Haftalık hedef açık (kcal) bugünkü motor sonucundan.
-int weekTargetFor(ResolvedTargets r) => weeklyDeficitTarget(
-      kgPerWeek: r.mode == TargetsMode.rate ? r.rate.kgPerWeek : null,
-      dailyDeficit: r.mode == TargetsMode.classic ? r.deficit : 0,
-    );
+/// Kas yapmada haftalık hedef fazla; kas yaparken yağ yakmada planın açığı
+/// × 7; korumada 0.
+int weekTargetFor(ResolvedTargets r) => switch (r.mode) {
+      TargetsMode.gain => weeklySurplusTarget(r.surplus),
+      TargetsMode.recomp => weeklyDeficitTarget(dailyDeficit: r.deficit),
+      _ => weeklyDeficitTarget(
+          kgPerWeek: r.mode == TargetsMode.rate ? r.rate.kgPerWeek : null,
+          dailyDeficit: r.mode == TargetsMode.classic ? r.deficit : 0,
+        ),
+    };
 
 /// Pazartesi–Pazar haftalık kalori açığı; anahtar haftanın pazartesisi.
 /// Bugün, SeriDetay, İçgörü ve bildirim aynı sağlayıcıyı okur.
@@ -140,6 +146,7 @@ final weekDeficitProvider =
     days: health.days,
     today: now,
     targetKcal: weekTargetFor(resolved),
+    surplusGoal: resolved.mode == TargetsMode.gain,
   );
 });
 

@@ -379,7 +379,7 @@ void main() {
       expect(find.text('0,50 kg/hafta'), findsWidgets);
       expect(find.text('0,75 kg/hafta'), findsWidgets);
       expect(find.text('1 kg/hafta'), findsWidgets);
-      expect(find.textContaining('0,25'), findsNothing);
+      expect(find.text('0,25 kg/hafta'), findsNothing);
       expect(find.byKey(const Key('plan-rate-half-badge')), findsOneWidget);
       expect(find.byKey(const Key('plan-rate-warning')), findsNothing);
       expect(tester.takeException(), isNull);

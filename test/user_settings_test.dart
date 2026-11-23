@@ -76,6 +76,8 @@ void main() {
         'checkin_monthday': 1,
         'checkin_reminder': true,
         'hide_photos': false,
+        'goal_mode': 'fat_loss',
+        'gain_rate': 'slow',
       });
     });
 

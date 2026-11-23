@@ -5,11 +5,13 @@ import '../../../settings/domain/user_settings.dart';
 import '../../../settings/presentation/settings_providers.dart';
 import '../../data/health_repository.dart';
 import '../../domain/energy_balance.dart';
+import '../../domain/goal_mode.dart';
 import '../../domain/targets_engine.dart';
 import '../energy_providers.dart' show energyWeightLookbackDays;
 import '../health_providers.dart' show weightSeriesProvider;
 import '../trend_providers.dart' show trendClockProvider;
 
+export '../../domain/goal_mode.dart';
 export '../../domain/safe_targets.dart';
 export '../../domain/targets_engine.dart';
 
@@ -121,17 +123,23 @@ class PlanController {
       _ref.read(userSettingsProvider.notifier).save(next);
 
   /// Motoru çalıştırır ve gerekiyorsa hedefleri yazar. [rate] verilirse
-  /// tempo da değişir. [weightKg] verilirse son tartı yerine o kullanılır
+  /// tempo, [goal] verilirse hedef türü, [gainRate] verilirse kas yapma
+  /// temposu da değişir (hepsi aynı yazımla; tek yazar burasıdır). [weightKg] verilirse son tartı yerine o kullanılır
   /// (kayıt hemen ardından, seri yenilenmeden çağrılınca). Yazma yoksa
   /// `null` döner; varsa snackbar metni [PlanWrite.message].
   Future<PlanWrite?> applyPlan(
     PlanTrigger trigger, {
     FatLossRate? rate,
+    GoalMode? goal,
+    GainRate? gainRate,
     double? weightKg,
   }) async {
     final current = await _settings();
-    final settings =
-        rate == null ? current : current.copyWith(weeklyRate: rate);
+    final settings = current.copyWith(
+      weeklyRate: rate,
+      goalMode: goal,
+      gainRate: gainRate,
+    );
     final weight =
         weightKg ?? (await _ref.read(latestWeightProvider.future))?.weightKg;
     final now = _now();
@@ -148,7 +156,11 @@ class PlanController {
       now: now,
     );
     if (write == null) {
-      if (rate != null && rate != current.weeklyRate) await _save(settings);
+      if (settings.weeklyRate != current.weeklyRate ||
+          settings.goalMode != current.goalMode ||
+          settings.gainRate != current.gainRate) {
+        await _save(settings);
+      }
       return null;
     }
     await _save(write.settings);

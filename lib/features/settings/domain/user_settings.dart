@@ -1,6 +1,7 @@
 import '../../../core/avatar/avatar_spec.dart';
 import '../../operations/domain/task_category.dart';
 import '../../health/domain/fat_loss_rate.dart' show FatLossRate;
+import '../../health/domain/goal_mode.dart' show GainRate, GoalMode;
 import 'activity_level.dart';
 
 export '../../health/domain/fat_loss_rate.dart' show FatLossRate;
@@ -119,6 +120,9 @@ class UserSettings {
     this.checkinReminder = true,
     this.hidePhotos = false,
     this.healthPlanColumns = true,
+    this.goalMode = GoalMode.fatLoss,
+    this.gainRate = GainRate.slow,
+    this.goalModeColumns = true,
   });
 
   const UserSettings.defaults()
@@ -158,7 +162,10 @@ class UserSettings {
         checkinMonthday = 1,
         checkinReminder = true,
         hidePhotos = false,
-        healthPlanColumns = true;
+        healthPlanColumns = true,
+        goalMode = GoalMode.fatLoss,
+        gainRate = GainRate.slow,
+        goalModeColumns = true;
 
   /// Elle girilen günlük harcamanın sınırları (schema.sql check).
   static const int expenditureManualMin = 1200;
@@ -264,6 +271,16 @@ class UserSettings {
   /// ayarların kaydı bozulmaz.
   final bool healthPlanColumns;
 
+  /// Hedef türü (`goal_mode`); varsayılan yağ yakma.
+  final GoalMode goalMode;
+
+  /// Kas yapma temposu (`gain_rate`); varsayılan yavaş (+250 kcal).
+  final GainRate gainRate;
+
+  /// Satır `goal_mode` sütununu taşıyor mu? Şema henüz yükseltilmemişse
+  /// [toMap] `goal_mode`/`gain_rate` yazmaz.
+  final bool goalModeColumns;
+
   /// Etkin görev kategorileri tanımı (kapalılar dahil).
   List<TaskCategory> get taskCategories =>
       taskCategoriesRaw ?? TaskCategory.defaults;
@@ -326,6 +343,8 @@ class UserSettings {
       activityLevel: ActivityLevel.tryParse(map['activity_level']),
       avatar: AvatarChoice.fromMap(map),
       weeklyRate: FatLossRate.parse(map['weekly_rate'] as String?),
+      goalMode: GoalMode.parse(map['goal_mode']),
+      gainRate: GainRate.parse(map['gain_rate']),
       expenditureKcalManual: _profileInt(map['expenditure_kcal_manual'],
           expenditureManualMin, expenditureManualMax),
       mealCount: _profileInt(map['meal_count'], 2, 3) ?? d.mealCount,
@@ -417,6 +436,10 @@ class UserSettings {
           'checkin_reminder': checkinReminder,
           'hide_photos': hidePhotos,
         },
+        if (goalModeColumns) ...{
+          'goal_mode': goalMode.dbValue,
+          'gain_rate': gainRate.dbValue,
+        },
       };
 
   UserSettings copyWith({
@@ -463,6 +486,9 @@ class UserSettings {
     bool? checkinReminder,
     bool? hidePhotos,
     bool? healthPlanColumns,
+    GoalMode? goalMode,
+    GainRate? gainRate,
+    bool? goalModeColumns,
   }) =>
       UserSettings(
         startWeightKg: startWeightKg ?? this.startWeightKg,
@@ -509,5 +535,8 @@ class UserSettings {
         checkinReminder: checkinReminder ?? this.checkinReminder,
         hidePhotos: hidePhotos ?? this.hidePhotos,
         healthPlanColumns: healthPlanColumns ?? this.healthPlanColumns,
+        goalMode: goalMode ?? this.goalMode,
+        gainRate: gainRate ?? this.gainRate,
+        goalModeColumns: goalModeColumns ?? this.goalModeColumns,
       );
 }

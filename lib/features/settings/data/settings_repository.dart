@@ -26,7 +26,8 @@ class SettingsRepository {
   /// zorlanmasın diye kurulumu bitmiş sayılır.
   ///
   /// Sağlık v2 sütunları (`weekly_rate` …) yoksa şema henüz yükseltilmemiştir:
-  /// ayarlar bu sütunları yazmaz ([UserSettings.healthPlanColumns]).
+  /// ayarlar bu sütunları yazmaz ([UserSettings.healthPlanColumns]). Aynı
+  /// kural `goal_mode` için de geçerlidir ([UserSettings.goalModeColumns]).
   static UserSettings parseRow(Map<String, dynamic> row) {
     final parsed = row.containsKey('onboarded_at')
         ? UserSettings.fromMap(row)
@@ -35,9 +36,11 @@ class SettingsRepository {
             'onboarded_at':
                 row['updated_at'] ?? DateTime.now().toUtc().toIso8601String(),
           });
-    return row.containsKey('weekly_rate')
-        ? parsed
-        : parsed.copyWith(healthPlanColumns: false);
+    return parsed.copyWith(
+      healthPlanColumns: row.containsKey('weekly_rate'),
+      // Hedef türü sütunları (`goal_mode`, `gain_rate`) yoksa yazılmaz.
+      goalModeColumns: row.containsKey('goal_mode'),
+    );
   }
 
   String get _userId {

@@ -1,6 +1,7 @@
 import '../../../core/templates/routine_templates.dart';
 import '../../routines/domain/routine.dart';
 import '../../health/domain/energy_balance.dart' show Sex;
+import '../../health/domain/goal_mode.dart';
 import '../../health/domain/targets_engine.dart';
 import '../../settings/domain/user_settings.dart';
 import 'goal_suggestion.dart';
@@ -60,13 +61,14 @@ OnboardingResult buildOnboardingResult({
   final suggested = suggestOnboardingTargets(answers, now: now);
   // Önerilen kalori/makrolar aynen kabul edildiyse kaynak 'onboarding'
   // (motor sonraki tartılarda günceller); elle değiştirildiyse ya da kilo
-  // alma hedefiyse 'manual'.
+  // kilo verme hedefi şimdiki kilodan düşük değilse 'manual'.
   final fromPlan = usesPlanEngine(answers) &&
       targets.calories == suggested.calories &&
       targets.proteinG == suggested.proteinG &&
       targets.carbsG == suggested.carbsG &&
       targets.fatG == suggested.fatG;
   final settings = base.copyWith(
+    goalMode: onboardingGoalMode(answers.goal),
     targetsSource: fromPlan ? TargetsSource.onboarding : TargetsSource.manual,
     targetsUpdatedAt: now,
     startWeightKg: answers.weightKg,
@@ -101,14 +103,21 @@ OnboardingResult buildOnboardingResult({
   );
 }
 
-/// Öneri tek motordan mı ([resolveTargets])? Koruma hedefinde ve hedef kilosu
-/// şimdikinden düşük kilo verme hedefinde evet. Kilo almada (motor fazla
-/// vermez) ve hedef kilo şimdiki kiloya eşitken "kilo ver" seçildiğinde
-/// [GoalSuggestion] kullanılır; bu durumda kaynak 'manual' olur.
+/// İlk kurulumdaki amacın hedef türü: "Kilo ver" yağ yakma, "Koru" kiloyu
+/// koru, "Kilo al" kas yapma (yavaş tempo, +250 kcal).
+GoalMode onboardingGoalMode(OnboardingGoal goal) => switch (goal) {
+      OnboardingGoal.lose => GoalMode.fatLoss,
+      OnboardingGoal.maintain => GoalMode.maintain,
+      OnboardingGoal.gain => GoalMode.leanGain,
+    };
+
+/// Öneri tek motordan mı ([resolveTargets])? Koruma, kilo alma (kas yapma)
+/// ve hedef kilosu şimdikinden düşük kilo verme hedefinde evet. Hedef kilo
+/// şimdiki kiloya eşitken "kilo ver" seçildiğinde [GoalSuggestion]
+/// kullanılır; bu durumda kaynak 'manual' olur.
 bool usesPlanEngine(OnboardingAnswers answers) => switch (answers.goal) {
-      OnboardingGoal.maintain => true,
+      OnboardingGoal.maintain || OnboardingGoal.gain => true,
       OnboardingGoal.lose => answers.targetWeightKg < answers.weightKg - 0.05,
-      OnboardingGoal.gain => false,
     };
 
 /// İlk kurulumun hedef adımında önerilen değerler (bkz. [usesPlanEngine];
@@ -121,6 +130,7 @@ OnboardingTargets suggestOnboardingTargets(
     return GoalSuggestion.compute(answers, nowYear: now.year);
   }
   final settings = const UserSettings.defaults().copyWith(
+    goalMode: onboardingGoalMode(answers.goal),
     startWeightKg: answers.weightKg,
     // Korumada hedef kilo şimdiki kilo sayılır (motor koruma verir).
     targetWeightKg: answers.goal == OnboardingGoal.maintain

@@ -1,4 +1,5 @@
 import 'fat_loss_plan.dart';
+import 'goal_mode.dart';
 import 'health_models.dart';
 
 /// "Bugün ne eksik / ne fazla": günün öğünleri yağ yakımı hedefleriyle
@@ -73,16 +74,20 @@ class MacroGap {
     required this.metric,
     required this.eaten,
     required this.target,
+    this.kcalTolerance,
   });
 
   final GapMetric metric;
+
+  /// Kalori için hedefe özgü tolerans; `null` = [MealGapRules.kcalTolerance].
+  final double? kcalTolerance;
 
   /// Yenen; veri yoksa `null` (öğün kayıtlarında lif tutulmaz).
   final double? eaten;
   final int target;
 
   double get _tolerance => switch (metric) {
-        GapMetric.kcal => MealGapRules.kcalTolerance,
+        GapMetric.kcal => kcalTolerance ?? MealGapRules.kcalTolerance,
         GapMetric.fiber => MealGapRules.fiberTolerance,
         _ => MealGapRules.gramTolerance,
       };
@@ -204,14 +209,24 @@ MealGapReport analyzeMealGap({
   int mealsPerDay = 3,
   double? fiberG,
   DateTime? now,
+  GoalMode goal = GoalMode.fatLoss,
 }) {
+  // Yağ yakma dışındaki hedeflerde kalori, Hedef serisiyle aynı ölçüyle
+  // (hedefin ±%10'u, en az 75 kcal) "tamam" sayılır.
+  final kcalTolerance = goal.usesDeficitStreak
+      ? null
+      : [
+          MealGapRules.kcalTolerance,
+          targets.kcal * GoalRules.targetStreakTolerance,
+        ].reduce((a, b) => a > b ? a : b);
   double sum(double Function(NutritionLog) f) =>
       logs.fold<double>(0, (s, l) => s + f(l));
   final gaps = [
     MacroGap(
         metric: GapMetric.kcal,
         eaten: sum((l) => l.calories),
-        target: targets.kcal),
+        target: targets.kcal,
+        kcalTolerance: kcalTolerance),
     MacroGap(
         metric: GapMetric.protein,
         eaten: sum((l) => l.proteinG),

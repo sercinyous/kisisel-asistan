@@ -5,6 +5,7 @@ import '../../settings/domain/user_settings.dart';
 import 'energy_balance.dart';
 import 'fat_loss_plan.dart' show FatLossRules, FatLossTargets, formatTr;
 import 'fat_loss_rate.dart';
+import 'goal_mode.dart';
 import 'safe_targets.dart';
 
 /// Günlük hedeflerin tek motoru. [resolveTargets] saf fonksiyondur;
@@ -19,8 +20,15 @@ enum TargetsMode {
   /// Hız modu: kcal = harcama − r × 7700 / 7, taban max(1.200, bazal).
   rate,
 
-  /// Hedef kilo şimdiki kilodan düşük değil: harcama kadar (koruma).
+  /// Hedef kilo şimdiki kilodan düşük değil ya da hedef "Kiloyu koru":
+  /// harcama kadar (koruma).
   maintain,
+
+  /// Kas yaparken yağ yakma: harcama − %10, taban max(1.200, bazal).
+  recomp,
+
+  /// Kas yapma: harcama + fazla (+250 ya da +400 kcal).
+  gain,
 
   /// 18 yaş altı ya da VKİ < 18,5: kilo verme planı kapalı, koruma.
   locked,
@@ -43,9 +51,17 @@ class ResolvedTargets {
     required this.proteinReduced,
     required this.fatReduced,
     this.estimatedExpenditureKcal,
+    this.goal = GoalMode.fatLoss,
+    this.gainRate = GainRate.slow,
   });
 
   final TargetsMode mode;
+
+  /// Ayardaki hedef türü.
+  final GoalMode goal;
+
+  /// Ayardaki kas yapma temposu.
+  final GainRate gainRate;
 
   /// Elle değer olmasaydı modelin harcama tahmini (kcal); profil eksikse
   /// `null`. Elle girilen değer bundan ±%30 saparsa uyarı gösterilir.
@@ -92,6 +108,24 @@ class ResolvedTargets {
   /// Bu hedefle beklenen haftalık kayıp (kg, ≥ 0).
   double get kgPerWeek =>
       deficit <= 0 ? 0 : deficit * 7 / FatLossRules.kcalPerKgFat;
+
+  /// Günlük fazla: hedef − harcama (kas yapmada pozitif).
+  int get surplus => -deficit;
+
+  /// Tahmini haftalık tartı değişimi (kg; eksi = kayıp, artı = artış).
+  /// Kas yapmada tempo tahmini (+0,25 / +0,4; bir kısmı yağ), açıkla
+  /// çalışan modlarda açık × 7 / 7.700, korumada 0.
+  double get weeklyChangeKg => switch (mode) {
+        TargetsMode.gain => gainRate.kgPerWeek,
+        TargetsMode.maintain || TargetsMode.locked => 0,
+        _ => -kgPerWeek,
+      };
+
+  /// Hedefe özgü not satırları (antrenman şartı, tahmin uyarısı).
+  List<String> get goalNotes => [
+        if (mode == TargetsMode.recomp) GoalRules.recompStrengthNote,
+        if (mode == TargetsMode.gain) GoalRules.gainEstimateNote,
+      ];
 
   /// Haftalık kaybın sağlık rozeti; kayıp yoksa `null`.
   RateHealth? get health =>
@@ -141,7 +175,8 @@ class ResolvedTargets {
       );
 
   @override
-  String toString() => 'ResolvedTargets(${mode.name}, ${rate.dbValue}, '
+  String toString() => 'ResolvedTargets(${mode.name}, ${goal.dbValue}, '
+      '${rate.dbValue}, '
       'kcal: $kcal, P $proteinG, K $carbsG, Y $fatG, deficit: $deficit, '
       'clamped: $clamped)';
 }
@@ -176,6 +211,10 @@ double? settingsBasal(
 /// * Hız: kcal = harcama − r × 7700 / 7; taban max(1.200, bazal) (altına
 ///   inerse [ResolvedTargets.clamped]). Protein kg × 2 (≤ 220 g),
 ///   yağ max(kg × 0,6, kcal × %25 / 9).
+/// * Hedef türü ([GoalMode]): kas yaparken yağ yakma kcal = harcama × 0,9
+///   (taban max(1.200, bazal)), protein kg × 2,2; kas yapma kcal = harcama +
+///   250/400, protein kg × 2,0 (yalnızca yaş kilidi); kiloyu koru kcal =
+///   harcama, protein kg × 1,6. Yağ yakma yukarıdaki kurallardır.
 /// * Makrolar hiçbir modda kcal'ı aşmaz ([fitMacros]).
 ResolvedTargets resolveTargets({
   required UserSettings settings,
@@ -201,6 +240,8 @@ ResolvedTargets resolveTargets({
   );
   final floor = kcalFloor(basal);
   final rate = settings.weeklyRate;
+  final goal = settings.goalMode;
+  final gainRate = settings.gainRate;
 
   ResolvedTargets build({
     required TargetsMode mode,
@@ -229,9 +270,10 @@ ResolvedTargets resolveTargets({
       clamped: clamped,
       proteinReduced: fit.proteinReduced,
       fatReduced: fit.fatReduced,
-      estimatedExpenditureKcal: estimate.source == ExpenditureSource.estimate
-          ? estimate.kcal
-          : null,
+      estimatedExpenditureKcal:
+          estimate.source == ExpenditureSource.estimate ? estimate.kcal : null,
+      goal: goal,
+      gainRate: gainRate,
     );
   }
 
@@ -240,20 +282,58 @@ ResolvedTargets resolveTargets({
     SafeTargets.proteinMaxG,
   );
 
-  final locked = planLocked(
-    age: age,
-    weightKg: weight,
-    targetWeightKg: settings.targetWeightKg,
-    heightCm: settings.heightCm,
-  );
+  // Kas yapmada yalnızca yaş kilidi geçerlidir (düşük VKİ'de kilo almak
+  // kilit sebebi değildir); diğer hedeflerde mevcut kilit kuralı.
+  final locked = goal == GoalMode.leanGain
+      ? age != null && age < SafeTargets.adultAge
+      : planLocked(
+          age: age,
+          weightKg: weight,
+          targetWeightKg: settings.targetWeightKg,
+          heightCm: settings.heightCm,
+        );
   final losing = settings.targetWeightKg < weight - 0.05;
-  if (locked || !losing) {
+
+  if (!locked && goal == GoalMode.recomp) {
+    final raw = (expenditure.kcal * (1 - GoalRules.recompDeficitShare)).round();
+    final clamped = raw < floor;
+    final kcal = clamped ? floor : raw;
+    return build(
+      mode: TargetsMode.recomp,
+      kcal: kcal,
+      protein: math.min(
+        (weight * GoalRules.recompProteinPerKg).floor(),
+        SafeTargets.proteinMaxG,
+      ),
+      fat: math.max(
+        (weight * SafeTargets.fatMinPerKg).ceil(),
+        (kcal * SafeTargets.fatShareOfKcal / 9).floor(),
+      ),
+      clamped: clamped,
+    );
+  }
+
+  if (!locked && goal == GoalMode.leanGain) {
+    final kcal = math.max(expenditure.kcal, SafeTargets.kcalFloorMin) +
+        gainRate.surplusKcal;
+    return build(
+      mode: TargetsMode.gain,
+      kcal: kcal,
+      protein: math.min(
+        (weight * GoalRules.gainProteinPerKg).floor(),
+        SafeTargets.proteinMaxG,
+      ),
+      fat: (kcal * SafeTargets.maintenanceFatShare / 9).floor(),
+    );
+  }
+
+  if (locked || !losing || goal == GoalMode.maintain) {
     final kcal = math.max(expenditure.kcal, SafeTargets.kcalFloorMin);
     return build(
       mode: locked ? TargetsMode.locked : TargetsMode.maintain,
       kcal: kcal,
       protein: math.min(
-        (weight * SafeTargets.proteinMinPerKg).floor(),
+        (weight * GoalRules.maintainProteinPerKg).floor(),
         SafeTargets.proteinMaxG,
       ),
       fat: (kcal * SafeTargets.maintenanceFatShare / 9).floor(),
@@ -297,7 +377,7 @@ enum PlanTrigger {
   /// aynı kural.
   profileSaved,
 
-  /// Tempo değişti: her zaman yazar, kaynak 'plan'.
+  /// Tempo ya da hedef türü değişti: her zaman yazar, kaynak 'plan'.
   rateChanged,
 
   /// "Kilona göre önerilen … [Uygula]": her zaman yazar, kaynak 'plan'.
@@ -372,6 +452,8 @@ PlanWrite? planWrite({
     kcal: v.kcal,
     settings: settings.copyWith(
       weeklyRate: resolved.rate,
+      goalMode: resolved.goal,
+      gainRate: resolved.gainRate,
       dailyCalories: v.kcal,
       dailyProteinG: v.protein,
       dailyCarbsG: v.carbs,

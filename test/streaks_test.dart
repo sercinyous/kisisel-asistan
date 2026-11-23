@@ -33,7 +33,8 @@ void main() {
             expenditureKcal: 900),
       ];
       final s = computeStreaks(days: days, targets: _t, today: _today);
-      for (final k in StreakKind.values) {
+      // Hedef serisi yalnızca yağ yakma dışındaki hedeflerde üretilir.
+      for (final k in StreakKind.values.where((k) => k != StreakKind.target)) {
         expect(_of(s, k).current, 5, reason: k.name);
         expect(_of(s, k).today, StreakToday.pending);
       }

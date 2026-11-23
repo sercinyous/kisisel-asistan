@@ -48,7 +48,8 @@ class OnboardingTargetsStep extends StatelessWidget {
   String _goalText() => switch (goal) {
         OnboardingGoal.lose => 'günlük ihtiyacından 500 kcal eksik',
         OnboardingGoal.maintain => 'günlük ihtiyacın kadar',
-        OnboardingGoal.gain => 'günlük ihtiyacından 300 kcal fazla',
+        OnboardingGoal.gain =>
+          'günlük ihtiyacından 250 kcal fazla (kas yapma, yavaş tempo)',
       };
 
   static String? _validator(String? value, int min, int max, String unit) {

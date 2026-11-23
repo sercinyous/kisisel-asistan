@@ -19,6 +19,8 @@ String streakRule(StreakKind kind) => switch (kind) {
       StreakKind.deficit => 'Kayıt günü olup kalori tabanı ile hedefin '
           'arasında kaldığın ve açığın güvenli sınırı aşmadığı gün sayılır. '
           'Aç kalmak seriyi uzatmaz.',
+      StreakKind.target => 'Kayıt günü olup aldığın kalorinin hedefinin '
+          '±%10\'u içinde kaldığı gün sayılır.',
     };
 
 const String streakGraceNote =
@@ -250,22 +252,23 @@ class _WeeksBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final target = weeks.isEmpty ? 0 : weeks.last.targetKcal;
+    final surplus = weeks.isNotEmpty && weeks.last.surplusGoal;
     final met = weeks
         .take(weeks.length - 1)
-        .where((w) => w.targetKcal > 0 && w.totalKcal >= w.targetKcal)
+        .where((w) => w.targetKcal > 0 && w.balanceKcal >= w.targetKcal)
         .length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BentoLabel(
           icon: Icons.calendar_view_week_rounded,
-          label: 'Haftalık açık',
+          label: surplus ? 'Haftalık fazla' : 'Haftalık açık',
           color: AppColors.fitness,
           trailing: 'son 8 hafta',
         ),
         const SizedBox(height: 12),
         DayBarChart(
-          values: [for (final w in weeks) w.totalKcal],
+          values: [for (final w in weeks) w.balanceKcal],
           color: AppColors.accent,
           labels: [
             for (final w in weeks)
@@ -274,13 +277,15 @@ class _WeeksBody extends StatelessWidget {
           highlightIndex: weeks.length - 1,
           target: target > 0 ? target.toDouble() : null,
           height: 130,
-          semanticsLabel: 'Son 8 haftanın kalori açığı',
+          semanticsLabel: surplus
+              ? 'Son 8 haftanın kalori fazlası'
+              : 'Son 8 haftanın kalori açığı',
         ),
         const SizedBox(height: 8),
         if (weeks.isNotEmpty)
           Text(
             'Bu hafta ${TodayFormat.weekTotal(weeks.last)}'
-            '${target > 0 ? ' / ${TodayFormat.weekTarget(target)}' : ''}'
+            '${target > 0 ? ' / ${TodayFormat.weekTarget(target, surplus: surplus)}' : ''}'
             ' · ${TodayFormat.weekKg(weeks.last)}',
             key: const Key('streak-weeks-current'),
             style: theme.textTheme.bodyMedium?.copyWith(

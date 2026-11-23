@@ -23,12 +23,23 @@ abstract final class TodayFormat {
   static String weekTotal(WeekDeficit week) =>
       week.hasData ? deficit(week.totalKcal) : '—';
 
-  /// Haftalık kg satırı; veri yoksa "Henüz veri yok".
-  static String weekKg(WeekDeficit week) =>
-      week.hasData ? kg(week.kg) : 'Henüz veri yok';
+  /// Haftalık kg satırı; veri yoksa "Henüz veri yok". Kas yapmada fazla
+  /// kilo karşılığı tahmin olarak: "≈ +0,23 kg (tahmin)".
+  static String weekKg(WeekDeficit week) {
+    if (!week.hasData) return 'Henüz veri yok';
+    if (!week.surplusGoal) return kg(week.kg);
+    final gain = -week.kg;
+    return gain <= 0 ? 'fazla yok' : '≈ +${formatTrDecimal2(gain)} kg (tahmin)';
+  }
 
-  /// Haftalık hedef (tüm ekranlarda aynı biçim): "hedef −3.850 kcal".
-  static String weekTarget(int targetKcal) => 'hedef ${deficit(targetKcal)}';
+  /// Haftalık hedef (tüm ekranlarda aynı biçim): "hedef −3.850 kcal";
+  /// kas yapmada fazla: "hedef +1.750 kcal".
+  static String weekTarget(int targetKcal, {bool surplus = false}) =>
+      'hedef ${deficit(surplus ? -targetKcal : targetKcal)}';
+
+  /// Haftalık kartın başlık eki.
+  static String weekTitle(WeekDeficit week) =>
+      week.surplusGoal ? 'kalori fazlası' : 'kalori açığı';
 
   /// Pazartesiden başlayan kısa gün adları.
   static const List<String> weekdayShort = [

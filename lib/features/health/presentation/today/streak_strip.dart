@@ -12,12 +12,14 @@ IconData streakIcon(StreakKind kind) => switch (kind) {
       StreakKind.steps => Icons.directions_walk_rounded,
       StreakKind.logging => Icons.edit_note_rounded,
       StreakKind.deficit => Icons.local_fire_department_rounded,
+      StreakKind.target => Icons.track_changes_rounded,
     };
 
 Color streakColor(StreakKind kind) => switch (kind) {
       StreakKind.steps => AppColors.ops,
       StreakKind.logging => AppColors.nutrition,
       StreakKind.deficit => AppColors.accent,
+      StreakKind.target => AppColors.accent,
     };
 
 /// Bugün'ün başındaki seriler şeridi: Adım (kaynak varsa), Kayıt, Açık ve
@@ -162,10 +164,10 @@ class _WeekChip extends StatelessWidget {
     final total = week.totalKcal;
     final value = '${TodayFormat.weekTotal(week)} ${TodayFormat.weekKg(week)}';
     final target = week.targetKcal > 0
-        ? TodayFormat.weekTarget(week.targetKcal)
+        ? TodayFormat.weekTarget(week.targetKcal, surplus: week.surplusGoal)
         : null;
     return Semantics(
-      label: 'Haftalık kalori açığı $value'
+      label: 'Haftalık ${TodayFormat.weekTitle(week)} $value'
           '${target == null ? '' : ', $target'}',
       excludeSemantics: true,
       child: Column(
@@ -193,7 +195,7 @@ class _WeekChip extends StatelessWidget {
               TodayFormat.weekTotal(week),
               key: const Key('streak-week-total'),
               style: theme.textTheme.titleMedium?.copyWith(
-                color: week.hasData && total < 0
+                color: week.hasData && total < 0 && !week.surplusGoal
                     ? AppColors.warning
                     : AppColors.textPrimary,
                 fontWeight: FontWeight.w800,

@@ -12,6 +12,7 @@ import '../domain/checkin.dart';
 import '../domain/energy_balance.dart';
 import '../domain/fat_loss_plan.dart';
 import '../domain/fat_loss_rate.dart';
+import '../domain/goal_projection.dart';
 import 'health_format.dart';
 import 'health_widgets.dart';
 import 'providers/targets_providers.dart';
@@ -35,7 +36,8 @@ const String supplementDisclaimer =
 
 const String planExpenditureError = '1200–6000 arası gir';
 
-const String planSaveError = 'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.';
+const String planSaveError =
+    'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.';
 
 /// Plan ayar yazımı: hata olursa snackbar gösterir (sessizce kaybolmaz).
 Future<void> guardedPlanWrite(
@@ -66,6 +68,21 @@ final tempoOptionsProvider =
         sex: Sex.tryParse(settings.sex),
       ),
   };
+});
+
+/// Her hedef türünün bugünkü ayar ve kiloyla projeksiyonu (Hedef türü
+/// kartındaki karşılaştırma).
+final goalProjectionsProvider =
+    FutureProvider<List<GoalProjection>>((ref) async {
+  final settings = await ref.watch(userSettingsProvider.future);
+  final weight = await ref.watch(latestWeightProvider.future);
+  final now = ref.watch(trendClockProvider)();
+  return projectGoals(
+    settings: settings,
+    latestWeightKg: weight?.weightKg,
+    age: ageFromSettings(settings, now),
+    sex: Sex.tryParse(settings.sex),
+  );
 });
 
 Color rateHealthColor(RateHealth h) => switch (h) {
@@ -116,8 +133,9 @@ class _PlanBody extends ConsumerWidget {
       children: [
         BentoGrid(children: [
           BentoCell(child: _GoalCard(resolved: resolved)),
+          BentoCell(child: _GoalModeCard(resolved: resolved)),
           BentoCell(child: _TargetsCard(resolved: resolved)),
-          if (!resolved.locked)
+          if (!resolved.locked && resolved.goal == GoalMode.fatLoss)
             BentoCell(child: _TempoCard(resolved: resolved)),
           BentoCell(child: _WhyCard(resolved: resolved)),
           BentoCell(child: _GuideCard(resolved: resolved)),
@@ -253,9 +271,15 @@ class _GoalCard extends ConsumerWidget {
             '${updated == null ? '' : ' · ${DateFormat('d MMM', 'tr_TR').format(updated.toLocal())}'}';
     final tempo = resolved.locked
         ? 'Dengeli beslenme'
-        : resolved.mode == TargetsMode.maintain
-            ? 'Koruma'
-            : resolved.rate.label;
+        : switch (resolved.mode) {
+            TargetsMode.maintain => resolved.goal == GoalMode.maintain
+                ? GoalMode.maintain.label
+                : 'Koruma',
+            TargetsMode.recomp => GoalMode.recomp.label,
+            TargetsMode.gain =>
+              '${GoalMode.leanGain.label} · ${resolved.gainRate.label}',
+            _ => '${GoalMode.fatLoss.label} · ${resolved.rate.label}',
+          };
     return BentoCard(
       key: const Key('plan-goal'),
       child: Column(
@@ -325,7 +349,8 @@ class _GoalCard extends ConsumerWidget {
                 FilledButton.tonal(
                   key: const Key('plan-suggestion-apply'),
                   // Tema tam genişlik verir; satır içinde içerik kadar olsun.
-                  style: FilledButton.styleFrom(minimumSize: const Size(88, 44)),
+                  style:
+                      FilledButton.styleFrom(minimumSize: const Size(88, 44)),
                   onPressed: () => _apply(context, ref),
                   child: const Text('Uygula'),
                 ),
@@ -333,6 +358,185 @@ class _GoalCard extends ConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------- Hedef türü
+
+class _GoalModeCard extends ConsumerWidget {
+  const _GoalModeCard({required this.resolved});
+
+  final ResolvedTargets resolved;
+
+  Future<void> _select(BuildContext context, WidgetRef ref,
+      {GoalMode? goal, GainRate? gainRate}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final write = await ref.read(planControllerProvider).applyPlan(
+            PlanTrigger.rateChanged,
+            goal: goal,
+            gainRate: gainRate,
+          );
+      if (write != null) {
+        messenger.showSnackBar(SnackBar(content: Text(write.message)));
+      }
+    } catch (_) {
+      messenger
+          .showSnackBar(const SnackBar(content: Text('Hedef kaydedilemedi.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final projections = ref.watch(goalProjectionsProvider).valueOrNull;
+    final selected = resolved.goal;
+    return BentoCard(
+      key: const Key('plan-goal-mode'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          BentoLabel(
+            icon: Icons.alt_route_rounded,
+            label: 'Hedef türü',
+            color: AppColors.fitness,
+          ),
+          const SizedBox(height: 8),
+          for (final g in GoalMode.values)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _GoalOption(
+                goal: g,
+                projection: projections?.firstWhere((p) => p.goal == g),
+                selected: g == selected,
+                onTap:
+                    g == selected ? null : () => _select(context, ref, goal: g),
+              ),
+            ),
+          if (selected == GoalMode.leanGain && !resolved.locked) ...[
+            Text(
+              'Kas yapma temposu',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final r in GainRate.values)
+                  ChoiceChip(
+                    key: Key('plan-gain-${r.name}'),
+                    label: Text(r.label),
+                    selected: resolved.gainRate == r,
+                    onSelected: resolved.gainRate == r
+                        ? null
+                        : (_) => _select(context, ref, gainRate: r),
+                  ),
+              ],
+            ),
+          ],
+          for (final note in resolved.goalNotes)
+            _WarningLine(
+              key: Key('plan-goal-note-${resolved.goalNotes.indexOf(note)}'),
+              text: note,
+              color: AppColors.textSecondary,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalOption extends StatelessWidget {
+  const _GoalOption({
+    required this.goal,
+    required this.projection,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final GoalMode goal;
+  final GoalProjection? projection;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = projection;
+    final eta = p?.etaText;
+    return Semantics(
+      selected: selected,
+      button: true,
+      inMutuallyExclusiveGroup: true,
+      child: Material(
+        key: Key('plan-goal-${goal.dbValue}'),
+        color: selected
+            ? AppColors.accent.withValues(alpha: 0.12)
+            : AppColors.surfaceHigh,
+        borderRadius: BorderRadius.circular(AppRadii.inner),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_off_rounded,
+                  color: selected ? AppColors.accent : AppColors.textMuted,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        goal.label,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight:
+                              selected ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        goal.summary,
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: AppColors.textSecondary),
+                      ),
+                      if (p != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          '${p.kcalText} · ${p.weeklyText}',
+                          key: Key('plan-goal-${goal.dbValue}-stats'),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          [p.headline, if (eta != null) eta].join(' · '),
+                          key: Key('plan-goal-${goal.dbValue}-projection'),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -414,9 +618,20 @@ class _TargetsCard extends ConsumerWidget {
               ),
             ),
           ],
+          if (resolved.mode == TargetsMode.gain && resolved.surplus > 0) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Hedef fazla: ${formatTr(resolved.surplus)} kcal/gün',
+              key: const Key('plan-surplus'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           // Hız uyarısı (1 kg) yalnızca Tempo kartında.
-          for (final w in resolved.warnings
-              .where((w) => w != resolved.rate.warning))
+          for (final w
+              in resolved.warnings.where((w) => w != resolved.rate.warning))
             _WarningLine(
               key: Key('plan-warning-${resolved.warnings.indexOf(w)}'),
               text: w,
@@ -782,8 +997,19 @@ class _WhyCard extends ConsumerWidget {
       TargetsMode.rate =>
         'Harcaman ${formatTr(resolved.floorKcal)} kcal tabanının altında; '
             'hedef tabana sabitlendi, bu yüzden açık oluşmuyor.',
+      TargetsMode.maintain when resolved.goal == GoalMode.maintain =>
+        'Hedefin kilonu korumak; harcaman kadar yemen önerilir.',
       TargetsMode.maintain =>
         'Hedef kilon şimdiki kilondan düşük değil; harcaman kadar yemen önerilir.',
+      TargetsMode.recomp =>
+        'Kas yaparken yağ yakmak için harcamanın ~%10 altında '
+            '(${formatTr(resolved.deficit)} kcal açık) ve yüksek proteinle '
+            '(kg × 2,2) beslenirsin. Hedef '
+            '${formatTr(resolved.floorKcal)} kcal tabanının altına inmez.',
+      TargetsMode.gain =>
+        'Kas yapmak için harcamanın ${formatTr(resolved.surplus)} kcal '
+            'üstünde ve kg × 2,0 proteinle beslenirsin. Haftalık artış '
+            'tahminidir; bir kısmı yağdır.',
       TargetsMode.locked => SafeTargets.lockedMessage,
     };
     final manual = e.source == ExpenditureSource.manual;
@@ -1167,9 +1393,11 @@ class _WaterTargetAction extends ConsumerWidget {
           key: const Key('plan-water-apply'),
           onPressed: () => guardedPlanWrite(
             context,
-            () => ref.read(waterTodayProvider.notifier).setTarget(recommendedMl),
+            () =>
+                ref.read(waterTodayProvider.notifier).setTarget(recommendedMl),
           ),
-          icon: Icon(Icons.water_drop_rounded, size: 18, color: AppColors.water),
+          icon:
+              Icon(Icons.water_drop_rounded, size: 18, color: AppColors.water),
           label: Text('Hedefi ${formatWaterMl(recommendedMl)} yap '
               '(şu an ${formatWaterMl(current)})'),
         ),
@@ -1323,8 +1551,8 @@ class _CheckinCard extends ConsumerWidget {
                     label: Text(TodayFormat.weekdayShort[d - 1]),
                     tooltip: trWeekdayNames[d - 1],
                     selected: settings.checkinWeekday == d,
-                    onSelected: (_) => guardedPlanWrite(
-                        context, () => controller.setCheckinSchedule(weekday: d)),
+                    onSelected: (_) => guardedPlanWrite(context,
+                        () => controller.setCheckinSchedule(weekday: d)),
                   ),
               ],
             )

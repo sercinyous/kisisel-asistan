@@ -4055,7 +4055,7 @@ begin
           quiet_start, quiet_end, team_members, height_cm, birth_year, sex,
           display_name, work_description, task_categories, activity_level,
           timezone, onboarded_at, weekly_rate, targets_source,
-          targets_updated_at)
+          targets_updated_at, goal_mode, gain_rate)
        = (select r.start_weight_kg, r.target_weight_kg, r.daily_calories,
                  r.daily_protein_g, r.daily_carbs_g, r.daily_fat_g, r.daily_steps,
                  r.sleep_minutes, r.notifications_enabled, r.routine_notifications,
@@ -4067,7 +4067,9 @@ begin
                  coalesce(r.onboarded_at, now()),
                  coalesce(r.weekly_rate, s.weekly_rate),
                  coalesce(r.targets_source, s.targets_source),
-                 coalesce(r.targets_updated_at, s.targets_updated_at)
+                 coalesce(r.targets_updated_at, s.targets_updated_at),
+                 coalesce(r.goal_mode, s.goal_mode),
+                 coalesce(r.gain_rate, s.gain_rate)
           from jsonb_populate_record(s, v_settings) r)
    where s.user_id = v_uid
   returning s.* into v_row;
@@ -4448,3 +4450,39 @@ revoke all on function public.report_health_safety(uuid, date, text)
   from public, anon, authenticated;
 grant execute on function public.report_health_safety(uuid, date, text) to service_role;
 -- END health_v2
+
+-- BEGIN goal_mode
+-- =====================================================================
+-- Hedef türü (yağ yakma / kas yaparken yağ yakma / kas yapma / koru)
+--   * goal_mode: hedef motorunun türü; varsayılan 'fat_loss' (mevcut
+--     kullanıcıların davranışı değişmez).
+--   * gain_rate: kas yapma temposu ('slow' +250 kcal, 'standard' +400 kcal).
+--   İstemci sütun yoksa bunları yazmaz (eski şema koruması).
+-- =====================================================================
+alter table public.user_settings
+  add column if not exists goal_mode text not null default 'fat_loss',
+  add column if not exists gain_rate text not null default 'slow';
+
+do $$
+declare
+  c record;
+begin
+  for c in
+    select * from (values
+      ('user_settings_goal_mode_check',
+       'check (goal_mode in (''fat_loss'', ''recomp'', ''lean_gain'', ''maintain''))'),
+      ('user_settings_gain_rate_check',
+       'check (gain_rate in (''slow'', ''standard''))')
+    ) as t(name, def)
+  loop
+    if not exists (
+      select 1 from pg_constraint
+      where conrelid = 'public.user_settings'::regclass and conname = c.name
+    ) then
+      execute format('alter table public.user_settings add constraint %I %s',
+                     c.name, c.def);
+    end if;
+  end loop;
+end;
+$$;
+-- END goal_mode

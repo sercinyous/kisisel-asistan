@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'fat_loss_plan.dart' show FatLossRules;
+import 'goal_mode.dart';
 import 'safe_targets.dart';
 
 /// Seriler (Adım, Kayıt, Açık), haftalık kalori açığı ve düşük alım uyarısı.
@@ -47,7 +48,11 @@ class StreakTargets {
     required this.kcalTarget,
     required this.floorKcal,
     this.plannedDeficit = 0,
+    this.goal = GoalMode.fatLoss,
   });
+
+  /// Hedef türü: yağ yakmada Açık serisi, diğerlerinde Hedef serisi.
+  final GoalMode goal;
 
   final int dailySteps;
   final int kcalTarget;
@@ -63,7 +68,8 @@ class StreakTargets {
 enum StreakKind {
   steps('Adım', 'Adım serisi'),
   logging('Kayıt', 'Kayıt serisi'),
-  deficit('Açık', 'Açık serisi');
+  deficit('Açık', 'Açık serisi'),
+  target('Hedef', 'Hedef serisi');
 
   const StreakKind(this.label, this.semanticLabel);
 
@@ -133,6 +139,14 @@ bool isDeficitDay(StreakDay d, StreakTargets t) {
   return gap <= cap;
 }
 
+/// Hedef günü (kas yapma, koruma, kas yaparken yağ yakma): Kayıt günü VE
+/// alınan hedefin ±%10'u içinde.
+bool isTargetDay(StreakDay d, StreakTargets t) {
+  if (!isLoggingDay(d, t) || t.kcalTarget <= 0) return false;
+  final tolerance = t.kcalTarget * GoalRules.targetStreakTolerance;
+  return (d.intakeKcal - t.kcalTarget).abs() <= tolerance + 1e-9;
+}
+
 /// Serilerde ve az yeme uyarısında kullanılan taban: min(taban, hedef).
 /// Uygulamanın kendi hedefinde yemek asla "çok az" sayılmaz.
 int effectiveFloorKcal(int floorKcal, int kcalTarget) =>
@@ -156,8 +170,12 @@ List<StreakStatus> computeStreaks({
           StreakKind.steps, byDay, todayOnly, (d) => isStepsDay(d, targets)),
     _streak(
         StreakKind.logging, byDay, todayOnly, (d) => isLoggingDay(d, targets)),
-    _streak(
-        StreakKind.deficit, byDay, todayOnly, (d) => isDeficitDay(d, targets)),
+    if (targets.goal.usesDeficitStreak)
+      _streak(
+          StreakKind.deficit, byDay, todayOnly, (d) => isDeficitDay(d, targets))
+    else
+      _streak(
+          StreakKind.target, byDay, todayOnly, (d) => isTargetDay(d, targets)),
   ];
 }
 
@@ -245,7 +263,11 @@ class WeekDeficit {
     required this.weekStart,
     required this.days,
     required this.targetKcal,
+    this.surplusGoal = false,
   });
+
+  /// Kas yapma hedefi: kart açık yerine fazlayı gösterir ([balanceKcal]).
+  final bool surplusGoal;
 
   /// Haftanın pazartesisi.
   final DateTime weekStart;
@@ -265,8 +287,15 @@ class WeekDeficit {
   /// ≈ kg = toplam / 7.700.
   double get kg => totalKcal / FatLossRules.kcalPerKgFat;
 
+  /// Hedef yönünde toplam: açıkta açık, kas yapmada fazla (alınan − harcama).
+  double get balanceKcal => surplusGoal ? -totalKcal : totalKcal;
+
+  /// Günün hedef yönündeki değeri (grafik çubuğu).
+  double? dayBalance(DayDeficit d) =>
+      d.deficit == null ? null : (surplusGoal ? -d.deficit! : d.deficit!);
+
   /// Hedefin oranı (0..∞); hedef yoksa 0.
-  double get progress => targetKcal <= 0 ? 0 : totalKcal / targetKcal;
+  double get progress => targetKcal <= 0 ? 0 : balanceKcal / targetKcal;
 }
 
 /// [weekStart]'tan başlayan haftanın açığı; [today]'den sonraki günler
@@ -276,6 +305,7 @@ WeekDeficit computeWeekDeficit({
   required List<StreakDay> days,
   required DateTime today,
   required int targetKcal,
+  bool surplusGoal = false,
 }) {
   final start = DateTime(weekStart.year, weekStart.month, weekStart.day);
   final todayOnly = DateTime(today.year, today.month, today.day);
@@ -285,6 +315,7 @@ WeekDeficit computeWeekDeficit({
   return WeekDeficit(
     weekStart: start,
     targetKcal: math.max(0, targetKcal),
+    surplusGoal: surplusGoal,
     days: [
       for (var i = 0; i < 7; i++)
         if (!DateTime(start.year, start.month, start.day + i)
@@ -299,6 +330,9 @@ WeekDeficit computeWeekDeficit({
     ],
   );
 }
+
+/// Kas yapmada haftalık hedef fazla: günlük fazla × 7 (negatifse 0).
+int weeklySurplusTarget(int dailySurplus) => math.max(0, dailySurplus * 7);
 
 /// Haftalık hedef açık: hız modunda r × 7.700; klasikte planın günlük açığı
 /// × 7 (negatifse 0).

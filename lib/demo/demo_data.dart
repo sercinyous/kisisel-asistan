@@ -13,6 +13,7 @@ import '../features/routines/domain/routine.dart';
 import '../core/avatar/avatar_spec.dart';
 import '../features/health/data/body_repository.dart';
 import '../features/health/domain/energy_balance.dart' show Sex;
+import '../features/health/domain/goal_mode.dart' show GoalMode;
 import '../features/health/domain/targets_engine.dart';
 import '../features/settings/domain/user_settings.dart';
 import 'demo_backend.dart';
@@ -310,6 +311,7 @@ class DemoData {
             activityLevel: ActivityLevel.moderate,
             teamMembers: _demoTeam,
             weeklyRate: FatLossRate.half,
+            goalMode: GoalMode.fatLoss,
             avatar: const AvatarChoice(
               kind: AvatarKind.mascot,
               mascotId: 'bal_porsugu',

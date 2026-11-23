@@ -38,7 +38,9 @@ class WeekCard extends ConsumerWidget {
             icon: Icons.calendar_view_week_rounded,
             label: 'Bu hafta',
             color: AppColors.accent,
-            trailing: 'kalori açığı',
+            trailing: week.valueOrNull == null
+                ? 'kalori açığı'
+                : TodayFormat.weekTitle(week.valueOrNull!),
           ),
           const SizedBox(height: 12),
           week.when(
@@ -54,18 +56,21 @@ class WeekCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   DayBarChart(
-                    values: [for (final d in w.days) d.deficit],
+                    values: [for (final d in w.days) w.dayBalance(d)],
                     color: AppColors.accent,
                     labels: TodayFormat.weekdayShort,
                     highlightIndex: todayIndex < 0 ? null : todayIndex,
                     height: 96,
-                    semanticsLabel: 'Bu haftanın günlük kalori açığı',
+                    semanticsLabel:
+                        'Bu haftanın günlük ${TodayFormat.weekTitle(w)}',
                   ),
                   const SizedBox(height: 12),
                   Text(
                     [
                       TodayFormat.weekTotal(w),
-                      if (w.targetKcal > 0) TodayFormat.weekTarget(w.targetKcal),
+                      if (w.targetKcal > 0)
+                        TodayFormat.weekTarget(w.targetKcal,
+                            surplus: w.surplusGoal),
                     ].join(' / '),
                     key: const Key('week-total'),
                     style: theme.textTheme.titleMedium?.copyWith(
