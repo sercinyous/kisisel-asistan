@@ -1,6 +1,7 @@
 import '../../settings/domain/user_settings.dart';
 import 'energy_balance.dart' show Sex;
 import 'fat_loss_plan.dart' show formatTr, formatTrDecimal2;
+import 'fat_loss_rate.dart' show RateHealth;
 import 'goal_mode.dart';
 import 'targets_engine.dart';
 
@@ -18,6 +19,29 @@ class GoalProjection {
   final ResolvedTargets targets;
   final double targetWeightKg;
 
+  /// Bu değerin altındaki haftalık değişim (kg) "≈ sabit" sayılır; haftalık
+  /// metin, ana cümle ve hedef süresi aynı eşiği kullanır.
+  static const double stableKgPerWeek = 0.05;
+
+  /// Hedef kiloya tahmini süre bu kadar haftayı aşarsa sayı gösterilmez.
+  static const int maxEtaWeeks = 104;
+
+  /// Haftalık değişim "≈ sabit" eşiğinin altında.
+  bool get isStable => weeklyKg.abs() < stableKgPerWeek;
+
+  /// Kayıp hızı vücut ağırlığına göre hızlı ya da agresif (ör. klasik
+  /// formül yüksek harcamada): kartta uyarı gösterilir.
+  bool get fastLoss {
+    final h = targets.health;
+    return weeklyKg < 0 && h != null && h != RateHealth.sustainable;
+  }
+
+  /// Hızlı kayıp uyarısı; yoksa `null`.
+  String? get fastLossText => fastLoss
+      ? '${targets.health!.label} kayıp: bu hız uzun süre sürdürülemez; '
+          'daha yavaş bir hız seç'
+      : null;
+
   int get kcal => targets.kcal;
 
   /// Tahmini haftalık değişim (kg; eksi = kayıp).
@@ -30,28 +54,32 @@ class GoalProjection {
   /// hedefteyse `null`.
   int? get etaWeeks {
     final diff = targetWeightKg - targets.weightKg;
-    if (diff.abs() < 0.05 || weeklyKg == 0) return null;
+    if (diff.abs() < 0.05 || isStable) return null;
     if (diff.sign != weeklyKg.sign) return null;
     return (diff / weeklyKg).ceil();
   }
 
   /// "−0,50 kg/hafta" / "+0,25 kg/hafta" / "≈ sabit".
-  String get weeklyText => _kgText(weeklyKg, suffix: ' kg/hafta');
+  String get weeklyText =>
+      isStable ? '≈ sabit' : _kgText(weeklyKg, suffix: ' kg/hafta');
 
   /// Kartın ana cümlesi: "Bunu yaparsan ~12 haftada −6 kg" ya da
   /// "~12 haftada +3 kg, bir kısmı yağ" ya da "Kilon ~12 haftada sabit kalır".
   String get headline {
     const w = GoalRules.projectionWeeks;
-    if (weeklyKg == 0) return 'Kilon ~$w haftada yaklaşık sabit kalır';
+    if (isStable) return 'Kilon ~$w haftada yaklaşık sabit kalır';
     final kg = _kgText(horizonKg, suffix: ' kg', decimals: false);
     if (weeklyKg > 0) return 'Bunu yaparsan ~$w haftada $kg, bir kısmı yağ';
     return 'Bunu yaparsan ~$w haftada $kg';
   }
 
-  /// "Hedef kiloya ~14 haftada"; yoksa `null`.
+  /// "Hedef kiloya ~14 haftada"; [maxEtaWeeks] üstünde "Hedef kiloya bu
+  /// hızla 2 yıldan uzun"; yoksa `null`.
   String? get etaText {
     final eta = etaWeeks;
-    return eta == null ? null : 'Hedef kiloya ~$eta haftada';
+    if (eta == null) return null;
+    if (eta > maxEtaWeeks) return 'Hedef kiloya bu hızla 2 yıldan uzun';
+    return 'Hedef kiloya ~$eta haftada';
   }
 
   /// Kalori satırı: "2.150 kcal".

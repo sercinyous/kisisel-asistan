@@ -128,12 +128,16 @@ class _PlanBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Eski şemada hedef türü sütunları yoksa seçim kaydedilemez: kart gizli.
+    final goalModeColumns =
+        ref.watch(userSettingsProvider).valueOrNull?.goalModeColumns ?? true;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BentoGrid(children: [
           BentoCell(child: _GoalCard(resolved: resolved)),
-          BentoCell(child: _GoalModeCard(resolved: resolved)),
+          if (goalModeColumns)
+            BentoCell(child: _GoalModeCard(resolved: resolved)),
           BentoCell(child: _TargetsCard(resolved: resolved)),
           if (!resolved.locked && resolved.goal == GoalMode.fatLoss)
             BentoCell(child: _TempoCard(resolved: resolved)),
@@ -529,6 +533,13 @@ class _GoalOption extends StatelessWidget {
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: AppColors.textSecondary),
                         ),
+                        if (p.fastLossText != null)
+                          Text(
+                            p.fastLossText!,
+                            key: Key('plan-goal-${goal.dbValue}-fast'),
+                            style: theme.textTheme.bodySmall
+                                ?.copyWith(color: AppColors.warning),
+                          ),
                       ],
                     ],
                   ),
@@ -635,7 +646,7 @@ class _TargetsCard extends ConsumerWidget {
             _WarningLine(
               key: Key('plan-warning-${resolved.warnings.indexOf(w)}'),
               text: w,
-              color: w == SafeTargets.lockedMessage
+              color: w == resolved.lockedText
                   ? AppColors.textSecondary
                   : null,
             ),
@@ -961,6 +972,15 @@ class _WhyCard extends ConsumerWidget {
 
   final ResolvedTargets resolved;
 
+  /// Proteinin hedefe göre gerekçesi.
+  static String _proteinWhy(TargetsMode mode) => switch (mode) {
+        TargetsMode.gain => 'kas yapımını destekler.',
+        TargetsMode.maintain ||
+        TargetsMode.locked =>
+          'kas kütleni korumana yardım eder.',
+        _ => 'açıkta kas kaybını azaltır.',
+      };
+
   Future<void> _edit(BuildContext context, WidgetRef ref) async {
     final value = await showDialog<int>(
       context: context,
@@ -1001,6 +1021,10 @@ class _WhyCard extends ConsumerWidget {
         'Hedefin kilonu korumak; harcaman kadar yemen önerilir.',
       TargetsMode.maintain =>
         'Hedef kilon şimdiki kilondan düşük değil; harcaman kadar yemen önerilir.',
+      TargetsMode.recomp when resolved.deficit <= 0 =>
+        'Harcaman ${formatTr(resolved.floorKcal)} kcal tabanına çok yakın; '
+            'hedef tabana sabitlendi, bu yüzden açık oluşmuyor. Yüksek '
+            'proteinle (kg × 2,2) beslen.',
       TargetsMode.recomp =>
         'Kas yaparken yağ yakmak için harcamanın ~%10 altında '
             '(${formatTr(resolved.deficit)} kcal açık) ve yüksek proteinle '
@@ -1010,7 +1034,7 @@ class _WhyCard extends ConsumerWidget {
         'Kas yapmak için harcamanın ${formatTr(resolved.surplus)} kcal '
             'üstünde ve kg × 2,0 proteinle beslenirsin. Haftalık artış '
             'tahminidir; bir kısmı yağdır.',
-      TargetsMode.locked => SafeTargets.lockedMessage,
+      TargetsMode.locked => resolved.lockedText,
     };
     final manual = e.source == ExpenditureSource.manual;
     return _Collapsible(
@@ -1037,8 +1061,9 @@ class _WhyCard extends ConsumerWidget {
           Text(deficitText, key: const Key('plan-why-deficit'), style: body),
           const SizedBox(height: 8),
           Text(
-            'Protein ${formatTr(resolved.proteinG)} g ($kgText kg için); açıkta '
-            'kas kaybını azaltır. Makrolar hiçbir zaman kalori hedefini aşmaz.',
+            'Protein ${formatTr(resolved.proteinG)} g ($kgText kg için); '
+            '${_proteinWhy(resolved.mode)} Makrolar hiçbir zaman kalori '
+            'hedefini aşmaz.',
             style: body,
           ),
           const SizedBox(height: 8),

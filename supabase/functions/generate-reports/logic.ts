@@ -266,6 +266,16 @@ export interface HealthSafety {
   periodDeficitKcal: number | null;
   /** Son günden geriye, açığı (0, sınır] ve alımı tabanın üstünde olan ardışık gün. */
   deficitStreakDays: number | null;
+  /** Kullanıcının hedef türü (user_settings.goal_mode); bilinmiyorsa yağ yakma. */
+  goalMode: GoalMode;
+}
+
+export type GoalMode = "fat_loss" | "recomp" | "lean_gain" | "maintain";
+
+const GOAL_MODES: readonly GoalMode[] = ["fat_loss", "recomp", "lean_gain", "maintain"];
+
+function goalModeOf(value: unknown): GoalMode {
+  return GOAL_MODES.includes(value as GoalMode) ? value as GoalMode : "fat_loss";
 }
 
 function num(value: unknown): number | null {
@@ -302,20 +312,50 @@ export function healthSafetyOf(metrics: unknown): HealthSafety {
       deficitStreakDays++;
     }
   }
-  return { floorKcal, expenditureKcal, deficitCapKcal, periodDeficitKcal, deficitStreakDays };
+  return {
+    floorKcal,
+    expenditureKcal,
+    deficitCapKcal,
+    periodDeficitKcal,
+    deficitStreakDays,
+    goalMode: goalModeOf(s.goal_mode),
+  };
 }
 
-/** Talimata eklenen sağlık sınırı satırları. */
+/** Talimata eklenen sağlık sınırı satırları (hedef türüne göre açık ya da fazla dili). */
 export function healthSafetyLines(safety: HealthSafety): string[] {
-  const lines = [
-    `Sağlık sınırları: günde en az ${safety.floorKcal} kcal; haftada en çok 0,75 kg kayıp` +
-    (safety.deficitCapKcal === null ? "." : `; günlük kalori açığı en çok ${safety.deficitCapKcal} kcal.`),
-  ];
-  if (safety.periodDeficitKcal !== null) {
-    lines.push(`Bu dönemde kayıtlı günlerin toplam kalori açığı ${safety.periodDeficitKcal} kcal ` +
-      "(negatifse fazla yenmiş).");
+  const deficitGoal = safety.goalMode === "fat_loss" || safety.goalMode === "recomp";
+  const lines: string[] = [];
+  switch (safety.goalMode) {
+    case "recomp":
+      lines.push("Kullanıcının hedefi: kas yaparken yağ yakma (hafif kalori açığı, yüksek protein, " +
+        "düzenli kuvvet antrenmanı).");
+      break;
+    case "lean_gain":
+      lines.push("Kullanıcının hedefi: kas yapma (kontrollü kalori fazlası ve kuvvet antrenmanı). " +
+        "Kalori açığı ya da kilo vermeyi önerme; harcamanın üstünde yemek hedefin parçasıdır.");
+      break;
+    case "maintain":
+      lines.push("Kullanıcının hedefi: kiloyu korumak. Kalori açığı ya da fazlası önerme; " +
+        "alımı harcamaya yakın tutmayı öner.");
+      break;
+    default:
+      lines.push("Kullanıcının hedefi: yağ yakma (güvenli kalori açığı).");
   }
-  if (safety.deficitStreakDays !== null) {
+  lines.push(
+    `Sağlık sınırları: günde en az ${safety.floorKcal} kcal; haftada en çok 0,75 kg kayıp` +
+      (!deficitGoal || safety.deficitCapKcal === null
+        ? "."
+        : `; günlük kalori açığı en çok ${safety.deficitCapKcal} kcal.`),
+  );
+  if (safety.periodDeficitKcal !== null) {
+    lines.push(deficitGoal
+      ? `Bu dönemde kayıtlı günlerin toplam kalori açığı ${safety.periodDeficitKcal} kcal ` +
+        "(negatifse fazla yenmiş)."
+      : `Bu dönemde kayıtlı günlerin toplam kalori dengesi (alım − harcama) ` +
+        `${-safety.periodDeficitKcal} kcal (pozitifse fazla, negatifse açık).`);
+  }
+  if (deficitGoal && safety.deficitStreakDays !== null) {
     lines.push(`Güvenli açık serisi: ${safety.deficitStreakDays} gün.`);
   }
   lines.push(

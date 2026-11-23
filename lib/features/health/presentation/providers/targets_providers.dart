@@ -135,10 +135,14 @@ class PlanController {
     double? weightKg,
   }) async {
     final current = await _settings();
+    // Eski şemada goal_mode/gain_rate sütunu yoksa hedef türü yazılamaz;
+    // hedefleri bu türe göre hesaplayıp yazmak, kayıtlı tür yağ yakma
+    // kaldığı için bir sonraki tartıda geri alınırdı. Değişiklik yok sayılır.
+    final goalWritable = current.goalModeColumns;
     final settings = current.copyWith(
       weeklyRate: rate,
-      goalMode: goal,
-      gainRate: gainRate,
+      goalMode: goalWritable ? goal : null,
+      gainRate: goalWritable ? gainRate : null,
     );
     final weight =
         weightKg ?? (await _ref.read(latestWeightProvider.future))?.weightKg;

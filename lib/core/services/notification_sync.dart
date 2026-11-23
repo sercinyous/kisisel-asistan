@@ -213,6 +213,7 @@ final healthNudgeStateProvider = FutureProvider<HealthNudgeState>((ref) async {
     checkinDoneToday: checkin?.done ?? false,
     weekDeficitKcal: hasWeek ? week.totalKcal : null,
     weekDeficitKg: hasWeek ? week.kg : null,
+    weekSurplusGoal: hasWeek && week.surplusGoal,
     tasksDonePercent: report?.metrics.workRate,
   );
 });

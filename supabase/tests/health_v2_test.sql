@@ -157,20 +157,28 @@ select tf.eq('sahip siler',
 -- 4b) AI rapor sağlık sınırları (report_health_safety) ------------------
 update public.user_settings
    set height_cm = 180, birth_year = 1990, sex = 'male', activity_level = 'moderate',
-       expenditure_kcal_manual = null
+       expenditure_kcal_manual = null, goal_mode = 'fat_loss'
  where user_id = 'c1000000-0000-0000-0000-000000000001';
 insert into public.fitness_logs (user_id, log_type, weight_kg, logged_at)
 values ('c1000000-0000-0000-0000-000000000001', 'weight', 80, '2026-11-10 08:00+03');
 -- Bazal 10·80 + 6,25·180 − 5·36 + 5 = 1.750; harcama × 1,55 ≈ 2.713.
 select tf.eq('taban ve harcama',
   public.report_health_safety('c1000000-0000-0000-0000-000000000001', '2026-11-15', 'Europe/Istanbul'),
-  '{"floor_kcal": 1750, "expenditure_kcal": 2713}');
+  '{"floor_kcal": 1750, "expenditure_kcal": 2713, "goal_mode": "fat_loss"}');
 update public.user_settings set expenditure_kcal_manual = 3000
  where user_id = 'c1000000-0000-0000-0000-000000000001';
 select tf.eq('elle harcama önce gelir',
   public.report_health_safety('c1000000-0000-0000-0000-000000000001', '2026-11-15', 'Europe/Istanbul')
     -> 'expenditure_kcal',
   '3000');
+update public.user_settings set goal_mode = 'lean_gain'
+ where user_id = 'c1000000-0000-0000-0000-000000000001';
+select tf.eq('hedef türü sınır bloğunda',
+  public.report_health_safety('c1000000-0000-0000-0000-000000000001', '2026-11-15', 'Europe/Istanbul')
+    -> 'goal_mode',
+  '"lean_gain"');
+update public.user_settings set goal_mode = 'fat_loss'
+ where user_id = 'c1000000-0000-0000-0000-000000000001';
 select tf.eq('haftalık rapor safety bloğu taşır',
   public.report_weekly_metrics('c1000000-0000-0000-0000-000000000001', '2026-11-09') -> 'safety'
     -> 'floor_kcal',

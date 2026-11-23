@@ -120,4 +120,48 @@ void main() {
     expect(find.textContaining('0,4 kg'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('haftalık kart: kas yapmada fazla ve +hedef', (tester) async {
+    final now = DateTime(2026, 11, 26, 12);
+    final week = AppDates.weekStart(now);
+    final deficit = WeekDeficit(
+      weekStart: week,
+      days: [
+        for (var i = 0; i < 4; i++)
+          DayDeficit(
+            date: AppDates.addDays(week, i),
+            deficit: -250,
+            isToday: i == 3,
+          ),
+      ],
+      targetKcal: 1750,
+      surplusGoal: true,
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        kokpitClockProvider.overrideWith((ref) => now),
+        weekDeficitProvider(week).overrideWith((ref) async => deficit),
+        streaksProvider.overrideWith((ref) async =>
+            const StreaksState(streaks: [], lowIntake: false)),
+        weightSeriesProvider(reportsWeightLookbackDays)
+            .overrideWith((ref) async => const <WeightEntry>[]),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ReportsHealthWeekCard(weekStart: week),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Haftalık fazla'), findsOneWidget);
+    expect(find.text('Haftalık açık'), findsNothing);
+    expect(find.text('+1.000 kcal'), findsOneWidget);
+    expect(find.text('≈0,1 kg'), findsOneWidget);
+    expect(find.text('Hedef +1.750 kcal · %57'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

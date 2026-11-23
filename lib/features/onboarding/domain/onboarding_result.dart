@@ -60,8 +60,8 @@ OnboardingResult buildOnboardingResult({
   final work = answers.workDescription;
   final suggested = suggestOnboardingTargets(answers, now: now);
   // Önerilen kalori/makrolar aynen kabul edildiyse kaynak 'onboarding'
-  // (motor sonraki tartılarda günceller); elle değiştirildiyse ya da kilo
-  // kilo verme hedefi şimdiki kilodan düşük değilse 'manual'.
+  // (motor sonraki tartılarda günceller); elle değiştirildiyse ya da
+  // hedef kilo şimdiki kilodan düşük değilken "kilo ver" seçildiyse 'manual'.
   final fromPlan = usesPlanEngine(answers) &&
       targets.calories == suggested.calories &&
       targets.proteinG == suggested.proteinG &&

@@ -10,6 +10,8 @@ import 'package:kisisel_asistan/features/health/presentation/providers/week_defi
     show weekTargetFor;
 import 'package:kisisel_asistan/features/onboarding/domain/onboarding_answers.dart';
 import 'package:kisisel_asistan/features/onboarding/domain/onboarding_result.dart';
+import 'package:kisisel_asistan/features/onboarding/presentation/onboarding_targets_step.dart';
+import 'package:kisisel_asistan/features/health/domain/safe_targets.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 
@@ -183,6 +185,46 @@ void main() {
       expect(p.etaWeeks, isNull);
     });
 
+    GoalProjection classicFatLoss({required int manual, double target = 78}) =>
+        projectGoals(
+          settings: _s(
+              rate: FatLossRate.classic, manual: manual, target: target),
+          latestWeightKg: 84,
+          age: 36,
+          sex: Sex.male,
+        ).firstWhere((p) => p.goal == GoalMode.fatLoss);
+
+    test('çok küçük açık: haftalık, ana cümle ve süre aynı eşikle sabit', () {
+      // Klasik 84 × 26 = 2.184 kcal; harcama 2.187 → 3 kcal açık.
+      final p = classicFatLoss(manual: 2187);
+      expect(p.isStable, isTrue);
+      expect(p.weeklyText, '≈ sabit');
+      expect(p.headline, 'Kilon ~12 haftada yaklaşık sabit kalır');
+      expect(p.headline, isNot(contains('−0')));
+      expect(p.etaWeeks, isNull);
+      expect(p.etaText, isNull);
+    });
+
+    test('hedef süresi 2 yılı aşarsa sayı yok', () {
+      // 100 kcal açık ≈ 0,09 kg/hafta; 84 → 60 kg yüzlerce hafta.
+      final p = classicFatLoss(manual: 2284, target: 60);
+      expect(p.etaWeeks, greaterThan(GoalProjection.maxEtaWeeks));
+      expect(p.etaText, 'Hedef kiloya bu hızla 2 yıldan uzun');
+      final near = classicFatLoss(manual: 2284, target: 82);
+      expect(near.etaText, 'Hedef kiloya ~${near.etaWeeks} haftada');
+    });
+
+    test('klasik formülle hızlı kayıp uyarı verir', () {
+      final p = classicFatLoss(manual: 3400);
+      expect(p.weeklyKg, lessThan(-1));
+      expect(p.fastLoss, isTrue);
+      expect(p.fastLossText, startsWith('Agresif kayıp'));
+      expect(project().firstWhere((p) => p.goal == GoalMode.fatLoss).fastLoss,
+          isFalse);
+      expect(project().firstWhere((p) => p.goal == GoalMode.leanGain).fastLoss,
+          isFalse);
+    });
+
     test('kas yaparken yağ yakma: açık kadar yavaş kayıp', () {
       final p = project().firstWhere((p) => p.goal == GoalMode.recomp);
       expect(p.kcal, 2700);
@@ -310,7 +352,69 @@ void main() {
     });
   });
 
+  group('hedefe göre uyarı metinleri', () {
+    test('18 yaş altı kas yapma: kilo verme dili yok', () {
+      final r = _r(_s(goal: GoalMode.leanGain), age: 16);
+      expect(r.locked, isTrue);
+      expect(r.warnings, [SafeTargets.gainLockedMessage]);
+      expect(r.surplus, 0);
+    });
+
+    test('kas yaparken yağ yakma tabana takılınca tempo denmez', () {
+      final r = _r(_s(goal: GoalMode.recomp, manual: 1200));
+      expect(r.clamped, isTrue);
+      expect(r.warnings, contains(SafeTargets.recompClampedMessage));
+      expect(r.warnings, isNot(contains(SafeTargets.clampedMessage)));
+    });
+  });
+
   group('ilk kurulum', () {
+    OnboardingAnswers answers(OnboardingGoal goal, int age,
+            {double target = 80}) =>
+        OnboardingAnswers(
+          displayName: 'Deneme',
+          heightCm: 180,
+          birthYear: 2026 - age,
+          sex: Sex.male,
+          weightKg: 80,
+          targetWeightKg: target,
+          goal: goal,
+        );
+
+    test('18 yaş altı "Kilo al": fazla yok, koruma kadar', () {
+      final now = DateTime(2026, 11, 23);
+      final gain = suggestOnboardingTargets(
+          answers(OnboardingGoal.gain, 16), now: now);
+      final keep = suggestOnboardingTargets(
+          answers(OnboardingGoal.maintain, 16), now: now);
+      expect(gain.calories, keep.calories);
+      expect(
+        OnboardingTargetsStep.goalText(OnboardingGoal.gain, age: 16),
+        contains('18 yaş altında'),
+      );
+      final adultGain = suggestOnboardingTargets(
+          answers(OnboardingGoal.gain, 30), now: now);
+      final adultKeep = suggestOnboardingTargets(
+          answers(OnboardingGoal.maintain, 30), now: now);
+      expect(adultGain.calories - adultKeep.calories, 250);
+      expect(OnboardingTargetsStep.goalText(OnboardingGoal.gain, age: 30),
+          contains('250 kcal fazla'));
+    });
+
+    test('"Kilo ver" metni önerinin gerçek yolunu söyler', () {
+      expect(
+        OnboardingTargetsStep.goalText(OnboardingGoal.lose,
+            age: 30, lossUsesEngine: true),
+        contains('kilo başına 26 kcal'),
+      );
+      expect(
+        OnboardingTargetsStep.goalText(OnboardingGoal.lose, age: 30),
+        contains('500 kcal eksik'),
+      );
+      expect(usesPlanEngine(answers(OnboardingGoal.lose, 30, target: 75)),
+          isTrue);
+    });
+
     test('"Kilo al" motordan kas yapma hedefine gider', () {
       expect(onboardingGoalMode(OnboardingGoal.gain), GoalMode.leanGain);
       expect(onboardingGoalMode(OnboardingGoal.maintain), GoalMode.maintain);

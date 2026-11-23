@@ -13,12 +13,17 @@ max(1200, bazal) ve açık sınırı yok (1 kg uyarı metniyle); Klasik 1.200 al
   (`unique(user_id, taken_on, pose)`, `storage_path = <uid>/<YYYY-MM-DD>/<pose>.jpg`). Yalnızca sahibi (RLS).
 - Storage `body_photos`: özel, yalnızca sahibi. Hesap silme (`delete-account`) kovayı da temizler.
 - `complete_onboarding` artık `weekly_rate`, `targets_source`, `targets_updated_at` da yazar.
+- Blok `goal_mode`: `user_settings.goal_mode` ('fat_loss' varsayılan | 'recomp' | 'lean_gain' | 'maintain'),
+  `gain_rate` ('slow' | 'standard'); `complete_onboarding` ikisini de coalesce ile yazar.
+  `report_health_safety` sonucu `goal_mode` taşır; `generate-reports` talimatı buna göre açık ya da fazla dili kullanır.
 
 ## Ayarlar (`lib/features/settings/domain/user_settings.dart`)
 `UserSettings` yeni alanlar: `weeklyRate` (`FatLossRate`), `expenditureKcalManual`, `mealCount`,
 `targetsSource` (`TargetsSource`), `targetsUpdatedAt`, `checkinCadence` (`CheckinCadence`),
 `checkinWeekday`, `checkinMonthday`, `checkinReminder`, `hidePhotos`. `copyWith(clearExpenditureKcalManual: true)`.
 `FatLossRate`: `classic | half | threeQuarter | one`, `.dbValue`, `.label`, `.kgPerWeek`, `.warning` (yalnızca 1 kg).
+`goalMode` (`GoalMode`), `gainRate` (`GainRate`); `goalModeColumns` false ise (eski şema) `toMap` ikisini yazmaz,
+Plan'ın Hedef türü kartı gizlenir ve `applyPlan(goal:, gainRate:)` değişikliği yok sayar.
 Eski SharedPreferences anahtarları bir kez taşınır (`legacyFatLossPrefsMigrationProvider`, HomeShell izler) ve silinir.
 
 ## Saf alan katmanı (`lib/features/health/domain/`)

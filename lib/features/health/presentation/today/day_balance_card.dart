@@ -79,7 +79,7 @@ class DayBalanceCard extends ConsumerWidget {
               targets: targets,
             ),
           ),
-          const _DeficitLine(),
+          const DayDeficitLine(),
           const _GapLine(),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -215,13 +215,18 @@ class _Balance extends StatelessWidget {
   }
 }
 
-class _DeficitLine extends ConsumerWidget {
-  const _DeficitLine();
+class DayDeficitLine extends ConsumerWidget {
+  const DayDeficitLine({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final deficit = ref.watch(todayDeficitProvider).valueOrNull;
     if (deficit == null) return const SizedBox.shrink();
+    // Kas yapmada fazla hedefin kendisidir: uyarı rengi yalnızca açıkla
+    // çalışan hedeflerde.
+    final surplusGoal =
+        ref.watch(resolvedTargetsProvider).valueOrNull?.mode ==
+            TargetsMode.gain;
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 12),
@@ -234,7 +239,9 @@ class _DeficitLine extends ConsumerWidget {
                 : 'Kalori fazlası (şu ana kadar): ${TodayFormat.deficit(deficit)}',
             key: const Key('day-deficit'),
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: deficit >= 0 ? AppColors.textPrimary : AppColors.warning,
+              color: deficit >= 0 || surplusGoal
+                  ? AppColors.textPrimary
+                  : AppColors.warning,
               fontWeight: FontWeight.w600,
             ),
           ),

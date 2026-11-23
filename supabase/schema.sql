@@ -4383,7 +4383,7 @@ $$;
 -- AI raporunun sağlık sınırları: kalori tabanı max(1.200, bazal) ve tahmini
 -- günlük harcama (elle girilen ya da bazal × hareket katsayısı). Bazal
 -- Mifflin–St Jeor (istemci basalKcal ile aynı); boy/doğum yılı yoksa
--- harcama null.
+-- harcama null. goal_mode raporun açık/fazla dilini seçer.
 -- Yalnızca service_role (report_period_metrics içinden) çağırır.
 create or replace function public.report_health_safety(
   p_user uuid,
@@ -4406,7 +4406,8 @@ declare
 begin
   select * into v_s from user_settings s where s.user_id = p_user;
   if not found then
-    return jsonb_build_object('floor_kcal', 1200, 'expenditure_kcal', null);
+    return jsonb_build_object('floor_kcal', 1200, 'expenditure_kcal', null,
+      'goal_mode', 'fat_loss');
   end if;
 
   select f.weight_kg into v_weight
@@ -4442,7 +4443,10 @@ begin
 
   return jsonb_build_object(
     'floor_kcal', greatest(1200, coalesce(round(v_basal)::integer, 0)),
-    'expenditure_kcal', v_exp);
+    'expenditure_kcal', v_exp,
+    -- Hedef türü: sütun eski şemada yoksa yağ yakma (to_jsonb ile okunur ki
+    -- fonksiyon goal_mode bloğundan önce de derlensin).
+    'goal_mode', coalesce(to_jsonb(v_s) ->> 'goal_mode', 'fat_loss'));
 end;
 $$;
 

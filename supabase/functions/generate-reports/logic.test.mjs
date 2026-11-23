@@ -253,6 +253,36 @@ test("buildPrompt: sağlık sınırları talimatta", () => {
   assert.match(prompt.system, /16:8/);
 });
 
+test("healthSafetyOf: hedef türü okunur, bilinmeyen yağ yakma", () => {
+  assert.equal(healthSafetyOf(healthMetrics).goalMode, "fat_loss");
+  const gain = { ...healthMetrics, safety: { ...healthMetrics.safety, goal_mode: "lean_gain" } };
+  assert.equal(healthSafetyOf(gain).goalMode, "lean_gain");
+  const bad = { ...healthMetrics, safety: { ...healthMetrics.safety, goal_mode: "bulk" } };
+  assert.equal(healthSafetyOf(bad).goalMode, "fat_loss");
+});
+
+test("buildPrompt: kas yapmada açık dili yok, fazla dengesi var", () => {
+  const metrics = {
+    ...healthMetrics,
+    nutrition: { calories: 2800, days_logged: 5 },
+    safety: { ...healthMetrics.safety, goal_mode: "lean_gain" },
+  };
+  const prompt = buildPrompt("weekly", "2026-11-09", metrics);
+  assert.match(prompt.system, /hedefi: kas yapma/);
+  assert.match(prompt.system, /dengesi \(alım − harcama\) 1500 kcal/);
+  assert.doesNotMatch(prompt.system, /Güvenli açık serisi/);
+  assert.doesNotMatch(prompt.system, /kalori açığı en çok/);
+  assert.match(prompt.system, /en az 1605 kcal/);
+  assert.match(prompt.system, /oruç/);
+});
+
+test("buildPrompt: korumada açık/fazla önerilmez", () => {
+  const metrics = { ...healthMetrics, safety: { ...healthMetrics.safety, goal_mode: "maintain" } };
+  const prompt = buildPrompt("weekly", "2026-11-09", metrics);
+  assert.match(prompt.system, /kiloyu korumak/);
+  assert.doesNotMatch(prompt.system, /Güvenli açık serisi/);
+});
+
 test("filterHealthAdvice: güvenli metin ve geçmiş kalori cümlesi kalır", () => {
   const s = healthSafetyOf(healthMetrics);
   for (const text of [

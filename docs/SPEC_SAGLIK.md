@@ -70,6 +70,15 @@ Header: segmented control `Bugün | Vücut | Plan` (`healthSegmentProvider`, enu
 6. **Ölçü ve fotoğraf günü:** Haftalık/Aylık, weekday or day of month, and reminder on/off.
 7. **Hedefleri elle ayarla** (link): opens Ayarlar > Hedeflerim.
 
+**Hedef türü** (card after Hedefim; `user_settings.goal_mode`, `gain_rate`): Yağ yakma (default, uses
+Tempo), Kas yaparken yağ yakma (recomp: expenditure × 0,9, protein kg × 2,2), Kas yapma (lean gain:
+expenditure + 250 / +400 kcal, protein kg × 2,0, 18+ only) and Kiloyu koru (expenditure, protein kg × 1,6).
+Each option shows kcal, weekly change, 12-week change and time to target weight. Changes below
+0,05 kg/week read "≈ sabit"; an ETA over 104 weeks reads "2 yıldan uzun"; a loss classified Hızlı/Agresif
+shows a warning line. Tempo is shown only for Yağ yakma. The card is hidden when the schema lacks the
+columns (`goalModeColumns`), and `applyPlan` ignores goal changes then. In lean gain, week cards, the
+weekly detail metric ("Fazla"), İçgörü week card, Sunday nudge and AI report speak of surplus, not deficit.
+
 Under-18 users, or users whose current or target BMI is below 18,5, see the following:
 - Plan shows "Kilo verme planı sana uygun değil, dengeli beslenme hedefleri gösteriliyor".
 - Tempo is hidden.

@@ -46,6 +46,7 @@ class HealthNudgeState {
     this.checkinDoneToday = false,
     this.weekDeficitKcal,
     this.weekDeficitKg,
+    this.weekSurplusGoal = false,
     this.tasksDonePercent,
   });
 
@@ -61,6 +62,9 @@ class HealthNudgeState {
   final double? weekDeficitKcal;
   final double? weekDeficitKg;
 
+  /// Kas yapma hedefi: özet açık yerine fazlayı (alınan − harcama) verir.
+  final bool weekSurplusGoal;
+
   /// Haftanın işlerinin tamamlanma oranı (0–100); bilinmiyorsa `null`.
   final int? tasksDonePercent;
 }
@@ -75,12 +79,18 @@ bool stepsNudgeApplies(int? steps, int target) {
 final NumberFormat _thousands = NumberFormat.decimalPattern('tr_TR');
 final NumberFormat _oneDecimal = NumberFormat('0.0', 'tr_TR');
 
-/// "Bu hafta −3.100 kcal (≈0,4 kg) · işlerin %80 tamam". Açık yoksa suçlamadan
+/// "Bu hafta −3.100 kcal (≈0,4 kg) · işlerin %80 tamam" (kas yapmada
+/// "Bu hafta +1.400 kcal fazla"). Açık/fazla yoksa suçlamadan
 /// yalnızca işler (o da yoksa `null`).
 String? weeklyNudgeBody(HealthNudgeState state) {
   final parts = <String>[];
   final kcal = state.weekDeficitKcal;
-  if (kcal != null && kcal >= 100) {
+  if (state.weekSurplusGoal) {
+    // Kas yapmada hedef fazladır: "Bu hafta +1.400 kcal fazla".
+    if (kcal != null && kcal <= -100) {
+      parts.add('Bu hafta +${_thousands.format((-kcal).round())} kcal fazla');
+    }
+  } else if (kcal != null && kcal >= 100) {
     final kg = state.weekDeficitKg ?? kcal / 7700;
     parts.add('Bu hafta −${_thousands.format(kcal.round())} kcal '
         '(≈${_oneDecimal.format(kg)} kg)');

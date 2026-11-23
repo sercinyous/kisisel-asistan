@@ -7,6 +7,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../kokpit/presentation/kokpit_format.dart';
 import '../data/health_repository.dart';
+import '../domain/fat_loss_plan.dart' show formatTrDecimal2;
 import 'health_format.dart';
 import 'health_widgets.dart';
 import 'providers/targets_providers.dart';
@@ -138,6 +139,10 @@ Color weeklyMetricColor(WeeklyMetric m) => switch (m) {
       WeeklyMetric.workouts => AppColors.fitness,
     };
 
+/// Kas yapmada "Açık" ölçüsü "Fazla" olarak (alınan − harcama) gösterilir.
+String weeklyMetricLabel(WeeklyMetric m, {bool surplus = false}) =>
+    surplus && m == WeeklyMetric.deficit ? 'Fazla' : m.label;
+
 String formatWeeklyValue(WeeklyMetric m, double v) => switch (m) {
       WeeklyMetric.kcal => HealthFormat.kcal(v),
       WeeklyMetric.deficit => TodayFormat.deficit(v),
@@ -180,6 +185,8 @@ class _WeeklyDetailScreenState extends ConsumerState<WeeklyDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(weeklyDetailDaysProvider(_range));
+    final surplus = ref.watch(resolvedTargetsProvider).valueOrNull?.mode ==
+        TargetsMode.gain;
     return Scaffold(
       appBar: AppBar(title: const Text('Haftalık detay')),
       body: ListView(
@@ -195,7 +202,7 @@ class _WeeklyDetailScreenState extends ConsumerState<WeeklyDetailScreen> {
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
                       key: Key('weekly-metric-${m.name}'),
-                      label: Text(m.label),
+                      label: Text(weeklyMetricLabel(m, surplus: surplus)),
                       selected: m == _metric,
                       onSelected: (_) => setState(() => _metric = m),
                     ),
@@ -261,10 +268,25 @@ class _DetailBody extends ConsumerWidget {
     final theme = Theme.of(context);
     final targets = ref.watch(targetsProvider);
     final resolved = ref.watch(resolvedTargetsProvider).valueOrNull;
+    // Kas yapmada açık ölçüsü fazla yönünde (alınan − harcama) çizilir;
+    // hedef çizgisi günlük fazla.
+    final surplus =
+        metric == WeeklyMetric.deficit && resolved?.mode == TargetsMode.gain;
     final planned =
         resolved == null || resolved.deficit <= 0 ? null : resolved.deficit;
-    final target = _target(targets, planned?.toDouble());
-    final values = [for (final d in days) d.value(metric)];
+    final target = surplus
+        ? (resolved!.surplus > 0 ? resolved.surplus.toDouble() : null)
+        : _target(targets, planned?.toDouble());
+    double? valueOf(DetailDay d) {
+      final v = d.value(metric);
+      return surplus && v != null ? -v : v;
+    }
+
+    String format(double v) => surplus
+        ? TodayFormat.deficit(-v)
+        : formatWeeklyValue(metric, v);
+    final label = weeklyMetricLabel(metric, surplus: surplus);
+    final values = [for (final d in days) valueOf(d)];
     final known = values.whereType<double>().toList();
     final total = known.fold<double>(0, (s, v) => s + v);
     final average = known.isEmpty ? null : total / known.length;
@@ -274,6 +296,7 @@ class _DetailBody extends ConsumerWidget {
         ? [for (final d in days) TodayFormat.weekdayShort[d.date.weekday - 1]]
         : null;
     final tooHigh = metric == WeeklyMetric.deficit &&
+        !surplus &&
         days.take(days.length - 1).any((d) => d.deficitTooHigh);
     final muted =
         theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
@@ -287,7 +310,7 @@ class _DetailBody extends ConsumerWidget {
             children: [
               BentoLabel(
                 icon: Icons.insights_rounded,
-                label: metric.label,
+                label: label,
                 color: color,
                 trailing: 'son ${days.length} gün',
               ),
@@ -297,8 +320,8 @@ class _DetailBody extends ConsumerWidget {
                     ? 'Veri yok'
                     : metric == WeeklyMetric.workouts ||
                             metric == WeeklyMetric.deficit
-                        ? 'Toplam ${formatWeeklyValue(metric, total)}'
-                        : 'Ortalama ${formatWeeklyValue(metric, average)}',
+                        ? 'Toplam ${format(total)}'
+                        : 'Ortalama ${format(average)}',
                 key: const Key('weekly-headline'),
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: AppColors.textPrimary,
@@ -307,7 +330,11 @@ class _DetailBody extends ConsumerWidget {
               ),
               if (metric == WeeklyMetric.deficit && known.isNotEmpty)
                 Text(
-                  TodayFormat.kg(total / 7700),
+                  surplus
+                      ? (total > 0
+                          ? '≈ +${formatTrDecimal2(total / 7700)} kg (tahmin)'
+                          : 'fazla yok')
+                      : TodayFormat.kg(total / 7700),
                   style: muted,
                 ),
               const SizedBox(height: 14),
@@ -319,7 +346,7 @@ class _DetailBody extends ConsumerWidget {
                 target: target,
                 height: 150,
                 semanticsLabel:
-                    '${metric.label} grafiği, son ${days.length} gün',
+                    '$label grafiği, son ${days.length} gün',
               ),
               if (!short) ...[
                 const SizedBox(height: 6),
@@ -335,7 +362,7 @@ class _DetailBody extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Kesikli çizgi: günlük hedef '
-                  '(${formatWeeklyValue(metric, target)})',
+                  '(${format(target)})',
                   style: muted,
                 ),
               ],
@@ -343,7 +370,7 @@ class _DetailBody extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Bugünün çubuğu taralı: gün bitmeden kesinleşmez. '
-                  'Turuncu çubuk: harcamadan fazla yenen gün.',
+                  '${surplus ? 'Turuncu çubuk: harcamanın altında kalınan gün.' : 'Turuncu çubuk: harcamadan fazla yenen gün.'}',
                   style: muted,
                 ),
               ],
@@ -398,12 +425,11 @@ class _DetailBody extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          d.value(metric) == null
-                              ? '—'
-                              : formatWeeklyValue(metric, d.value(metric)!),
+                          valueOf(d) == null ? '—' : format(valueOf(d)!),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: d.deficitTooHigh &&
-                                    metric == WeeklyMetric.deficit
+                                    metric == WeeklyMetric.deficit &&
+                                    !surplus
                                 ? AppColors.warning
                                 : AppColors.textSecondary,
                             fontWeight: FontWeight.w600,

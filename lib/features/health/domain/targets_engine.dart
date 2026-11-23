@@ -143,10 +143,22 @@ class ResolvedTargets {
   /// Kilo verme planı kilitli (koruma hedefleri).
   bool get locked => mode == TargetsMode.locked;
 
+  /// Kilit mesajı hedef türüne göre (kas yapmada "kilo verme" denmez).
+  String get lockedText => switch (goal) {
+        GoalMode.leanGain => SafeTargets.gainLockedMessage,
+        GoalMode.maintain => SafeTargets.maintainLockedMessage,
+        _ => SafeTargets.lockedMessage,
+      };
+
+  /// Tabana sabitleme mesajı; kas yaparken yağ yakmada tempo yoktur.
+  String get clampedText => mode == TargetsMode.recomp
+      ? SafeTargets.recompClampedMessage
+      : SafeTargets.clampedMessage;
+
   /// Gösterilecek uyarı satırları (sırayla).
   List<String> get warnings => [
-        if (locked) SafeTargets.lockedMessage,
-        if (clamped) SafeTargets.clampedMessage,
+        if (locked) lockedText,
+        if (clamped) clampedText,
         if (classicBelowFloor) SafeTargets.classicBelowFloorWarning,
         if (classicSurplus) SafeTargets.classicSurplusWarning,
         if (mode == TargetsMode.rate && rate.warning != null) rate.warning!,

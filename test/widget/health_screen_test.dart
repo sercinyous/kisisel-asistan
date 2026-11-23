@@ -10,7 +10,12 @@ import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_screen.dart';
+import 'package:kisisel_asistan/features/health/domain/goal_mode.dart';
 import 'package:kisisel_asistan/features/health/domain/safe_targets.dart';
+import 'package:kisisel_asistan/features/health/domain/targets_engine.dart'
+    show PlanTrigger;
+import 'package:kisisel_asistan/features/health/presentation/providers/targets_providers.dart'
+    show planControllerProvider;
 import 'package:kisisel_asistan/features/health/presentation/streak_detail_screen.dart';
 import 'package:kisisel_asistan/features/health/presentation/weekly_detail_screen.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
@@ -406,6 +411,58 @@ void main() {
       );
       expect(find.byKey(const Key('plan-tempo')), findsNothing);
       expect(find.text(SafeTargets.lockedMessage), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('hedef türü: kas yapma seçilir, tempo ayara yazılır',
+        (tester) async {
+      await pumpScreen(tester, segment: HealthSegment.plan);
+      expect(find.byKey(const Key('plan-goal-mode')), findsOneWidget);
+      for (final g in GoalMode.values) {
+        expect(find.byKey(Key('plan-goal-${g.dbValue}')), findsOneWidget);
+        expect(find.byKey(Key('plan-goal-${g.dbValue}-projection')),
+            findsOneWidget);
+      }
+      expect(find.byKey(const Key('plan-gain-slow')), findsNothing);
+
+      await tapVisible(tester, find.byKey(const Key('plan-goal-lean_gain')));
+      expect(settingsRepo.settings!.goalMode, GoalMode.leanGain);
+      expect(find.byKey(const Key('plan-tempo')), findsNothing);
+      expect(find.byKey(const Key('plan-gain-slow')), findsOneWidget);
+
+      await tapVisible(tester, find.byKey(const Key('plan-gain-standard')));
+      expect(settingsRepo.settings!.gainRate, GainRate.standard);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('eski şema: hedef türü kartı gizli, seçim yazılmaz',
+        (tester) async {
+      final container = await pumpScreen(
+        tester,
+        segment: HealthSegment.plan,
+        settings: baseSettings().copyWith(goalModeColumns: false),
+      );
+      expect(find.byKey(const Key('plan-goal-mode')), findsNothing);
+      await container.read(planControllerProvider).applyPlan(
+            PlanTrigger.rateChanged,
+            goal: GoalMode.leanGain,
+            gainRate: GainRate.standard,
+          );
+      expect(settingsRepo.settings!.goalMode, GoalMode.fatLoss);
+      expect(settingsRepo.settings!.gainRate, GainRate.slow);
+    });
+
+    testWidgets('18 yaş altı kas yapma: kilo verme metni yok', (tester) async {
+      await pumpScreen(
+        tester,
+        segment: HealthSegment.plan,
+        settings: baseSettings().copyWith(
+          birthYear: today.year - 16,
+          goalMode: GoalMode.leanGain,
+        ),
+      );
+      expect(find.text(SafeTargets.gainLockedMessage), findsWidgets);
+      expect(find.text(SafeTargets.lockedMessage), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

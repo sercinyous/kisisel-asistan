@@ -188,6 +188,25 @@ void main() {
       'İşlerin %60 tamam',
       reason: 'açık yoksa suçlama yok',
     );
+    expect(
+      weeklyNudgeBody(const HealthNudgeState(
+        mealsLoggedToday: true,
+        weekDeficitKcal: -1400,
+        weekSurplusGoal: true,
+        tasksDonePercent: 60,
+      )),
+      'Bu hafta +1.400 kcal fazla · işlerin %60 tamam',
+      reason: 'kas yapmada fazla özetlenir',
+    );
+    expect(
+      weeklyNudgeBody(const HealthNudgeState(
+        mealsLoggedToday: true,
+        weekDeficitKcal: 900,
+        weekSurplusGoal: true,
+      )),
+      isNull,
+      reason: 'kas yapmada açık suçlanmaz',
+    );
     expect(weeklyNudgeBody(idle), isNull);
 
     final plan = buildHealthNudgePlan(

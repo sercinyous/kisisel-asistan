@@ -525,7 +525,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       case OnboardingStep.targets:
         final height = OnboardingValidators.parseInt(_height.text) ?? 170;
         final weight = OnboardingValidators.parseDecimal(_weight.text) ?? 70;
+        final answers = _answers;
         return OnboardingTargetsStep(
+          age: answers == null ? null : _now().year - answers.birthYear,
+          lossUsesEngine: answers != null && usesPlanEngine(answers),
           goal: _goal,
           onGoal: _onGoal,
           activity: _activity,

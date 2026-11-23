@@ -130,7 +130,8 @@ class ReportsHealthWeekCard extends ConsumerWidget {
       ),
       data: (week) {
         final hasData = week.days.any((d) => d.deficit != null);
-        final kgLabel = deficitKgLabel(week.kg);
+        final surplus = week.surplusGoal;
+        final kgLabel = deficitKgLabel(surplus ? -week.kg : week.kg);
         final target = week.targetKcal;
         return BentoCard(
           key: const ValueKey('reports-health-week'),
@@ -141,7 +142,7 @@ class ReportsHealthWeekCard extends ConsumerWidget {
             children: [
               BentoLabel(
                 icon: Icons.local_fire_department_rounded,
-                label: 'Haftalık açık',
+                label: surplus ? 'Haftalık fazla' : 'Haftalık açık',
                 color: AppColors.nutrition,
                 trailing: isCurrent ? 'şu ana kadar' : null,
               ),
@@ -182,7 +183,7 @@ class ReportsHealthWeekCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.s),
                 Text(
-                  'Hedef ${deficitLabel(target.toDouble())}'
+                  'Hedef ${deficitLabel(surplus ? -target.toDouble() : target.toDouble())}'
                   '${hasData ? ' · %${(week.progress * 100).round().clamp(0, 999)}' : ''}',
                   style: theme.textTheme.labelMedium
                       ?.copyWith(color: AppColors.textSecondary),

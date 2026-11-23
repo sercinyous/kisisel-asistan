@@ -56,6 +56,19 @@ abstract final class SafeTargets {
       'Kilo verme planı sana uygun değil, dengeli beslenme hedefleri '
       'gösteriliyor';
   static const String clampedMessage = 'Hızın güvenli sınıra indirildi';
+
+  /// Kas yapma 18 yaş altında kilitli.
+  static const String gainLockedMessage =
+      'Kas yapma planı 18 yaş altında uygulanmaz, dengeli beslenme '
+      'hedefleri gösteriliyor';
+
+  /// Koruma hedefi kilit kuralına takıldığında (sayılar zaten korumadır).
+  static const String maintainLockedMessage =
+      'Dengeli beslenme hedefleri gösteriliyor';
+
+  /// Kas yaparken yağ yakmada hedef kalori tabanına sabitlendi.
+  static const String recompClampedMessage =
+      'Hedef kalori tabanına sabitlendi; açık küçüldü';
 }
 
 /// Kalori tabanı: max(1.200, bazal). Bazal bilinmiyorsa 1.200.
