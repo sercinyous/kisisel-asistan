@@ -5,6 +5,8 @@ import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
 import 'package:kisisel_asistan/features/health/presentation/fat_loss_providers.dart';
 import 'package:kisisel_asistan/features/health/presentation/fat_loss_screen.dart';
+import 'package:kisisel_asistan/features/health/domain/energy_balance.dart' show Sex;
+import 'package:kisisel_asistan/features/health/domain/targets_engine.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart'
     show dayNutritionLogsProvider;
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
@@ -12,6 +14,23 @@ import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/fakes.dart';
+
+/// Eski cihaz tercihlerinin yerini alan user_settings alanları (testlerde
+/// kısa yazım için anahtar adları korunur).
+const String fatLossRateKey = 'weekly_rate';
+const String fatLossExpenditureKey = 'expenditure_kcal_manual';
+
+/// Ayarlar: hız ve elle harcama; hedef kilo, plan kilitlenmeyecek ve kilo
+/// verme modu seçilecek şekilde (VKİ 18,6 ya da 30 kg).
+UserSettings _withPlan(UserSettings s, Map<String, Object> plan) {
+  final h = s.heightCm;
+  final target = h == null ? 30.0 : (18.6 * h * h / 10000).ceilToDouble();
+  return s.copyWith(
+    targetWeightKg: target,
+    weeklyRate: FatLossRate.parse(plan[fatLossRateKey] as String?),
+    expenditureKcalManual: plan[fatLossExpenditureKey] as int?,
+  );
+}
 
 Future<FakeSettingsRepository> _pump(
   WidgetTester tester, {
@@ -21,11 +40,14 @@ Future<FakeSettingsRepository> _pump(
   FakeHealthRepository? health,
   FakeSettingsRepository? settingsRepo,
 }) async {
-  SharedPreferences.setMockInitialValues(prefs);
+  SharedPreferences.setMockInitialValues({});
   tester.view.physicalSize = const Size(1000, 4000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final repo = settingsRepo ?? FakeSettingsRepository(settings: settings);
+  final repo = settingsRepo ??
+      FakeSettingsRepository(
+          settings: _applied(_withPlan(settings, prefs),
+              weights.isNotEmpty ? weights : health?.weights ?? const []));
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -58,11 +80,25 @@ UserSettings _profile({
       activityLevel: activity,
     );
 
-Map<String, dynamic> _withoutTargets(UserSettings s) => s.toMap()
-  ..remove('daily_calories')
-  ..remove('daily_protein_g')
-  ..remove('daily_fat_g')
-  ..remove('daily_carbs_g');
+/// Hedefler motorun yazdığı gibi (ilk kurulum / tempo sonrası durum).
+UserSettings _applied(UserSettings s, List<WeightEntry> weights) {
+  if (weights.isEmpty) return s;
+  final latest =
+      weights.reduce((a, b) => b.loggedAt.isAfter(a.loggedAt) ? b : a);
+  final r = resolveTargets(
+    settings: s,
+    latestWeightKg: latest.weightKg,
+    age: ageFromSettings(s, DateTime.now()),
+    sex: Sex.tryParse(s.sex),
+  );
+  return planWrite(
+    settings: s,
+    resolved: r,
+    trigger: PlanTrigger.rateChanged,
+    now: DateTime.now(),
+  )!
+      .settings;
+}
 
 void main() {
   testWidgets('kilo yoksa boş durum ve Kilo ekle', (tester) async {
@@ -81,11 +117,11 @@ void main() {
     expect(find.text('Tavuk göğsü · 540 g'), findsOneWidget);
     expect(find.byKey(const Key('fat-loss-menu-total')), findsOneWidget);
     expect(find.text(fatLossDisclaimer), findsOneWidget);
-    // Varsayılan harcama 3000: 816 kcal açık → 0,74 kg/hafta, uyarı yok.
+    // Varsayılan harcama 3000: 816 kcal açık → 0,74 kg/hafta (%0,88: Hızlı).
     expect(find.text('≈ 0,74 kg/hafta'), findsOneWidget);
     expect(find.byKey(const Key('fat-loss-menu-target')), findsOneWidget);
     expect(find.text(fatLossApproxNote), findsOneWidget);
-    expect(find.byKey(const Key('fat-loss-warning')), findsNothing);
+    expect(find.text(fatLossFastWarning(RateHealth.fast)), findsOneWidget);
     expect(find.text(fatLossWaterNote), findsOneWidget);
 
     await tester.tap(find.descendant(
@@ -126,34 +162,6 @@ void main() {
     expect(find.byKey(const Key('fat-loss-warning')), findsNothing);
   });
 
-  testWidgets('hedefleri ayarla: onay sonrası yalnızca makrolar yazılır',
-      (tester) async {
-    final repo = await _pump(tester, weights: [_weight(84)]);
-    await tester.tap(find.byKey(const Key('fat-loss-apply')));
-    await tester.pumpAndSettle();
-    expect(find.text('Hedefler güncellensin mi?'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('fat-loss-apply-confirm')));
-    await tester.pumpAndSettle();
-    expect(repo.saved, hasLength(1));
-    final s = repo.saved.single;
-    const d = UserSettings.defaults();
-    expect(s.dailyCalories, 2184);
-    expect(s.dailyProteinG, 168);
-    expect(s.dailyFatG, 72);
-    expect(s.dailyCarbsG, 216);
-    expect(_withoutTargets(s), _withoutTargets(d));
-    expect(find.text('Hedefler güncellendi'), findsOneWidget);
-  });
-
-  testWidgets('vazgeçince kaydedilmez', (tester) async {
-    final repo = await _pump(tester, weights: [_weight(84)]);
-    await tester.tap(find.byKey(const Key('fat-loss-apply')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Vazgeç'));
-    await tester.pumpAndSettle();
-    expect(repo.saved, isEmpty);
-  });
-
   testWidgets('en son tartı kullanılır', (tester) async {
     await _pump(tester, weights: [
       _weight(90, ago: const Duration(days: 2)),
@@ -165,7 +173,8 @@ void main() {
 
   testWidgets('profil tamsa harcama profilden; Elle gir saklanır',
       (tester) async {
-    await _pump(tester, weights: [_weight(84)], settings: _profile());
+    final repo =
+        await _pump(tester, weights: [_weight(84)], settings: _profile());
     expect(
         find.text('Harcama profilinden (bazal × hareket düzeyi) hesaplandı.'),
         findsOneWidget);
@@ -177,8 +186,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('fat-loss-edit-expenditure')), findsOneWidget);
     expect(find.textContaining('Günlük harcama 3.000 kcal'), findsOneWidget);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getBool(fatLossManualModeKey), isTrue);
+    expect(repo.settings!.expenditureKcalManual, 3000);
 
     await tester.tap(find.text('Profilden hesapla'));
     await tester.pumpAndSettle();
@@ -195,7 +203,7 @@ void main() {
   });
 
   testWidgets('kayıtlı harcama okunur ve düzenleme saklanır', (tester) async {
-    await _pump(
+    final repo = await _pump(
       tester,
       weights: [_weight(84)],
       prefs: {fatLossExpenditureKey: 2600},
@@ -210,8 +218,7 @@ void main() {
     await tester.tap(find.byKey(const Key('fat-loss-expenditure-save')));
     await tester.pumpAndSettle();
     expect(find.byType(ExpenditureDialog), findsNothing);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getInt(fatLossExpenditureKey), 3500);
+    expect(repo.settings!.expenditureKcalManual, 3500);
     // 1316 kcal açık → 1,20 kg/hafta, uyarı.
     expect(find.text('≈ 1,20 kg/hafta'), findsOneWidget);
     expect(find.byKey(const Key('fat-loss-warning')), findsOneWidget);
@@ -252,35 +259,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byType(ExpenditureDialog), findsNothing);
-  });
-
-  testWidgets('kalori sınırı: diyalog kaydedilecek değeri gösterir',
-      (tester) async {
-    // 30 kg → 780 kcal; sınır 800 → oran 800/780.
-    final repo = await _pump(tester, weights: [_weight(30)]);
-    await tester.tap(find.byKey(const Key('fat-loss-apply')));
-    await tester.pumpAndSettle();
-    expect(find.text(fatLossClampNote(800)), findsOneWidget);
-    expect(
-      find.text('Günlük hedeflerin 800 kcal, 62 g protein, 27 g yağ ve '
-          '78 g karbonhidrat olacak.'),
-      findsOneWidget,
-    );
-    await tester.tap(find.byKey(const Key('fat-loss-apply-confirm')));
-    await tester.pumpAndSettle();
-    final s = repo.saved.single;
-    expect(s.dailyCalories, 800);
-    expect(s.dailyProteinG, 62);
-    expect(s.dailyFatG, 27);
-    expect(s.dailyCarbsG, 78);
-    expect(_withoutTargets(s), _withoutTargets(const UserSettings.defaults()));
-  });
-
-  testWidgets('sınır içinde not yok', (tester) async {
-    await _pump(tester, weights: [_weight(84)]);
-    await tester.tap(find.byKey(const Key('fat-loss-apply')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('fat-loss-apply-clamp')), findsNothing);
   });
 
   testWidgets('kilo hatası: dokununca yeniden yüklenir', (tester) async {
@@ -352,8 +330,9 @@ void main() {
       await tester.pumpWidget(ProviderScope(
         overrides: [
           healthRepositoryProvider.overrideWithValue(health),
-          settingsRepositoryProvider.overrideWithValue(
-              FakeSettingsRepository(settings: const UserSettings.defaults())),
+          settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository(
+              settings: _applied(_withPlan(const UserSettings.defaults(), {}),
+                  health.weights))),
         ],
         child: MaterialApp(
           theme: AppTheme.dark,
@@ -381,7 +360,7 @@ void main() {
 
     testWidgets('hız değişince kalori, makro, menü ve öğün açığı güncellenir',
         (tester) async {
-      await _pump(tester, weights: [_weight(84)]);
+      final repo = await _pump(tester, weights: [_weight(84)]);
       expect(find.text('2.184'), findsOneWidget);
       expect(find.byKey(const Key('fat-loss-rate-classic-info')), findsOneWidget);
       final chip = find.byKey(const Key('fat-loss-rate-half'));
@@ -401,17 +380,15 @@ void main() {
       expect(inCard('fat-loss-rate-card', find.text('Sürdürülebilir')),
           findsOneWidget);
       expect(find.byKey(const Key('fat-loss-rate-classic-info')), findsNothing);
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString(fatLossRateKey), 'half');
+      expect(repo.settings!.weeklyRate, FatLossRate.half);
 
       await tester.tap(find.byKey(const Key('fat-loss-rate-threeQuarter')));
       await tester.pumpAndSettle();
       expect(find.text('2.175'), findsOneWidget);
       expect(inCard('fat-loss-rate-card', find.text('Hızlı')), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('fat-loss-apply')));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('2.175 kcal'), findsWidgets);
+      // Tempo değişimi hedefleri motorla yazar (tek yazar).
+      expect(repo.settings!.dailyCalories, 2175);
+      expect(repo.settings!.targetsSource, TargetsSource.plan);
     });
 
     testWidgets('saklanan 1 kg seçimi, taban notu, agresif ve multivitamin',

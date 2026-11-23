@@ -5,6 +5,7 @@ import 'package:kisisel_asistan/features/health/presentation/fat_loss_providers.
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
 import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
+import 'package:kisisel_asistan/features/settings/presentation/settings_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers/fakes.dart';
@@ -16,7 +17,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final c = ProviderContainer(overrides: [
       healthRepositoryProvider.overrideWithValue(health),
-      settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository(settings: const UserSettings.defaults())),
+      settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository(
+          settings: const UserSettings.defaults().copyWith(dailyProteinG: 168))),
     ]);
     addTearDown(c.dispose);
     return c;
@@ -70,25 +72,41 @@ void main() {
     expect(r.gap(GapMetric.protein).headline, 'Protein 45 g eksik');
   });
 
-  test('yükleme bitmeden yapılan seçim saklı değerle ezilmez', () async {
-    SharedPreferences.setMockInitialValues(
-        {fatLossRateKey: 'one', fatLossExpenditureKey: 2000});
-    final rate = FatLossRateNotifier();
-    final exp = ManualExpenditureNotifier();
-    addTearDown(rate.dispose);
-    addTearDown(exp.dispose);
-    await rate.set(FatLossRate.half);
-    await exp.set(3500);
-    await Future<void>.delayed(Duration.zero);
-    expect(rate.state, FatLossRate.half);
-    expect(exp.state, 3500);
+  test('hız seçimi user_settings\'e yazılır ve hedefleri motorla günceller',
+      () async {
+    final health = FakeHealthRepository(weights: [
+      WeightEntry(id: 'w', weightKg: 84, loggedAt: today),
+    ]);
+    final repo = FakeSettingsRepository(
+      settings: const UserSettings.defaults().copyWith(
+        targetWeightKg: 75,
+        expenditureKcalManual: 2800,
+      ),
+    );
+    final c = ProviderContainer(overrides: [
+      healthRepositoryProvider.overrideWithValue(health),
+      settingsRepositoryProvider.overrideWithValue(repo),
+    ]);
+    addTearDown(c.dispose);
+    await c.read(userSettingsProvider.future);
+    await c.read(fatLossRateProvider.notifier).set(FatLossRate.half);
+    final saved = repo.settings!;
+    expect(saved.weeklyRate, FatLossRate.half);
+    expect(saved.dailyCalories, 2250);
+    expect(saved.targetsSource, TargetsSource.plan);
+    expect(c.read(fatLossRateProvider), FatLossRate.half);
   });
 
-  test('saklı değer seçim yoksa okunur', () async {
-    SharedPreferences.setMockInitialValues({fatLossRateKey: 'one'});
-    final rate = FatLossRateNotifier();
-    addTearDown(rate.dispose);
-    await Future<void>.delayed(Duration.zero);
-    expect(rate.state, FatLossRate.one);
+  test('öğün sayısı user_settings\'e yazılır', () async {
+    final repo = FakeSettingsRepository(settings: const UserSettings.defaults());
+    final c = ProviderContainer(overrides: [
+      healthRepositoryProvider.overrideWithValue(FakeHealthRepository()),
+      settingsRepositoryProvider.overrideWithValue(repo),
+    ]);
+    addTearDown(c.dispose);
+    await c.read(userSettingsProvider.future);
+    await c.read(fatLossMealCountProvider.notifier).set(2);
+    expect(repo.settings!.mealCount, 2);
+    expect(c.read(fatLossMealCountProvider), 2);
   });
 }

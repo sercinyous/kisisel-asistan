@@ -7,6 +7,7 @@ import '../../operations/presentation/operations_widgets.dart';
 import 'health_format.dart';
 import 'health_providers.dart';
 import 'health_widgets.dart';
+import 'providers/targets_providers.dart';
 import 'weight_card.dart';
 
 /// Kilo ölçümü ekleme formu.
@@ -51,6 +52,7 @@ class _WeightFormSheetState extends ConsumerState<WeightFormSheet> {
     }
     final navigator = Navigator.of(context);
     final route = ModalRoute.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
     final container = ProviderScope.containerOf(context, listen: false);
     setState(() {
       _saving = true;
@@ -70,6 +72,7 @@ class _WeightFormSheetState extends ConsumerState<WeightFormSheet> {
     }
     invalidateHealthData(container);
     closeOpsSheet(navigator, route);
+    await updatePlanAfterWeight(container, messenger);
   }
 
   @override
@@ -247,5 +250,24 @@ class _WeightHistorySheetState extends ConsumerState<WeightHistorySheet> {
         ],
       ),
     );
+  }
+}
+
+/// Tartı kaydından sonra hedefleri motorla günceller (kaynak 'manual'
+/// değilse ve fark eşiği aşıyorsa) ve "Hedefin güncellendi: … kcal"
+/// gösterir. Hata tartı kaydını etkilemez.
+Future<void> updatePlanAfterWeight(
+  ProviderContainer container,
+  ScaffoldMessengerState? messenger,
+) async {
+  try {
+    final write = await container
+        .read(planControllerProvider)
+        .applyPlan(PlanTrigger.weightSaved);
+    if (write != null) {
+      messenger?.showSnackBar(SnackBar(content: Text(write.message)));
+    }
+  } on Object {
+    // Hedef güncellenemezse eski hedefler geçerli kalır; Plan öneri gösterir.
   }
 }

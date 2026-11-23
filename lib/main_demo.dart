@@ -28,6 +28,7 @@ import 'demo/demo_foods.dart';
 import 'demo/demo_health_extras.dart';
 import 'features/ai_quick_add/data/gemini_parser_service.dart';
 import 'features/ai_quick_add/data/quick_add_repository.dart';
+import 'features/health/data/body_repository.dart';
 import 'features/health/data/food_catalog.dart';
 import 'features/health/data/health_repository.dart';
 import 'features/health/data/water_repository.dart';
@@ -123,6 +124,7 @@ Future<void> main() async {
         tasksRepositoryProvider.overrideWithValue(data.tasks),
         notesRepositoryProvider.overrideWithValue(data.notes),
         healthRepositoryProvider.overrideWithValue(data.health),
+        bodyRepositoryProvider.overrideWithValue(data.body),
         waterRepositoryProvider.overrideWithValue(FakeWaterRepository()),
         weeklyCheckinRepositoryProvider
             .overrideWithValue(FakeWeeklyCheckinRepository()),

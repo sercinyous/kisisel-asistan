@@ -43,10 +43,6 @@ String rateFloorNote(double actualKgPerWeek) => actualKgPerWeek <= 0
     : 'Bu hız için kalori tabanına takıldı; gerçek hız '
         '≈${formatTrDecimal2(actualKgPerWeek)} kg/hafta.';
 
-/// Uygulamanın kalori sınırı nedeniyle değişen kaydın açıklaması.
-String fatLossClampNote(int kcal) =>
-    'Uygulamanın sınırı nedeniyle ${formatTr(kcal)} kcal olarak kaydedilecek.';
-
 String _date(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
 
@@ -176,65 +172,6 @@ class _TargetsCard extends ConsumerWidget {
 
   final FatLossPlanState state;
 
-  Future<void> _apply(BuildContext context, WidgetRef ref) async {
-    final v = fatLossApplyValues(state.targets);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hedefler güncellensin mi?'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Günlük hedeflerin ${formatTr(v.kcal)} kcal, ${v.proteinG} g protein, '
-              '${v.fatG} g yağ ve ${v.carbsG} g karbonhidrat olacak.',
-              key: const Key('fat-loss-apply-text'),
-            ),
-            if (v.clamped) ...[
-              const SizedBox(height: 8),
-              Text(
-                fatLossClampNote(v.kcal),
-                key: const Key('fat-loss-apply-clamp'),
-                style: TextStyle(color: AppColors.warning),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            key: const Key('fat-loss-apply-confirm'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Ayarla'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final notifier = ref.read(userSettingsProvider.notifier);
-    try {
-      final current = await ref.read(userSettingsProvider.future);
-      await notifier.save(current.copyWith(
-        dailyCalories: v.kcal,
-        dailyProteinG: v.proteinG,
-        dailyFatG: v.fatG,
-        dailyCarbsG: v.carbsG,
-      ));
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Hedefler güncellendi')),
-      );
-    } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Hedefler kaydedilemedi')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -283,15 +220,6 @@ class _TargetsCard extends ConsumerWidget {
                   label: 'Karb', grams: t.carbsG, color: AppColors.nutrition),
               _Macro(label: 'Lif', grams: t.fiberG, color: AppColors.water),
             ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.tonal(
-              key: const Key('fat-loss-apply'),
-              onPressed: () => _apply(context, ref),
-              child: const Text('Hedeflerimi buna göre ayarla'),
-            ),
           ),
         ],
       ),
@@ -565,7 +493,7 @@ class _MenuCard extends ConsumerWidget {
               ],
               selected: {meals},
               onSelectionChanged: (s) =>
-                  ref.read(fatLossMealCountProvider.notifier).state = s.first,
+                  ref.read(fatLossMealCountProvider.notifier).set(s.first),
             ),
           ),
           for (final meal in menu) ...[

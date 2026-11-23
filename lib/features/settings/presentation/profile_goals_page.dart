@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/notification_sync.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../health/domain/targets_engine.dart' show manualTargets;
 import '../domain/user_settings.dart';
 import 'avatar_picker_sheet.dart';
 import 'delete_account_screen.dart';
@@ -239,16 +240,30 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
     final birthYear = int.tryParse(_birthYear.text.trim());
     final displayName = _blankToNull(_displayName.text);
     final work = _blankToNull(_workDescription.text);
-    return base.copyWith(
+    final kcal = int.parse(_calories.text.trim());
+    final protein = int.parse(_protein.text.trim());
+    final carbs = int.parse(_carbs.text.trim());
+    final fat = int.parse(_fat.text.trim());
+    // Kalori/makro elle değiştiyse kaynak 'manual' olur (tartı artık
+    // hedefleri değiştirmez; Plan yalnızca öneri gösterir).
+    final edited = kcal != base.dailyCalories ||
+        protein != base.dailyProteinG ||
+        carbs != base.dailyCarbsG ||
+        fat != base.dailyFatG;
+    final targetsBase = edited
+        ? manualTargets(base,
+            kcal: kcal,
+            proteinG: protein,
+            carbsG: carbs,
+            fatG: fat,
+            now: DateTime.now())
+        : base;
+    return targetsBase.copyWith(
       // numeric(5,2): iki ondalığa yuvarlanır.
       startWeightKg:
           (_parseDecimal(_startWeight.text)! * 100).roundToDouble() / 100,
       targetWeightKg:
           (_parseDecimal(_targetWeight.text)! * 100).roundToDouble() / 100,
-      dailyCalories: int.parse(_calories.text.trim()),
-      dailyProteinG: int.parse(_protein.text.trim()),
-      dailyCarbsG: int.parse(_carbs.text.trim()),
-      dailyFatG: int.parse(_fat.text.trim()),
       dailySteps: int.parse(_steps.text.trim()),
       sleepMinutes: int.parse(_sleep.text.trim()),
       // Boş alan null yazılır; böylece kullanıcı profilini temizleyebilir.

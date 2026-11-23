@@ -10,6 +10,7 @@ import '../../ai_quick_add/presentation/ai_quick_add_modal.dart';
 import '../../ai_quick_add/presentation/quick_add_mode_sheet.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/health_screen.dart';
+import '../../health/presentation/providers/targets_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_screen.dart';
 import '../../operations/presentation/operations_screen.dart';
@@ -105,6 +106,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
     ref.watch(notificationSyncProvider);
     // Bildirimdeki "Yaptım" eylemleri (oturum sahibi denetimiyle).
     ref.watch(reminderActionProcessorProvider);
+    // Eski cihaz tercihleri (yağ yakımı hızı, elle harcama) bir kez
+    // user_settings'e taşınır.
+    ref.watch(legacyFatLossPrefsMigrationProvider);
     // Kokpit kartlarından gelen sekme geçişi isteği.
     ref.listen<int?>(homeTabRequestProvider, (_, next) {
       if (next == null) return;

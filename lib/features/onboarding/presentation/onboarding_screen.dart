@@ -254,7 +254,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _targetWeight.text = _formatKg(target);
     final answers = _answers;
     if (answers == null) return;
-    _fillTargets(GoalSuggestion.compute(answers, nowYear: _now().year));
+    _fillTargets(suggestOnboardingTargets(answers, now: _now()));
     _targetsFor = answers.targetsSignature;
   }
 
