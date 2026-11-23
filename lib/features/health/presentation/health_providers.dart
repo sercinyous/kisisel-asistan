@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/google_health_api.dart';
 import '../../../core/services/health_service.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
@@ -326,8 +327,32 @@ Future<String?> connectGoogleHealth(ProviderContainer container) async {
   } on GoogleAuthException catch (error) {
     return error.kind == GoogleAuthErrorKind.canceled ? null : error.message;
   }
+  // OAuth her Google hesabında başarılı olur; hesapta Google Health (Fitbit)
+  // profili yoksa veri uçları 400 döndürür. Bağlantı kimlik isteğiyle
+  // doğrulanır, profil yoksa kurulmuş sayılmaz.
+  final error = await verifyGoogleHealthAccount(container);
+  if (error != null) return error;
   if (container.read(healthSourceProvider) == HealthSourceKind.googleHealth) {
     await resyncHealthKit(container);
+  }
+  return null;
+}
+
+/// Bağlanan hesabın Google Health profilini denetler. Profil yoksa bağlantıyı
+/// geri alır ve gösterilecek mesajı döndürür. Diğer hatalar (ağ, geçici)
+/// bağlantıyı bozmaz; okuma kartı onları ayrıca gösterir.
+Future<String?> verifyGoogleHealthAccount(ProviderContainer container) async {
+  try {
+    await container.read(googleHealthApiProvider).identity();
+  } on GoogleHealthException catch (error) {
+    if (error.kind == GoogleHealthErrorKind.accountNotLinked) {
+      await container
+          .read(googleConnectionProvider.notifier)
+          .rejectUnlinkedAccount(error);
+      return error.message;
+    }
+  } catch (_) {
+    // Beklenmeyen hata: bağlantı korunur, ilk okuma durumu gösterir.
   }
   return null;
 }

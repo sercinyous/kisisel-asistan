@@ -32,6 +32,11 @@ enum GoogleHealthErrorKind {
   /// Yanıt beklenen biçimde değil.
   invalidResponse,
 
+  /// Google hesabında etkin Google Health (Fitbit) profili yok
+  /// (400 `FAILED_PRECONDITION`, neden `ACCOUNT_NOT_LINKED`). OAuth her Google
+  /// hesabında başarılı olur; veri uçları ise profil kurulana kadar reddeder.
+  accountNotLinked,
+
   /// Diğer 4xx yanıtları.
   requestRejected;
 
@@ -43,10 +48,18 @@ enum GoogleHealthErrorKind {
 }
 
 class GoogleHealthException implements Exception {
-  const GoogleHealthException(this.kind, {this.status, String? message})
-      : _message = message;
+  const GoogleHealthException(
+    this.kind, {
+    this.status,
+    String? message,
+    this.detail,
+  }) : _message = message;
 
   final GoogleHealthErrorKind kind;
+
+  /// Google'ın hata gövdesinden kısaltılmış ve temizlenmiş özet
+  /// (`INVALID_ARGUMENT: ...`); kullanıcı mesajına ve hata raporuna eklenir.
+  final String? detail;
 
   /// HTTP durum kodu (varsa).
   final int? status;
@@ -75,8 +88,16 @@ class GoogleHealthException implements Exception {
           'Google Health\'e ulaşılamadı. İnternet bağlantını kontrol et.',
         GoogleHealthErrorKind.invalidResponse =>
           'Google Health yanıtı okunamadı.',
-        GoogleHealthErrorKind.requestRejected =>
-          'Google Health isteği reddetti (HTTP ${status ?? '?'}).',
+        GoogleHealthErrorKind.accountNotLinked =>
+          'Bu Google hesabında Google Health (Fitbit) profili yok. Fitbit '
+              'uygulamasını aynı Google hesabıyla açıp kurulumu tamamla, '
+              'sonra Google\'a yeniden bağlan.',
+        GoogleHealthErrorKind.requestRejected => detail == null
+            ? 'Google Health isteği reddetti (HTTP ${status ?? '?'}). Google\'a '
+                'yeniden bağlanmayı dene.'
+            : 'Google Health isteği reddetti (HTTP ${status ?? '?'} · '
+                '$detail). Google\'a yeniden bağlanmayı dene; sürerse '
+                'uygulamayı güncelle.',
       };
 
   @override
@@ -94,12 +115,16 @@ GoogleHealthException googleHealthErrorFor(
 }) {
   final reasons = <String>{};
   var apiMessage = '';
+  var rawMessage = '';
+  var apiStatus = '';
   try {
     final decoded = jsonDecode(body);
     if (decoded is Map<String, dynamic>) {
       final error = decoded['error'];
       if (error is Map<String, dynamic>) {
-        apiMessage = '${error['message'] ?? ''}'.toLowerCase();
+        rawMessage = '${error['message'] ?? ''}';
+        apiMessage = rawMessage.toLowerCase();
+        apiStatus = '${error['status'] ?? ''}'.toUpperCase();
         final details = error['details'];
         if (details is List) {
           for (final detail in details) {
@@ -141,6 +166,16 @@ GoogleHealthException googleHealthErrorFor(
     return const GoogleHealthException(GoogleHealthErrorKind.reconnect,
         status: 403);
   }
+  if (status == 400 &&
+      (reasons.contains('ACCOUNT_NOT_LINKED') ||
+          (apiStatus == 'FAILED_PRECONDITION' && reasons.isEmpty) ||
+          apiMessage.contains('not linked'))) {
+    return GoogleHealthException(
+      GoogleHealthErrorKind.accountNotLinked,
+      status: 400,
+      detail: googleErrorSummary(apiStatus, reasons, rawMessage),
+    );
+  }
   if (status == 429) {
     return const GoogleHealthException(GoogleHealthErrorKind.rateLimited,
         status: 429);
@@ -149,8 +184,38 @@ GoogleHealthException googleHealthErrorFor(
     return GoogleHealthException(GoogleHealthErrorKind.unavailable,
         status: status);
   }
-  return GoogleHealthException(GoogleHealthErrorKind.requestRejected,
-      status: status);
+  return GoogleHealthException(
+    GoogleHealthErrorKind.requestRejected,
+    status: status,
+    detail: googleErrorSummary(apiStatus, reasons, rawMessage),
+  );
+}
+
+/// Hata gövdesinin kısa, tek satırlık özeti: `DURUM/NEDEN: mesaj`. Denetim
+/// karakterleri ve fazla boşluk atılır, mesaj [maxLength] karakterde kesilir;
+/// hiçbir alan yoksa `null`.
+String? googleErrorSummary(
+  String apiStatus,
+  Set<String> reasons,
+  String message, {
+  int maxLength = 120,
+}) {
+  String clean(String raw) => raw
+      .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  final code = [
+    if (apiStatus.isNotEmpty) clean(apiStatus),
+    ...reasons.where((r) => r != apiStatus).map(clean),
+  ].where((part) => part.isNotEmpty).join('/');
+  var text = clean(message);
+  if (text.length > maxLength) {
+    text = '${text.substring(0, maxLength - 1).trimRight()}…';
+  }
+  if (code.isEmpty && text.isEmpty) return null;
+  if (code.isEmpty) return text;
+  if (text.isEmpty) return code;
+  return '$code: $text';
 }
 
 /// Bir uyku oturumu ve içindeki uyku (uyanık olmayan) bölümleri.
@@ -292,6 +357,18 @@ class GoogleHealthApi {
     ];
   }
 
+  /// Hesabın Google Health kimliği (`GET users/me/identity`). Bağlandıktan
+  /// hemen sonra çağrılır: profil yoksa [GoogleHealthErrorKind.accountNotLinked]
+  /// fırlatır. Yanıttaki kullanıcı kimliğini (varsa) döndürür.
+  Future<String?> identity() async {
+    final response = await _send('GET', baseUri.resolve('users/me/identity'));
+    for (final key in const ['healthUserId', 'name', 'legacyUserId']) {
+      final value = response[key];
+      if (value is String && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
   // ------------------------------------------------------------ istekler
 
   Future<List<(DateTime, Map<String, dynamic>)>> _dailyRollUp(
@@ -310,6 +387,9 @@ class GoogleHealthApi {
         chunkStart.day + maxRollUpDays,
       );
       final chunkEnd = limit.isBefore(to) ? limit : to;
+      // Gece yarısından hemen sonra `to` yalnızca salise taşır; saniyeye
+      // kırpılan aralık boş kalır ve API 400 döndürür. İstek atlanır.
+      if (!_toSecond(chunkEnd).isAfter(chunkStart)) break;
       String? pageToken;
       final seen = <String>{};
       for (var page = 0; page < maxPages; page++) {
@@ -456,6 +536,9 @@ class GoogleHealthApi {
             'seconds': local.second,
           },
       };
+
+  static DateTime _toSecond(DateTime t) =>
+      DateTime(t.year, t.month, t.day, t.hour, t.minute, t.second);
 
   static DateTime? _civilDay(Object? civil) {
     if (civil is! Map) return null;

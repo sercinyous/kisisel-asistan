@@ -453,7 +453,11 @@ bağlanmak güvenli ve pratik yoldur.
 
 **Sorun giderme**: "bu derlemede yapılandırılmamış" → `GOOGLE_IOS_CLIENT_ID` eksik ya da hatalı;
 "Google Health API … etkin değil" → 1.2. adım; "izin eksik" → yeniden bağlan ve iki kutuyu işaretle;
-"Biraz sonra tekrar dene" → Google'ın geçici yoğunluğu (429/5xx). İzni Google tarafından da kaldırabilirsin:
+"Biraz sonra tekrar dene" → Google'ın geçici yoğunluğu (429/5xx); "Google Health (Fitbit) profili yok" →
+Google hesabı Google Health'e bağlı değil (400 `FAILED_PRECONDITION` / `ACCOUNT_NOT_LINKED`): Fitbit uygulamasını
+aynı Google hesabıyla açıp kurulumu bitir, sonra yeniden bağlan; "isteği reddetti (HTTP 400 · …)" → mesajdaki
+Google kodu (ör. `INVALID_ARGUMENT`) asıl nedendir. Apple Sağlık "Bu hesap için onay gerekli" → Bağlantılar'da
+**Bağla** (Google seçiliyken **Bağlan ve seç**). İzni Google tarafından da kaldırabilirsin:
 myaccount.google.com > Güvenlik > Üçüncü taraf erişimi.
 
 **Doğrulama durumu**: REST istemcisi, API'nin resmi keşif belgesindeki (revizyon 20261114) uç noktalar,

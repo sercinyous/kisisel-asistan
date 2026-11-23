@@ -353,6 +353,26 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
     }
   }
 
+  /// Bağlanan hesapta Google Health profili yok: bağlantı kurulmuş sayılmaz.
+  /// Google oturumu kapatılır ve bu kullanıcının izleri silinir; durum
+  /// "bağlı değil" olur ve [error] mesajı gösterilir.
+  Future<void> rejectUnlinkedAccount(GoogleHealthException error) async {
+    final owner = _ownerId;
+    _generation++;
+    _watermark = null;
+    _ownerChanged = false;
+    state = GoogleLinkState(
+      status: GoogleLinkStatus.disconnected,
+      message: error.message,
+    );
+    try {
+      await _auth.disconnect();
+    } catch (_) {
+      // Oturum kapatılamasa da bağlantı kayıtlı değildir.
+    }
+    await _store.clear(userId: owner);
+  }
+
   /// İzni geri alır, oturumu kapatır ve bu kullanıcının cihazdaki izlerini
   /// siler. Daha önce yazılan günlük değerler ve içe aktarılan antrenmanlar
   /// silinmez.
@@ -380,6 +400,7 @@ class GoogleConnectionController extends Notifier<GoogleLinkState>
         state = const GoogleLinkState(status: GoogleLinkStatus.disconnected);
       case GoogleHealthErrorKind.reconnect:
       case GoogleHealthErrorKind.missingScope:
+      case GoogleHealthErrorKind.accountNotLinked:
         state = GoogleLinkState(
           status: GoogleLinkStatus.reconnect,
           email: state.email,
@@ -477,14 +498,19 @@ final googleHealthHttpClientProvider = Provider<http.Client>((ref) {
   return client;
 });
 
-final googleHealthSourceProvider = Provider<GoogleHealthReader>((ref) {
+/// Google Health REST istemcisi; erişim anahtarını bağlantıdan alır.
+final googleHealthApiProvider = Provider<GoogleHealthApi>((ref) {
   final link = ref.watch(googleConnectionProvider.notifier);
+  return GoogleHealthApi(
+    accessToken: link.accessToken,
+    client: ref.watch(googleHealthHttpClientProvider),
+  );
+});
+
+final googleHealthSourceProvider = Provider<GoogleHealthReader>((ref) {
   return GoogleHealthSource(
-    link: link,
-    api: GoogleHealthApi(
-      accessToken: link.accessToken,
-      client: ref.watch(googleHealthHttpClientProvider),
-    ),
+    link: ref.watch(googleConnectionProvider.notifier),
+    api: ref.watch(googleHealthApiProvider),
   );
 });
 

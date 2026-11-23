@@ -14,7 +14,14 @@ import 'settings_widgets.dart';
 class ConnectionsPage extends ConsumerWidget {
   const ConnectionsPage({super.key});
 
-  Future<void> _reconnectHealth(BuildContext context, WidgetRef ref) async {
+  /// Apple Sağlık bağlantısı tek dokunuşla: HealthKit izin penceresi her
+  /// seferinde istenir, [select] ise kaynak Apple Sağlık'a geçer, ardından bu
+  /// hesap için onay verilir ve son günler okunup yedeklenir.
+  Future<void> _connectAppleHealth(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool select,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
     var granted = false;
@@ -23,14 +30,23 @@ class ConnectionsPage extends ConsumerWidget {
     } catch (_) {
       granted = false;
     }
-    // İlk izinle birlikte son günler de okunur ve yedeklenir.
-    unawaited(resyncHealthKit(container));
-    if (granted) return;
-    showSettingsSnack(
-      messenger,
-      'İzin verilmedi. iPhone Ayarlar > Sağlık > Veri Erişimi '
-      'bölümünden açabilirsin.',
-    );
+    if (!granted) {
+      showSettingsSnack(
+        messenger,
+        'İzin verilmedi. iPhone Ayarlar > Sağlık > Veri Erişimi '
+        'bölümünden açabilirsin.',
+      );
+      return;
+    }
+    if (select) {
+      try {
+        await selectHealthSource(container, HealthSourceKind.appleHealth);
+      } catch (_) {
+        // Seçim yazılamazsa onay yine verilir.
+      }
+    }
+    // Onay (bu hesap için) + yeniden okuma; onay yoksa okuma "bağlı değil" kalır.
+    await approveAppleHealth(container);
   }
 
   @override
@@ -61,14 +77,24 @@ class ConnectionsPage extends ConsumerWidget {
                   'Bu cihazda kullanılamıyor',
                   AppColors.textMuted
                 ),
-              HealthStatus.notConnected ||
+              HealthStatus.notConnected => (
+                  'Bu hesap için onay gerekli',
+                  AppColors.warning
+                ),
               HealthStatus.reconnect ||
               HealthStatus.failed =>
                 ('Okunamadı', AppColors.warning),
             },
           );
-    final healthUnavailable =
-        !appleActive || health.valueOrNull?.status == HealthStatus.unavailable;
+    final healthUnavailable = appleActive &&
+        health.valueOrNull?.status == HealthStatus.unavailable;
+    final needsConsent =
+        appleActive && health.valueOrNull?.status == HealthStatus.notConnected;
+    final appleAction = !appleActive
+        ? 'Bağlan ve seç'
+        : needsConsent
+            ? 'Bağla'
+            : 'Yeniden bağlan';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -94,10 +120,15 @@ class ConnectionsPage extends ConsumerWidget {
                   ),
                   status: healthText,
                   statusColor: healthColor,
-                  actionLabel: 'Yeniden bağlan',
-                  onAction: health.isLoading || healthUnavailable
+                  actionLabel: appleAction,
+                  onAction: (appleActive && health.isLoading) ||
+                          healthUnavailable
                       ? null
-                      : () => _reconnectHealth(context, ref),
+                      : () => _connectAppleHealth(
+                            context,
+                            ref,
+                            select: !appleActive,
+                          ),
                 ),
               ),
               const Divider(height: 16),

@@ -3,11 +3,13 @@
 // Derleme: flutter build web -t lib/main_demo.dart --no-web-resources-cdn
 import 'dart:math' as math;
 
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -143,6 +145,12 @@ Future<void> main() async {
         initialGoogleLinkProvider.overrideWithValue(googleLink),
         googleClientIdProvider.overrideWithValue(_demoGoogleClientId),
         googleAuthClientProvider.overrideWithValue(googleAuth),
+        // Demo ağa çıkmaz: bağlanınca yapılan kimlik denetimi yerelde yanıtlanır.
+        googleHealthHttpClientProvider.overrideWithValue(
+          MockClient(
+            (_) async => http.Response('{"healthUserId":"demo"}', 200),
+          ),
+        ),
         googleHealthSourceProvider.overrideWith(
           (ref) => demoGoogleHealthSource(
             ref.watch(googleConnectionProvider.notifier),

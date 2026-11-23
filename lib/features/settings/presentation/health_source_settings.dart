@@ -110,7 +110,9 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
     _show(
       messenger,
       snapshot?.status == HealthStatus.ok
-          ? 'Google Health eşitlendi.'
+          ? (snapshot!.hasData
+              ? 'Google Health eşitlendi.'
+              : 'Google Health bağlı, henüz veri yok.')
           : snapshot?.message ?? 'Google Health eşitlenemedi.',
     );
   }
@@ -169,11 +171,13 @@ class _GoogleHealthRowState extends ConsumerState<GoogleHealthRow> {
           AppColors.textMuted,
           'Derlemeye GOOGLE_IOS_CLIENT_ID verilmedi.',
         ),
-      GoogleLinkStatus.disconnected => (
-          'Bağlı değil',
-          AppColors.textMuted,
-          'Fitbit verilerin Google hesabından okunur.',
-        ),
+      GoogleLinkStatus.disconnected => link.message == null
+          ? (
+              'Bağlı değil',
+              AppColors.textMuted,
+              'Fitbit verilerin Google hesabından okunur.',
+            )
+          : ('Bağlı değil', AppColors.warning, link.message),
       GoogleLinkStatus.connecting => (
           'Bağlanıyor…',
           AppColors.textMuted,
