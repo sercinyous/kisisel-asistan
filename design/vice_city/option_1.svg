@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#150B3A"/><stop offset=".6" stop-color="#2A0F55"/><stop offset="1" stop-color="#5A1470"/></linearGradient>
+<radialGradient id="halo" cx="512" cy="600" r="520" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF2E97" stop-opacity=".42"/><stop offset=".6" stop-color="#FF2E97" stop-opacity=".1"/><stop offset="1" stop-color="#FF2E97" stop-opacity="0"/></radialGradient>
+<linearGradient id="sun" x1="0" y1="495" x2="0" y2="800" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE45C"/><stop offset=".42" stop-color="#FF8A4C"/><stop offset="1" stop-color="#FF2E97"/></linearGradient>
+<linearGradient id="teal" x1="175" y1="0" x2="852" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#7DFFE6"/><stop offset="1" stop-color="#19D3E0"/></linearGradient>
+<linearGradient id="stem" x1="0" y1="213" x2="0" y2="442" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE45C"/><stop offset="1" stop-color="#FF7A59"/></linearGradient>
+<mask id="cut"><rect width="1024" height="1024" fill="#fff"/><g fill="#000"><rect x="0" y="641.5" width="1024" height="13"/><rect x="0" y="676.3333333333333" width="1024" height="16.666666666666668"/><rect x="0" y="711.1666666666667" width="1024" height="20.333333333333332"/><rect x="0" y="746" width="1024" height="24"/></g></mask>
+<filter id="gl" filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024"><feGaussianBlur stdDeviation="34"/></filter>
+</defs>
+<rect width="1024" height="1024" fill="url(#bg)"/><rect width="1024" height="1024" fill="url(#halo)"/>
+<g transform="translate(512 512) scale(1.07) translate(-513 -508)">
+<path d="M218 355 C190 365 172 385 175 405 C185 480 330 540 520 570 C720 600 850 570 852 512 C852 450 740 385 588 350 L578 393 C680 418 750 450 745 472 C735 505 610 510 470 485 C320 458 200 398 218 355 Z" fill="#19E3D6" filter="url(#gl)" opacity=".55"/>
+<path d="M228 495 C340 580 620 640 778 593 C700 670 580 720 470 795 C455 806 440 800 435 790 C400 720 300 600 228 495 Z" fill="#FF2E97" filter="url(#gl)" opacity=".45"/>
+<path d="M228 495 C340 580 620 640 778 593 C700 670 580 720 470 795 C455 806 440 800 435 790 C400 720 300 600 228 495 Z" fill="url(#sun)" mask="url(#cut)"/>
+<g stroke="url(#stem)"><line x1="568" y1="255" x2="535" y2="400" stroke-width="84" stroke-linecap="round" /></g>
+<path d="M218 355 C190 365 172 385 175 405 C185 480 330 540 520 570 C720 600 850 570 852 512 C852 450 740 385 588 350 L578 393 C680 418 750 450 745 472 C735 505 610 510 470 485 C320 458 200 398 218 355 Z" fill="url(#teal)"/>
+</g></svg>
