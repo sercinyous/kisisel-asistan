@@ -5,11 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/widgets/bento.dart';
 import '../../friends/presentation/friends_button.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/water_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
+import '../../../core/services/health_service.dart';
 import 'kokpit_day_view.dart';
+import 'kokpit_format.dart';
+import 'kokpit_motion.dart';
 import 'kokpit_providers.dart';
 
 /// Kokpit ("Bugün"): kalori, günlük işler/adım/uyku, su ve bugünün rutinleri.
@@ -59,42 +63,140 @@ class KokpitScreen extends ConsumerWidget {
             120,
           ),
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppDates.upperTr(AppDates.longDay(now)),
-                        style: TextStyle(
-                          fontSize: AppType.caption,
-                          letterSpacing: 0.6,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        AppDates.greeting(now),
-                        style: TextStyle(
-                          fontSize: AppType.screenTitle,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const FriendsButton(),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.section),
+            KokpitEntrance(index: 0, child: KokpitGreetingCard(now: now)),
+            const SizedBox(height: AppSpacing.grid),
             const KokpitDayView(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Ekranın tepesindeki selamlama ve gün durumu kartı. Zemini günün
+/// bölümüne (sabah/öğle/akşam/gece) göre pastel bir geçişle boyanır.
+class KokpitGreetingCard extends ConsumerWidget {
+  const KokpitGreetingCard({super.key, required this.now});
+
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phase = KokpitDayPhase.of(now);
+    final items = watchKokpitTodayItems(ref)
+        ?.where((i) => i is! KokpitCheckinItem)
+        .toList();
+    final left = items?.where((i) => !i.done).length;
+    final health = ref.watch(healthTodayProvider).valueOrNull;
+    final sleep = health?.status == HealthStatus.ok && health!.sleepMinutes > 0
+        ? health.sleepMinutes
+        : null;
+
+    return BentoCard(
+      key: const ValueKey('kokpit-greeting'),
+      gradient: phase.gradient,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppDates.upperTr(AppDates.longDay(now)),
+                      style: TextStyle(
+                        fontSize: AppType.caption,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      AppDates.greeting(now),
+                      style: TextStyle(
+                        fontSize: AppType.screenTitle,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const FriendsButton(),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            children: [
+              _StatusChip(
+                icon: phase.icon,
+                color: phase.color,
+                label: phase.label,
+              ),
+              if (left != null)
+                _StatusChip(
+                  key: const ValueKey('kokpit-greeting-tasks'),
+                  icon: left == 0
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.checklist_rounded,
+                  color: AppColors.ops,
+                  label: left == 0 ? 'Bugünün işleri bitti' : '$left iş kaldı',
+                ),
+              if (sleep != null)
+                _StatusChip(
+                  icon: Icons.bedtime_outlined,
+                  color: AppColors.sleep,
+                  label: 'Uyku ${KokpitFormat.sleep(sleep)}',
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    super.key,
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: AppType.caption,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -14,6 +14,7 @@ import '../../health/presentation/providers/streaks_providers.dart';
 import '../../health/presentation/providers/targets_providers.dart';
 import '../../health/presentation/providers/water_providers.dart';
 import 'kokpit_format.dart';
+import 'kokpit_motion.dart';
 import 'kokpit_providers.dart';
 import 'kokpit_widgets.dart';
 
@@ -61,13 +62,14 @@ class KokpitRing extends StatelessWidget {
   Widget build(BuildContext context) {
     final over = value > 1;
     final target = value.isNaN ? 0.0 : value.clamp(0, 1).toDouble();
-    final track = AppColors.surfaceHigh;
+    final track = AppColors.track;
     final arc = over ? overColor : color;
+    final reduce = kokpitReduceMotion(context);
     return SizedBox.square(
       dimension: size,
       child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: target),
-        duration: const Duration(milliseconds: 650),
+        tween: Tween(begin: reduce ? target : 0, end: target),
+        duration: reduce ? Duration.zero : KokpitMotion.fill,
         curve: Curves.easeOutCubic,
         builder: (_, animated, inner) => CustomPaint(
           painter: _RingPainter(
@@ -107,6 +109,12 @@ class _RingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..color = track;
     canvas.drawArc(arcRect, 0, math.pi * 2, false, base);
+    // Halkanın içi alan renginde hafifçe boyanır: halka daha belirgin okunur.
+    canvas.drawCircle(
+      rect.center,
+      arcRect.width / 2 - stroke / 2,
+      Paint()..color = color.withValues(alpha: 0.10),
+    );
     if (value <= 0) return;
     final fill = Paint()
       ..style = PaintingStyle.stroke
@@ -183,6 +191,7 @@ class _HealthCardBody extends ConsumerWidget {
 
     return BentoCard(
       key: const ValueKey('kokpit-health-card'),
+      tint: AppColors.nutrition,
       onTap: () {
         unawaited(HapticFeedback.selectionClick());
         openHealthToday(ref);
@@ -199,7 +208,15 @@ class _HealthCardBody extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const BentoLabel(label: 'Sağlık', trailing: 'Detay ›'),
+            Row(
+              children: [
+                RitimDot(color: AppColors.nutrition, size: 8),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: BentoLabel(label: 'Sağlık', trailing: 'Detay ›'),
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.sm),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -208,25 +225,42 @@ class _HealthCardBody extends ConsumerWidget {
                   value: ratio,
                   color: AppColors.nutrition,
                   overColor: AppColors.danger,
-                  size: 60,
-                  stroke: 7,
-                  child: const SizedBox.shrink(),
+                  size: 68,
+                  stroke: 8,
+                  child: KokpitCountUp(
+                    value: target > 0 ? (ratio * 100).round() : 0,
+                    builder: (_, v) => Text(
+                      '%$v',
+                      style: TextStyle(
+                        fontSize: AppType.caption,
+                        fontWeight: FontWeight.w700,
+                        color: over ? AppColors.danger : AppColors.nutrition,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.section),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        headline,
-                        maxLines: 1,
+                      KokpitCountUp(
+                        value: remaining.abs(),
+                        builder: (_, v) => Text(
+                          over
+                              ? '${thousands.format(v)} kcal fazla'
+                              : 'Kalan ${thousands.format(v)} kcal',
+                          maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: AppType.body,
                           fontWeight: FontWeight.w700,
                           height: 1.3,
-                          color:
-                              over ? AppColors.negative : AppColors.textPrimary,
+                            color: over
+                                ? AppColors.negative
+                                : AppColors.textPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -367,13 +401,26 @@ class KokpitWaterTile extends ConsumerWidget {
     final failed = today == null && water.hasError;
 
     return BentoCard(
+      tint: AppColors.water,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const BentoLabel(label: 'Su'),
+          Row(
+            children: [
+              RitimDot(color: AppColors.water, size: 8),
+              const SizedBox(width: 8),
+              const Expanded(child: BentoLabel(label: 'Su')),
+            ],
+          ),
           const SizedBox(height: AppSpacing.sm),
           if (today != null)
-            _WaterDots(totalMl: today.totalMl, targetMl: today.targetMl),
+            KokpitCelebrate(
+              key: const ValueKey('kokpit-water-celebrate'),
+              active: today.targetMl > 0 && today.totalMl >= today.targetMl,
+              color: AppColors.water,
+              child:
+                  _WaterDots(totalMl: today.totalMl, targetMl: today.targetMl),
+            ),
           const Spacer(),
           const SizedBox(height: AppSpacing.s),
           if (failed)
@@ -453,9 +500,15 @@ class _WaterDots extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (var i = 0; i < glasses; i++)
-          RitimDot(
-            size: 8,
-            color: i < filled ? AppColors.water : AppColors.track,
+          AnimatedScale(
+            scale: i < filled ? 1.15 : 1,
+            duration: kokpitReduceMotion(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 200),
+            child: RitimDot(
+              size: 9,
+              color: i < filled ? AppColors.water : AppColors.track,
+            ),
           ),
       ],
     );
