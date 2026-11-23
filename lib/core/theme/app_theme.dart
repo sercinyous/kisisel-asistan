@@ -480,26 +480,7 @@ abstract final class AppTheme {
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      segmentedButtonTheme: SegmentedButtonThemeData(
-        style: ButtonStyle(
-          visualDensity: VisualDensity.compact,
-          side: WidgetStatePropertyAll(BorderSide(color: p.border)),
-          shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: innerRadius),
-          ),
-          backgroundColor: WidgetStateProperty.resolveWith(
-            (s) => s.contains(WidgetState.selected) ? p.selection : p.surface,
-          ),
-          foregroundColor: WidgetStateProperty.resolveWith(
-            (s) => s.contains(WidgetState.selected)
-                ? p.textPrimary
-                : p.textSecondary,
-          ),
-          textStyle: const WidgetStatePropertyAll(
-            TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
+
       chipTheme: ChipThemeData(
         backgroundColor: p.selection,
         selectedColor: p.accent.withValues(alpha: 0.18),
