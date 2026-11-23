@@ -641,3 +641,5 @@ ortamdan açılamadığından belgelerdeki açıklama metinleri arama özetlerin
   gösterilir ve kaynak Apple Sağlık'a döner.
 - Bağlantılar › Apple Sağlık: düğme her dokunuşta HealthKit iznini ister, sonra bu hesap için onay verir ve
   yeniden okur. `notConnected` → "Bu hesap için onay gerekli" / **Bağla**; Google seçiliyken **Bağlan ve seç**.
+- Bağlantılar › Google Health: hesap bağlı ama Apple Sağlık seçiliyken satırda **Kaynak olarak seç**
+  (`settings-google-select`) görünür; Google'ı etkin kaynak yapar ve ilk okumanın sonucunu bildirir.
