@@ -96,11 +96,26 @@ void main() {
     expect(find.text('Zeytinyağı · 5 yemek kaşığı'), findsOneWidget);
   });
 
-  testWidgets('haftada 0,8 kg üstünde uyarı', (tester) async {
-    // 60 kg → 1560 kcal; 3000 harcama → 1440 açık → 1,3 kg/hafta.
+  testWidgets('agresif hızda uyarı', (tester) async {
+    // 60 kg → 1560 kcal; 3000 harcama → 1440 açık → 1,3 kg/hafta (%2,2).
     await _pump(tester, weights: [_weight(60)]);
     expect(find.byKey(const Key('fat-loss-warning')), findsOneWidget);
-    expect(find.text(fatLossFastWarning), findsOneWidget);
+    expect(find.text(fatLossFastWarning(RateHealth.aggressive)),
+        findsOneWidget);
+  });
+
+  testWidgets('klasik 1.200 altı: uyarı, sayılar aynı', (tester) async {
+    // 40 kg → 1040 kcal.
+    await _pump(tester, weights: [_weight(40)]);
+    expect(find.text('1.040'), findsOneWidget);
+    expect(find.text(classicFloorWarning(1040)), findsOneWidget);
+  });
+
+  testWidgets('saklanan tanınmayan hız klasiğe düşer', (tester) async {
+    await _pump(tester,
+        weights: [_weight(84)], prefs: {fatLossRateKey: 'bilinmeyen'});
+    expect(find.text('2.184'), findsOneWidget);
+    expect(find.byKey(const Key('fat-loss-rate-classic-info')), findsOneWidget);
   });
 
   testWidgets('açık yoksa kayıp yok açıklaması', (tester) async {
@@ -412,7 +427,10 @@ void main() {
       expect(find.text(rateFloorNote(700 * 7 / 7700)), findsOneWidget);
       expect(inCard('fat-loss-rate-card', find.text('Agresif')),
           findsOneWidget);
-      expect(find.text(rateWaterNote), findsOneWidget);
+      expect(find.text(fatLossWaterNote), findsOneWidget);
+      expect(find.text(rateClampLine(1200)), findsOneWidget);
+      expect(inCard('supplement-fiber', find.textContaining('hedefin: 16 g')),
+          findsOneWidget);
       expect(find.text('Multivitamin · önerilir'), findsOneWidget);
       expect(find.text(supplementDisclaimer), findsOneWidget);
     });
@@ -432,6 +450,31 @@ void main() {
           settings: _profile().copyWith(sex: 'female'));
       expect(inCard('supplement-magnesium', find.textContaining('Kadın: 310')),
           findsOneWidget);
+    });
+
+    testWidgets('cinsiyet bilinmeyen profil: iki değer, su sınırı',
+        (tester) async {
+      await _pump(tester,
+          weights: [_weight(150)],
+          settings: _profile().copyWith(sex: 'other'));
+      expect(
+          inCard('supplement-magnesium',
+              find.textContaining('Kadın 310–320 mg, erkek 400–420')),
+          findsOneWidget);
+      expect(
+          inCard('supplement-magnesium', find.textContaining('350 mg\'ı aşma')),
+          findsOneWidget);
+      expect(inCard('supplement-water', find.textContaining('4.000 ml/gün')),
+          findsOneWidget);
+    });
+
+    testWidgets('kayıp yokken ≈0,00 gösterilmez', (tester) async {
+      await _pump(tester,
+          weights: [_weight(70)],
+          prefs: {fatLossRateKey: 'half', fatLossExpenditureKey: 1200});
+      expect(find.textContaining('0,00'), findsNothing);
+      expect(find.text(rateFloorNote(0)), findsOneWidget);
+      expect(find.text('Bu harcamayla kilo kaybı beklenmez.'), findsOneWidget);
     });
 
     testWidgets('profil yoksa iki magnezyum değeri', (tester) async {

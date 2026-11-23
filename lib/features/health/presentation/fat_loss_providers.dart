@@ -41,17 +41,23 @@ class FatLossRateNotifier extends StateNotifier<FatLossRate> {
     _load();
   }
 
+  /// Yükleme bitmeden [set] çağrıldıysa saklı değer onu ezmez.
+  bool _touched = false;
+
   Future<void> _load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString(fatLossRateKey);
-      if (stored != null && mounted) state = FatLossRate.parse(stored);
+      if (stored != null && mounted && !_touched) {
+        state = FatLossRate.parse(stored);
+      }
     } on Object {
       // Saklama kullanılamıyorsa klasik formülle devam edilir.
     }
   }
 
   Future<void> set(FatLossRate rate) async {
+    _touched = true;
     state = rate;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -77,17 +83,23 @@ class ManualExpenditureNotifier extends StateNotifier<int> {
     _load();
   }
 
+  /// Yükleme bitmeden [set] çağrıldıysa saklı değer onu ezmez.
+  bool _touched = false;
+
   Future<void> _load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getInt(fatLossExpenditureKey);
-      if (stored != null && mounted) state = clampExpenditure(stored);
+      if (stored != null && mounted && !_touched) {
+        state = clampExpenditure(stored);
+      }
     } on Object {
       // Saklama kullanılamıyorsa varsayılan değerle devam edilir.
     }
   }
 
   Future<void> set(int kcal) async {
+    _touched = true;
     state = clampExpenditure(kcal);
     try {
       final prefs = await SharedPreferences.getInstance();

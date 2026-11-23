@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/features/health/domain/fat_loss_plan.dart';
+import 'package:kisisel_asistan/features/health/domain/fat_loss_rate.dart';
 
 void main() {
   group('hedefler', () {
@@ -41,26 +42,22 @@ void main() {
       final w = estimateWeeklyLoss(expenditureKcal: 3000, targetKcal: 2184);
       expect(w.deficitKcal, 816);
       expect(w.weeklyKg, closeTo(816 * 7 / 7700, 1e-9));
-      expect(w.isTooFast, isFalse);
     });
 
-    test('0,8 kg/hafta üstü hızlı sayılır', () {
+    test('büyük açıkta kg/hafta', () {
       final w = estimateWeeklyLoss(expenditureKcal: 3000, targetKcal: 1560);
       expect(w.weeklyKg, closeTo(1440 * 7 / 7700, 1e-9));
-      expect(w.isTooFast, isTrue);
     });
 
-    test('yavaş kayıpta uyarı yok', () {
+    test('küçük açıkta kayıp var', () {
       final w = estimateWeeklyLoss(expenditureKcal: 2600, targetKcal: 2184);
       expect(w.hasLoss, isTrue);
-      expect(w.isTooFast, isFalse);
     });
 
     test('açık yoksa kayıp yok', () {
       final w = estimateWeeklyLoss(expenditureKcal: 2000, targetKcal: 2184);
       expect(w.hasLoss, isFalse);
       expect(w.weeklyKg, 0);
-      expect(w.isTooFast, isFalse);
     });
   });
 
@@ -133,6 +130,31 @@ void main() {
       expect(two.fat, closeTo(73, 2));
       expect(two.carbs, closeTo(208, 3));
       expect(two.fiber, closeTo(32, 2));
+    });
+
+    test('hız modlarında menü hedefin ±%10\'unda ya da not', () {
+      for (final kg in [50.0, 70.0, 84.0, 110.0, 150.0, 200.0]) {
+        for (final e in [1800, 2500, 3000, 4000]) {
+          for (final rate in [
+            FatLossRate.half,
+            FatLossRate.threeQuarter,
+            FatLossRate.one
+          ]) {
+            final t = computeRateTargets(
+                    weightKg: kg, expenditureKcal: e, rate: rate)
+                .targets;
+            for (final count in [2, 3]) {
+              final menu = scaledMenu(count, t);
+              final kcal = menuTotals(menu).kcal;
+              final why = '$kg kg, $e, ${rate.name}, $count öğün';
+              expect(kcal, lessThanOrEqualTo(t.kcal * 1.1), reason: why);
+              expect(
+                  kcal >= t.kcal * 0.9 || menuUnderTarget(menu, t), isTrue,
+                  reason: why);
+            }
+          }
+        }
+      }
     });
 
     test('2 öğünde zeytinyağı gramla yazılır', () {

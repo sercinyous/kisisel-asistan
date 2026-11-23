@@ -31,8 +31,14 @@ enum FatLossRate {
 /// Hız modlarının sabitleri.
 abstract final class FatLossRateRules {
   static const int kcalFloor = 1200;
-  static const double proteinCapPerKg = 2.2;
+  /// Kalori yetmezse protein kg × 1,6'ya kadar iner; her durumda en çok
+  /// 220 g.
+  static const double proteinMinPerKg = 1.6;
+  static const int proteinMaxG = 220;
   static const double fatMinPerKg = 0.6;
+
+  /// Protein indirimi de yetmezse yağın inebileceği alt sınır.
+  static const double fatFloorPerKg = 0.5;
   static const double fatShareOfKcal = 0.25;
   static const int carbsMinG = 50;
 
@@ -49,6 +55,7 @@ class FatLossRateResult {
     required this.floorKcal,
     required this.clampedToFloor,
     required this.actualKgPerWeek,
+    required this.proteinReduced,
     required this.fatReduced,
     required this.carbsBelowMin,
   });
@@ -65,11 +72,35 @@ class FatLossRateResult {
   /// Harcama − hedef açığıyla gerçek haftalık kayıp (≥ 0).
   final double actualKgPerWeek;
 
-  /// Karbonhidrat 50 g'a yetsin diye yağ kg × 0,6'ya doğru azaltıldı.
+  /// Protein kg × 2'nin altına indi (kalori yetmedi ya da 220 g sınırı).
+  final bool proteinReduced;
+
+  /// Karbonhidrat 50 g'a yetsin diye yağ azaltıldı.
   final bool fatReduced;
 
-  /// Yağ en alt sınırda olsa da karbonhidrat 50 g'ın altında kaldı.
+  /// Bütün indirimlere rağmen karbonhidrat 50 g'ın altında kaldı.
   final bool carbsBelowMin;
+
+  /// Klasik formül 1.200 kcal tabanının altında kalori veriyor.
+  bool get classicBelowFloor =>
+      rate == FatLossRate.classic &&
+      targets.kcal < FatLossRateRules.kcalFloor;
+
+  /// Makro indirimlerinin açıklaması; indirim yoksa `null`.
+  String? get macroNote {
+    final parts = <String>[
+      if (proteinReduced)
+        'Kalori sınırlı olduğu için protein ${targets.proteinG} g\'a '
+            'indirildi (kg × 2 yerine; en az kg × 1,6, en çok 220 g).',
+      if (fatReduced)
+        'Karbonhidrat en az 50 g kalsın diye yağ ${targets.fatG} g\'a '
+            'azaltıldı.',
+      if (carbsBelowMin)
+        'Karbonhidrat 50 g\'ın altında kaldı; bu kaloriyle uzun süre devam '
+            'etme.',
+    ];
+    return parts.isEmpty ? null : parts.join(' ');
+  }
 }
 
 /// Hız modu için günlük kalori: harcama − r × 7700 / 7; en az
@@ -96,6 +127,7 @@ FatLossRateResult computeRateTargets({
       floorKcal: floor,
       clampedToFloor: false,
       actualKgPerWeek: _weeklyKg(expenditureKcal, t.kcal),
+      proteinReduced: false,
       fatReduced: false,
       carbsBelowMin: false,
     );
@@ -111,6 +143,7 @@ FatLossRateResult computeRateTargets({
     floorKcal: floor,
     clampedToFloor: clamped,
     actualKgPerWeek: _weeklyKg(expenditureKcal, kcal),
+    proteinReduced: macros.proteinReduced,
     fatReduced: macros.fatReduced,
     carbsBelowMin: macros.carbsBelowMin,
   );
@@ -121,49 +154,66 @@ double _weeklyKg(int expenditure, int kcal) {
   return deficit <= 0 ? 0 : deficit * 7 / FatLossRules.kcalPerKgFat;
 }
 
-/// Hız modu makroları: protein = kg × 2 (en çok kg × 2,2);
-/// yağ = max(kg × 0,6, kcal × 0,25 / 9); lif = kcal / 1000 × 14;
-/// karbonhidrat kalan (en az 50 g hedeflenir; yetmezse yağ kg × 0,6'ya
-/// doğru azaltılır).
-({FatLossTargets targets, bool fatReduced, bool carbsBelowMin}) rateMacros({
+/// Hız modu makroları. Başlangıç: protein = kg × 2 (en çok 220 g),
+/// yağ = max(kg × 0,6, kcal × 0,25 / 9), lif = kcal / 1000 × 14,
+/// karbonhidrat kalan. Karbonhidrat 50 g'a yetmezse sırasıyla:
+/// yağ kg × 0,6'ya, protein kg × 1,6'ya, yağ kg × 0,5'e iner. Son çare
+/// karbonhidrat 0 ve yağ kalan kaloriye sığdırılır; böylece
+/// P×4 + Y×9 + K×4 ≤ kcal her zaman sağlanır.
+({
+  FatLossTargets targets,
+  bool proteinReduced,
+  bool fatReduced,
+  bool carbsBelowMin,
+}) rateMacros({
   required double weightKg,
   required int kcal,
 }) {
-  final protein = math.min(
-    (weightKg * FatLossRules.proteinPerKg).floor(),
-    (weightKg * FatLossRateRules.proteinCapPerKg).floor(),
-  );
+  const carbsMin = FatLossRateRules.carbsMinG;
+  final fullProtein = (weightKg * FatLossRules.proteinPerKg).floor();
+  var protein = math.min(fullProtein, FatLossRateRules.proteinMaxG);
   final fatMin = (weightKg * FatLossRateRules.fatMinPerKg).ceil();
-  var fat = math.max(
+  final fatFloor = (weightKg * FatLossRateRules.fatFloorPerKg).ceil();
+  final fatStart = math.max(
     fatMin,
     (kcal * FatLossRateRules.fatShareOfKcal / 9).floor(),
   );
-  final fiber = (kcal * FatLossRules.fiberPer1000Kcal / 1000).floor();
-  int carbsFor(int f) {
-    final rest = kcal - (protein * 4 + f * 9);
-    return rest <= 0 ? 0 : rest ~/ 4;
-  }
+  var fat = fatStart;
+  int fatFits(int p) => ((kcal - p * 4 - carbsMin * 4) / 9).floor();
+  bool short() => protein * 4 + fat * 9 + carbsMin * 4 > kcal;
 
-  var carbs = carbsFor(fat);
-  var reduced = false;
-  if (carbs < FatLossRateRules.carbsMinG && fat > fatMin) {
-    final needKcal = (FatLossRateRules.carbsMinG - carbs) * 4;
-    final cut = math.min(fat - fatMin, (needKcal / 9).ceil());
-    fat -= cut;
-    reduced = cut > 0;
-    carbs = carbsFor(fat);
+  // 1) Yağı %25 payından kg × 0,6'ya doğru indir.
+  if (short() && fat > fatMin) fat = math.max(fatMin, fatFits(protein));
+  // 2) Proteini kg × 1,6'ya doğru indir.
+  if (short()) {
+    final pMin = math.min(
+      (weightKg * FatLossRateRules.proteinMinPerKg).floor(),
+      FatLossRateRules.proteinMaxG,
+    );
+    final need = ((kcal - fat * 9 - carbsMin * 4) / 4).floor();
+    protein = math.max(pMin, math.min(protein, need));
   }
+  // 3) Yağı kg × 0,5'e doğru indir.
+  if (short() && fat > fatFloor) fat = math.max(fatFloor, fatFits(protein));
+  // 4) Son çare: karbonhidrat 0, yağ ve gerekirse protein sığdırılır.
+  if (protein * 4 + fat * 9 > kcal) {
+    if (protein * 4 > kcal) protein = kcal ~/ 4;
+    fat = math.max(0, (kcal - protein * 4) ~/ 9);
+  }
+  final rest = kcal - (protein * 4 + fat * 9);
+  final carbs = rest <= 0 ? 0 : rest ~/ 4;
   return (
     targets: FatLossTargets(
       weightKg: weightKg,
       kcal: kcal,
       proteinG: protein,
       fatG: fat,
-      fiberG: fiber,
+      fiberG: (kcal * FatLossRules.fiberPer1000Kcal / 1000).floor(),
       carbsG: carbs,
     ),
-    fatReduced: reduced,
-    carbsBelowMin: carbs < FatLossRateRules.carbsMinG,
+    proteinReduced: protein < fullProtein,
+    fatReduced: fat < fatStart,
+    carbsBelowMin: carbs < carbsMin,
   );
 }
 
@@ -193,65 +243,84 @@ RateHealth classifyRate(double kgPerWeek, double weightKg) {
 
 /// "Ne kadar sağlıklı?" metinleri.
 class RateInfo {
-  const RateInfo({required this.pros, required this.cons, this.note});
+  const RateInfo({required this.pros, required this.cons});
 
   final List<String> pros;
   final List<String> cons;
-  final String? note;
 }
 
-const String rateWaterNote =
-    'İlk 1–2 haftada tartıdaki hızlı düşüşün bir kısmı sudur.';
-
-RateInfo rateInfo(FatLossRate rate) => switch (rate) {
-      FatLossRate.classic => const RateInfo(
-          pros: [
-            'Sabit formül: kilonun 26 katı kalori; harcamaya bağlı değil.',
-            'Hesabı basit, her gün aynı hedef.',
-          ],
-          cons: [
-            'Haftalık hız harcamana göre değişir; aşağıdaki tahmine bak.',
-          ],
-        ),
-      FatLossRate.half => const RateInfo(
-          pros: [
-            'Kas kaybı en az.',
-            'Açlık ve halsizlik az.',
-            'Alışkanlık kalıcı olur.',
-            'Antrenman performansı korunur.',
-          ],
-          cons: [
-            'Görünür ilerleme yavaş.',
-            'Motivasyon düşebilir.',
-            'Uzun süre gerekir.',
-          ],
-        ),
-      FatLossRate.threeQuarter => const RateInfo(
-          pros: [
-            'Hız ve sürdürülebilirlik dengesi.',
-            'Çoğu kişi için uygun.',
-          ],
-          cons: [
-            'Yüksek proteine ve uykuya daha çok dikkat gerekir.',
-            'Bazı günler açlık hissi olabilir.',
-          ],
-        ),
-      FatLossRate.one => const RateInfo(
-          pros: [
-            'Hızlı sonuç.',
-            'Yüksek kilolularda başlangıçta uygun olabilir.',
-          ],
-          cons: [
-            'Kas kaybı riski artar.',
-            'Yorgunluk, açlık ve sinirlilik.',
-            'Besin eksikliği riski.',
-            'Safra kesesi taşı riski.',
-            'Uzun süre sürdürmek zor; 2–4 haftadan uzun sürdürmeden önce '
-                'doktora danış.',
-          ],
-          note: rateWaterNote,
-        ),
+/// Seçeneğe özgü tek satır.
+String rateOptionLine(FatLossRate rate) => switch (rate) {
+      FatLossRate.classic =>
+        'Sabit formül: harcamaya bağlı değil, her gün aynı hedef.',
+      FatLossRate.half =>
+        '0,50 kg/hafta: en yavaş seçenek; alışkanlık kalıcı olur.',
+      FatLossRate.threeQuarter =>
+        '0,75 kg/hafta: çoğu kişi için hız ve sürdürülebilirlik dengesi.',
+      FatLossRate.one =>
+        '1 kg/hafta: yüksek kilolularda başlangıçta uygun olabilir.',
     };
+
+/// Kalori tabanına takılınca seçilen hız yerine gösterilen satır.
+String rateClampLine(int floorKcal) =>
+    'Hedef kalori ${formatTr(floorKcal)} kcal tabanına takıldı; seçilen hıza '
+    'ulaşılamıyor, gerçek hız daha düşük.';
+
+const Map<RateHealth, RateInfo> _healthInfo = {
+  RateHealth.sustainable: RateInfo(
+    pros: [
+      'Kas kaybı en az.',
+      'Açlık ve halsizlik az.',
+      'Antrenman performansı korunur.',
+    ],
+    cons: [
+      'Görünür ilerleme yavaş.',
+      'Motivasyon düşebilir; uzun süre gerekir.',
+    ],
+  ),
+  RateHealth.fast: RateInfo(
+    pros: [
+      'Görünür ilerleme daha hızlı.',
+      'Kısa-orta vadede sürdürülebilir.',
+    ],
+    cons: [
+      'Yüksek proteine ve uykuya daha çok dikkat gerekir.',
+      'Bazı günler açlık hissi olabilir.',
+    ],
+  ),
+  RateHealth.aggressive: RateInfo(
+    pros: [
+      'Hızlı sonuç.',
+    ],
+    cons: [
+      'Kas kaybı riski artar.',
+      'Yorgunluk, açlık ve sinirlilik.',
+      'Besin eksikliği ve safra kesesi taşı riski.',
+      'Uzun süre sürdürmek zor; 2–4 haftadan uzun sürdürmeden önce '
+          'doktora danış.',
+    ],
+  ),
+};
+
+/// Metinler gerçek hızın sınıfına ([classifyRate]) göre seçilir; başa
+/// seçeneğe özgü satır eklenir. Tabana takıldıysa bu, eksilerin başında
+/// söylenir. Kayıp yoksa yalnızca seçenek satırı (ve taban satırı).
+RateInfo rateInfo(FatLossRateResult result) {
+  final option = rateOptionLine(result.rate);
+  final kg = result.targets.weightKg;
+  final clamp = [if (result.clampedToFloor) rateClampLine(result.floorKcal)];
+  if (result.actualKgPerWeek <= 0) {
+    return RateInfo(
+      pros: [option],
+      cons: clamp,
+    );
+  }
+  final base = _healthInfo[classifyRate(result.actualKgPerWeek, kg)]!;
+  return RateInfo(
+    pros: [option, ...base.pros],
+    cons: [...clamp, ...base.cons],
+  );
+}
 
 /// Diyette günlük vitamin/mineral rehberi (genel yetişkin bilgisi).
 class SupplementGuide {
@@ -261,7 +330,7 @@ class SupplementGuide {
     required this.multivitaminHighlighted,
   });
 
-  /// Günlük su: kg × 35 ml (50 ml'ye yuvarlı).
+  /// Günlük su: kg × 35 ml (50 ml'ye yuvarlı), en çok 4.000 ml.
   final int waterMl;
 
   /// Cinsiyete göre toplam magnezyum; bilinmiyorsa iki değer.
@@ -273,6 +342,7 @@ class SupplementGuide {
 
 abstract final class SupplementRules {
   static const int waterMlPerKg = 35;
+  static const int waterMaxMl = 4000;
   static const int multivitaminKcalLimit = 1500;
 }
 
@@ -281,7 +351,10 @@ SupplementGuide supplementGuide({
   required Sex? sex,
   required int kcal,
 }) {
-  final water = (weightKg * SupplementRules.waterMlPerKg / 50).round() * 50;
+  final water = math.min(
+    (weightKg * SupplementRules.waterMlPerKg / 50).round() * 50,
+    SupplementRules.waterMaxMl,
+  );
   final magnesium = switch (sex) {
     Sex.female => 'Kadın: 310–320 mg/gün toplam (yiyecek + takviye)',
     Sex.male => 'Erkek: 400–420 mg/gün toplam (yiyecek + takviye)',

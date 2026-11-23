@@ -38,9 +38,6 @@ abstract final class FatLossRules {
   static const double fiberPer1000Kcal = 14;
   static const double kcalPerKgFat = 7700;
 
-  /// Haftalık kayıp bu değeri aşarsa uyarı gösterilir (kg/hafta).
-  static const double fastLossKgPerWeek = 0.8;
-
   /// Profil eksikse önerilen günlük harcama (kcal).
   static const int defaultExpenditure = 3000;
   static const int expenditureMin = 1200;
@@ -48,6 +45,12 @@ abstract final class FatLossRules {
 
   /// Örnek menülerin hazırlandığı referans kilo.
   static const double referenceKg = 84;
+
+  /// Referans menülerin kalorisi: 84 × 26.
+  static const double referenceKcal = referenceKg * kcalPerKg;
+
+  /// Menü toplamı hedefin bu oranının altındaysa not gösterilir.
+  static const double menuUnderRatio = 0.9;
 }
 
 /// Kalori = kg × 26; protein = kg × 2; yağ = ⌊kcal / 30⌋;
@@ -89,8 +92,6 @@ class WeeklyLossEstimate {
 
   double get weeklyKg =>
       hasLoss ? deficitKcal * 7 / FatLossRules.kcalPerKgFat : 0;
-
-  bool get isTooFast => weeklyKg > FatLossRules.fastLossKgPerWeek;
 }
 
 WeeklyLossEstimate estimateWeeklyLoss({
@@ -477,12 +478,12 @@ double _step(FatLossFood food) => switch (food.unit) {
 double _minQuantity(FatLossFood food) =>
     _fatSources.contains(food) || food.unit == FoodUnit.gram ? 0 : 1;
 
-/// Referans (84 kg) menüyü kg/84 ile ölçekler: gram 5 g'a, yemek kaşığı
+/// Referans (84 kg, 2.184 kcal) menüyü hedef kcal / 2.184 ile ölçekler: gram 5 g'a, yemek kaşığı
 /// 0,5'e, adet tam sayıya (en az 1) yuvarlanır; ardından [trimToTarget].
 List<Meal> scaledMenu(int mealCount, FatLossTargets targets) {
   final source =
       mealCount == 2 ? FatLossMenus.twoMeals : FatLossMenus.threeMeals;
-  final factor = targets.weightKg / FatLossRules.referenceKg;
+  final factor = targets.kcal / FatLossRules.referenceKcal;
   final meals = [
     for (final meal in source)
       Meal(meal.name, [
@@ -491,6 +492,10 @@ List<Meal> scaledMenu(int mealCount, FatLossTargets targets) {
   ];
   return trimToTarget(meals, targets.kcal, fatTargetG: targets.fatG);
 }
+
+/// Menü toplamı hedefin %90'ının altında kaldı.
+bool menuUnderTarget(List<Meal> menu, FatLossTargets targets) =>
+    menuTotals(menu).kcal < targets.kcal * FatLossRules.menuUnderRatio;
 
 MenuItem _scale(MenuItem item, double factor) {
   final step = _step(item.food);

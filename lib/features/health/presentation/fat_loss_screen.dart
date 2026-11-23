@@ -13,8 +13,18 @@ const String fatLossDisclaimer =
     'Bilgilendirme amaçlıdır; tıbbi tavsiye değildir.';
 const String fatLossWaterNote =
     'İlk 1–2 hafta su kaybı yüzünden tartı daha hızlı düşer.';
-const String fatLossFastWarning =
-    'Hız 0,80 kg/haftayı aşıyor; halsizlik olursa kaloriyi 200–300 kcal artır.';
+/// Haftalık kayıp hızlı/agresif sınıftayken gösterilen uyarı.
+String fatLossFastWarning(RateHealth health) =>
+    'Hız ${health.label.toLowerCase()} (vücut ağırlığının %0,7\'sinden fazla); '
+    'halsizlik olursa kaloriyi 200–300 kcal artır.';
+
+const String menuUnderNote =
+    'Menü hedefin altında; porsiyonları biraz artırabilirsin.';
+
+/// Klasik formül 1.200 kcal tabanının altındayken gösterilen uyarı.
+String classicFloorWarning(int kcal) =>
+    'Bu formül ${formatTr(kcal)} kcal veriyor; 1.200 kcal altına inmemen '
+    'önerilir — hız seçeneklerinden birini kullan.';
 const String fatLossLoadError = 'Plan yüklenemedi. Yeniden denemek için dokun.';
 const String fatLossNegativeDeficit =
     'Hedef harcamanın üstünde; kilo kaybı beklenmez.';
@@ -27,9 +37,11 @@ const String supplementDisclaimer =
     'danış. Hamilelik, emzirme ve kronik hastalıkta farklıdır.';
 
 /// Hız modu kalori tabanına takıldığında gösterilen not.
-String rateFloorNote(double actualKgPerWeek) =>
-    'Bu hız için kalori tabanına takıldı; gerçek hız '
-    '≈${formatTrDecimal2(actualKgPerWeek)} kg/hafta.';
+String rateFloorNote(double actualKgPerWeek) => actualKgPerWeek <= 0
+    ? 'Bu hız için kalori tabanına takıldı. Bu harcamayla kilo kaybı '
+        'beklenmez.'
+    : 'Bu hız için kalori tabanına takıldı; gerçek hız '
+        '≈${formatTrDecimal2(actualKgPerWeek)} kg/hafta.';
 
 /// Uygulamanın kalori sınırı nedeniyle değişen kaydın açıklaması.
 String fatLossClampNote(int kcal) =>
@@ -337,6 +349,7 @@ class _WeeklyCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final weekly = state.weekly;
+    final health = classifyRate(weekly.weeklyKg, state.weight.weightKg);
     final muted =
         theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted);
     return BentoCard(
@@ -406,7 +419,7 @@ class _WeeklyCard extends ConsumerWidget {
                 label: const Text('Günlük harcamayı düzenle'),
               ),
             ),
-          if (weekly.isTooFast) ...[
+          if (weekly.hasLoss && health != RateHealth.sustainable) ...[
             const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,7 +429,7 @@ class _WeeklyCard extends ConsumerWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    fatLossFastWarning,
+                    fatLossFastWarning(health),
                     key: const Key('fat-loss-warning'),
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: AppColors.warning),
@@ -530,6 +543,7 @@ class _MenuCard extends ConsumerWidget {
     final meals = ref.watch(fatLossMealCountProvider);
     final menu = scaledMenu(meals, targets);
     final totals = menuTotals(menu);
+    final under = menuUnderTarget(menu, targets);
     final t = targets;
     return BentoCard(
       child: Column(
@@ -590,6 +604,15 @@ class _MenuCard extends ConsumerWidget {
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: AppColors.textSecondary),
           ),
+          if (under) ...[
+            const SizedBox(height: 4),
+            Text(
+              menuUnderNote,
+              key: const Key('fat-loss-menu-under'),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.warning),
+            ),
+          ],
           const SizedBox(height: 4),
           Text(
             fatLossApproxNote,
@@ -879,10 +902,9 @@ class FatLossRateCard extends ConsumerWidget {
     final weeklyKg = result.actualKgPerWeek;
     final health = classifyRate(weeklyKg, kg);
     final pct = ratePercentOfBodyWeight(weeklyKg, kg);
-    final info = rateInfo(rate);
+    final info = rateInfo(result);
+    final macroNote = result.macroNote;
     final body = theme.textTheme.bodyMedium;
-    final muted =
-        theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted);
     return BentoCard(
       key: const Key('fat-loss-rate-card'),
       child: Column(
@@ -952,10 +974,18 @@ class FatLossRateCard extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               'Klasik: kilonun 26 katı sabit kalori '
-              '(${formatTr(state.targets.kcal)} kcal). Harcamana göre tahmini '
-              'hız ≈${formatTrDecimal2(weeklyKg)} kg/hafta.',
+              '(${formatTr(state.targets.kcal)} kcal).'
+              '${weeklyKg > 0 ? ' Harcamana göre tahmini hız ≈${formatTrDecimal2(weeklyKg)} kg/hafta.' : ''}',
               key: const Key('fat-loss-rate-classic-info'),
               style: body?.copyWith(color: AppColors.textPrimary),
+            ),
+          ],
+          if (result.classicBelowFloor) ...[
+            const SizedBox(height: 6),
+            Text(
+              classicFloorWarning(state.targets.kcal),
+              key: const Key('fat-loss-classic-floor'),
+              style: body?.copyWith(color: AppColors.warning),
             ),
           ],
           if (result.clampedToFloor) ...[
@@ -966,13 +996,10 @@ class FatLossRateCard extends ConsumerWidget {
               style: body?.copyWith(color: AppColors.warning),
             ),
           ],
-          if (result.fatReduced || result.carbsBelowMin) ...[
+          if (macroNote != null) ...[
             const SizedBox(height: 6),
             Text(
-              result.carbsBelowMin
-                  ? 'Karbonhidrat 50 g\'ın altında kaldı; yağ en alt sınırda '
-                      '(kg × 0,6). Bu kaloriyle uzun süre devam etme.'
-                  : 'Karbonhidrat en az 50 g kalsın diye yağ azaltıldı.',
+              macroNote,
               key: const Key('fat-loss-rate-carbs'),
               style: body?.copyWith(color: AppColors.warning),
             ),
@@ -982,11 +1009,6 @@ class FatLossRateCard extends ConsumerWidget {
             _Bullet(text: p, color: AppColors.accent, sign: '+'),
           for (final c in info.cons)
             _Bullet(text: c, color: AppColors.warning, sign: '−'),
-          if (info.note != null) ...[
-            const SizedBox(height: 6),
-            Text(info.note!,
-                key: const Key('fat-loss-rate-water'), style: muted),
-          ],
         ],
       ),
     );
@@ -1073,8 +1095,9 @@ class SupplementCard extends StatelessWidget {
               '1.000–2.000 IU/gün (üst sınır 4.000 IU; kan değeri ölçtürmeden '
               'yüksek doz alma). Yağlı öğünle al.'),
           item('magnesium', 'Magnezyum',
-              '${guide.magnesiumText}. Takviye genelde 200–400 mg '
-              '(sitrat/bisglisinat), akşam. Böbrek hastalığında doktora sor.'),
+              '${guide.magnesiumText}. Takviye genelde 200–350 mg; takviyeden '
+              'günde 350 mg\'ı aşma. Sitrat/bisglisinat, akşam. Böbrek '
+              'hastalığında doktora sor.'),
           item('omega3', 'Omega-3 (EPA+DHA)',
               '250–500 mg/gün. Haftada 2 porsiyon yağlı balık yemiyorsan '
               'takviye. Kan sulandırıcı kullanıyorsan doktora sor.'),
@@ -1091,11 +1114,14 @@ class SupplementCard extends StatelessWidget {
             hot: guide.multivitaminHighlighted,
           ),
           item('water', 'Su',
-              '≈ ${formatTr(guide.waterMl)} ml/gün (kilo × 35 ml).'),
+              '≈ ${formatTr(guide.waterMl)} ml/gün (kilo × 35 ml, en çok 4.000 ml); '
+              'yiyecek ve içecek dahil; kalp/böbrek hastalığında doktora sor.'),
           item('protein', 'Protein',
               'Günlük ${formatTr(state.targets.proteinG)} gramlık hedefi '
               'öğünlere böl; kas kaybını azaltır.'),
-          item('fiber', 'Lif', '25–30 g/gün; sebze, baklagil ve tam tahıl.'),
+          item('fiber', 'Lif',
+              'En az 25 g; hedefin: ${formatTr(state.targets.fiberG)} g. Sebze, '
+              'baklagil ve tam tahıl.'),
           Text(
             supplementDisclaimer,
             key: const Key('supplement-disclaimer'),
