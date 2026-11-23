@@ -154,7 +154,7 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
           BentoCard(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Column(
-              children: [
+              children: _divided([
                 _MenuRow(
                   key: const Key('hesap-profile'),
                   icon: Icons.badge_outlined,
@@ -201,14 +201,14 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                       : source.label,
                   onTap: () => _open(const ConnectionsPage()),
                 ),
-              ],
+              ]),
             ),
           ),
           const SizedBox(height: AppSpacing.section),
           BentoCard(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
             child: Column(
-              children: [
+              children: _divided([
                 // BEGIN faz5_account
                 _MenuRow(
                   key: const Key('settings-privacy'),
@@ -246,7 +246,7 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                   showChevron: false,
                   onTap: _signingOut ? null : _signOut,
                 ),
-              ],
+              ]),
             ),
           ),
         ],
@@ -255,7 +255,21 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
   }
 }
 
-/// Menü satırı: ikon, başlık, sağda gri durum ya da rozet ve ok.
+/// Kart içindeki satırların arasına ince ayırıcı çizgi koyar.
+List<Widget> _divided(List<Widget> rows) => [
+      for (final (i, row) in rows.indexed) ...[
+        if (i > 0)
+          const Divider(
+            height: 1,
+            thickness: 0.5,
+            indent: AppSpacing.cardPadding,
+            endIndent: AppSpacing.cardPadding,
+          ),
+        row,
+      ],
+    ];
+
+/// Menü satırı: başlık, sağda gri durum ya da rozet ve ok.
 class _MenuRow extends StatelessWidget {
   const _MenuRow({
     super.key,
@@ -285,7 +299,7 @@ class _MenuRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: compact ? 44 : 52),
+        constraints: const BoxConstraints(minHeight: 44),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.cardPadding,
@@ -293,19 +307,10 @@ class _MenuRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                icon,
-                size: compact ? 18 : 20,
-                color: danger ? AppColors.danger : AppColors.textSecondary,
-              ),
-              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
                   title,
-                  style: (compact
-                          ? theme.textTheme.bodyMedium
-                          : theme.textTheme.bodyLarge)
-                      ?.copyWith(color: color),
+                  style: theme.textTheme.bodyLarge?.copyWith(color: color),
                 ),
               ),
               if (badge != null)
@@ -327,14 +332,15 @@ class _MenuRow extends StatelessWidget {
                   ),
                 )
               else if (hint != null)
-                Flexible(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 160),
                   child: Text(
                     hint!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.end,
                     style: theme.textTheme.bodySmall
-                        ?.copyWith(color: AppColors.textMuted),
+                        ?.copyWith(color: AppColors.textSecondary),
                   ),
                 ),
               if (showChevron) ...[

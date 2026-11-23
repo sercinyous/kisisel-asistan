@@ -66,8 +66,7 @@ class ReportsWeekDetailsScreen extends ConsumerWidget {
                   )
                 : _NumbersGrid(metrics: value.metrics),
           ),
-          const SizedBox(height: 24),
-          const KokpitSectionHeader(title: 'Geçmiş haftalar'),
+          const SizedBox(height: AppSpacing.grid),
           history.when(
             loading: () => const KokpitSkeletonCard(height: 120),
             error: (_, __) => KokpitInlineMessage(
@@ -89,6 +88,7 @@ class ReportsWeekDetailsScreen extends ConsumerWidget {
               }
               return ReportListCard(
                 icon: Icons.insights_outlined,
+                title: 'Geçmiş haftalar',
                 entries: [
                   for (final item in others)
                     ReportListEntry(

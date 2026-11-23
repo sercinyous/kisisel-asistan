@@ -193,7 +193,7 @@ class SettingsSection extends StatelessWidget {
         children: [
           BentoLabel(
               icon: icon, label: title, color: color, trailing: trailing),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ...children,
         ],
       ),
@@ -401,11 +401,6 @@ class SettingsStatusRow extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(icon, size: 20, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../../health/domain/health_models.dart';
 import '../../health/presentation/health_providers.dart'
     show weightSeriesProvider;
@@ -158,7 +159,7 @@ class ReportsHealthWeekCard extends ConsumerWidget {
                           : KokpitFormat.none,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
@@ -280,7 +281,6 @@ class ReportsMeasurementMonthCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final measurements = ref.watch(measurementsProvider).valueOrNull;
     if (measurements == null) return const SizedBox.shrink();
     final deltas = monthMeasurementDeltas(measurements, month);
@@ -296,67 +296,24 @@ class ReportsMeasurementMonthCard extends ConsumerWidget {
             BentoLabel(
               icon: Icons.straighten_outlined,
               label: 'Ölçü değişimi',
-              color: AppColors.accent,
+              trailing: '${deltas.length} ölçü',
             ),
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.s,
-              runSpacing: AppSpacing.s,
-              children: [
-                for (final d in deltas)
-                  _DeltaChip(
-                    text: measurementDeltaLabel(d),
-                    // Göğüs/kol/bacak/boyun büyümesi iyi ya da kötü
-                    // sayılmaz (Vücut ile aynı: yalnızca azalan bel/kalça iyi).
-                    good: d.field.lowerIsBetter && d.deltaCm < 0,
-                    neutral:
-                        !d.field.lowerIsBetter || d.deltaCm.abs() < 0.05,
-                    style: theme.textTheme.labelLarge,
-                  ),
-              ],
-            ),
+            const SizedBox(height: 4),
+            for (final (i, d) in deltas.indexed)
+              RitimListRow(
+                showDivider: i > 0,
+                title: d.field.label,
+                // Yalnızca azalan bel/kalça iyi sayılır (mint); artış
+                // suçlanmaz, nötr gri kalır.
+                delta: measurementDeltaLabel(d)
+                    .substring(d.field.label.length + 1),
+                deltaColor: d.field.lowerIsBetter &&
+                        d.deltaCm < 0 &&
+                        d.deltaCm.abs() >= 0.05
+                    ? AppColors.positive
+                    : AppColors.textSecondary,
+              ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DeltaChip extends StatelessWidget {
-  const _DeltaChip({
-    required this.text,
-    required this.good,
-    required this.neutral,
-    required this.style,
-  });
-
-  final String text;
-  final bool good;
-  final bool neutral;
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) {
-    // Suçlama yok: artış da nötr gri; yalnızca iyi yön renklenir.
-    final color =
-        neutral || !good ? AppColors.textSecondary : AppColors.fitness;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        child: Text(
-          text,
-          style: style?.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
         ),
       ),
     );

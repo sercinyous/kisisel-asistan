@@ -88,8 +88,7 @@ class ReportsDailyView extends ConsumerWidget {
               ? aiCard(null)
               : _DailyReportGrid(report: value, aiCard: aiCard(value)),
         ),
-        const SizedBox(height: 24),
-        const KokpitSectionHeader(title: 'Son 7 gün'),
+        const SizedBox(height: AppSpacing.grid),
         recent.when(
           loading: () => const KokpitSkeletonCard(height: 120),
           error: (_, __) => KokpitInlineMessage(
@@ -111,6 +110,7 @@ class ReportsDailyView extends ConsumerWidget {
             }
             return ReportListCard(
               icon: Icons.today_outlined,
+              title: 'Son 7 gün',
               entries: [
                 for (final item in others)
                   ReportListEntry(

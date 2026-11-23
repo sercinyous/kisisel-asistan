@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/ritim_avatar.dart';
 import '../../../core/widgets/bento.dart';
+import '../../../core/widgets/ritim_ui.dart';
 import '../data/friends_repository.dart';
 import '../domain/friends_models.dart';
 import 'friends_providers.dart';
@@ -92,11 +93,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    Widget title(String t) => Padding(
-          padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xs, AppSpacing.section, AppSpacing.xs, 8),
-          child: Text(t, style: theme.textTheme.titleMedium),
-        );
+    const gap = SizedBox(height: AppSpacing.grid);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -120,12 +117,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   _sharing(theme),
                 ]
               : [
-                  title('Davetler'),
+                  gap,
                   _incoming(theme),
-                  title('Arkadaşlar'),
+                  gap,
                   _friendList(theme),
-                  title('Arkadaş ekle'),
-                  BentoCard(
+                  gap,
+                  RitimSectionCard(
+                    title: 'Arkadaş ekle',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -140,18 +138,17 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                             hintText: 'ornek@gmail.com',
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        FilledButton.icon(
+                        const SizedBox(height: AppSpacing.grid),
+                        FilledButton(
                           onPressed: _sending ? null : _send,
-                          icon: const Icon(Icons.person_add_alt_1_outlined),
-                          label:
+                          child:
                               Text(_sending ? 'Gönderiliyor…' : 'İstek gönder'),
                         ),
                       ],
                     ),
                   ),
                   _outgoing(theme),
-                  const SizedBox(height: AppSpacing.section),
+                  gap,
                   BentoCard(
                     key: const Key('friends-sharing-settings'),
                     onTap: () => Navigator.of(context).push<void>(
@@ -161,16 +158,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.visibility_outlined,
-                          size: 20,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Text(
                             'Paylaşım ayarları',
-                            style: theme.textTheme.bodyLarge,
+                            style: theme.textTheme.titleMedium,
                           ),
                         ),
                         Icon(
@@ -229,13 +220,29 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       error: (_, __) =>
           _error(theme, () => ref.invalidate(incomingRequestsProvider)),
       data: (list) {
-        if (list.isEmpty) return _message(theme, 'Bekleyen davet yok.');
-        return Column(
-          children: [
-            for (final r in list)
-              Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.grid),
-                child: BentoCard(
+        if (list.isEmpty) {
+          return RitimSectionCard(
+            title: 'Davetler',
+            trailing: 'yok',
+            child: Text(
+              'Bekleyen davet yok.',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+          );
+        }
+        return RitimSectionCard(
+          title: 'Davetler',
+          trailing: '${list.length} davet',
+          child: Column(
+            children: [
+              for (final (i, r) in list.indexed)
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: i == 0
+                        ? null
+                        : Border(top: BorderSide(color: AppColors.border)),
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -263,8 +270,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     ],
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -313,12 +320,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            BentoCard(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.cardPadding,
-                vertical: AppSpacing.sm,
-              ),
+            const SizedBox(height: AppSpacing.grid),
+            RitimSectionCard(
+              title: 'Arkadaşlar',
+              trailing: '${metric.label} · ${period.label}',
               child: Column(
                 children: [
                   for (var i = 0; i < ranked.length; i++)
@@ -372,7 +377,14 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
           SizedBox(
             width: 26,
             child: medal != null
-                ? Icon(Icons.emoji_events_outlined, size: 18, color: medal)
+                ? Text(
+                    '${index + 1}',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: medal,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
                 : Text(
                     '${index + 1}',
                     textAlign: TextAlign.center,
@@ -391,7 +403,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   e.isSelf ? '${e.displayName} (sen)' : e.displayName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall,
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(fontWeight: FontWeight.w500),
                 ),
                 if (e.email.isNotEmpty && e.email != e.displayName)
                   Text(

@@ -98,7 +98,6 @@ class ReportsMonthSummary extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const KokpitSectionHeader(title: 'Ay özeti'),
         BentoGrid(
           children: [
             BentoCell(
@@ -230,7 +229,7 @@ class _MonthStatCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 value,
-                style: theme.textTheme.headlineSmall?.copyWith(
+                style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
