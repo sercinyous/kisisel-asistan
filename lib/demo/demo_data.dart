@@ -273,6 +273,7 @@ class DemoData {
           heightCm: demoHeightCm,
           birthYear: demoBirthYear,
           sex: demoSex,
+          activityLevel: ActivityLevel.moderate,
           teamMembers: _demoTeam,
           avatar: const AvatarChoice(
             kind: AvatarKind.mascot,

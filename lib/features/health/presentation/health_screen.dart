@@ -6,6 +6,7 @@ import '../../../core/widgets/bento.dart';
 import 'activity_cards.dart';
 import 'energy_card.dart';
 import 'health_providers.dart';
+import 'fat_loss_screen.dart';
 import 'health_segment.dart';
 import 'healthkit_card.dart';
 import 'meals_section.dart';
@@ -123,7 +124,12 @@ class _NutritionView extends StatelessWidget {
           ),
           MealsSection(),
           SizedBox(height: AppSpacing.grid),
-          BentoGrid(children: [BentoCell(child: CaloriesWeekCard())]),
+          BentoGrid(
+            children: [
+              BentoCell(child: CaloriesWeekCard()),
+              BentoCell(child: FatLossEntryCard()),
+            ],
+          ),
         ],
       );
 }
