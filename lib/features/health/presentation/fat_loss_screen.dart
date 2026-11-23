@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
-import '../../onboarding/domain/goal_suggestion.dart' show TargetLimits;
 import '../../settings/presentation/settings_providers.dart';
+import 'health_providers.dart' show weightSeriesProvider;
 import 'fat_loss_providers.dart';
 import 'weight_sheets.dart';
 
@@ -13,7 +14,17 @@ const String fatLossDisclaimer =
 const String fatLossWaterNote =
     'İlk 1–2 hafta su kaybı yüzünden tartı daha hızlı düşer.';
 const String fatLossFastWarning =
-    'Hız 0,8 kg/haftayı aşıyor; halsizlik olursa kaloriyi 200–300 kcal artır.';
+    'Hız 0,80 kg/haftayı aşıyor; halsizlik olursa kaloriyi 200–300 kcal artır.';
+const String fatLossLoadError = 'Plan yüklenemedi. Yeniden denemek için dokun.';
+const String fatLossNegativeDeficit =
+    'Hedef harcamanın üstünde; kilo kaybı beklenmez.';
+const String fatLossExpenditureError = '1200–6000 arası gir';
+const String fatLossApproxNote =
+    'Yaklaşık değerler; pişmiş 100 g besin değerleriyle hesaplandı.';
+
+/// Uygulamanın kalori sınırı nedeniyle değişen kaydın açıklaması.
+String fatLossClampNote(int kcal) =>
+    'Uygulamanın sınırı nedeniyle ${formatTr(kcal)} kcal olarak kaydedilecek.';
 
 String _date(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
@@ -47,9 +58,12 @@ class FatLossScreen extends ConsumerWidget {
           error: (e, _) => BentoGrid(children: [
             BentoCell(
               child: BentoCard(
-                onTap: () => ref.invalidate(fatLossPlanProvider),
-                child:
-                    const Text('Kilo yüklenemedi. Yeniden denemek için dokun.'),
+                key: const Key('fat-loss-retry'),
+                onTap: () => ref
+                  ..invalidate(weightSeriesProvider)
+                  ..invalidate(userSettingsProvider)
+                  ..invalidate(fatLossPlanProvider),
+                child: const Text(fatLossLoadError),
               ),
             ),
           ]),
@@ -139,14 +153,29 @@ class _TargetsCard extends ConsumerWidget {
   final FatLossPlanState state;
 
   Future<void> _apply(BuildContext context, WidgetRef ref) async {
-    final t = state.targets;
+    final v = fatLossApplyValues(state.targets);
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hedefler güncellensin mi?'),
-        content: Text(
-          'Günlük hedeflerin ${formatTr(t.kcal)} kcal, ${t.proteinG} g protein, '
-          '${t.fatG} g yağ ve ${t.carbsG} g karbonhidrat olacak.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Günlük hedeflerin ${formatTr(v.kcal)} kcal, ${v.proteinG} g protein, '
+              '${v.fatG} g yağ ve ${v.carbsG} g karbonhidrat olacak.',
+              key: const Key('fat-loss-apply-text'),
+            ),
+            if (v.clamped) ...[
+              const SizedBox(height: 8),
+              Text(
+                fatLossClampNote(v.kcal),
+                key: const Key('fat-loss-apply-clamp'),
+                style: TextStyle(color: AppColors.warning),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -167,17 +196,10 @@ class _TargetsCard extends ConsumerWidget {
     try {
       final current = await ref.read(userSettingsProvider.future);
       await notifier.save(current.copyWith(
-        dailyCalories: t.kcal
-            .clamp(TargetLimits.caloriesMin, TargetLimits.caloriesMax)
-            .toInt(),
-        dailyProteinG: t.proteinG
-            .clamp(TargetLimits.proteinMin, TargetLimits.proteinMax)
-            .toInt(),
-        dailyFatG:
-            t.fatG.clamp(TargetLimits.fatMin, TargetLimits.fatMax).toInt(),
-        dailyCarbsG: t.carbsG
-            .clamp(TargetLimits.carbsMin, TargetLimits.carbsMax)
-            .toInt(),
+        dailyCalories: v.kcal,
+        dailyProteinG: v.proteinG,
+        dailyFatG: v.fatG,
+        dailyCarbsG: v.carbsG,
       ));
       messenger.showSnackBar(
         const SnackBar(content: Text('Hedefler güncellendi')),
@@ -289,33 +311,11 @@ class _WeeklyCard extends ConsumerWidget {
   final FatLossPlanState state;
 
   Future<void> _editExpenditure(BuildContext context, WidgetRef ref) async {
-    final controller =
-        TextEditingController(text: '${ref.read(manualExpenditureProvider)}');
     final value = await showDialog<int>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Günlük harcama'),
-        content: TextField(
-          key: const Key('fat-loss-expenditure-field'),
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(suffixText: 'kcal'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(int.tryParse(controller.text.trim())),
-            child: const Text('Kaydet'),
-          ),
-        ],
-      ),
+      builder: (_) =>
+          ExpenditureDialog(initial: ref.read(manualExpenditureProvider)),
     );
-    controller.dispose();
     if (value != null) {
       await ref.read(manualExpenditureProvider.notifier).set(value);
     }
@@ -339,7 +339,7 @@ class _WeeklyCard extends ConsumerWidget {
           const SizedBox(height: 12),
           if (weekly.hasLoss)
             Text(
-              '≈ ${formatTrDecimal(weekly.weeklyKg)} kg/hafta',
+              '≈ ${formatTrDecimal2(weekly.weeklyKg)} kg/hafta',
               key: const Key('fat-loss-weekly'),
               style: theme.textTheme.headlineSmall?.copyWith(
                 color: AppColors.textPrimary,
@@ -348,7 +348,9 @@ class _WeeklyCard extends ConsumerWidget {
             )
           else
             Text(
-              'Harcama hedef kaloriden yüksek değil; bu planla kilo kaybı beklenmez.',
+              weekly.deficitKcal < 0
+                  ? fatLossNegativeDeficit
+                  : 'Harcama hedef kaloriden yüksek değil; bu planla kilo kaybı beklenmez.',
               key: const Key('fat-loss-no-loss'),
               style: theme.textTheme.bodyLarge,
             ),
@@ -360,6 +362,25 @@ class _WeeklyCard extends ConsumerWidget {
                 ?.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 4),
+          if (state.expenditure.profileAvailable) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<bool>(
+                key: const Key('fat-loss-expenditure-mode'),
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Profilden hesapla')),
+                  ButtonSegment(value: true, label: Text('Elle gir')),
+                ],
+                selected: {!state.expenditure.fromProfile},
+                onSelectionChanged: (s) => ref
+                    .read(manualExpenditureModeProvider.notifier)
+                    .set(s.first),
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
           if (state.expenditure.fromProfile)
             Text('Harcama profilinden (bazal × hareket düzeyi) hesaplandı.',
                 style: muted)
@@ -503,6 +524,7 @@ class _MenuCardState extends State<_MenuCard> {
     final theme = Theme.of(context);
     final menu = scaledMenu(_meals, widget.targets);
     final totals = menuTotals(menu);
+    final t = widget.targets;
     return BentoCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -552,8 +574,87 @@ class _MenuCardState extends State<_MenuCard> {
               fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            'Hedef ${formatTr(t.kcal)} kcal · P ${formatTr(t.proteinG)} g · '
+            'Y ${formatTr(t.fatG)} g · K ${formatTr(t.carbsG)} g · '
+            'Lif ${formatTr(t.fiberG)} g',
+            key: const Key('fat-loss-menu-target'),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            fatLossApproxNote,
+            style:
+                theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Günlük harcama girişi; denetleyicinin sahibi bu durum nesnesidir, böylece
+/// diyalog kapanış animasyonu sırasında da denetleyici geçerli kalır.
+class ExpenditureDialog extends StatefulWidget {
+  const ExpenditureDialog({super.key, required this.initial});
+
+  final int initial;
+
+  @override
+  State<ExpenditureDialog> createState() => _ExpenditureDialogState();
+}
+
+class _ExpenditureDialogState extends State<ExpenditureDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: '${widget.initial}');
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null ||
+        value < FatLossRules.expenditureMin ||
+        value > FatLossRules.expenditureMax) {
+      setState(() => _error = fatLossExpenditureError);
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Günlük harcama'),
+      content: TextField(
+        key: const Key('fat-loss-expenditure-field'),
+        controller: _controller,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        autofocus: true,
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(suffixText: 'kcal', errorText: _error),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Vazgeç'),
+        ),
+        FilledButton(
+          key: const Key('fat-loss-expenditure-save'),
+          onPressed: _submit,
+          child: const Text('Kaydet'),
+        ),
+      ],
     );
   }
 }

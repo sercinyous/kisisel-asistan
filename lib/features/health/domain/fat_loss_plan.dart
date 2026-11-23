@@ -168,7 +168,12 @@ abstract final class FatLossFoods {
   static const tuna = FatLossFood(
       name: 'Ton balığı', kcal: 116, protein: 25, fat: 1, carbs: 0, fiber: 0);
   static const yogurt = FatLossFood(
-      name: 'Süzme yoğurt', kcal: 97, protein: 10, fat: 5, carbs: 4, fiber: 0);
+      name: 'Süzme yoğurt (az yağlı)',
+      kcal: 70,
+      protein: 10,
+      fat: 1.5,
+      carbs: 4,
+      fiber: 0);
   static const lentil = FatLossFood(
       name: 'Kırmızı mercimek',
       kcal: 116,
@@ -194,6 +199,15 @@ abstract final class FatLossFoods {
       fiber: 0,
       unit: FoodUnit.tablespoon,
       unitGrams: 13.5);
+
+  /// Gram birimli zeytinyağı (2 öğünlük menüde gram olarak yazılır).
+  static const oliveOilGrams = FatLossFood(
+      name: 'Zeytinyağı',
+      kcal: 884,
+      protein: 0,
+      fat: 100,
+      carbs: 0,
+      fiber: 0);
   static const walnut = FatLossFood(
       name: 'Ceviz', kcal: 654, protein: 15, fat: 65, carbs: 14, fiber: 6.7);
   static const almond = FatLossFood(
@@ -204,18 +218,18 @@ abstract final class FatLossFoods {
       name: 'Avokado', kcal: 160, protein: 2, fat: 15, carbs: 9, fiber: 6.7);
   static const rice = FatLossFood(
       name: 'Pirinç pilavı',
-      kcal: 150,
+      kcal: 135,
       protein: 2.7,
-      fat: 3,
-      carbs: 28,
+      fat: 2,
+      carbs: 27,
       fiber: 0.4);
   static const bulgur = FatLossFood(
       name: 'Bulgur pilavı',
-      kcal: 111,
+      kcal: 90,
       protein: 3.1,
-      fat: 2.5,
-      carbs: 19,
-      fiber: 4.5);
+      fat: 0.8,
+      carbs: 18.5,
+      fiber: 3.5);
   static const oats = FatLossFood(
       name: 'Kuru yulaf',
       kcal: 389,
@@ -261,7 +275,7 @@ abstract final class FatLossFoods {
       carbs: 13.8,
       fiber: 2.2,
       unit: FoodUnit.piece,
-      unitGrams: 200);
+      unitGrams: 150);
   static const salad = FatLossFood(
       name: 'Salata', kcal: 20, protein: 1.2, fat: 0.2, carbs: 3.6, fiber: 1.8);
 
@@ -329,24 +343,25 @@ class MenuItem {
 
   final FatLossFood food;
 
-  /// Gram ya da birim sayısı ([FatLossFood.unit]).
-  final int quantity;
+  /// Gram ya da birim sayısı ([FatLossFood.unit]); yemek kaşığı yarımlı
+  /// olabilir.
+  final double quantity;
 
-  double get grams => food.unit == FoodUnit.gram
-      ? quantity.toDouble()
-      : quantity * food.unitGrams;
+  double get grams =>
+      food.unit == FoodUnit.gram ? quantity : quantity * food.unitGrams;
 
   double amountOf(double per100) => per100 * grams / 100;
 
   double get kcal => amountOf(food.kcal);
   double get carbs => amountOf(food.carbs);
+  double get fat => amountOf(food.fat);
 
   String get label => food.unit == FoodUnit.gram
-      ? '${formatTr(quantity)} g ${food.name.toLowerCase()}'
-      : '${formatTr(quantity)} ${food.unit == FoodUnit.piece ? '' : '${food.unit.label} '}'
+      ? '${formatTrQuantity(quantity)} g ${food.name.toLowerCase()}'
+      : '${formatTrQuantity(quantity)} ${food.unit == FoodUnit.piece ? '' : '${food.unit.label} '}'
           '${food.name.toLowerCase()}';
 
-  MenuItem withQuantity(int value) => MenuItem(food, value);
+  MenuItem withQuantity(double value) => MenuItem(food, value);
 }
 
 class Meal {
@@ -387,6 +402,8 @@ MenuTotals menuTotals(List<Meal> meals) {
   return MenuTotals(kcal: kcal, protein: p, fat: f, carbs: c, fiber: fi);
 }
 
+/// Referans menüler 84 kg hedeflerine (2.184 kcal, 168 P, 72 Y, 216 K) göre
+/// hazırlanmıştır; toplamları hedefi aşmaz, bu yüzden 84 kg'da kırpma olmaz.
 abstract final class FatLossMenus {
   static const threeMeals = [
     Meal('Kahvaltı', [
@@ -424,32 +441,44 @@ abstract final class FatLossMenus {
       MenuItem(FatLossFoods.rice, 200),
       MenuItem(FatLossFoods.lentil, 150),
       MenuItem(FatLossFoods.salad, 250),
-      MenuItem(FatLossFoods.oliveOil, 20),
+      MenuItem(FatLossFoods.oliveOilGrams, 20),
       MenuItem(FatLossFoods.apple, 1),
     ]),
   ];
 }
 
-/// Zeytinyağı 2 öğünlük menüde gram olarak yazılır; bu yüzden gram birimli
-/// bir kopyası tutulur.
-const _oliveOilGrams = FatLossFood(
-  name: 'Zeytinyağı',
-  kcal: 884,
-  protein: 0,
-  fat: 100,
-  carbs: 0,
-  fiber: 0,
-);
+/// Kırpılırken 0'a inebilen yağ kaynakları (yağ ve kuruyemiş).
+const Set<FatLossFood> _fatSources = {
+  FatLossFoods.oliveOil,
+  FatLossFoods.oliveOilGrams,
+  FatLossFoods.walnut,
+  FatLossFoods.almond,
+  FatLossFoods.butter,
+  FatLossFoods.avocado,
+};
 
-MenuItem _normalize(MenuItem item, List<Meal> source) =>
-    identical(source, FatLossMenus.twoMeals) &&
-            identical(item.food, FatLossFoods.oliveOil)
-        ? MenuItem(_oliveOilGrams, item.quantity)
-        : item;
+/// Hiç kırpılmayan protein kalemleri.
+const Set<FatLossFood> _proteinSources = {
+  FatLossFoods.chicken,
+  FatLossFoods.tuna,
+  FatLossFoods.yogurt,
+  FatLossFoods.egg,
+  FatLossFoods.lentil,
+};
 
-/// Referans (84 kg) menüyü kg/84 ile ölçekler: gram 5 g'a, birim tam sayıya
-/// (en az 1) yuvarlanır. Toplam kalori hedefi aşarsa en çok karbonhidratlı
-/// gram kalemi 5 g'lık adımlarla azaltılır.
+double _step(FatLossFood food) => switch (food.unit) {
+      FoodUnit.gram => 5,
+      FoodUnit.tablespoon => 0.5,
+      FoodUnit.piece => 1,
+    };
+
+/// Kırpmada inilebilecek en küçük miktar: yağ kaynakları 0, birimli diğer
+/// besinler 1, gram besinler 0 (menüden çıkar).
+double _minQuantity(FatLossFood food) =>
+    _fatSources.contains(food) || food.unit == FoodUnit.gram ? 0 : 1;
+
+/// Referans (84 kg) menüyü kg/84 ile ölçekler: gram 5 g'a, yemek kaşığı
+/// 0,5'e, adet tam sayıya (en az 1) yuvarlanır; ardından [trimToTarget].
 List<Meal> scaledMenu(int mealCount, FatLossTargets targets) {
   final source =
       mealCount == 2 ? FatLossMenus.twoMeals : FatLossMenus.threeMeals;
@@ -457,47 +486,68 @@ List<Meal> scaledMenu(int mealCount, FatLossTargets targets) {
   final meals = [
     for (final meal in source)
       Meal(meal.name, [
-        for (final raw in meal.items) _scale(_normalize(raw, source), factor),
+        for (final raw in meal.items) _scale(raw, factor),
       ]),
   ];
-  return trimToTarget(meals, targets.kcal);
+  return trimToTarget(meals, targets.kcal, fatTargetG: targets.fatG);
 }
 
 MenuItem _scale(MenuItem item, double factor) {
-  if (item.food.unit != FoodUnit.gram) {
-    final n = (item.quantity * factor).round();
-    return item.withQuantity(n < 1 ? 1 : n);
-  }
-  final g = (item.quantity * factor / 5).round() * 5;
-  return item.withQuantity(g < 5 ? 5 : g);
+  final step = _step(item.food);
+  final n = (item.quantity * factor / step).round() * step;
+  return item.withQuantity(n < step ? step : n);
 }
 
-/// Toplam kalori [targetKcal]'yi aşıyorsa en çok karbonhidrat veren gram
-/// kalemini 5 g azaltarak hedefin altına indirir.
-List<Meal> trimToTarget(List<Meal> meals, int targetKcal) {
+/// Yağ [fatTargetG]'yi aşarken önce en çok yağ veren yağ kaynağı (yağ,
+/// kuruyemiş) azaltılır; kalori [targetKcal]'yi aşarken en çok karbonhidrat
+/// veren kalem azaltılır, kalmadıysa yağ kaynağı. Protein kalemleri hiç
+/// kırpılmaz. 0'a inen kalem menüden çıkar.
+List<Meal> trimToTarget(List<Meal> meals, int targetKcal, {int? fatTargetG}) {
   final items = [
     for (final m in meals) [...m.items]
   ];
-  double total() => menuTotals([
+  MenuTotals totals() => menuTotals([
         for (var i = 0; i < meals.length; i++) Meal(meals[i].name, items[i]),
-      ]).kcal;
-  while (total() > targetKcal) {
-    var bestMeal = -1, bestItem = -1;
-    var bestCarbs = 0.0;
+      ]);
+
+  (int, int)? pick(bool Function(FatLossFood) allowed,
+      double Function(MenuItem) score) {
+    (int, int)? best;
+    var bestScore = 0.0;
     for (var m = 0; m < items.length; m++) {
       for (var i = 0; i < items[m].length; i++) {
         final item = items[m][i];
-        if (item.food.unit != FoodUnit.gram || item.quantity <= 0) continue;
-        if (item.carbs > bestCarbs) {
-          bestCarbs = item.carbs;
-          bestMeal = m;
-          bestItem = i;
+        if (!allowed(item.food)) continue;
+        if (item.quantity - _step(item.food) < _minQuantity(item.food) - 1e-9) {
+          continue;
+        }
+        final s = score(item);
+        if (s > bestScore) {
+          bestScore = s;
+          best = (m, i);
         }
       }
     }
-    if (bestMeal < 0) break;
-    final item = items[bestMeal][bestItem];
-    items[bestMeal][bestItem] = item.withQuantity(item.quantity - 5);
+    return best;
+  }
+
+  bool isFat(FatLossFood f) => _fatSources.contains(f);
+  bool isCarb(FatLossFood f) => !isFat(f) && !_proteinSources.contains(f);
+
+  while (true) {
+    final t = totals();
+    // Yuvarlama gürültüsü kırpma tetiklemesin diye 0,5 g pay.
+    final fatOver = fatTargetG != null && t.fat > fatTargetG + 0.5;
+    final kcalOver = t.kcal > targetKcal;
+    if (!fatOver && !kcalOver) break;
+    final target = fatOver
+        ? pick(isFat, (i) => i.fat) ??
+            (kcalOver ? pick(isCarb, (i) => i.carbs) : null)
+        : pick(isCarb, (i) => i.carbs) ?? pick(isFat, (i) => i.fat);
+    if (target == null) break;
+    final (m, i) = target;
+    final item = items[m][i];
+    items[m][i] = item.withQuantity(item.quantity - _step(item.food));
   }
   return [
     for (var i = 0; i < meals.length; i++)
@@ -510,9 +560,19 @@ List<Meal> trimToTarget(List<Meal> meals, int targetKcal) {
 
 final NumberFormat _trInt = NumberFormat.decimalPattern('tr_TR');
 final NumberFormat _trOneDecimal = NumberFormat('0.0', 'tr_TR');
+final NumberFormat _trTwoDecimals = NumberFormat('0.00', 'tr_TR');
+final NumberFormat _trQuantity = NumberFormat('0.#', 'tr_TR');
 
 /// Türkçe binlik ayraçlı tam sayı: 2184 → "2.184".
 String formatTr(num value) => _trInt.format(value.round());
 
 /// Bir ondalıklı Türkçe sayı: 0.8 → "0,8".
 String formatTrDecimal(double value) => _trOneDecimal.format(value);
+
+/// İki ondalıklı Türkçe sayı: 0.7418 → "0,74".
+String formatTrDecimal2(double value) => _trTwoDecimals.format(value);
+
+/// Menü miktarı: tam sayı ondalıksız, yarım değer virgüllü (1.5 → "1,5").
+String formatTrQuantity(double value) => value == value.roundToDouble()
+    ? formatTr(value)
+    : _trQuantity.format(value);

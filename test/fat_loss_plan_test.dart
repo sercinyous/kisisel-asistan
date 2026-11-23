@@ -31,6 +31,9 @@ void main() {
     expect(formatTr(540), '540');
     expect(formatTrDecimal(0.8), '0,8');
     expect(formatTrDecimal(84), '84,0');
+    expect(formatTrDecimal2(816 * 7 / 7700), '0,74');
+    expect(formatTrQuantity(1.5), '1,5');
+    expect(formatTrQuantity(3), '3');
   });
 
   group('haftalık kayıp', () {
@@ -75,11 +78,11 @@ void main() {
       final carbs =
           equivalentsFor(t, FatLossMacro.carbs).map((a) => a.label).toList();
       expect(carbs, contains('Muz · 8 adet'));
-      expect(carbs, contains('Pirinç pilavı · 770 g'));
+      expect(carbs, contains('Pirinç pilavı · 800 g'));
       final fiber =
           equivalentsFor(t, FatLossMacro.fiber).map((a) => a.label).toList();
       expect(fiber, contains('Kuru yulaf · 300 g'));
-      expect(fiber, contains('Elma · 7 adet'));
+      expect(fiber, contains('Elma · 9 adet'));
     });
 
     test('öğün sayısına bölünür', () {
@@ -104,17 +107,86 @@ void main() {
   });
 
   group('örnek menü', () {
-    test('84 kg: referans ölçek, toplam hedefi aşmaz (karb kırpılır)', () {
+    test('84 kg: referans hedefin altında, kırpma yok, gramlar aynı', () {
       final t = computeFatLossTargets(84);
-      final menu = scaledMenu(3, t);
-      expect(menu.length, 3);
-      expect(menuTotals(menu).kcal, lessThanOrEqualTo(t.kcal));
-      final breakfast = menu.first.items;
-      expect(breakfast.first.quantity, 3); // yumurta
-      // Kırpmadan önce referans toplamı hedefin üstündedir.
-      expect(menuTotals(FatLossMenus.threeMeals).kcal, greaterThan(t.kcal));
-      // Protein kalemleri kırpılmaz.
-      expect(menu[1].items.first.quantity, 150);
+      for (final count in [2, 3]) {
+        final reference =
+            count == 2 ? FatLossMenus.twoMeals : FatLossMenus.threeMeals;
+        final refTotals = menuTotals(reference);
+        expect(refTotals.kcal, lessThanOrEqualTo(t.kcal));
+        expect(refTotals.fat, lessThanOrEqualTo(t.fatG + 0.5));
+        final menu = scaledMenu(count, t);
+        expect(
+          [for (final m in menu) for (final i in m.items) i.quantity],
+          [for (final m in reference) for (final i in m.items) i.quantity],
+        );
+      }
+      final three = menuTotals(FatLossMenus.threeMeals);
+      expect(three.kcal, closeTo(2176, 25));
+      expect(three.protein, closeTo(171, 3));
+      expect(three.fat, closeTo(71, 2));
+      expect(three.carbs, closeTo(216, 3));
+      expect(three.fiber, closeTo(42, 2));
+      final two = menuTotals(FatLossMenus.twoMeals);
+      expect(two.kcal, closeTo(2165, 45));
+      expect(two.protein, closeTo(167, 3));
+      expect(two.fat, closeTo(73, 2));
+      expect(two.carbs, closeTo(208, 3));
+      expect(two.fiber, closeTo(32, 2));
+    });
+
+    test('2 öğünde zeytinyağı gramla yazılır', () {
+      final oil = FatLossMenus.twoMeals[1].items
+          .firstWhere((i) => i.food.name == 'Zeytinyağı');
+      expect(oil.food.unit, FoodUnit.gram);
+      expect(oil.label, '20 g zeytinyağı');
+    });
+
+    for (final kg in [30.0, 60.0, 84.0, 120.0, 250.0]) {
+      test('$kg kg: kalori hedefi aşmaz, yağ en çok %10 fazla', () {
+        final t = computeFatLossTargets(kg);
+        for (final count in [2, 3]) {
+          final menu = scaledMenu(count, t);
+          final totals = menuTotals(menu);
+          expect(totals.kcal, lessThanOrEqualTo(t.kcal), reason: '$count öğün');
+          expect(totals.fat, lessThanOrEqualTo(t.fatG * 1.1),
+              reason: '$count öğün');
+          for (final meal in menu) {
+            for (final item in meal.items) {
+              if (item.food.unit == FoodUnit.piece) {
+                expect(item.quantity, greaterThanOrEqualTo(1));
+              }
+            }
+          }
+          // Protein kalemleri kırpılmaz: ölçeklenmiş miktar korunur.
+          final chicken = menu
+              .expand((m) => m.items)
+              .firstWhere((i) => identical(i.food, FatLossFoods.chicken));
+          final ref = (count == 2 ? 270 : 150) * kg / 84;
+          expect(chicken.quantity, closeTo(ref, 5));
+        }
+      });
+    }
+
+    test('yağ fazlası önce yağ kaynaklarından kırpılır', () {
+      const meals = [
+        Meal('A', [
+          MenuItem(FatLossFoods.chicken, 100),
+          MenuItem(FatLossFoods.walnut, 40),
+          MenuItem(FatLossFoods.oliveOil, 2),
+          MenuItem(FatLossFoods.rice, 100),
+        ]),
+      ];
+      final trimmed = trimToTarget(meals, 5000, fatTargetG: 20);
+      final items = trimmed.first.items;
+      expect(menuTotals(trimmed).fat, lessThanOrEqualTo(20.5));
+      expect(items.first.quantity, 100);
+      expect(items.firstWhere((i) => i.food == FatLossFoods.rice).quantity,
+          100);
+      final oil = items.where((i) => i.food == FatLossFoods.oliveOil);
+      for (final o in oil) {
+        expect(o.quantity * 2 % 1, 0); // 0,5 adım
+      }
     });
 
     test('ölçekleme: gram 5 g, birim tam sayı', () {
