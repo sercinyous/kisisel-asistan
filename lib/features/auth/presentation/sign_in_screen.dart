@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -10,6 +11,15 @@ import 'sign_in_controller.dart';
 /// Google yapılandırılmamışsa (ya da tarayıcı demosunda) yalnızca e-posta
 /// formu görünür. Kayıt herkese açıktır: Google ilk girişte hesap açar, e-posta
 /// formunda "Kayıt ol" ile yeni hesap oluşturulur.
+/// Yeni hesap şifresinin en kısa uzunluğu.
+const int minPasswordLength = 8;
+
+final RegExp _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
+
+/// Basit e-posta denetimi (boşluklar kırpılır).
+bool isValidEmail(String? value) =>
+    value != null && _emailPattern.hasMatch(value.trim());
+
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -23,6 +33,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _password = TextEditingController();
   bool _emailOpen = false;
   bool _signUp = false;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -37,13 +48,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       return;
     }
     final controller = ref.read(signInControllerProvider.notifier);
-    if (_signUp) {
-      await controller.signUpWithPassword(
-          email: _email.text, password: _password.text);
-    } else {
-      await controller.signInWithPassword(
-          email: _email.text, password: _password.text);
-    }
+    final email = _email.text.trim();
+    final ok = _signUp
+        ? await controller.signUpWithPassword(
+            email: email, password: _password.text)
+        : await controller.signInWithPassword(
+            email: email, password: _password.text);
+    // iOS'un şifreyi anahtar zincirine kaydetmeyi önermesi için.
+    if (ok) TextInput.finishAutofillContext();
   }
 
   @override
@@ -134,34 +146,49 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               autocorrect: false,
-                              autofillHints: const [AutofillHints.username],
+                              autofillHints: const [AutofillHints.email],
                               decoration:
                                   const InputDecoration(hintText: 'E-posta'),
-                              validator: (value) =>
-                                  value == null || !value.contains('@')
-                                      ? 'Geçerli bir e-posta gir.'
-                                      : null,
+                              validator: (value) => isValidEmail(value)
+                                  ? null
+                                  : 'Geçerli bir e-posta gir.',
                             ),
                             const SizedBox(height: AppSpacing.md),
                             TextFormField(
                               controller: _password,
                               enabled: !busy,
-                              obscureText: true,
+                              obscureText: !_showPassword,
                               textInputAction: TextInputAction.done,
                               autofillHints: [
                                 _signUp
                                     ? AutofillHints.newPassword
                                     : AutofillHints.password,
                               ],
-                              decoration:
-                                  const InputDecoration(hintText: 'Şifre'),
+                              decoration: InputDecoration(
+                                hintText: 'Şifre',
+                                suffixIcon: IconButton(
+                                  key: const Key('sign-in-toggle-password'),
+                                  tooltip: _showPassword
+                                      ? 'Şifreyi gizle'
+                                      : 'Şifreyi göster',
+                                  onPressed: () => setState(
+                                    () => _showPassword = !_showPassword,
+                                  ),
+                                  icon: Icon(
+                                    _showPassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                  ),
+                                ),
+                              ),
                               onFieldSubmitted: (_) => _submit(),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Şifreni gir.';
                                 }
-                                if (_signUp && value.length < 6) {
-                                  return 'Şifre en az 6 karakter olmalı.';
+                                if (_signUp && value.length < minPasswordLength) {
+                                  return 'Şifre en az $minPasswordLength '
+                                      'karakter olmalı.';
                                 }
                                 return null;
                               },

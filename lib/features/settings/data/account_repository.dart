@@ -36,7 +36,12 @@ class AccountRepository {
   static const int maxFeedback = 2000;
 
   /// Kullanıcıya bağlı olmayan ama kişisel sayılan cihaz anahtarları.
-  static const List<String> sharedPersonalKeys = ['recent_food_ids'];
+  static const List<String> sharedPersonalKeys = [
+    'recent_food_ids',
+    'stories.seen.v1',
+    'checkin_dismissed_on',
+    'health_nudges_disabled',
+  ];
 
   final SupabaseClient _client;
   final Future<SharedPreferences> Function() _openPrefs;
@@ -75,6 +80,17 @@ class AccountRepository {
               (k) => k.endsWith(':$userId') || sharedPersonalKeys.contains(k))
           .toList();
       for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } catch (_) {}
+  }
+
+  /// Oturum bitince (hangi yoldan olursa olsun) kullanıcı soneki olmayan
+  /// kişisel tercihleri siler; aynı telefonda sonraki hesap devralmaz.
+  Future<void> clearSharedPersonalKeys() async {
+    try {
+      final prefs = await _openPrefs().timeout(const Duration(seconds: 2));
+      for (final key in sharedPersonalKeys) {
         await prefs.remove(key);
       }
     } catch (_) {}

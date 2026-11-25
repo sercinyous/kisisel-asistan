@@ -15,6 +15,7 @@ import '../../onboarding/presentation/onboarding_screen.dart';
 import 'appearance_page.dart';
 import 'categories_team_page.dart';
 import 'connections_page.dart';
+import 'delete_account_screen.dart';
 import 'feedback_sheet.dart';
 import 'my_avatar.dart';
 import 'notifications_page.dart';
@@ -214,7 +215,7 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                 _MenuRow(
                   key: const Key('settings-privacy'),
                   icon: Icons.privacy_tip_outlined,
-                  title: 'Yardım ve gizlilik',
+                  title: 'Gizlilik ve koşullar',
                   compact: true,
                   onTap: () => _open(const PrivacyScreen()),
                 ),
@@ -246,6 +247,14 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                   danger: true,
                   showChevron: false,
                   onTap: _signingOut ? null : _signOut,
+                ),
+                _MenuRow(
+                  key: const Key('settings-delete-account'),
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Hesabımı sil',
+                  compact: true,
+                  danger: true,
+                  onTap: () => _open(const DeleteAccountScreen()),
                 ),
               ]),
             ),

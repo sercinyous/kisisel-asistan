@@ -43,19 +43,20 @@ const store: ReportStore = {
   async listUsers() {
     const { data, error } = await admin
       .from("user_settings")
-      .select("user_id, timezone, onboarded_at");
+      .select("user_id, timezone, onboarded_at, ai_consent_at");
     if (error !== null) throw new Error(error.message);
     return (data ?? []).map((row) => ({
       id: row.user_id as string,
       timeZone: row.timezone as string,
       onboarded: row.onboarded_at !== null,
+      aiConsent: row.ai_consent_at != null,
     }));
   },
 
   async userOf(userId) {
     const { data, error } = await admin
       .from("user_settings")
-      .select("timezone, onboarded_at")
+      .select("timezone, onboarded_at, ai_consent_at")
       .eq("user_id", userId)
       .maybeSingle();
     if (error !== null) throw new Error(error.message);
@@ -64,6 +65,7 @@ const store: ReportStore = {
       id: userId,
       timeZone: data.timezone as string,
       onboarded: data.onboarded_at !== null,
+      aiConsent: data.ai_consent_at != null,
     };
   },
 

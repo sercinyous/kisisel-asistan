@@ -60,7 +60,8 @@ select tf.eq('yeni hesabın ayar satırı nötr varsayılanlarla açılır',
     "weekly_rate": "classic", "expenditure_kcal_manual": null, "meal_count": 3,
     "targets_source": "plan", "targets_updated_at": null, "checkin_cadence": "weekly",
     "checkin_weekday": 1, "checkin_monthday": 1, "checkin_reminder": true,
-    "hide_photos": false, "goal_mode": "fat_loss", "gain_rate": "slow"}'::jsonb);
+    "hide_photos": false, "goal_mode": "fat_loss", "gain_rate": "slow",
+    "ai_consent_at": null}'::jsonb);
 select tf.eq('yeni hesaba rutin/görev/not/tartı/öğün/ekip yüklenmez',
   (select to_jsonb(
      (select count(*) from public.routines where user_id = :A)

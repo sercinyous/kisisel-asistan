@@ -15,6 +15,12 @@
 <key>NSHealthUpdateUsageDescription</key>
 <string>Bu uygulama Sağlık verilerine yazmaz; yalnızca okuma yapar.</string>
 
+<!-- Kamera ve fotoğraf arşivi: profil ve ilerleme fotoğrafı -->
+<key>NSCameraUsageDescription</key>
+<string>Profil ve ilerleme fotoğrafı çekmek için kamera kullanılır; fotoğraf yalnızca sana özel alana yüklenir.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Profil ve ilerleme fotoğrafı seçmek için fotoğraf arşivine erişilir; yalnızca seçtiğin fotoğraf küçültülüp sana özel alana yüklenir.</string>
+
 <!-- Ana ekranda görünen ad -->
 <key>CFBundleDisplayName</key>
 <string>Ritim</string>

@@ -255,6 +255,8 @@ final healthNudgeSyncProvider = FutureProvider<void>((ref) async {
       await notifications.cancelReminder(key);
     }
     for (final p in plan) {
+      // Çıkıştan önce başlamış tur, çıkıştan sonra planlamayı sürdürmez.
+      if (!current()) return;
       await notifications.scheduleReminder(
         ReminderSchedule(
           taskId: p.key,

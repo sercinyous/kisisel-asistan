@@ -5,6 +5,15 @@ import '../../operations/domain/task_category.dart';
 import '../data/settings_repository.dart';
 import '../domain/user_settings.dart';
 
+/// AI (Gemini) kullanımına açık onay. Okunamazsa onay yok sayılır.
+final aiConsentProvider = FutureProvider<bool>((ref) async {
+  try {
+    return await ref.watch(settingsRepositoryProvider).fetchAiConsent();
+  } catch (_) {
+    return false;
+  }
+});
+
 final userSettingsProvider =
     AsyncNotifierProvider<UserSettingsNotifier, UserSettings>(
   UserSettingsNotifier.new,

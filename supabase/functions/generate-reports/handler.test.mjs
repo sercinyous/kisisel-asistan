@@ -533,3 +533,32 @@ test("refresh: sayılar değişmediyse completeClaim jetonla çağrılır", asyn
   assert.deepEqual(calls.complete.map((c) => c.token).sort(), ["jeton-1", "jeton-2"]);
   assert.equal(calls.release.length, 0);
 });
+
+test("cron: AI onayı olmayan kullanıcıya Gemini çağrılmaz, rapor yorumsuz kaydedilir", async () => {
+  const { handler, calls } = setup({
+    store: {
+      listUsers: async () => [
+        { id: "user-1", timeZone: "Europe/Istanbul", onboarded: true, aiConsent: true },
+        { id: "user-2", timeZone: "Europe/Istanbul", onboarded: true, aiConsent: false },
+      ],
+    },
+  });
+  const response = await handler(post({ kind: "daily" }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(response.status, 200);
+  assert.equal(calls.fetch.length, 1);
+  const user2 = calls.save.find((s) => s.userId === "user-2");
+  assert.equal(user2.summary, null);
+});
+
+test("refresh: AI onayı yoksa kota düşülmez, Gemini çağrılmaz", async () => {
+  const { handler, calls } = setup({
+    store: {
+      claimDirty: async () => DIRTY,
+      userOf: async (userId) => ({ id: userId, timeZone: "Europe/Istanbul", onboarded: true, aiConsent: false }),
+    },
+  });
+  const body = await (await handler(post({ kind: "refresh" }, CRON))).json();
+  assert.equal(body.deferred, 2);
+  assert.equal(calls.fetch.length, 0);
+  assert.equal(calls.quota.length, 0);
+});

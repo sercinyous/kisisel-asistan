@@ -107,6 +107,9 @@ void main() {
         tasksRepositoryProvider.overrideWithValue(tasks),
         settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         notificationServiceProvider.overrideWithValue(notifications),
+        // Sağlık dürtüleri gerçek saate bağlıdır (ölçü günü ufka girince
+        // planlanır); bu testler yalnızca görev/rutin kuyruğunu sınar.
+        healthNudgeSyncProvider.overrideWith((ref) async {}),
       ],
     );
     addTearDown(() async {

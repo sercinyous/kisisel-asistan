@@ -163,10 +163,10 @@ void main() {
     await tester.enterText(find.byType(TextFormField).last, '123');
     await tester.tap(find.byKey(const Key('sign-in-submit')));
     await tester.pump();
-    expect(find.text('Şifre en az 6 karakter olmalı.'), findsOneWidget);
+    expect(find.text('Şifre en az 8 karakter olmalı.'), findsOneWidget);
     expect(backend.signUpCalls, 0);
 
-    await tester.enterText(find.byType(TextFormField).last, 'sifre1');
+    await tester.enterText(find.byType(TextFormField).last, 'sifre123');
     await tester.tap(find.byKey(const Key('sign-in-submit')));
     await tester.pumpAndSettle();
 

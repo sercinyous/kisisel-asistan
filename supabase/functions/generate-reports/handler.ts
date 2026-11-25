@@ -24,6 +24,11 @@ export interface ReportUser {
   timeZone: string;
   /** user_settings.onboarded_at dolu mu; ilk kurulumunu bitirmeyen için rapor üretilmez. */
   onboarded: boolean;
+  /**
+   * user_settings.ai_consent_at dolu mu. false ise Gemini çağrılmaz, rapor
+   * yalnızca sayılarla kaydedilir. Belirtilmezse (eski testler) onaylı sayılır.
+   */
+  aiConsent?: boolean;
 }
 
 /** Veritabanı işlemleri (service_role istemcisiyle; yalnızca sunucuda). */
@@ -170,7 +175,9 @@ async function generateForUser(
   if (!target.ok) return { status: "rejected", error: target.error };
   try {
     const metrics = await deps.store.metrics(kind, user.id, target.date);
-    const summary = await generateSummary(deps, kind, target.date, metrics);
+    const summary = user.aiConsent === false
+      ? null
+      : await generateSummary(deps, kind, target.date, metrics);
     await deps.store.save(
       kind,
       user.id,
@@ -209,11 +216,13 @@ async function refreshOne(
       await deps.store.completeClaim(report);
       return "unchanged";
     }
-    const allowed = await deps.store.consumeQuota(
-      report.userId,
-      REPORT_REFRESH_QUOTA_KIND,
-      refreshLimit,
-    );
+    const owner = await deps.store.userOf(report.userId);
+    const allowed = owner !== null && owner.aiConsent !== false &&
+      await deps.store.consumeQuota(
+        report.userId,
+        REPORT_REFRESH_QUOTA_KIND,
+        refreshLimit,
+      );
     const summary = allowed
       ? await generateSummary(deps, report.kind, report.date, fresh.metrics)
       : null;

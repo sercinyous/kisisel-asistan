@@ -1,5 +1,5 @@
 name: kisisel_asistan
-description: Kişisel Asistan & Operasyon Merkezi (tek kullanıcı, iOS Ad-Hoc).
+description: Ritim - görev, rutin, hatırlatıcı ve sağlık takibini tek yerde toplayan kişisel asistan (iOS).
 publish_to: "none"
 version: 1.0.0+1
 

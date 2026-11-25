@@ -1010,9 +1010,18 @@ class FakeHealthRepository implements HealthRepository {
 /// Bellekte çalışan ayar deposu. [settings] boşsa ilk okuma varsayılanı
 /// "oluşturur" (gerçek deponun satır yokken yaptığı gibi).
 class FakeSettingsRepository implements SettingsRepository {
-  FakeSettingsRepository({this.settings});
+  FakeSettingsRepository({this.settings, this.aiConsent = true});
 
   UserSettings? settings;
+
+  /// AI onayı; demo ve mevcut testler onaylı başlar.
+  bool aiConsent;
+
+  @override
+  Future<bool> fetchAiConsent() async => aiConsent;
+
+  @override
+  Future<void> setAiConsent(bool granted) async => aiConsent = granted;
 
   /// Doluysa [fetch] bu hatayı fırlatır.
   Object? fetchError;

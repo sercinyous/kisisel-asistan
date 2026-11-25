@@ -433,6 +433,12 @@ alter table public.user_settings
   add column if not exists display_name text check (char_length(display_name) <= 60),
   add column if not exists work_description text check (char_length(work_description) <= 500);
 
+-- AI (Gemini) açık onayı (App Store 5.1.2). Boş = onay yok: istemci hızlı
+-- eklemeyi açmadan önce sorar, generate-reports Gemini yorumunu atlar.
+-- Mevcut hesaplara yazılmaz; herkes ilk AI kullanımında onay verir.
+alter table public.user_settings
+  add column if not exists ai_consent_at timestamptz;
+
 -- Profil avatarı (sürüm 8). avatar_kind: 'initials' (baş harfler, varsayılan),
 -- 'mascot' (assets/mascots/<avatar_mascot>.svg) ya da 'photo' (Storage
 -- avatars/<uid>/avatar.jpg). avatar_color AppColors rol adıdır (null =

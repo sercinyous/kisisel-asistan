@@ -58,7 +58,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     let body: unknown = null;
     try {
       const text = await req.text();
-      if (text.length > MAX_BODY_BYTES) {
+      if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) {
         return jsonResponse(400, { ok: false, error: MESSAGES.badRequest });
       }
       body = text.length === 0 ? null : JSON.parse(text);

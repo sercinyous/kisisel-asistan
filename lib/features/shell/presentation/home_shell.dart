@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../../core/widgets/app_bottom_bar.dart';
 import '../../ai_quick_add/domain/quick_add_mode.dart';
+import '../../ai_quick_add/presentation/ai_consent_sheet.dart';
 import '../../ai_quick_add/presentation/ai_quick_add_modal.dart';
 import '../../ai_quick_add/presentation/quick_add_mode_sheet.dart';
 import '../../health/presentation/health_providers.dart';
@@ -95,6 +96,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
     final mode =
         quickAddModeForTab(_index) ?? await QuickAddModeSheet.show(context);
     if (mode == null || !mounted) return;
+    if (!await ensureAiConsent(context, ref) || !mounted) return;
     final saved = await AiQuickAddModal.show(context, mode: mode);
     if (saved == null || saved == 0) return;
     messenger.showSnackBar(SnackBar(content: Text('$saved kayıt eklendi.')));

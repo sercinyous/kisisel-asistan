@@ -25,9 +25,11 @@ Supabase Dashboard'da ve App Store Connect'te kendin doldur.
 
 - iPhone'da `DEMO_EPOSTA` / `DEMO_SIFRE` ile giriş yap; Kokpit, İşler,
   Sağlık ve İçgörü dolu görünmeli.
-- Sağ üstteki profil ikonu > Hesap: Yardım ve gizlilik ile Sorun bildir satırları;
-  Hesabımı sil, Profil ve hedefler sayfasının en altında görünmeli
-  (demo hesabında **Hesabımı sil**'i deneme; denersen 1–2. adımları tekrarla).
+- Sağ üstteki profil ikonu > Hesap: Gizlilik ve koşullar (en üstte AI onayı
+  anahtarı), Sorun bildir ve kartın en altında Hesabımı sil satırları görünmeli
+  (Hesabımı sil, Profil ve hedefler sayfasının en altında da var; demo hesabında
+  **Hesabımı sil**'i deneme; denersen 1–2. adımları tekrarla).
+- Demo hesabında AI onayı boştur: ilk "+" kullanımında onay sayfası çıkmalı.
 - İçgörü sekmesinde "Raporu yeniden oluştur" bir kez denenebilir.
 
 ## 4. App Store Connect
@@ -43,24 +45,33 @@ Password: DEMO_SIFRE
 **Review Notes** (aynen yapıştır, yer tutucu yok):
 
 ```
-This is a personal-assistant app for a small group of friends. Anyone can sign
-up, but please use the demo account provided above (e-mail + password on the sign-in screen; do not use "Sign in
-with Google").
+Ritim is a Turkish personal assistant (tasks, routines, reminders, meals and
+health goals). Anyone can sign up; please use the demo account provided above
+(e-mail + password on the sign-in screen, after tapping "E-posta ile devam et").
 
 The demo account is pre-filled with sample, non-personal data (tasks, notes,
 routines, meals, workouts and 14 days of step/sleep/energy summaries).
 
 Health data: the app reads steps, sleep, active energy, height and weight from
 Apple Health only after the user grants permission and confirms import for the
-account (Health tab). It never writes to Apple Health. Health data is not used
+account (Sağlık tab). It never writes to Apple Health. Health data is not used
 for advertising and is not shared with third parties.
 
-AI quick add (center "+" button): the text the user types is sent through our
-server function to Google Gemini to turn it into a task/meal/note.
+AI (third-party data sharing, explicit consent): the first time the user taps
+the center "+" button, a consent sheet explains that the typed text is sent to
+Google Gemini; nothing is sent unless the user taps "Kabul ediyorum". Report
+comments use only computed numbers and are also skipped without consent.
+Consent can be withdrawn at: profile avatar (top right of Kokpit) > Hesap >
+"Gizlilik ve koşullar" > "AI özellikleri (Google Gemini)" switch.
 
-Account deletion: Settings (gear icon on Kokpit) > "Hesabımı sil", type SİL to
-confirm. This permanently deletes the account and all its data on the server.
-Privacy policy: Settings > "Gizlilik". Feedback: Settings > "Sorun bildir".
+Account deletion (two taps from the home screen): profile avatar (top right of
+Kokpit) > Hesap > "Hesabımı sil" (last row of the bottom card). Type SİL or SIL
+(either spelling works with an English keyboard) and tap "Hesabımı kalıcı
+olarak sil". This permanently deletes the account and all its data on the
+server. It is also reachable during first-run setup ("Hesabı sil" at the top).
+
+Privacy policy in the app: Hesap > "Gizlilik ve koşullar".
+Feedback: Hesap > "Sorun bildir".
 
 The UI is in Turkish.
 ```

@@ -13,6 +13,7 @@ import '../../health/domain/energy_balance.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../operations/presentation/operations_providers.dart';
 import '../../settings/domain/user_settings.dart';
+import '../../settings/presentation/delete_account_screen.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/onboarding_op_key_store.dart';
 import '../data/onboarding_repository.dart';
@@ -612,12 +613,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close_outlined),
                   )
-                else
+                else ...[
+                  TextButton(
+                    key: const Key('onboarding-delete-account'),
+                    onPressed: _saving
+                        ? null
+                        : () => Navigator.of(context).push<void>(
+                              MaterialPageRoute(
+                                builder: (_) => const DeleteAccountScreen(),
+                              ),
+                            ),
+                    child: Text(
+                      'Hesabı sil',
+                      style: TextStyle(color: AppColors.danger),
+                    ),
+                  ),
                   TextButton(
                     key: const Key('onboarding-sign-out'),
                     onPressed: _saving ? null : _signOut,
                     child: const Text('Çıkış yap'),
                   ),
+                ],
               ],
             ),
           ),
