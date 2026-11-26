@@ -410,7 +410,7 @@ void main() {
     await tester.tap(find.text('3 kaydı kaydet'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Kaydedilemedi.'), findsOneWidget);
+    expect(find.textContaining('Kayıt doğrulanamadı.'), findsOneWidget);
     expect(find.text('3 kaydı kaydet'), findsOneWidget);
     expect(host.closed, isFalse);
     expect(notifications.scheduled, isEmpty);
@@ -725,7 +725,7 @@ void main() {
       await tester.tap(find.text('Kaydet ve iş girişine geç'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Kaydedilemedi.'), findsOneWidget);
+      expect(find.textContaining('Kayıt doğrulanamadı.'), findsOneWidget);
       expect(find.text('Bunları anladım'), findsOneWidget);
       expect(find.text('Kaydet ve iş girişine geç'), findsOneWidget);
       expect(find.text('İş girişi'), findsNothing);

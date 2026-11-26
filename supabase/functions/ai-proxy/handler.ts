@@ -153,7 +153,9 @@ export function createHandler(deps: ProxyDeps): (req: Request) => Promise<Respon
 
     if (!upstream.ok) {
       deps.log(`Gemini HTTP ${upstream.status}`);
-      if (upstream.status >= 500) await refund(userId);
+      // 400 isteğin kendisinden gelir; diğer hatalar (429, 402, 401/403/404,
+      // 5xx) kullanıcının suçu değildir, birim iade edilir.
+      if (upstream.status !== 400) await refund(userId);
       const mapped = mapUpstreamError(upstream.status);
       return fail(mapped.status, mapped.error);
     }

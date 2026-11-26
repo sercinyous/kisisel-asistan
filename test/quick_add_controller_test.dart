@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
@@ -134,6 +136,25 @@ void main() {
       expect(harness.health.inputs, ['sağlık metni']);
       expect(stateOf(QuickAddMode.work).entry!.tasks, hasLength(1));
       expect(stateOf(QuickAddMode.health).entry!.nutrition, hasLength(1));
+    });
+
+    test('ayrıştırma iptal edilince geç gelen yanıt yok sayılır', () async {
+      final gate = Completer<void>();
+      harness.parserFor(QuickAddMode.work).handler = (_) async {
+        await gate.future;
+        return ParsedEntry.fromJson(const {
+          'tasks': [_task],
+        }).restrictedTo(QuickAddMode.work);
+      };
+      final controller = controllerFor(QuickAddMode.work);
+      final pending = controller.parse('süt al');
+      expect(stateOf(QuickAddMode.work).status, QuickAddStatus.parsing);
+      controller.cancelParse();
+      expect(stateOf(QuickAddMode.work).status, QuickAddStatus.idle);
+      gate.complete();
+      await pending;
+      expect(stateOf(QuickAddMode.work).status, QuickAddStatus.idle);
+      expect(stateOf(QuickAddMode.work).entry, isNull);
     });
 
     test('iki alanın durumu birbirinden bağımsızdır', () async {
@@ -511,7 +532,7 @@ void main() {
       final state = stateOf(QuickAddMode.work);
       expect(state.status, QuickAddStatus.preview);
       expect(state.entry!.totalCount, 2);
-      expect(state.errorMessage, contains('hiçbir kayıt yazılmadı'));
+      expect(state.errorMessage, contains('doğrulanamadı'));
       // Sağlık dürtüleri kayıttan bağımsız planlanır; iş hatırlatması yok.
       expect(
         harness.notifications.scheduled

@@ -63,7 +63,7 @@ class GeminiTransport {
     http.Client? client,
     Duration timeout = const Duration(seconds: 30),
     RetryDelay retryDelay = defaultRetryDelay,
-    int maxAttempts = 3,
+    int maxAttempts = 2,
   })  : _apiKey = apiKey.trim(),
         _model = model,
         _proxyUrl = proxyUrl,

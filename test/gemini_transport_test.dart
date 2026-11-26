@@ -327,14 +327,14 @@ void main() {
     }
 
     for (final status in [500, 503, 504]) {
-      test('$status 3 kez denenir', () async {
+      test('$status 2 kez denenir', () async {
         var calls = 0;
         final transport = proxyTransport((_) async {
           calls++;
           return json({'error': 'geçici'}, status);
         });
         final e = await expectAiError(transport.post(geminiBody));
-        expect(calls, 3);
+        expect(calls, 2);
         expect(e.statusCode, status);
       });
     }
@@ -360,7 +360,7 @@ void main() {
         },
       );
       await expectAiError(transport.post(geminiBody));
-      expect(delays, [1, 2]); // 3 denemede 2 bekleme
+      expect(delays, [1]); // 2 denemede 1 bekleme
     });
 
     test('ağ hataları ve zaman aşımı yeniden denenir', () async {
@@ -368,11 +368,19 @@ void main() {
       final transport = proxyTransport((_) async {
         calls++;
         if (calls == 1) throw const SocketException('offline');
-        if (calls == 2) throw http.ClientException('reset');
         return geminiOk('tamam');
       });
       await transport.post(geminiBody);
-      expect(calls, 3);
+      expect(calls, 2);
+
+      var resets = 0;
+      final reset = proxyTransport((_) async {
+        resets++;
+        if (resets == 1) throw http.ClientException('reset');
+        return geminiOk('tamam');
+      });
+      await reset.post(geminiBody);
+      expect(resets, 2);
 
       var slowCalls = 0;
       final slow = proxyTransport(
@@ -384,7 +392,7 @@ void main() {
         timeout: const Duration(milliseconds: 20),
       );
       final e = await expectAiError(slow.post(geminiBody));
-      expect(slowCalls, 3);
+      expect(slowCalls, 2);
       expect(e.message,
           'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
@@ -432,7 +440,7 @@ void main() {
         return json({'error': 'quota'}, 429);
       });
       final e = await expectAiError(transport.post(geminiBody));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.message,
           'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.');
     });

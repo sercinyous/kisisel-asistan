@@ -127,6 +127,17 @@ class TasksRepository {
           .gte('completed_at', day.toUtc().toIso8601String())
           .order('completed_at', ascending: true)
           .limit(200),
+      // Bugün eklenen tarihsiz açık görevler ("süt al") saatsiz satır olur;
+      // yoksa + ile eklenen iş Kokpit'te kaybolmuş gibi görünür.
+      _client
+          .from('tasks')
+          .select()
+          .neq('status', 'done')
+          .isFilter('due_at', null)
+          .isFilter('remind_at', null)
+          .gte('created_at', day.toUtc().toIso8601String())
+          .order('created_at', ascending: true)
+          .limit(20),
     ]);
     final byId = <String, TaskItem>{
       for (final rows in results)

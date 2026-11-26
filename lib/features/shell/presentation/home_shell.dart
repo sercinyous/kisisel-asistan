@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/notification_service.dart'
+    show notificationTapPayload, tabForNotificationPayload;
 import '../../../core/services/notification_sync.dart';
 import '../../../core/widgets/app_bottom_bar.dart';
 import '../../ai_quick_add/domain/quick_add_mode.dart';
@@ -10,6 +12,7 @@ import '../../ai_quick_add/presentation/ai_consent_sheet.dart';
 import '../../ai_quick_add/presentation/ai_quick_add_modal.dart';
 import '../../ai_quick_add/presentation/quick_add_mode_sheet.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../health/presentation/providers/body_providers.dart';
 import '../../health/presentation/health_screen.dart';
 import '../../health/presentation/providers/targets_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
@@ -37,6 +40,9 @@ class HomeShell extends ConsumerStatefulWidget {
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
 }
+
+/// Arka arkaya gelen "resumed" olaylarında ağır tazelemenin en kısa aralığı.
+const Duration resumeRefreshThrottle = Duration(seconds: 60);
 
 class _HomeShellState extends ConsumerState<HomeShell>
     with WidgetsBindingObserver {
@@ -83,10 +89,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scheduleClockTick();
+    notificationTapPayload.addListener(_openNotificationTarget);
     // Açılışta HealthKit'in son günleri gün sonu değerleriyle tamamlanır
     // (uygulama kapalıyken biten günleri başka okuyan yoktur).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // Uygulama bildirime dokunularak açıldıysa ilgili sekme.
+      _openNotificationTarget();
       unawaited(
         backfillHealthKit(ProviderScope.containerOf(context, listen: false)),
       );
@@ -96,6 +105,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    notificationTapPayload.removeListener(_openNotificationTarget);
     _clockTimer?.cancel();
     super.dispose();
   }
@@ -105,16 +115,41 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
-    _refreshForNewMoment();
+    // Denetim Merkezi, izin uyarısı ya da seçici kapanınca da "resumed"
+    // gelir; gün değişmediyse ve son tazelemeden bu yana 60 sn geçmediyse
+    // yalnız saat ilerler.
+    final now = DateTime.now();
+    final last = _lastRefresh;
+    if (last != null &&
+        now.difference(last) < resumeRefreshThrottle &&
+        DateUtils.isSameDay(now, last)) {
+      ref.read(kokpitClockProvider.notifier).state = now;
+    } else {
+      _refreshForNewMoment();
+    }
     // Arka planda zamanlayıcı kaymış olabilir; dakika hizası yeniden kurulur.
     _scheduleClockTick();
   }
 
+  DateTime? _lastRefresh;
+
+  /// Dokunulan bildirimin sekmesine geçer (görev/rutin İşler, sağlık Sağlık).
+  void _openNotificationTarget() {
+    final payload = notificationTapPayload.value;
+    if (payload == null || !mounted) return;
+    notificationTapPayload.value = null;
+    final tab = tabForNotificationPayload(payload);
+    if (tab != null && tab != _index) setState(() => _index = tab);
+  }
+
   void _refreshForNewMoment() {
+    _lastRefresh = DateTime.now();
     final container = ProviderScope.containerOf(context, listen: false);
     ref.read(kokpitClockProvider.notifier).state = DateTime.now();
     ref.invalidate(todayOccurrencesProvider);
     ref.invalidate(upcomingRemindersProvider);
+    // Ölçü/fotoğraf günü satırı ve 09:00 hatırlatması "bugün"e göredir.
+    ref.invalidate(checkinTodayProvider);
     // Arkadaş hikâyeleri 24 saatte düşer; yenileri de gelmiş olabilir.
     ref.invalidate(friendStoryGroupsProvider);
     ref

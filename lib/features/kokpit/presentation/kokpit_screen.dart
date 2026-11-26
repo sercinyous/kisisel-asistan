@@ -9,6 +9,7 @@ import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/sunset_stripe.dart';
 import '../../friends/presentation/friends_button.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../health/presentation/providers/body_providers.dart';
 import '../../health/presentation/water_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../../core/services/health_service.dart';
@@ -29,6 +30,7 @@ class KokpitScreen extends ConsumerWidget {
     ref.invalidate(upcomingRemindersProvider);
     ref.invalidate(todayNutritionProvider);
     ref.invalidate(waterTodayProvider);
+    ref.invalidate(checkinTodayProvider);
     ref.invalidate(friendStoryGroupsProvider);
     // HealthKit yeniden okunup yedeklenir.
     unawaited(

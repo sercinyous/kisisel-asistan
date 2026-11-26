@@ -329,4 +329,17 @@ void main() {
     expect(find.text('Bu hafta için rapor henüz oluşmadı'), findsNothing);
     expect(find.text('Hafta özeti.'), findsOneWidget);
   });
+
+  testWidgets('60 sn içinde ikinci öne geliş ağır tazelemeyi tekrarlamaz',
+      (tester) async {
+    await pumpShell(tester);
+    await selectTab(tester, 'Sağlık');
+    health.log.clear();
+    await backgroundAndResume(tester);
+    final first = health.log.where((e) => e == 'meals').length;
+    expect(first, greaterThanOrEqualTo(1));
+    health.log.clear();
+    await backgroundAndResume(tester);
+    expect(health.log.where((e) => e == 'meals'), isEmpty);
+  });
 }

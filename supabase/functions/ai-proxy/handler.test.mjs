@@ -500,3 +500,15 @@ test("AI onayı varsa istek Gemini'ye gider ve onay kullanıcı kimliğiyle soru
   assert.deepEqual(calls.consent, ["user-ali"]);
   assert.equal(calls.fetch.length, 1);
 });
+
+for (const [status, refunded] of [[400, false], [401, true], [402, true], [403, true], [404, true], [429, true], [500, true]]) {
+  test(`Gemini ${status}: kota ${refunded ? "iade edilir" : "iade edilmez"}`, async () => {
+    const refunds = [];
+    const { handler } = setup({
+      fetch: async () => new Response("{}", { status }),
+      store: { refundQuota: async (userId, kind) => { refunds.push({ userId, kind }); } },
+    });
+    await handler(post(geminiBody()));
+    assert.equal(refunds.length, refunded ? 1 : 0);
+  });
+}

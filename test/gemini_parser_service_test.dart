@@ -524,29 +524,29 @@ void main() {
   });
 
   // Not: aşağıdaki testler servis içindeki gerçek bekleme sürelerini
-  // (600 ms + 1200 ms) yaşar; gecikme lib tarafında enjekte edilemiyor.
+  // (600 ms) yaşar; gecikme lib tarafında enjekte edilemiyor.
   group('yeniden denenen hatalar', () {
-    test('429 -> 3 deneme, sonra kota mesajı', () async {
+    test('429 -> 2 deneme, sonra kota mesajı', () async {
       var calls = 0;
       final service = serviceWith((_) async {
         calls++;
         return jsonResponse({'error': 'quota'}, 429);
       });
       final e = await expectAiError(service.parse('metin', now: now));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.statusCode, 429);
       expect(e.message,
           'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.');
     });
 
-    test('503 -> 3 deneme, sonra servis hatası mesajı', () async {
+    test('503 -> 2 deneme, sonra servis hatası mesajı', () async {
       var calls = 0;
       final service = serviceWith((_) async {
         calls++;
         return jsonResponse({'error': 'overloaded'}, 503);
       });
       final e = await expectAiError(service.parse('metin', now: now));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.statusCode, 503);
       expect(e.message, 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
@@ -564,7 +564,7 @@ void main() {
       expect(entry.totalCount, 3);
     });
 
-    test('zaman aşımı -> 3 deneme, sonra zaman aşımı mesajı', () async {
+    test('zaman aşımı -> 2 deneme, sonra zaman aşımı mesajı', () async {
       var calls = 0;
       final service = serviceWith(
         (_) async {
@@ -575,7 +575,7 @@ void main() {
         timeout: const Duration(milliseconds: 20),
       );
       final e = await expectAiError(service.parse('metin', now: now));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.statusCode, isNull);
       expect(e.message,
           'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
@@ -583,16 +583,20 @@ void main() {
 
     test('ağ hataları (SocketException / ClientException) yeniden denenir',
         () async {
-      var calls = 0;
-      final service = serviceWith((_) async {
-        calls++;
-        if (calls == 1) throw const SocketException('offline');
-        if (calls == 2) throw http.ClientException('reset');
-        return geminiOk(sampleEntryJson);
-      });
-      final entry = await service.parse('metin', now: now);
-      expect(calls, 3);
-      expect(entry.totalCount, 3);
+      for (final error in <Exception>[
+        const SocketException('offline'),
+        http.ClientException('reset'),
+      ]) {
+        var calls = 0;
+        final service = serviceWith((_) async {
+          calls++;
+          if (calls == 1) throw error;
+          return geminiOk(sampleEntryJson);
+        });
+        final entry = await service.parse('metin', now: now);
+        expect(calls, 2);
+        expect(entry.totalCount, 3);
+      }
     });
   });
 

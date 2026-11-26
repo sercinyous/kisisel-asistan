@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -20,7 +21,9 @@ final geminiParserServiceProvider =
     Provider.family<GeminiParserService, QuickAddMode>((ref, mode) {
   final service = GeminiParserService(
     // Anahtar boşsa çağrılar sunucudaki ai-proxy'den geçer (oturum belirteciyle).
-    apiKey: Env.geminiApiKey,
+    // Doğrudan mod yalnız geliştirme derlemesindedir: yayın derlemesi her
+    // zaman proxy kullanır, geliştirici hata metinleri kullanıcıya ulaşmaz.
+    apiKey: kDebugMode ? Env.geminiApiKey : '',
     model: Env.geminiModel,
     proxyUrl: Env.aiProxyUrl,
     anonKey: Env.supabaseAnonKey,

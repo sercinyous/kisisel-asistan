@@ -132,8 +132,12 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
     _focusNode.requestFocus();
   }
 
-  void _close() => Navigator.of(context)
-      .pop(_savedBeforeSwitch > 0 ? _savedBeforeSwitch : null);
+  void _close() {
+    // Ayrıştırma sürüyorsa iptal edilir; geç gelen yanıt yok sayılır.
+    ref.read(quickAddControllerProvider(_mode).notifier).cancelParse();
+    Navigator.of(context)
+        .pop(_savedBeforeSwitch > 0 ? _savedBeforeSwitch : null);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,12 +164,14 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                         : _switchMode,
               );
 
-    // Ayrıştırma/kaydetme sürerken kapanmaz; boştayken arka plana dokunma
+    // Kaydetme sürerken kapanmaz (ayrıştırma iptal edilebilir); boştayken arka plana dokunma
     // da X gibi kapatır ve önceki alanda kaydedilenlerin sayısını döndürür.
     return PopScope<int>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop || ref.read(quickAddControllerProvider(_mode)).isBusy) {
+        if (didPop ||
+            ref.read(quickAddControllerProvider(_mode)).status ==
+                QuickAddStatus.saving) {
           return;
         }
         _close();
@@ -203,7 +209,9 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                     _Header(
                       mode: _mode,
                       inPreview: inPreview,
-                      onClose: state.isBusy ? null : _close,
+                      onClose: state.status == QuickAddStatus.saving
+                          ? null
+                          : _close,
                     ),
                     const SizedBox(height: 16),
                     if (inPreview)

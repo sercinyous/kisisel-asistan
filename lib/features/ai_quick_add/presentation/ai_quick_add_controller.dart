@@ -78,9 +78,20 @@ class QuickAddController
     return const QuickAddState();
   }
 
+  /// Her ayrıştırmanın numarası; iptal edilen ya da eskiyen sonuç yok sayılır.
+  int _parseGeneration = 0;
+
+  /// Ayrıştırma sürerken kullanıcı vazgeçerse geç gelen yanıt atılır.
+  void cancelParse() {
+    if (state.status != QuickAddStatus.parsing) return;
+    _parseGeneration++;
+    state = state.copyWith(status: QuickAddStatus.idle);
+  }
+
   /// 1. adım: metni Gemini ile ayrıştır ve önizlemeye geç.
   Future<void> parse(String text) async {
     if (state.isBusy) return;
+    final generation = ++_parseGeneration;
     state = state.copyWith(
       status: QuickAddStatus.parsing,
       clearEntry: true,
@@ -89,6 +100,7 @@ class QuickAddController
     try {
       final entry =
           await ref.read(geminiParserServiceProvider(arg)).parse(text);
+      if (generation != _parseGeneration) return;
       if (entry.isEmpty) {
         // Metin tümüyle diğer alana aitse hata değil, yönlendirme gösterilir.
         state = entry.otherDomain
@@ -110,6 +122,7 @@ class QuickAddController
         otherDomainSummary: entry.otherDomainSummary,
       );
     } on AiParseException catch (e) {
+      if (generation != _parseGeneration) return;
       // Sunucu onay bulamadı: önbellekteki onay düşer, + yeniden onay sorar.
       if (e.statusCode == 403) ref.invalidate(aiConsentProvider);
       state = state.copyWith(
@@ -117,6 +130,7 @@ class QuickAddController
         errorMessage: e.message,
       );
     } catch (_) {
+      if (generation != _parseGeneration) return;
       state = state.copyWith(
         status: QuickAddStatus.idle,
         errorMessage: 'Bir şeyler ters gitti. Tekrar dene ya da elle ekle.',
@@ -189,8 +203,9 @@ class QuickAddController
     } catch (_) {
       state = state.copyWith(
         status: QuickAddStatus.preview,
-        errorMessage:
-            'Kaydedilemedi. Bağlantını kontrol edip tekrar dene; hiçbir kayıt yazılmadı.',
+        // Yanıt kaybolmuş olabilir: kayıt sunucuda yazılmış olabilir.
+        errorMessage: 'Kayıt doğrulanamadı. Tekrar denemeden önce '
+            'listende eklenip eklenmediğine bak.',
       );
       return false;
     }

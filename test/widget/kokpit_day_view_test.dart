@@ -169,6 +169,28 @@ void main() {
       );
     });
 
+    test('hatırlatması bugün, son tarihi ileride görev listelenir', () {
+      final now = DateTime(2026, 11, 26, 8);
+      final remind = DateTime(2026, 11, 26, 10);
+      final items = kokpitTodayItems(
+        routines: const [],
+        tasks: [
+          TaskItem(
+            id: 'r1',
+            title: 'Rapor',
+            category: 'Ekip',
+            priority: 'medium',
+            status: 'todo',
+            dueAt: DateTime(2026, 12, 4, 17),
+            remindAt: remind,
+          ),
+        ],
+        now: now,
+      );
+      expect(items, hasLength(1));
+      expect(items.single.time, remind);
+    });
+
     testWidgets('bugün 8 görev: sayılar kesilmez, 5 satır görünür',
         (tester) async {
       harness.routines.routines = [];

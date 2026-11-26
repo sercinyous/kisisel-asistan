@@ -90,7 +90,16 @@ class KokpitTaskItem extends KokpitTodayItem {
   final DateTime now;
 
   @override
-  DateTime? get time => task.scheduledAt ?? task.nextTime(now);
+  DateTime? get time {
+    // Son tarihi ileride ama hatırlatması bugün olan görev bugün listelenir;
+    // satırda hatırlatma saati görünür.
+    final remind = task.remindAt, due = task.dueAt;
+    if (remind != null && due != null) {
+      final tomorrow = AppDates.startOfDay(now).add(const Duration(days: 1));
+      if (!due.isBefore(tomorrow) && remind.isBefore(tomorrow)) return remind;
+    }
+    return task.scheduledAt ?? task.nextTime(now);
+  }
 
   @override
   bool get done => task.isDone;
@@ -130,6 +139,9 @@ List<KokpitTodayItem> kokpitTodayItems({
           KokpitTaskItem(t, now)
         else
           ...const <KokpitTaskItem>[]
+      else if (t.dueAt == null && t.remindAt == null)
+        // Tarihsiz açık görev yalnız bugün eklendiyse gelir; saatsiz satır.
+        KokpitTaskItem(t, now)
       else if (KokpitTaskItem(t, now).time case final time?
           when time.isBefore(tomorrow))
         KokpitTaskItem(t, now),
@@ -588,7 +600,7 @@ class _TodayTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
               if (icon != null && !done)

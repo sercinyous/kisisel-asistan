@@ -9,6 +9,7 @@ import '../../../core/services/health_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/ritim_ui.dart';
+import '../../health/domain/targets_engine.dart' show TargetsMode;
 import '../../health/presentation/health_segment.dart';
 import '../../health/presentation/providers/streaks_providers.dart';
 import '../../health/presentation/providers/targets_providers.dart';
@@ -174,11 +175,20 @@ class _HealthCardBody extends ConsumerWidget {
     final remaining = target - eaten;
     final over = remaining < 0;
     final ratio = target > 0 ? eaten / target : 0.0;
+    // Kas yapmada hedefe ulaşmak amaçtır; %110'a kadar fazla hata sayılmaz.
+    final resolved = ref.watch(resolvedTargetsProvider).valueOrNull;
+    final gainMode = resolved != null &&
+        !resolved.locked &&
+        resolved.mode == TargetsMode.gain;
+    final goodOver = over && gainMode && ratio <= 1.10;
+    String overText(int v) => goodOver
+        ? 'Hedef tamam · +${thousands.format(v)} kcal'
+        : '${thousands.format(v)} kcal fazla';
     final streakLine =
         streaks == null || streaks.streaks.isEmpty ? null : streaks.line;
 
     final headline = over
-        ? '${thousands.format(remaining.abs())} kcal fazla'
+        ? overText(remaining.abs())
         : 'Kalan ${thousands.format(remaining)} kcal';
     final semantics = [
       'Sağlık',
@@ -224,7 +234,7 @@ class _HealthCardBody extends ConsumerWidget {
                 KokpitRing(
                   value: ratio,
                   color: AppColors.nutrition,
-                  overColor: AppColors.danger,
+                  overColor: goodOver ? AppColors.nutrition : AppColors.danger,
                   size: 68,
                   stroke: 8,
                   child: KokpitCountUp(
@@ -249,7 +259,7 @@ class _HealthCardBody extends ConsumerWidget {
                         value: remaining.abs(),
                         builder: (_, v) => Text(
                           over
-                              ? '${thousands.format(v)} kcal fazla'
+                              ? overText(v)
                               : 'Kalan ${thousands.format(v)} kcal',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -257,7 +267,7 @@ class _HealthCardBody extends ConsumerWidget {
                             fontSize: AppType.body,
                             fontWeight: FontWeight.w700,
                             height: 1.3,
-                            color: over
+                            color: over && !goodOver
                                 ? AppColors.negative
                                 : AppColors.textPrimary,
                           ),
@@ -448,14 +458,22 @@ class KokpitWaterTile extends ConsumerWidget {
                   ),
                 ),
                 if (today != null && today.logs.isNotEmpty) ...[
-                  RitimPillButton(
-                    key: const ValueKey('kokpit-water-undo'),
-                    label: '−',
-                    ghost: true,
-                    onPressed: () => _run(
-                      context,
-                      notifier.undo,
-                      'Su kaydı geri alınamadı.',
+                  Tooltip(
+                    message: 'Son su kaydını geri al',
+                    child: Semantics(
+                      label: 'Son su kaydını geri al',
+                      button: true,
+                      excludeSemantics: true,
+                      child: RitimPillButton(
+                        key: const ValueKey('kokpit-water-undo'),
+                        label: '−',
+                        ghost: true,
+                        onPressed: () => _run(
+                          context,
+                          notifier.undo,
+                          'Su kaydı geri alınamadı.',
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),

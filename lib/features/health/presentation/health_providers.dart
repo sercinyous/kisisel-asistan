@@ -264,7 +264,9 @@ Future<void> backfillHealthKit(ProviderContainer container) async {
   try {
     container
       ..invalidate(weekStepsProvider)
-      ..invalidate(monthOverviewProvider);
+      ..invalidate(monthOverviewProvider)
+      // Adım serisi ve hikâyedeki adım, yedeklenen yeni satırı okur.
+      ..invalidate(healthDaysProvider);
     // Yedeklenen aktif kalori ve antrenmanlar enerji dengesine girer.
     invalidateEnergyData(container);
     if (workoutsImported) {
