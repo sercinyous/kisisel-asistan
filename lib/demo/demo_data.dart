@@ -576,7 +576,7 @@ WeeklyReport demoWeeklyReport(DateTime weekStart, DateTime now) {
         ? null
         : 'İş tarafında ${(parsed.workRate ?? 0) >= 75 ? 'güçlü' : 'orta'} bir hafta: '
             'görevlerin $tasksDone / $tasksTotal kadarı kapandı, rutinler '
-            '%${parsed.routineRate ?? 0} düzeyinde. Form tarafında $workouts antrenman '
+            '%${parsed.routineRate ?? 0} düzeyinde. Sağlık tarafında $workouts antrenman '
             'yapıldı, protein hedefi $proteinDays gün tuttu.\n'
             'Kaçan antrenmanı sabaha al.\n'
             'Öğle öğününe 30 g protein ekle.\n'

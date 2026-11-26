@@ -177,7 +177,6 @@ class OpsChoiceWrap<T> extends StatelessWidget {
         for (final (value, label) in options)
           ChoiceChip(
             label: Text(label),
-            showCheckmark: false,
             selected: value == selected,
             onSelected: (_) => onSelected(value),
           ),

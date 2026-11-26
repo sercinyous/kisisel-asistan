@@ -98,7 +98,7 @@ class ReportsWeekDetailsScreen extends ConsumerWidget {
                       title: ReportsFormat.weekRange(item.weekStart),
                       subtitle: [
                         'İş ${ReportsFormat.rate(item.metrics.workRate)}',
-                        'Form ${ReportsFormat.rate(item.metrics.formRate)}',
+                        'Sağlık ${ReportsFormat.rate(item.metrics.formRate)}',
                         if (item.metrics.weightChangeKg case final change?)
                           KokpitFormat.weightChange(change),
                       ].join(' · '),

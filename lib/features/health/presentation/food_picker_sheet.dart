@@ -290,7 +290,6 @@ class _FoodPickerSheetState extends ConsumerState<FoodPickerSheet> {
                         child: ChoiceChip(
                           key: Key('food-category-$category'),
                           label: Text(category),
-                          showCheckmark: false,
                           selected: _category == category,
                           onSelected: (selected) => setState(
                             () => _category = selected ? category : null,
@@ -590,14 +589,12 @@ class _FoodAmountSheetState extends ConsumerState<FoodAmountSheet> {
                 label: Text(
                   '${portion.name} (${HealthFormat.plain(portion.grams)} g)',
                 ),
-                showCheckmark: false,
                 selected: index == i,
                 onSelected: (_) => _selectUnit(i),
               ),
             ChoiceChip(
               key: const Key('amount-unit-gram'),
               label: const Text('Gram'),
-              showCheckmark: false,
               selected: index == null,
               onSelected: (_) => _selectUnit(null),
             ),

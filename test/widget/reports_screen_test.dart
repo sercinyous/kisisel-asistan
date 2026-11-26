@@ -78,7 +78,7 @@ void main() {
       await tester.scrollUntilVisible(find.text('26 Eki – 1 Kas'), 150);
       expect(find.text('Geçmiş haftalar'), findsOneWidget);
       expect(find.text('9 – 15 Kasım'), findsOneWidget);
-      expect(find.text('İş %74 · Form %80 · −0,5 kg'), findsOneWidget);
+      expect(find.text('İş %74 · Sağlık %80 · −0,5 kg'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

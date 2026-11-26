@@ -383,7 +383,6 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                       size: 18,
                       color: taskCategoryRoleColor(_color),
                     ),
-                    showCheckmark: false,
                     selected: key == _icon,
                     onSelected: (_) => setState(() => _icon = key),
                   ),

@@ -133,7 +133,6 @@ class OnboardingTargetsStep extends StatelessWidget {
               ChoiceChip(
                 key: Key('onboarding-activity-${level.name}'),
                 label: Text(level.label),
-                showCheckmark: false,
                 selected: activity == level,
                 onSelected: (_) => onActivity(level),
               ),
@@ -149,7 +148,6 @@ class OnboardingTargetsStep extends StatelessWidget {
               ChoiceChip(
                 key: Key('onboarding-goal-${option.name}'),
                 label: Text(option.label),
-                showCheckmark: false,
                 selected: goal == option,
                 onSelected: (_) => onGoal(option),
               ),

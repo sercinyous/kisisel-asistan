@@ -127,7 +127,7 @@ class ReportsDailyView extends ConsumerWidget {
                     title: ReportsFormat.dayShort(item.reportDate),
                     subtitle: [
                       'İş ${ReportsFormat.rate(item.metrics.workRate)}',
-                      'Form ${ReportsFormat.rate(item.metrics.formRate)}',
+                      'Sağlık ${ReportsFormat.rate(item.metrics.formRate)}',
                       if (item.metrics.hasHealth && item.metrics.steps > 0)
                         '${ReportsFormat.count(item.metrics.steps)} adım',
                     ].join(' · '),

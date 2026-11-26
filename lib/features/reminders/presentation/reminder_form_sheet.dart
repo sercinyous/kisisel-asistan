@@ -194,7 +194,6 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
               for (final (index, label) in ReminderDays.shortLabels.indexed)
                 FilterChip(
                   label: Text(label),
-                  showCheckmark: false,
                   selected: _days.contains(index + 1),
                   onSelected: (selected) => setState(() {
                     selected ? _days.add(index + 1) : _days.remove(index + 1);

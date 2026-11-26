@@ -274,7 +274,6 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
               for (final (index, label) in opsWeekdayLabels.indexed)
                 FilterChip(
                   label: Text(label),
-                  showCheckmark: false,
                   selected: _days.contains(index + 1),
                   onSelected: (selected) => _toggleDay(index + 1, selected),
                 ),

@@ -7,7 +7,8 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../domain/task_item.dart';
-import '../../kokpit/presentation/kokpit_providers.dart' show kokpitClockProvider;
+import '../../kokpit/presentation/kokpit_providers.dart'
+    show kokpitClockProvider;
 import 'operations_providers.dart';
 import 'operations_screen.dart';
 import 'operations_widgets.dart';
@@ -347,16 +348,22 @@ class _TaskRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(2, 2, AppSpacing.cardPadding, 2),
         child: Row(
           children: [
-            Checkbox(
-              key: ValueKey('task-check-${task.id}'),
-              value: task.isDone,
-              onChanged: (_) => onToggle(),
-              activeColor: AppColors.accent,
-              checkColor: AppColors.onAccent,
-              shape: const CircleBorder(),
-              side: BorderSide(color: AppColors.textMuted, width: 1.5),
-              // Dokunma alanı en az 48 pt (görünür boyut aynı).
-              materialTapTargetSize: MaterialTapTargetSize.padded,
+            Semantics(
+              label: '${task.title}, tamamla',
+              checked: task.isDone,
+              excludeSemantics: true,
+              onTap: onToggle,
+              child: Checkbox(
+                key: ValueKey('task-check-${task.id}'),
+                value: task.isDone,
+                onChanged: (_) => onToggle(),
+                activeColor: AppColors.accent,
+                checkColor: AppColors.onAccent,
+                shape: const CircleBorder(),
+                side: BorderSide(color: AppColors.textMuted, width: 1.5),
+                // Dokunma alanı en az 48 pt (görünür boyut aynı).
+                materialTapTargetSize: MaterialTapTargetSize.padded,
+              ),
             ),
             Expanded(
               child: Column(

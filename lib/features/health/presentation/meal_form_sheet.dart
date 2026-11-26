@@ -433,7 +433,6 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
                           '${portion.name} '
                           '(${HealthFormat.plain(portion.grams)} g)',
                         ),
-                        showCheckmark: false,
                         selected: portionIndex == index,
                         onSelected: (selected) =>
                             _onPortionSelected(food, index, selected),

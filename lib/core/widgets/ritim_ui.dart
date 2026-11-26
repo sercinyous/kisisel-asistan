@@ -144,7 +144,7 @@ class RitimChipTile extends StatelessWidget {
               if (st != null)
                 Text(
                   st,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: AppType.caption,

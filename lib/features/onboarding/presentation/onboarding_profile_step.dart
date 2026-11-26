@@ -97,7 +97,6 @@ class OnboardingProfileStep extends StatelessWidget {
               ChoiceChip(
                 key: Key('onboarding-sex-${value.name}'),
                 label: Text(label),
-                showCheckmark: false,
                 selected: sex == value,
                 onSelected: (_) => onSex(value),
               ),

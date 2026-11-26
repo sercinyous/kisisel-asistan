@@ -433,7 +433,7 @@ class _SelectedDayPanel extends StatelessWidget {
           if (marks != null) const SizedBox(height: 8),
           if (marks != null && marks.isEmpty)
             Text(
-              'Bu tarihte görev ya da aylık iş yok.',
+              'Bu tarihte görev ya da aylık iş yok. Günlük rutinler Rutinler sekmesinde.',
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: AppColors.textSecondary),
             )
