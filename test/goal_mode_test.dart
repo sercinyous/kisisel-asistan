@@ -144,6 +144,16 @@ void main() {
       expect(weekTargetFor(_r(_s(goal: GoalMode.maintain))), 0);
       expect(weekTargetFor(_r(_s())), 3850);
     });
+
+    test('haftalık hedef: taban kırpmasında planın gerçek açığı × 7', () {
+      final r = _r(
+        _s(rate: FatLossRate.threeQuarter, manual: 1900, target: 65),
+        kg: 75,
+      );
+      expect(r.clamped, isTrue, reason: "$r");
+      expect(weekTargetFor(r), r.deficit * 7);
+      expect(weekTargetFor(r), lessThan(5775));
+    });
   });
 
   group('GoalProjection', () {
@@ -362,7 +372,7 @@ void main() {
 
     test('kas yaparken yağ yakma tabana takılınca tempo denmez', () {
       final r = _r(_s(goal: GoalMode.recomp, manual: 1200));
-      expect(r.clamped, isTrue);
+      expect(r.clamped, isTrue, reason: "$r");
       expect(r.warnings, contains(SafeTargets.recompClampedMessage));
       expect(r.warnings, isNot(contains(SafeTargets.clampedMessage)));
     });

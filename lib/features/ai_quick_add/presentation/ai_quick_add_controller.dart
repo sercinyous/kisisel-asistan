@@ -7,6 +7,8 @@ import '../../../core/services/notification_sync.dart';
 import '../../health/presentation/energy_providers.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/providers/targets_providers.dart';
+import '../../health/presentation/providers/week_deficit_providers.dart'
+    show healthDaysProvider;
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../operations/presentation/operations_providers.dart';
 import '../../reminders/presentation/reminders_providers.dart';
@@ -271,7 +273,9 @@ class QuickAddController
     if (wroteHealth) {
       ref
         ..invalidate(energyDayProvider)
-        ..invalidate(energyRangeProvider);
+        ..invalidate(energyRangeProvider)
+        // Kalori açığı, Hafta kartı ve seriler bu sağlayıcıdan okur.
+        ..invalidate(healthDaysProvider);
     }
     if (result.reminderCount > 0) ref.invalidate(remindersProvider);
     if (wroteRoutines || wroteTasks || result.reminderCount > 0) {

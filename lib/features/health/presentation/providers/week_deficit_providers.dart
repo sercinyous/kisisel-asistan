@@ -127,8 +127,14 @@ int weekTargetFor(ResolvedTargets r) => switch (r.mode) {
       TargetsMode.gain => weeklySurplusTarget(r.surplus),
       TargetsMode.recomp => weeklyDeficitTarget(dailyDeficit: r.deficit),
       _ => weeklyDeficitTarget(
-          kgPerWeek: r.mode == TargetsMode.rate ? r.rate.kgPerWeek : null,
-          dailyDeficit: r.mode == TargetsMode.classic ? r.deficit : 0,
+          // Taban kırpması varsa planın gerçek açığı esas alınır.
+          kgPerWeek: r.mode == TargetsMode.rate && !r.clamped
+              ? r.rate.kgPerWeek
+              : null,
+          dailyDeficit: r.mode == TargetsMode.classic ||
+                  (r.mode == TargetsMode.rate && r.clamped)
+              ? r.deficit
+              : 0,
         ),
     };
 
