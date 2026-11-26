@@ -39,6 +39,24 @@ class _Backend implements SignInBackend {
 
   @override
   bool get hasSession => false;
+
+  final List<(String, String)> signupCodes = [];
+  final List<String> resent = [];
+  Object? resendError;
+
+  @override
+  Future<void> verifySignupCode({
+    required String email,
+    required String code,
+  }) async {
+    signupCodes.add((email, code));
+  }
+
+  @override
+  Future<void> resendSignupCode({required String email}) async {
+    if (resendError != null) throw resendError!;
+    resent.add(email);
+  }
   Object? error;
   int googleCalls = 0;
   int passwordCalls = 0;
@@ -193,5 +211,25 @@ void main() {
     expect(backend.signUpCalls, 1);
     expect(backend.passwordCalls, 0);
     expect(find.text(confirmationSentMessage), findsOneWidget);
+
+    // Onay kodu uygulamada yazılır; yeniden gönderme ve hız sınırı (G2-06).
+    await tester.tap(find.byKey(const Key('sign-in-confirm-code')));
+    await tester.pumpAndSettle();
+    backend.resendError =
+        const AuthApiException('rate', statusCode: '429');
+    await tester.tap(find.byKey(const Key('confirm-resend')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('confirm-error')), findsOneWidget);
+    backend.resendError = null;
+    await tester.tap(find.byKey(const Key('confirm-resend')));
+    await tester.pumpAndSettle();
+    expect(backend.resent, ['yeni@gmail.com']);
+    expect(find.text('Yeni kod gönderildi.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('confirm-code')), '123456');
+    await tester.tap(find.byKey(const Key('confirm-submit')));
+    await tester.pumpAndSettle();
+    expect(backend.signupCodes, [('yeni@gmail.com', '123456')]);
+    expect(find.byKey(const Key('confirm-code')), findsNothing);
   });
 }

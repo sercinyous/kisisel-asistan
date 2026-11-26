@@ -36,6 +36,12 @@ abstract interface class SignInBackend {
 
   /// Açık bir oturum var mı (kod zaten doğrulanmış olabilir).
   bool get hasSession;
+
+  /// Kayıt onay kodunu doğrular; başarılıysa oturum açılır.
+  Future<void> verifySignupCode({required String email, required String code});
+
+  /// Kayıt onay kodunu yeniden gönderir.
+  Future<void> resendSignupCode({required String email});
 }
 
 class SupabaseSignInBackend implements SignInBackend {
@@ -91,6 +97,19 @@ class SupabaseSignInBackend implements SignInBackend {
 
   @override
   bool get hasSession => _auth.currentSession != null;
+
+  @override
+  Future<void> verifySignupCode({
+    required String email,
+    required String code,
+  }) async {
+    await _auth.verifyOTP(email: email, token: code, type: OtpType.signup);
+  }
+
+  @override
+  Future<void> resendSignupCode({required String email}) async {
+    await _auth.resend(type: OtpType.signup, email: email);
+  }
 }
 
 final signInBackendProvider = Provider<SignInBackend>(

@@ -62,7 +62,7 @@ Görünüm tercihi, seçili sağlık kaynağı, Apple Sağlık onayı, Google He
 
 Verilerin, sen silene ya da hesabını silene kadar saklanır. Tek tek kayıtları (görev, not, öğün vb.) uygulama içinden istediğin zaman silebilirsin.
 
-Hata kayıtları ve geri bildirimler, hesabın silinince birlikte silinir. Sunucu sağlayıcısının olağan yedekleri kısa bir süre sonra kendiliğinden yenilenir.
+Hata kayıtları 90 gün sonra kendiliğinden silinir. Hata kayıtları ve geri bildirimler, hesabın silinince birlikte silinir. Sunucu sağlayıcısının olağan yedekleri kısa bir süre sonra kendiliğinden yenilenir.
 
 ## Hesabını ve verilerini silme
 

@@ -10,6 +10,7 @@ import '../../health/presentation/providers/targets_providers.dart';
 import '../../health/presentation/providers/week_deficit_providers.dart'
     show healthDaysProvider;
 import '../../kokpit/presentation/kokpit_providers.dart';
+import '../../onboarding/data/onboarding_op_key_store.dart' show randomUuidV4;
 import '../../operations/presentation/operations_providers.dart';
 import '../../reminders/presentation/reminders_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
@@ -115,6 +116,7 @@ class QuickAddController
               );
         return;
       }
+      _opKey = null;
       state = QuickAddState(
         status: QuickAddStatus.preview,
         entry: entry,
@@ -144,6 +146,7 @@ class QuickAddController
     final entry = state.entry;
     if (entry == null || state.isBusy) return;
     final next = entry.without(kind, index);
+    _opKey = null;
     state = next.isEmpty
         ? state.copyWith(status: QuickAddStatus.idle, clearEntry: true)
         : state.copyWith(entry: next);
@@ -152,6 +155,7 @@ class QuickAddController
   /// Önizlemeyi kapatıp metin düzenlemeye dön.
   void backToEdit() {
     if (state.isBusy) return;
+    _opKey = null;
     state = state.copyWith(
       status: QuickAddStatus.idle,
       clearEntry: true,
@@ -172,7 +176,12 @@ class QuickAddController
     final generation = queue.generation;
     bool current() => queue.generation == generation;
     try {
-      final result = await ref.read(quickAddRepositoryProvider).saveAll(entry);
+      // Aynı önizlemenin her denemesi aynı anahtarla gider (G2-09).
+      final opKey = _opKey ??= randomUuidV4();
+      final result = await ref
+          .read(quickAddRepositoryProvider)
+          .saveAll(entry, opKey: opKey);
+      _opKey = null;
       await _afterWrite(result, queue, current);
       final total = _savedEarlier + result.totalCount;
       _savedEarlier = 0;
@@ -184,6 +193,7 @@ class QuickAddController
     } on QuickAddPartialSaveException catch (e) {
       // RPC kalemleri yazıldı; yalnızca hatırlatıcılar önizlemede kalır ki
       // tekrar kaydetme diğerlerini ikinci kez yazmasın.
+      _opKey = null;
       await _afterWrite(e.saved, queue, current);
       _savedEarlier += e.saved.totalCount;
       state = state.copyWith(
@@ -213,6 +223,9 @@ class QuickAddController
 
   /// Önceki denemede kısmen yazılmış kalem sayısı (hatırlatıcı hatası).
   int _savedEarlier = 0;
+
+  /// Bu önizlemenin kayıt anahtarı; önizleme değişince sıfırlanır.
+  String? _opKey;
 
   /// Yazılan kalemler için bildirim planlar ve ekranları tazeler.
   Future<void> _afterWrite(

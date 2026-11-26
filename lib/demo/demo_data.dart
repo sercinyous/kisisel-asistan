@@ -649,7 +649,7 @@ class DemoQuickAddRepository implements QuickAddRepository {
   final DemoData _data;
 
   @override
-  Future<QuickAddResult> saveAll(ParsedEntry entry) async {
+  Future<QuickAddResult> saveAll(ParsedEntry entry, {String? opKey}) async {
     final saved = <SavedTask>[];
     for (final t in entry.tasks) {
       final id = _data.nextId('task');

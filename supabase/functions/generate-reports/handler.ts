@@ -119,7 +119,18 @@ export interface HandlerDeps {
   fetch: typeof fetch;
   now: () => Date;
   log: (message: string) => void;
+  /** Zamanlanmış çalıştırmada bir çağrının işlediği en çok kullanıcı (varsayılan 40). */
+  cronPageSize?: number;
+  /**
+   * Sayfa bitmeden kullanıcı kaldıysa aynı gövdeyi `after` imleciyle yeniden
+   * gönderir (index.ts kendi adresine x-cron-secret ile istek atar). Böylece
+   * tek çağrı Edge süre sınırına takılmadan tüm kullanıcılar işlenir (G2-04).
+   */
+  continueCron?: (body: Record<string, unknown>) => Promise<void>;
 }
+
+/** Zamanlanmış çalıştırmada sayfa başına varsayılan kullanıcı sayısı. */
+export const DEFAULT_CRON_PAGE_SIZE = 40;
 
 /** Gemini çağrısının üst süresi. */
 export const GEMINI_TIMEOUT_MS = 30_000;
@@ -368,10 +379,20 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     const kind = parsed.kind;
 
     let users: ReportUser[];
+    let nextCursor: string | null = null;
     try {
       if (jwtUserId === null) {
         // Zamanlanmış çalıştırma: yalnızca ilk kurulumunu bitirmiş kullanıcılar.
-        users = (await deps.store.listUsers()).filter((user) => user.onboarded);
+        // Sayfalı: kimliğe göre sıralanır, `after` imlecinden sonraki ilk N kişi.
+        const after = typeof (body as Record<string, unknown>).after === "string"
+          ? (body as Record<string, unknown>).after as string
+          : null;
+        const pageSize = deps.cronPageSize ?? DEFAULT_CRON_PAGE_SIZE;
+        const remaining = (await deps.store.listUsers())
+          .filter((user) => user.onboarded && (after === null || user.id > after))
+          .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        users = remaining.slice(0, pageSize);
+        if (remaining.length > pageSize) nextCursor = users[users.length - 1].id;
       } else {
         const user = await deps.store.userOf(jwtUserId);
         if (user === null || !user.onboarded) {
@@ -428,6 +449,14 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       return json(400, { ok: false, error: outcomes[0].error });
     }
 
+    if (nextCursor !== null && deps.continueCron !== undefined) {
+      try {
+        await deps.continueCron({ ...(body as Record<string, unknown>), after: nextCursor });
+      } catch (error) {
+        deps.log(`Sonraki sayfa başlatılamadı: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
     const saved = outcomes.filter((o) => o.status === "saved");
     const skipped = outcomes.filter((o) => o.status === "skipped").length;
     const failed = outcomes.length - saved.length - skipped;
@@ -466,6 +495,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       ai_failed: saved.filter((o) => !o.aiOk && o.skip === null).length,
       ai_disabled: saved.filter((o) => o.skip === "disabled").length,
       ai_inactive: saved.filter((o) => o.skip === "inactive").length,
+      ...(nextCursor !== null ? { next: nextCursor } : {}),
     };
     // Hiçbir rapor yazılamadıysa çağıran (uygulama, pg_net günlüğü) hata görmeli.
     return json(users.length > 0 && saved.length === 0 && skipped === 0 ? 500 : 200, result);

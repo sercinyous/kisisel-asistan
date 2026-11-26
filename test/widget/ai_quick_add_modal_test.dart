@@ -420,6 +420,10 @@ void main() {
     await tester.tap(find.text('3 kaydı kaydet'));
     await tester.pumpAndSettle();
     expect(host.result, 3);
+    // Tekrar deneme aynı kayıt anahtarıyla gider (sunucu çift yazmaz, G2-09).
+    expect(repository.opKeys, hasLength(2));
+    expect(repository.opKeys.first, isNotNull);
+    expect(repository.opKeys.last, repository.opKeys.first);
   });
 
   testWidgets('X düğmesi kayıt yapmadan kapatır (null döner)', (tester) async {

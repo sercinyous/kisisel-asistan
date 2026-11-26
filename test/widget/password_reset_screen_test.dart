@@ -42,6 +42,15 @@ class _Backend implements SignInBackend {
   bool get hasSession => session;
 
   @override
+  Future<void> verifySignupCode({
+    required String email,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> resendSignupCode({required String email}) async {}
+
+  @override
   Future<void> signInWithGoogleIdToken({
     required String idToken,
     String? accessToken,

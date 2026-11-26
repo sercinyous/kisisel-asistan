@@ -225,6 +225,23 @@ const handler = createHandler({
   fetch,
   now: () => new Date(),
   log: (message) => console.error(message),
+  // Kalan kullanıcılar için kendine yeni istek; yanıt beklenmez, istek
+  // gönderilene dek çalışma ömrü uzatılır (G2-04).
+  continueCron: (body) => {
+    const pending = fetch(`${supabaseUrl}/functions/v1/generate-reports`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-cron-secret": Deno.env.get("CRON_SECRET") ?? "",
+      },
+      body: JSON.stringify(body),
+    }).then((response) => response.body?.cancel()).catch((error) => {
+      console.error(`Sonraki sayfa isteği başarısız: ${error instanceof Error ? error.message : "hata"}`);
+    });
+    // deno-lint-ignore no-explicit-any
+    (globalThis as any).EdgeRuntime?.waitUntil?.(pending);
+    return Promise.resolve();
+  },
 });
 
 Deno.serve((req) => {

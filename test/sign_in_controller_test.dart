@@ -49,6 +49,15 @@ class FakeSignInBackend implements SignInBackend {
 
   @override
   bool get hasSession => false;
+
+  @override
+  Future<void> verifySignupCode({
+    required String email,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> resendSignupCode({required String email}) async {}
   Object? error;
   final List<({String idToken, String? accessToken})> googleCalls = [];
   final List<({String email, String password})> passwordCalls = [];

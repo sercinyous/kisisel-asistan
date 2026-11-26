@@ -41,6 +41,7 @@ create extension if not exists pgcrypto;
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $$
 begin
   new.updated_at := now();
@@ -729,10 +730,18 @@ declare
   v_notes      integer := 0;
   v_routines   integer := 0;
   v_sort       integer;
+  v_key        text;
 begin
   if v_uid is null then
     raise exception 'Oturum bulunamadı' using errcode = '28000';
   end if;
+  -- Tek çağrıda alan başına en çok 50 kalem (G2-09).
+  foreach v_key in array array['tasks', 'nutrition', 'workouts', 'weights', 'notes', 'routines']
+  loop
+    if jsonb_typeof(payload -> v_key) = 'array' and jsonb_array_length(payload -> v_key) > 50 then
+      raise exception 'Tek seferde en çok 50 kayıt eklenebilir' using errcode = '22023';
+    end if;
+  end loop;
 
   with ins as (
     -- AI ile eklenen görev her zaman bildirimlidir (notify = true).
@@ -1406,10 +1415,10 @@ begin
 end;
 $$;
 
+-- friend_requests istemciye hiç açık değil: engelleme kaydı engelleyenin
+-- e-postasını, ret kaydı 'declined' durumunu sızdırıyordu (G2-02). İstemci
+-- yalnızca my_outgoing_requests / my_incoming_requests RPC'lerini kullanır.
 drop policy if exists friend_requests_sender_select on public.friend_requests;
-create policy friend_requests_sender_select on public.friend_requests
-  for select to authenticated
-  using ((select auth.uid()) = from_user);
 
 drop policy if exists friendships_member_select on public.friendships;
 create policy friendships_member_select on public.friendships
@@ -1432,8 +1441,6 @@ create policy ai_usage_owner_select on public.ai_usage
 revoke all on table
   public.friend_requests, public.friendships, public.friend_sharing, public.ai_usage
   from anon, authenticated;
-grant select (id, from_user, target_email, status, created_at, responded_at)
-  on table public.friend_requests to authenticated;
 grant select on table public.friendships to authenticated;
 grant select, insert, update, delete on table public.friend_sharing to authenticated;
 grant select on table public.ai_usage to authenticated;
@@ -1605,7 +1612,8 @@ begin
   v_my_verified := public.verified_email_of(v_uid);
   select u.id into v_target
   from auth.users u
-  where lower(btrim(u.email)) = v_email and u.email_confirmed_at is not null
+  -- GoTrue e-postayı kırpılmış saklar; btrim'siz karşılaştırma lower(email) dizinini kullanır (G2-15).
+  where lower(u.email) = v_email and u.email_confirmed_at is not null
   order by u.created_at
   limit 1;
 
@@ -4728,10 +4736,22 @@ returns trigger
 language plpgsql
 set search_path = public, pg_temp
 as $$
+declare
+  v_back integer;
 begin
   -- Hikâye yalnızca dün/bugün/yarın (saat dilimi payı) için açılır (SEC-10).
-  if new.day is null or new.day not between current_date - 1 and current_date + 1 then
+  -- weekly_goal haftanın pazartesisini taşır; bu yüzden 7 gün geriye izin verilir (G2-01).
+  v_back := case when new.kind = 'weekly_goal' then 7 else 1 end;
+  if new.day is null or new.day not between current_date - v_back and current_date + 1 then
     raise exception 'Geçersiz hikâye günü' using errcode = '22023';
+  end if;
+  -- Arkadaşa gösterilen tek serbest alan seri adıdır; yalnızca bilinen adlar
+  -- kabul edilir, değiştirilmiş istemci keyfi metin yayımlayamaz (G2-14).
+  if new.payload is distinct from '{}'::jsonb
+     and not (jsonb_typeof(new.payload) = 'object'
+              and (select array_agg(k) from jsonb_object_keys(new.payload) k) = array['streak']
+              and new.payload->>'streak' in ('Adım', 'Kayıt', 'Kalori açığı', 'Hedef')) then
+    raise exception 'Geçersiz hikâye içeriği' using errcode = '23514';
   end if;
   new.created_at := now();
   new.expires_at := now() + interval '24 hours';
@@ -4922,3 +4942,117 @@ begin
 end;
 $$;
 -- END guvenlik_limits
+
+-- =====================================================================
+-- BEGIN guvenlik_tur2 (G2-09, G2-13)
+-- quick_add_entries(payload, op_key): aynı anahtarla tekrar çağrı ilk sonucu
+-- döndürür (yanıt kaybolup "Kaydet"e yeniden basılırsa kayıtlar çiftlenmez).
+-- Kullanıcı başına yalnızca son anahtar tutulur; tek argümanlı sürüm eski
+-- derlemeler için kalır.
+-- =====================================================================
+create table if not exists public.quick_add_ops (
+  user_id    uuid primary key default auth.uid()
+             references auth.users (id) on delete cascade,
+  op_key     uuid,
+  result     jsonb check (result is null or pg_column_size(result) <= 65536),
+  updated_at timestamptz
+);
+alter table public.quick_add_ops enable row level security;
+drop policy if exists quick_add_ops_owner_all on public.quick_add_ops;
+create policy quick_add_ops_owner_all on public.quick_add_ops
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+revoke all on table public.quick_add_ops from anon, authenticated;
+grant select, insert, update on table public.quick_add_ops to authenticated;
+grant select, delete on table public.quick_add_ops to service_role;
+
+create or replace function public.quick_add_entries(payload jsonb, op_key uuid)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_uid    uuid := auth.uid();
+  v_prev   uuid;
+  v_result jsonb;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if quick_add_entries.op_key is null then
+    return public.quick_add_entries(payload);
+  end if;
+  -- Satır kilitlenir: eşzamanlı ikinci çağrı ilkini bekler, sonucu görür.
+  insert into quick_add_ops (user_id) values (v_uid) on conflict (user_id) do nothing;
+  select o.op_key, o.result into v_prev, v_result
+  from quick_add_ops o where o.user_id = v_uid for update;
+  if v_prev is not distinct from quick_add_entries.op_key then
+    return v_result;
+  end if;
+  v_result := public.quick_add_entries(payload);
+  update quick_add_ops
+     set op_key = quick_add_entries.op_key, result = v_result, updated_at = now()
+   where user_id = v_uid;
+  return v_result;
+end;
+$$;
+revoke all on function public.quick_add_entries(jsonb, uuid) from public, anon;
+grant execute on function public.quick_add_entries(jsonb, uuid) to authenticated;
+
+-- Kullanıcı başına boyut sınırları (G2-13). Mevcut aşırı satır varsa
+-- kısıt doğrulanmadan kalır (yeni yazmalara yine uygulanır).
+create or replace function public.text_array_within(arr text[], max_items integer, max_len integer)
+returns boolean
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  select arr is null
+      or (cardinality(arr) <= max_items
+          and not exists (select 1 from unnest(arr) e where char_length(e) > max_len));
+$$;
+
+do $$
+declare
+  r record;
+begin
+  for r in
+    select * from (values
+      ('user_settings', 'user_settings_team_members_size', 'public.text_array_within(team_members, 30, 60)'),
+      ('user_settings', 'user_settings_task_categories_size',
+       'task_categories is null or pg_column_size(task_categories) <= 16384'),
+      ('onboarding_ops', 'onboarding_ops_result_size', 'result is null or pg_column_size(result) <= 65536')
+    ) as v(tbl, con, expr)
+  loop
+    if not exists (select 1 from pg_constraint c
+                   where c.conname = r.con and c.conrelid = format('public.%I', r.tbl)::regclass) then
+      execute format('alter table public.%I add constraint %I check (%s) not valid', r.tbl, r.con, r.expr);
+    end if;
+    begin
+      execute format('alter table public.%I validate constraint %I', r.tbl, r.con);
+    exception when check_violation then
+      raise warning '% doğrulanamadı: eski satırlar sınırı aşıyor', r.con;
+    end;
+  end loop;
+end;
+$$;
+
+-- İlerleme fotoğrafı: kullanıcı başına en çok 400 satır (≈ 3 MB × 400).
+create or replace function public.progress_photos_cap()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if (select count(*) from public.progress_photos p where p.user_id = new.user_id) >= 400 then
+    raise exception 'Fotoğraf sınırına ulaştın; eski fotoğrafları sil' using errcode = '54000';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists progress_photos_cap on public.progress_photos;
+create trigger progress_photos_cap before insert on public.progress_photos
+  for each row execute function public.progress_photos_cap();
+-- END guvenlik_tur2

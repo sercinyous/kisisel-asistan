@@ -12,7 +12,7 @@ const String signUpFailedMessage =
 
 /// E-posta onayı gerektiren kayıttan sonra gösterilen bilgi.
 const String confirmationSentMessage =
-    'Onay e-postası gönderildi, gelen kutunu (ve spam) kontrol et.';
+    'Onay kodu e-postana gönderildi, gelen kutunu (ve spam) kontrol et.';
 
 const String connectionFailedMessage = 'Bağlantı kurulamadı. Tekrar dene.';
 

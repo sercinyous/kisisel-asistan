@@ -119,6 +119,33 @@ void main() {
       expect(list[1].day.weekday, DateTime.monday);
     });
 
+    test('haftalık hedef günü her gün sunucu penceresinde (G2-01)', () {
+      for (var i = 0; i < 7; i++) {
+        final today = DateTime(2026, 11, 23 + i);
+        final a = StoryBuilder.detectAchievements(
+                AchievementInput(today: today, weeklyGoalHit: true))
+            .single;
+        final back = today.difference(a.day).inDays;
+        // Sunucu weekly_goal için current_date-7..+1 kabul eder.
+        expect(back, inInclusiveRange(0, 7));
+      }
+    });
+
+    test('yalnızca bilinen seri adı gösterilir (G2-14)', () {
+      FriendStory story(Object? name) => FriendStory(
+            id: 's',
+            ownerId: 'o',
+            kind: AchievementKind.streak7,
+            createdAt: DateTime(2026, 11, 26),
+            expiresAt: DateTime(2026, 11, 27),
+            payload: {'streak': name},
+          );
+      expect(StoryBuilder.achievementSlide(story('Adım')).title,
+          '7 günlük Adım serisi');
+      expect(StoryBuilder.achievementSlide(story('bedava kupon')).title,
+          '7 günlük seri');
+    });
+
     test('eşik dışında seri başarı değildir', () {
       expect(
         StoryBuilder.detectAchievements(

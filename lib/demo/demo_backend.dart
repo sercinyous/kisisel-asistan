@@ -59,7 +59,7 @@ class FakeQuickAddRepository implements QuickAddRepository {
   final List<ParsedEntry> saved = [];
 
   @override
-  Future<QuickAddResult> saveAll(ParsedEntry entry) async {
+  Future<QuickAddResult> saveAll(ParsedEntry entry, {String? opKey}) async {
     if (gate != null) await gate!.future;
     if (error != null) throw error!;
     saved.add(entry);

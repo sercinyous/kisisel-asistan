@@ -79,12 +79,18 @@ class QuickAddRepository {
   /// insert ile `reminders` tablosuna yazılır (yalnızca hatırlatıcı varsa
   /// RPC hiç çağrılmaz). RPC yazdıktan sonra hatırlatıcı insert'i
   /// başarısız olursa [QuickAddPartialSaveException] fırlatılır.
-  Future<QuickAddResult> saveAll(ParsedEntry entry) async {
+  ///
+  /// [opKey] aynı önizlemenin tekrar denemesinde aynı kalır: yanıt kaybolup
+  /// yeniden kaydedilirse sunucu ilk sonucu döndürür, kayıt iki kez yazılmaz.
+  Future<QuickAddResult> saveAll(ParsedEntry entry, {String? opKey}) async {
     final Object? response = entry.rpcCount == 0
         ? null
         : await _client.rpc<Object?>(
             'quick_add_entries',
-            params: {'payload': entry.toJson()},
+            params: {
+              'payload': entry.toJson(),
+              if (opKey != null) 'op_key': opKey,
+            },
           );
     if (entry.reminders.isNotEmpty) {
       try {

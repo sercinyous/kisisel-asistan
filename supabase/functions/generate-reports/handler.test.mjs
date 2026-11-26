@@ -638,3 +638,32 @@ test("yenileme: sahibinin AI onayı yoksa sayılar yazılır, dirty temizlenir, 
   assert.equal(calls.quota.length, 0);
   assert.equal(calls.fetch.length, 0);
 });
+
+test("cron sayfalı: ilk N kullanıcı işlenir, kalanı için after imleciyle devam edilir (G2-04)", async () => {
+  const continued = [];
+  const users = ["u-3", "u-1", "u-5", "u-2", "u-4"].map((id) => ({ id, timeZone: "Europe/Istanbul", onboarded: true }));
+  const { handler, calls } = setup({
+    store: { listUsers: async () => users },
+    deps: { cronPageSize: 2, continueCron: async (body) => continued.push(body) },
+  });
+  const first = await handler(post({ kind: "daily", previous: true }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(first.status, 200);
+  assert.equal((await first.json()).next, "u-2");
+  assert.deepEqual(calls.save.map((s) => s.userId).sort(), ["u-1", "u-2"]);
+  assert.deepEqual(continued, [{ kind: "daily", previous: true, after: "u-2" }]);
+
+  const last = await handler(post({ kind: "daily", previous: true, after: "u-4" }, { "x-cron-secret": "cron-gizli" }));
+  const body = await last.json();
+  assert.equal(body.next, undefined);
+  assert.deepEqual(calls.save.map((s) => s.userId).slice(2), ["u-5"]);
+  assert.equal(continued.length, 1);
+});
+
+test("JWT isteği after imlecini yok sayar ve devam etmez", async () => {
+  const continued = [];
+  const { handler, calls } = setup({ deps: { cronPageSize: 1, continueCron: async (b) => continued.push(b) } });
+  const response = await handler(post({ kind: "daily", after: "zzz" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.save.map((s) => s.userId), ["user-1"]);
+  assert.equal(continued.length, 0);
+});

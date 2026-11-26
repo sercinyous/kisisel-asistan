@@ -10,6 +10,7 @@ import '../../settings/presentation/terms_screen.dart';
 import '../domain/sign_in_messages.dart';
 import 'password_reset_screen.dart';
 import 'sign_in_controller.dart';
+import 'signup_confirm_screen.dart';
 
 /// Giriş ekranı: "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
 /// Google yapılandırılmamışsa (ya da tarayıcı demosunda) yalnızca e-posta
@@ -222,6 +223,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: AppColors.textSecondary),
                     ),
+                    if (state.info == confirmationSentMessage)
+                      TextButton(
+                        key: const Key('sign-in-confirm-code'),
+                        onPressed: busy
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => SignupConfirmScreen(
+                                      email: _email.text.trim(),
+                                    ),
+                                  ),
+                                ),
+                        child: const Text('Onay kodunu gir'),
+                      ),
                   ],
                   if (showForm) ...[
                     const SizedBox(height: AppSpacing.lg),

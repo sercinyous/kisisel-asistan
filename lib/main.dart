@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'core/services/secure_session_storage.dart';
 import 'core/config/env.dart';
 import 'core/services/error_reporter.dart';
 import 'core/services/notification_service.dart';
@@ -43,6 +44,12 @@ Future<void> _run({required void Function(ErrorReporter) onReporter}) async {
   await Supabase.initialize(
     url: Env.supabaseUrl,
     anonKey: Env.supabaseAnonKey,
+    // Oturum Anahtar Zinciri'nde (yedeğe girmez); eskisi taşınır (G2-10).
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SecureSessionStorage(
+        persistSessionKey: SecureSessionStorage.keyFor(Env.supabaseUrl),
+      ),
+    ),
   );
   if (errorReportingEnabled) {
     onReporter(supabaseErrorReporter(Supabase.instance.client)..install());

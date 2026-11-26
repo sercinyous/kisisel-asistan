@@ -433,16 +433,12 @@ select tf.eq('arkadaşlık satırlarını yalnızca taraflar görür',
 select tf.eq('Ali yalnızca kendi arkadaşlık satırını görür',
   tf.run('authenticated', :U1, $q$select to_jsonb(count(*)) from public.friendships$q$),
   '1'::jsonb);
-select tf.eq('gönderen kendi isteğini (açık sütunlarla) okur',
-  tf.run('authenticated', :U1, $q$select to_jsonb(count(*)) from public.friend_requests where from_user = auth.uid()$q$),
-  (select to_jsonb(count(*)) from public.friend_requests where from_user = :U1));
-select tf.eq('hedef taraf istek tablosunda satır görmez (yalnızca RPC)',
-  tf.run('authenticated', :U2, $q$select to_jsonb(count(*)) from public.friend_requests where from_user <> auth.uid()$q$),
-  '0'::jsonb);
+select tf.fails('gönderen istek tablosunu doğrudan okuyamaz (yalnızca RPC, G2-02)', 'authenticated', :U1,
+  $q$select to_jsonb(count(*)) from public.friend_requests where from_user = auth.uid()$q$, '42501');
+select tf.fails('engellenen kişi engelleyenin e-postasını/ret durumunu okuyamaz (G2-02)', 'authenticated', :U2,
+  $q$select to_jsonb(array_agg(target_email || status)) from public.friend_requests$q$, '42501');
 select tf.fails('hedef kullanıcı sütunu (hesap var mı sinyali) okunamaz', 'authenticated', :U1,
   $q$select to_jsonb(count(target_user)) from public.friend_requests$q$, '42501');
-select tf.fails('friend_requests * okuması reddedilir (kısıtlı sütun yetkisi)', 'authenticated', :U1,
-  $q$select to_jsonb(count(*)) from (select * from public.friend_requests) z$q$, '42501');
 select tf.fails('istemci doğrudan istek ekleyemez', 'authenticated', :U1,
   $q$insert into public.friend_requests (from_user, target_email) values (auth.uid(), 'x@y.co') returning to_jsonb(id)$q$, '42501');
 select tf.fails('istemci doğrudan arkadaşlık ekleyemez', 'authenticated', :U5,

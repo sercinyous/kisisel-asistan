@@ -107,3 +107,40 @@ begin
   end;
 end;
 $$;
+
+-- G2-02: engellenen kişi engelleyenin e-postasını/ret durumunu okuyamaz.
+select tf.fails('engellenen friend_requests okuyamaz', 'authenticated', '5ec00000-0000-0000-0000-000000000003',
+  $q$select to_jsonb(array_agg(target_email)) from public.friend_requests$q$, '42501');
+
+-- G2-09: aynı op_key ikinci kez yazmaz; kalem sınırı.
+select tf.run('authenticated', '5ec00000-0000-0000-0000-000000000001',
+  $q$select public.quick_add_entries('{"nutrition":[{"food_name":"elma","calories":50}]}'::jsonb,
+                                     '0b000000-0000-0000-0000-0000000000a1'::uuid)$q$);
+select tf.run('authenticated', '5ec00000-0000-0000-0000-000000000001',
+  $q$select public.quick_add_entries('{"nutrition":[{"food_name":"elma","calories":50}]}'::jsonb,
+                                     '0b000000-0000-0000-0000-0000000000a1'::uuid)$q$);
+select tf.eq('aynı op_key ile tek öğün yazılır',
+  (select to_jsonb(count(*)) from public.nutrition_logs
+    where user_id = '5ec00000-0000-0000-0000-000000000001' and food_name = 'elma'), '1');
+select tf.run('authenticated', '5ec00000-0000-0000-0000-000000000001',
+  $q$select public.quick_add_entries('{"nutrition":[{"food_name":"elma","calories":50}]}'::jsonb,
+                                     '0b000000-0000-0000-0000-0000000000a2'::uuid)$q$);
+select tf.eq('yeni op_key yeniden yazar',
+  (select to_jsonb(count(*)) from public.nutrition_logs
+    where user_id = '5ec00000-0000-0000-0000-000000000001' and food_name = 'elma'), '2');
+select tf.fails('51 kalem reddedilir', 'authenticated', '5ec00000-0000-0000-0000-000000000001',
+  $q$select public.quick_add_entries(jsonb_build_object('tasks',
+       (select jsonb_agg(jsonb_build_object('title', 'g' || i)) from generate_series(1, 51) i)))$q$, '22023');
+
+-- G2-13: ekip üyesi ve kategori boyutu.
+insert into public.user_settings (user_id) values ('5ec00000-0000-0000-0000-000000000001')
+  on conflict (user_id) do nothing;
+select tf.fails('31 ekip üyesi reddedilir', 'authenticated', '5ec00000-0000-0000-0000-000000000001',
+  $q$update public.user_settings set team_members = (select array_agg('k' || i) from generate_series(1, 31) i)
+     where user_id = auth.uid() returning to_jsonb(user_id)$q$, '23514');
+select tf.fails('uzun ekip üyesi adı reddedilir', 'authenticated', '5ec00000-0000-0000-0000-000000000001',
+  $q$update public.user_settings set team_members = array[repeat('a', 61)]
+     where user_id = auth.uid() returning to_jsonb(user_id)$q$, '23514');
+select tf.fails('büyük kategori listesi reddedilir', 'authenticated', '5ec00000-0000-0000-0000-000000000001',
+  $q$update public.user_settings set task_categories = jsonb_build_array(repeat(md5('x'), 700))
+     where user_id = auth.uid() returning to_jsonb(user_id)$q$, '23514');

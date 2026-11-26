@@ -33,8 +33,12 @@ class RecordingQuickAddRepository implements QuickAddRepository {
 
   final List<ParsedEntry> saved = [];
 
+  /// Her denemenin kayıt anahtarı (hatalı denemeler dahil).
+  final List<String?> opKeys = [];
+
   @override
-  Future<QuickAddResult> saveAll(ParsedEntry entry) async {
+  Future<QuickAddResult> saveAll(ParsedEntry entry, {String? opKey}) async {
+    opKeys.add(opKey);
     if (gate != null) await gate!.future;
     if (error != null) throw error!;
     if (failReminders && entry.reminders.isNotEmpty) {

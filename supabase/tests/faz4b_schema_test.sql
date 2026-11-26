@@ -227,7 +227,7 @@ select tf.eq('yeni tablolardaki politikalar',
   (select jsonb_agg(tablename || '.' || policyname || '.' || cmd order by tablename, policyname)
    from pg_policies
    where schemaname = 'public' and tablename in ('friend_requests', 'friendships', 'friend_sharing', 'ai_usage')),
-  '["ai_usage.ai_usage_owner_select.SELECT", "friend_requests.friend_requests_sender_select.SELECT",
+  '["ai_usage.ai_usage_owner_select.SELECT",
     "friend_sharing.friend_sharing_owner_all.ALL", "friendships.friendships_member_select.SELECT"]'::jsonb);
 
 \echo tamam: Faz 4B şema testleri geçti

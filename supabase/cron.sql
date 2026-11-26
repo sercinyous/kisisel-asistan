@@ -17,7 +17,8 @@
 --                  raporların sayıları yenilenir; AI yorumu yalnızca sayılar
 --                  değiştiyse (kişi başına günde en çok REPORT_REFRESH_DAILY_LIMIT)
 --   0 4 * * 1    → her Pazartesi 07:00 İstanbul: biten haftanın raporu
---   30 3 * * 0   → her Pazar: 60 günden eski günlük AI kota sayaçları silinir
+--   30 3 * * 0   → her Pazar: 60 günden eski günlük AI kota sayaçları ve 90 günden
+--                  eski hata kayıtları (app_errors) silinir
 --
 -- Raporlar yalnızca ilk kurulumunu bitirmiş (user_settings.onboarded_at dolu)
 -- kullanıcılar için üretilir; bunu Edge Function generate-reports uygular
@@ -132,6 +133,7 @@ select cron.schedule(
   $job$
   delete from public.ai_usage where day < current_date - 60;
   delete from public.ai_global_usage where day < current_date - 60;
+  delete from public.app_errors where created_at < now() - interval '90 days';
   $job$
 );
 
