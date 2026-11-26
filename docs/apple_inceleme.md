@@ -52,7 +52,7 @@ health goals). Anyone can sign up; please use the demo account provided above
 The demo account is pre-filled with sample, non-personal data (tasks, notes,
 routines, meals, workouts and 14 days of step/sleep/energy summaries).
 
-Health data: the app reads steps, sleep, active energy, height and weight from
+Health data: the app reads steps, sleep, active energy, workouts, height and weight from
 Apple Health only after the user grants permission and confirms import for the
 account (Sağlık tab). It never writes to Apple Health. Health data is not used
 for advertising and is not shared with third parties.

@@ -111,9 +111,11 @@ if ! grep -q "PrivacyInfo.xcprivacy in Resources" "$PBXPROJ"; then
   perl -0pi -e 's/(\/\* Begin PBXBuildFile section \*\/\n)/$1\t\tA1B2C3D4E5F60718293A4B01 \/\* PrivacyInfo.xcprivacy in Resources \*\/ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B02 \/\* PrivacyInfo.xcprivacy \*\/; };\n/' "$PBXPROJ"
   perl -0pi -e 's/(\/\* Begin PBXFileReference section \*\/\n)/$1\t\tA1B2C3D4E5F60718293A4B02 \/\* PrivacyInfo.xcprivacy \*\/ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };\n/' "$PBXPROJ"
   perl -0pi -e 's/(\n(\s*)[0-9A-F]{24} \/\* Info\.plist \*\/,\n)/$1$2A1B2C3D4E5F60718293A4B02 \/\* PrivacyInfo.xcprivacy \*\/,\n/' "$PBXPROJ"
-  perl -0pi -e 's/(isa = PBXResourcesBuildPhase;\n\s*buildActionMask = \d+;\n\s*files = \(\n)/$1\t\t\t\tA1B2C3D4E5F60718293A4B01 \/\* PrivacyInfo.xcprivacy in Resources \*\/,\n/' "$PBXPROJ"
+  # Yalnızca Runner hedefinin Resources aşaması (LaunchScreen.storyboard'u
+  # içeren blok); ilk eşleşme RunnerTests aşaması olabilir.
+  perl -0pi -e 's/(\n\s*[0-9A-F]{24} \/\* Resources \*\/ = \{\n\s*isa = PBXResourcesBuildPhase;\n\s*buildActionMask = \d+;\n\s*files = \(\n)(?=(?:[^)]*\n)*?\s*[0-9A-F]{24} \/\* LaunchScreen\.storyboard in Resources \*\/)/$1\t\t\t\tA1B2C3D4E5F60718293A4B01 \/\* PrivacyInfo.xcprivacy in Resources \*\/,\n/' "$PBXPROJ"
 fi
-if [[ "$(grep -c "A1B2C3D4E5F60718293A4B0" "$PBXPROJ")" -lt 4 ]]; then
+if [[ "$(grep -c "A1B2C3D4E5F60718293A4B0" "$PBXPROJ")" -lt 4 ]] || ! perl -0ne 'exit((/files = \(\n(?:[^)]*\n)*?\s*A1B2C3D4E5F60718293A4B01 [^\n]*\n(?:[^)]*\n)*?[^\n]*LaunchScreen\.storyboard in Resources/ || /files = \(\n(?:[^)]*\n)*?[^\n]*LaunchScreen\.storyboard in Resources[^\n]*\n(?:[^)]*\n)*?\s*A1B2C3D4E5F60718293A4B01 /) ? 0 : 1)' "$PBXPROJ"; then
   echo "HATA: PrivacyInfo.xcprivacy Runner hedefine eklenemedi." >&2
   exit 1
 fi

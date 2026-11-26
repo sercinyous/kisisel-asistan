@@ -1,6 +1,6 @@
 # Gizlilik Metni
 
-Son güncelleme: 25 Kasım 2026
+Son güncelleme: 26 Kasım 2026
 
 ## Kısaca
 
@@ -14,7 +14,7 @@ Hesap: e-posta adresin ve giriş bilgilerin (şifre ya da Google ile giriş). Ş
 
 Profil: görünen adın, profil resmin (seçtiğin maskot ya da yüklediğin fotoğraf), boy, doğum yılı, cinsiyet, saat dilimi, hedeflerin (adım, uyku, kalori, su, kilo) ve uygulama ayarların. Profil fotoğrafı yüklemeden önce telefonunda kare kırpılıp küçültülür ve özel bir depolama alanında saklanır.
 
-Sağlık verileri: izin verirsen Apple Sağlık'tan (iPhone) ya da Google Health'ten adım, uyku, aktif enerji, boy ve kilo okunur. Uygulamada günlük özetler (günlük adım, uyku süresi, yakılan kalori) ve antrenman kayıtları saklanır; ham dakika dakika veri sunucuya gönderilmez. Apple Sağlık içe aktarımı her hesap için ayrıca onaylanır.
+Sağlık verileri: izin verirsen Apple Sağlık'tan (iPhone) ya da Google Health'ten adım, uyku, aktif enerji, antrenman, boy ve kilo okunur. Uygulamada günlük özetler (günlük adım, uyku süresi, yakılan kalori) ve antrenman kayıtları saklanır; ham dakika dakika veri sunucuya gönderilmez. Apple Sağlık içe aktarımı her hesap için ayrıca onaylanır.
 
 Kendi girdiğin kayıtlar: öğünler ve besin değerleri, su, kilo, görevler, notlar, rutinler, hatırlatıcılar ve onların tamamlanma kayıtları.
 

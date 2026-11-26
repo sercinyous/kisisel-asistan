@@ -16,7 +16,7 @@ const List<PrivacySection> privacySections = [
   PrivacySection('Topladığımız veriler', [
     'Hesap: e-posta adresin ve giriş bilgilerin (şifre ya da Google ile giriş). Şifren yalnızca kimlik doğrulama servisinde, şifrelenmiş olarak tutulur.',
     'Profil: görünen adın, profil resmin (seçtiğin maskot ya da yüklediğin fotoğraf), boy, doğum yılı, cinsiyet, saat dilimi, hedeflerin (adım, uyku, kalori, su, kilo) ve uygulama ayarların. Profil fotoğrafı yüklemeden önce telefonunda kare kırpılıp küçültülür ve özel bir depolama alanında saklanır.',
-    'Sağlık verileri: izin verirsen Apple Sağlık\'tan (iPhone) ya da Google Health\'ten adım, uyku, aktif enerji, boy ve kilo okunur. Uygulamada günlük özetler (günlük adım, uyku süresi, yakılan kalori) ve antrenman kayıtları saklanır; ham dakika dakika veri sunucuya gönderilmez. Apple Sağlık içe aktarımı her hesap için ayrıca onaylanır.',
+    'Sağlık verileri: izin verirsen Apple Sağlık\'tan (iPhone) ya da Google Health\'ten adım, uyku, aktif enerji, antrenman, boy ve kilo okunur. Uygulamada günlük özetler (günlük adım, uyku süresi, yakılan kalori) ve antrenman kayıtları saklanır; ham dakika dakika veri sunucuya gönderilmez. Apple Sağlık içe aktarımı her hesap için ayrıca onaylanır.',
     'Kendi girdiğin kayıtlar: öğünler ve besin değerleri, su, kilo, görevler, notlar, rutinler, hatırlatıcılar ve onların tamamlanma kayıtları.',
     'Raporlar: bu verilerden hesaplanan günlük ve haftalık rapor sayıları ve kısa yorumları.',
     'İlerleme fotoğrafları: eklersen vücut ilerleme fotoğrafların telefonunda küçültülür ve yalnızca senin erişebildiğin özel bir depolama alanında saklanır; arkadaşlarınla ya da başka biriyle paylaşılmaz, AI\'ya gönderilmez.',
@@ -44,7 +44,7 @@ const List<PrivacySection> privacySections = [
   ]),
   PrivacySection('Saklama süresi', [
     'Verilerin, sen silene ya da hesabını silene kadar saklanır. Tek tek kayıtları (görev, not, öğün vb.) uygulama içinden istediğin zaman silebilirsin.',
-    'Hata kayıtları ve geri bildirimler, hesabın silinince birlikte silinir. Sunucu sağlayıcısının olağan yedekleri kısa bir süre sonra kendiliğinden yenilenir.',
+    'Hata kayıtları 90 gün sonra kendiliğinden silinir. Hata kayıtları ve geri bildirimler, hesabın silinince birlikte silinir. Sunucu sağlayıcısının olağan yedekleri kısa bir süre sonra kendiliğinden yenilenir.',
   ]),
   PrivacySection('Hesabını ve verilerini silme', [
     'Hesap > Profil ve hedefler sayfasının en altındaki Hesabımı sil ekranında (Hesap ekranının en altından da açılır) SİL ya da SIL yazıp onayladığında hesabın ve sunucudaki tüm verin hemen ve kalıcı olarak silinir: profil, profil fotoğrafın, ilerleme fotoğrafların, vücut ölçülerin, haftalık check-in\'lerin, hikâyelerin ve tepkilerin, sağlık özetleri, öğünler, görevler, notlar, rutinler, hatırlatıcılar, raporlar, arkadaşlıklar (iki taraftan da), davetler, paylaşım ayarları, hata kayıtları ve geri bildirimler.',

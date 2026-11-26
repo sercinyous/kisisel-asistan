@@ -1,4 +1,4 @@
-// docs/kullanim_kosullari.md ile aynı içerik; birini değiştirirsen diğerini de güncelle.
+// docs/kullanim_kosullari.md ile aynı içerik (test/features/settings/legal_docs_sync_test.dart denetler).
 
 import 'privacy_text.dart';
 
