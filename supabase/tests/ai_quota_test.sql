@@ -69,27 +69,22 @@ select tf.fails('null tür reddedilir', 'service_role', null,
 select tf.fails('null kullanıcı reddedilir', 'service_role', null,
   $q$select to_jsonb(public.consume_ai_quota(null, 'ai', 5))$q$, '22023');
 
--- Gün, kullanıcının saat dilimindeki gündür (UTC+14 ile UTC-11 arası fark: 1 gün).
+-- Gün UTC günüdür; kullanıcının saat dilimi kotayı etkilemez (SEC-08).
 update public.user_settings set timezone = 'Pacific/Kiritimati' where user_id = :A;
 update public.user_settings set timezone = 'Pacific/Pago_Pago' where user_id = :B;
 select tf.run('service_role', null, $q$select jsonb_build_array(
   public.consume_ai_quota('c1000000-0000-0000-0000-000000000001', 'tz', 5),
   public.consume_ai_quota('c2000000-0000-0000-0000-000000000002', 'tz', 5))$q$);
-select tf.ok('kota günü kullanıcının saat dilimine göre',
+select tf.ok('kota günü UTC günü',
   (select day from public.ai_usage where user_id = :A and kind = 'tz') =
-    (now() at time zone 'Pacific/Kiritimati')::date
+    (now() at time zone 'UTC')::date
   and (select day from public.ai_usage where user_id = :B and kind = 'tz') =
-    (now() at time zone 'Pacific/Pago_Pago')::date);
-update public.user_settings set timezone = 'Boyle/BirYerYok' where user_id = :A;
-select tf.run('service_role', null, $q$select to_jsonb(public.consume_ai_quota('c1000000-0000-0000-0000-000000000001', 'tz-bozuk', 5))$q$);
-select tf.ok('bozuk saat dilimi adı kotayı düşürmez (İstanbul gününe düşer)',
-  (select day from public.ai_usage where user_id = :A and kind = 'tz-bozuk') =
-    (now() at time zone 'Europe/Istanbul')::date);
+    (now() at time zone 'UTC')::date);
 update public.user_settings set timezone = 'Europe/Istanbul' where user_id in (:A, :B);
 
 -- Önceki günün sayacı bugünü etkilemez.
 insert into public.ai_usage (user_id, kind, day, count)
-values (:B, 'dun', (now() at time zone 'Europe/Istanbul')::date - 1, 99);
+values (:B, 'dun', (now() at time zone 'UTC')::date - 1, 99);
 select tf.eq('dünkü dolu sayaç bugünkü kotayı tüketmez',
   tf.run('service_role', null, $q$select to_jsonb(public.consume_ai_quota('c2000000-0000-0000-0000-000000000002', 'dun', 5))$q$),
   'true'::jsonb);

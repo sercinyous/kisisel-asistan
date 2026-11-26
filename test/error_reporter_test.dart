@@ -65,6 +65,15 @@ void main() {
     final r = make();
     expect(r.report(_Bad(), null), isFalse);
   });
+  test('hata metnindeki tırnaklı kullanıcı değerleri silinir', () {
+    expect(
+      ErrorReporter.scrubMessage(
+          const FormatException('Bozuk "gizli not"\nayrıntı')),
+      'FormatException: FormatException: Bozuk "…"',
+    );
+    expect(ErrorReporter.scrubMessage(StateError("x 'ali@ex.com'")),
+        "Bad state: x '…'");
+  });
 }
 
 class _Bad {

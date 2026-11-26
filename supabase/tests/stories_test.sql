@@ -63,7 +63,7 @@ begin
     '42501');
 
   -- Süresi dolmuş story arkadaşa görünmez, sahibe görünür.
-  insert into public.friend_stories (user_id, kind, day) values (owner_u, 'workout', current_date - 2)
+  insert into public.friend_stories (user_id, kind, day) values (owner_u, 'workout', current_date - 1)
     returning id into old_sid;
   update public.friend_stories set expires_at = now() - interval '1 minute' where id = old_sid;
   r := tf.run('authenticated', friend_u,

@@ -1,4 +1,5 @@
 import '../../../core/config/app_targets.dart';
+import '../../../core/text_limits.dart';
 
 /// `notes` tablosundaki bir satır.
 class NoteItem {
@@ -34,7 +35,7 @@ class NoteItem {
   /// Formdan düzenlenebilen sütunlar.
   Map<String, dynamic> toWriteMap() => {
         'title': title.trim(),
-        'content': content.trim(),
+        'content': clipText(content.trim(), TextLimits.noteContent),
         'category': category,
         'is_pinned': isPinned,
       };

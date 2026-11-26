@@ -22,6 +22,17 @@ abstract interface class SignInBackend {
     required String idToken,
     String? accessToken,
   });
+
+  /// Şifre sıfırlama kodunu e-postayla gönderir. Adres kayıtlı olmasa da
+  /// hata vermez (hesap varlığı sızmaz).
+  Future<void> sendPasswordReset({required String email});
+
+  /// E-postadaki kodu doğrular (oturum açılır) ve yeni şifreyi kaydeder.
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  });
 }
 
 class SupabaseSignInBackend implements SignInBackend {
@@ -56,6 +67,20 @@ class SupabaseSignInBackend implements SignInBackend {
       idToken: idToken,
       accessToken: accessToken,
     );
+  }
+
+  @override
+  Future<void> sendPasswordReset({required String email}) =>
+      _auth.resetPasswordForEmail(email);
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    await _auth.verifyOTP(email: email, token: code, type: OtpType.recovery);
+    await _auth.updateUser(UserAttributes(password: newPassword));
   }
 }
 

@@ -30,11 +30,11 @@ Arkadaşlık: gönderdiğin ve aldığın davetler (karşı tarafın e-postası)
 
 AI kullanım sayaçları: günlük kaç kez AI kullandığın (kota için); içerik değil, yalnızca sayı.
 
-Hata kayıtları ve geri bildirim: uygulama çökerse hata mesajı, teknik iz, uygulama sürümü ve platform; "Sorun bildir" ile yazdığın mesaj. Bunları yalnızca uygulama sahibi görür; sen gönderdikten sonra bile okuyamazsın.
+Hata kayıtları ve geri bildirim: uygulama çökerse hata mesajı (tırnak içindeki değerler silinerek), teknik iz, uygulama sürümü ve platform; "Sorun bildir" ile yazdığın mesaj. Bunları yalnızca uygulama sahibi görür; sen gönderdikten sonra bile okuyamazsın.
 
 ## Yapay zekâ (Gemini)
 
-AI ile hızlı eklemede yazdığın metin, sunucumuzdaki ai-proxy fonksiyonu üzerinden Google Gemini'ye gönderilir ve kayda dönüştürülür. Gemini anahtarı uygulamada değil, sunucudadır.
+AI ile hızlı eklemede yazdığın metin, sunucumuzdaki ai-proxy fonksiyonu üzerinden Google Gemini'ye gönderilir ve kayda dönüştürülür. Metnin doğru anlaşılması için yanında Ayarlar'daki iş tanımın, görev kategorilerin, ekip üyesi adların, başlangıç/hedef kilon, beslenme ve adım hedeflerin ve bugünün tarihi de gönderilir. Gemini anahtarı uygulamada değil, sunucudadır.
 
 Raporların kısa yorumu için Gemini'ye yalnızca hesaplanmış sayılar (ör. görev tamamlama oranı, ortalama uyku) gönderilir; ad, e-posta ya da notlarının metni gönderilmez.
 

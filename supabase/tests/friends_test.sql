@@ -286,12 +286,15 @@ select tf.ok('reddedilen istek: arkadaşlık yok, durum declined',
   (select count(*) from public.friendships) = 1
   and (select status = 'declined' from public.friend_requests
        where from_user = :U2 and target_email = 'ayse@example.com'));
-select tf.eq('reddedilen isteğin yerine yeni istek açılabilir',
+select tf.eq('reddedilen gönderen yeniden gönderince aynı cevabı alır',
   tf.run('authenticated', :U2, $q$select to_jsonb(public.send_friend_request('ayse@example.com'))$q$),
   '"İstek gönderildi"'::jsonb);
-select tf.eq('Ayşe yeni isteği görür',
+select tf.eq('ret kalıcı: Ayşe yeni istek görmez (SEC-04)',
   tf.run('authenticated', :U3, $q$select to_jsonb(count(*)) from public.my_incoming_requests()$q$),
-  '1'::jsonb);
+  '0'::jsonb);
+-- Sonraki adımlar için Veli'nin bekleyen isteği doğrudan açılır.
+insert into public.friend_requests (from_user, target_email, target_user)
+values (:U2, 'ayse@example.com', :U3);
 -- Karşı taraf (Veli) Ayşe'ye zaten istek göndermişse Ayşe'nin isteği yeni satır açmaz
 -- (cevap aynı; Veli'nin isteği zaten Ayşe'nin gelen kutusunda).
 select tf.eq('Ayşe, ona zaten istek atmış Veli''ye istek gönderir: aynı cevap',

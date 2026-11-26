@@ -84,6 +84,8 @@ run -d faz4b -f "$HERE/friend_scope_test.sql" >/dev/null
 echo "tamam: arkadaş paylaşım kapsamı ve sağlık kaynağı (friend_scope_test)"
 run -d faz4b -f "$HERE/stories_test.sql" >/dev/null
 echo "tamam: story'ler, tepkiler ve paylaşım anahtarı (stories_test)"
+run -d faz4b -f "$HERE/guvenlik_test.sql" >/dev/null
+echo "tamam: güvenlik sınırları (guvenlik_test)"
 run -d faz4b -f "$HERE/account_delete_test.sql" >/dev/null
 echo "tamam: hesap silme sonrası public şemada satır kalmıyor (account_delete_test)"
 run -d faz4b -f "$HERE/app_errors_test.sql" >/dev/null

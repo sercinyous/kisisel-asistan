@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/ritim_top/ritim_top.dart';
 import '../../../core/widgets/sunset_stripe.dart';
+import 'password_reset_screen.dart';
 import 'sign_in_controller.dart';
 
 /// Giriş ekranı: "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
@@ -247,6 +248,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             : 'Hesabın yok mu? Kayıt ol',
                       ),
                     ),
+                    if (!_signUp)
+                      TextButton(
+                        key: const Key('sign-in-forgot'),
+                        onPressed: busy
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PasswordResetScreen(
+                                      initialEmail: _email.text.trim(),
+                                    ),
+                                  ),
+                                ),
+                        child: const Text('Şifremi unuttum'),
+                      ),
                   ],
                 ],
               ),

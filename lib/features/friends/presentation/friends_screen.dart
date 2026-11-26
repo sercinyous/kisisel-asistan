@@ -90,6 +90,45 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     }
   }
 
+  Future<void> _confirmBlock(LeaderboardEntry f) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Engelle'),
+        content: Text(
+          '${f.displayName} arkadaş listenden çıkar ve sana bir daha '
+          'istek gönderemez.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Engelle', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await _run(() => ref.read(friendsRepositoryProvider).block(f.userId));
+    }
+  }
+
+  Future<void> _report(String subject, {String? requestId}) async {
+    final repo = ref.read(friendsRepositoryProvider);
+    await _run(() async {
+      await repo.report(
+        subject: subject,
+        reason: requestId == null ? 'kullanıcı' : 'arkadaşlık isteği $requestId',
+      );
+      // Bildirilen istek reddedilir; ret kalıcıdır (yeniden gönderilemez).
+      if (requestId != null) await repo.respond(requestId, accept: false);
+    });
+    _toast('Bildirimin alındı. Teşekkürler.');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -249,6 +288,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                         child: Text(
                           r.fromName.isEmpty ? 'Bir kullanıcı' : r.fromName,
                           style: theme.textTheme.titleSmall,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Bildir',
+                        color: AppColors.textMuted,
+                        icon: const Icon(Icons.flag_outlined),
+                        onPressed: () => _report(
+                          r.fromName.isEmpty ? 'Bir kullanıcı' : r.fromName,
+                          requestId: r.id,
                         ),
                       ),
                       IconButton(
@@ -431,7 +479,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               tooltip: 'Seçenekler',
               icon: Icon(Icons.more_vert_outlined,
                   size: 20, color: AppColors.textMuted),
-              onSelected: (_) => _confirmLeave(e),
+              onSelected: (v) => switch (v) {
+                'block' => _confirmBlock(e),
+                'report' => _report(e.displayName),
+                _ => _confirmLeave(e),
+              },
               itemBuilder: (_) => [
                 PopupMenuItem(
                   value: 'leave',
@@ -440,6 +492,14 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     style: TextStyle(color: AppColors.danger),
                   ),
                 ),
+                PopupMenuItem(
+                  value: 'block',
+                  child: Text(
+                    'Engelle',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+                const PopupMenuItem(value: 'report', child: Text('Bildir')),
               ],
             )
           else

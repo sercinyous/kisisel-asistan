@@ -72,7 +72,7 @@ class ErrorReporter {
   bool report(Object error, StackTrace? stack) {
     try {
       final now = _now();
-      final message = _clip(error.toString(), ErrorReport.maxMessage);
+      final message = _clip(scrubMessage(error), ErrorReport.maxMessage);
       final stackText = stack == null || stack.toString().isEmpty
           ? null
           : _clip(stack.toString(), ErrorReport.maxStack);
@@ -139,6 +139,22 @@ class ErrorReporter {
 
   static String _clip(String value, int max) =>
       value.length <= max ? value : value.substring(0, max);
+
+  static final RegExp _doubleQuoted = RegExp(r'"[^"\n]*"');
+  static final RegExp _singleQuoted = RegExp(r"'[^'\n]*'");
+
+  /// Hata metninden kullanıcının yazdığı değerler sızmasın: tırnak içindeki
+  /// değerler silinir; sunucu/biçim hatalarında yalnızca tür ve ilk satır
+  /// tutulur (gizlilik politikası, SEC-12).
+  static String scrubMessage(Object error) {
+    var text = error.toString();
+    if (error is PostgrestException || error is FormatException) {
+      text = '${error.runtimeType}: ${text.split('\n').first}';
+    }
+    return text
+        .replaceAll(_doubleQuoted, '"…"')
+        .replaceAll(_singleQuoted, "'…'");
+  }
 
   static String _firstFrame(String? stack) {
     if (stack == null) return '';

@@ -635,7 +635,7 @@ begin
     execute format('drop policy if exists %I on public.%I', t || '_owner_all', t);
     execute format(
       'create policy %I on public.%I for all to authenticated
-         using (auth.uid() = user_id) with check (auth.uid() = user_id)',
+         using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)',
       t || '_owner_all', t
     );
   end loop;
@@ -650,7 +650,7 @@ begin
     execute format('drop policy if exists %I on public.%I', t || '_owner_select', t);
     execute format(
       'create policy %I on public.%I for select to authenticated
-         using (auth.uid() = user_id)',
+         using ((select auth.uid()) = user_id)',
       t || '_owner_select', t
     );
   end loop;
@@ -1241,10 +1241,10 @@ create or replace function public.seed_personal_assistant(p_user uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
-  insert into user_settings (user_id) values (p_user)
+  insert into public.user_settings (user_id) values (p_user)
   on conflict (user_id) do nothing;
 end;
 $$;
@@ -1256,7 +1256,7 @@ create or replace function public.handle_new_user_seed()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
 begin
   begin
@@ -1416,6 +1416,9 @@ grant select (id, from_user, target_email, status, created_at, responded_at)
 grant select on table public.friendships to authenticated;
 grant select, insert, update, delete on table public.friend_sharing to authenticated;
 grant select on table public.ai_usage to authenticated;
+-- Hesap silme (delete-account) bu iki tabloyu service_role ile temizler; yeni
+-- projelerde varsayılan tablo yetkisi olmadığından açıkça verilir (SEC-01).
+grant select, delete on table public.friendships, public.friend_requests to service_role;
 
 -- ---------------------------------------------------------------------
 -- Yardımcı işlevler (hiçbir istemci rolüne açık değil; security definer
@@ -1559,6 +1562,12 @@ begin
   -- Aynı kullanıcının eşzamanlı istekleri sınırı aşmasın.
   perform pg_advisory_xact_lock(hashtextextended('friend_requests:' || v_uid::text, 0));
 
+  -- Günlük gönderim sınırı (iptal + yeniden gönderme döngüsü dahil): 30/gün.
+  if not public.consume_ai_quota(v_uid, 'friend_request', 30) then
+    raise exception 'Bugün çok fazla istek gönderdin. Yarın tekrar dene.'
+      using errcode = '54000';
+  end if;
+
   select count(*) into v_pending
   from public.friend_requests r
   where r.from_user = v_uid and r.status = 'pending';
@@ -1593,6 +1602,16 @@ begin
        ) then
       return c_ok;
     end if;
+  end if;
+
+  -- Karşı taraf daha önce reddettiyse ya da engellediyse istek sessizce
+  -- düşer (gönderene fark ettirilmez; taciz döngüsü kırılır).
+  if exists (
+    select 1 from public.friend_requests r
+    where r.from_user = v_uid and r.status = 'declined'
+      and (r.target_email = v_email or (v_target is not null and r.target_user = v_target))
+  ) then
+    return c_ok;
   end if;
 
   begin
@@ -1724,12 +1743,53 @@ begin
       and (r.target_user = v_from
            or r.target_email = (select lower(btrim(u.email)) from auth.users u where u.id = v_from));
   else
+    -- target_user da yazılır: ret kalıcıdır, gönderen aynı kişiye bir daha
+    -- istek açamaz (send_friend_request).
     update public.friend_requests r
-       set status = 'declined', responded_at = now()
+       set status = 'declined', target_user = v_uid, responded_at = now()
      where r.id = respond_friend_request.request_id;
   end if;
 end;
 $$;
+
+-- Engelle: arkadaşlık biter ve karşı taraf bana bir daha istek gönderemez
+-- (kalıcı 'declined' kaydı). Bekleyen istekler de silinir.
+create or replace function public.block_user(target uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+#variable_conflict use_column
+declare
+  v_uid   uuid := auth.uid();
+  v_other uuid := block_user.target;
+  v_email text;
+begin
+  if v_uid is null then
+    raise exception 'Oturum bulunamadı' using errcode = '28000';
+  end if;
+  if v_other is null or v_other = v_uid then
+    return;
+  end if;
+  delete from public.friendships f
+  where f.user_a = least(v_uid, v_other) and f.user_b = greatest(v_uid, v_other);
+  select lower(btrim(u.email)) into v_email from auth.users u where u.id = v_uid;
+  delete from public.friend_requests r
+  where r.status = 'pending'
+    and ((r.from_user = v_uid and r.target_user = v_other)
+      or (r.from_user = v_other and (r.target_user = v_uid or r.target_email = v_email)));
+  if v_email is not null and not exists (
+    select 1 from public.friend_requests r
+    where r.from_user = v_other and r.status = 'declined' and r.target_user = v_uid
+  ) then
+    insert into public.friend_requests (from_user, target_email, target_user, status, responded_at)
+    values (v_other, v_email, v_uid, 'declined', now());
+  end if;
+end;
+$$;
+revoke all on function public.block_user(uuid) from public, anon;
+grant execute on function public.block_user(uuid) to authenticated;
 
 -- Arkadaşlarım. share_* arkadaşın bana AÇTIĞI anahtarlardır (kapalıysa
 -- arayüz "paylaşmıyor" der). display_name boşsa maskelenmiş e-posta.
@@ -2041,7 +2101,6 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_tz    text;
   v_day   date;
   v_count integer;
 begin
@@ -2052,8 +2111,9 @@ begin
     return false;
   end if;
 
-  select s.timezone into v_tz from public.user_settings s where s.user_id = p_user;
-  v_day := (now() at time zone public.safe_timezone(v_tz))::date;
+  -- Kota günü UTC'dir: kullanıcının kendi değiştirebildiği saat dilimi
+  -- günlük sınırı ikiye katlamaya yaramasın (SEC-08).
+  v_day := (now() at time zone 'UTC')::date;
 
   insert into public.ai_usage as u (user_id, kind, day, count)
   values (p_user, p_kind, v_day, 1)
@@ -2078,14 +2138,14 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_tz  text;
   v_day date;
 begin
   if p_user is null or p_kind is null or char_length(p_kind) not between 1 and 40 then
     raise exception 'Geçersiz kota isteği' using errcode = '22023';
   end if;
-  select s.timezone into v_tz from public.user_settings s where s.user_id = p_user;
-  v_day := (now() at time zone public.safe_timezone(v_tz))::date;
+  -- Kota günü UTC'dir: kullanıcının kendi değiştirebildiği saat dilimi
+  -- günlük sınırı ikiye katlamaya yaramasın (SEC-08).
+  v_day := (now() at time zone 'UTC')::date;
   update public.ai_usage u set count = u.count - 1
    where u.user_id = p_user and u.kind = p_kind and u.day = v_day and u.count > 0;
 end;
@@ -3795,6 +3855,30 @@ grant insert (user_id, message, category, app_version)
   on public.feedback to authenticated;
 grant all on public.feedback to service_role;
 
+-- Kişi başına günde en çok 20 geri bildirim (SEC-10).
+create or replace function public.feedback_rate_limit()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform pg_advisory_xact_lock(hashtextextended('feedback:' || new.user_id::text, 0));
+  if (select count(*) from public.feedback f
+      where f.user_id = new.user_id
+        and f.created_at > now() - interval '1 day') >= 20 then
+    raise exception 'feedback rate limit' using errcode = 'P0001';
+  end if;
+  new.created_at := now();
+  return new;
+end;
+$$;
+revoke all on function public.feedback_rate_limit() from public, anon, authenticated;
+
+drop trigger if exists feedback_rate_limit on public.feedback;
+create trigger feedback_rate_limit before insert on public.feedback
+  for each row execute function public.feedback_rate_limit();
+
 drop policy if exists feedback_insert_own on public.feedback;
 create policy feedback_insert_own on public.feedback
   for insert to authenticated
@@ -4555,6 +4639,10 @@ language plpgsql
 set search_path = public, pg_temp
 as $$
 begin
+  -- Hikâye yalnızca dün/bugün/yarın (saat dilimi payı) için açılır (SEC-10).
+  if new.day is null or new.day not between current_date - 1 and current_date + 1 then
+    raise exception 'Geçersiz hikâye günü' using errcode = '22023';
+  end if;
   new.created_at := now();
   new.expires_at := now() + interval '24 hours';
   -- Sahibin bir günden uzun süredir dolmuş eski satırları temizlenir
@@ -4710,3 +4798,37 @@ revoke all on table public.friend_stories, public.story_reactions from anon, aut
 grant select, insert, delete on table public.friend_stories to authenticated;
 grant select, insert, delete on table public.story_reactions to authenticated;
 -- END stories
+
+-- =====================================================================
+-- BEGIN guvenlik_limits — idempotent (SEC-10)
+-- Serbest metin sütunlarına üst sınır. NOT VALID ile eklenir, sonra
+-- doğrulanır; mevcut aşırı uzun satır varsa doğrulama atlanır (uyarı).
+-- =====================================================================
+do $$
+declare
+  r record;
+begin
+  for r in
+    select * from (values
+      ('tasks', 'tasks_description_len', 'description is null or char_length(description) <= 4000'),
+      ('tasks', 'tasks_assignee_len', 'assignee is null or char_length(assignee) <= 120'),
+      ('notes', 'notes_content_len', 'content is null or char_length(content) <= 20000'),
+      ('fitness_logs', 'fitness_logs_title_len', 'title is null or char_length(title) <= 200'),
+      ('fitness_logs', 'fitness_logs_notes_len', 'notes is null or char_length(notes) <= 2000'),
+      ('nutrition_logs', 'nutrition_logs_quantity_text_len',
+       'quantity_text is null or char_length(quantity_text) <= 200')
+    ) as v(tbl, con, expr)
+  loop
+    if not exists (select 1 from pg_constraint c
+                   where c.conname = r.con and c.conrelid = format('public.%I', r.tbl)::regclass) then
+      execute format('alter table public.%I add constraint %I check (%s) not valid', r.tbl, r.con, r.expr);
+    end if;
+    begin
+      execute format('alter table public.%I validate constraint %I', r.tbl, r.con);
+    exception when check_violation then
+      raise warning '% doğrulanamadı: eski satırlar sınırı aşıyor', r.con;
+    end;
+  end loop;
+end;
+$$;
+-- END guvenlik_limits

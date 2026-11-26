@@ -68,7 +68,8 @@ class AiConsentSheet extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Hızlı eklemede yazdığın metin, kayda dönüştürülmesi için '
-              "Google Gemini'ye gönderilir.",
+              "Google Gemini'ye gönderilir. Yanında iş tanımın, görev "
+              'kategorilerin, ekip üyesi adların ve hedeflerin de gider.',
               style: muted,
             ),
             const SizedBox(height: AppSpacing.sm),

@@ -1,4 +1,5 @@
 import '../../../core/config/app_targets.dart';
+import '../../../core/text_limits.dart';
 
 /// `tasks` tablosundaki bir satır (tek seferlik görev ya da randevu).
 class TaskItem {
@@ -65,10 +66,11 @@ class TaskItem {
   /// `complete` / `reopen` ile ayrıca yönetilir.
   Map<String, dynamic> toWriteMap() => {
         'title': title.trim(),
-        'description': _blankToNull(description),
+        'description':
+            clipText(_blankToNull(description), TextLimits.taskDescription),
         'category': category,
         'priority': priority,
-        'assignee': _blankToNull(assignee),
+        'assignee': clipText(_blankToNull(assignee), TextLimits.taskAssignee),
         'due_at': dueAt?.toUtc().toIso8601String(),
         'remind_at': remindAt?.toUtc().toIso8601String(),
         'notify': notify,

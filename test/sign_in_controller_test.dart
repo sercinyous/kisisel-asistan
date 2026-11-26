@@ -29,6 +29,25 @@ class FakeGoogleIdentityClient implements GoogleIdentityClient {
 }
 
 class FakeSignInBackend implements SignInBackend {
+
+  final List<String> resetRequests = [];
+  final List<({String email, String code, String password})> resets = [];
+
+  @override
+  Future<void> sendPasswordReset({required String email}) async {
+    resetRequests.add(email);
+    if (error != null) throw error!;
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    resets.add((email: email, code: code, password: newPassword));
+    if (error != null) throw error!;
+  }
   Object? error;
   final List<({String idToken, String? accessToken})> googleCalls = [];
   final List<({String email, String password})> passwordCalls = [];
