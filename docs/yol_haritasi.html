@@ -153,14 +153,14 @@ p{margin:0}
     <dl class="stats">
       <div><dt>tamamlanan faz (Faz 2'den Faz 5'e)</dt><dd>7</dd></div>
       <div><dt>bağımsız inceleme bulgusu kapatıldı</dt><dd>12</dd></div>
-      <div><dt>otomatik test geçiyor (Flutter)</dt><dd>1606</dd></div>
-      <div><dt>kalan iş, dağıtım için şart olan yok</dt><dd>1</dd></div>
+      <div><dt>otomatik test geçiyor (Flutter)</dt><dd>1681</dd></div>
+      <div><dt>kalan iş (1 sahipte: mağaza kurulumu)</dt><dd>2</dd></div>
     </dl>
 
     <div class="next">
       <span class="eyebrow">Sıradaki adım</span>
-      <strong>TestFlight dış test onayı ve arkadaşlarla deneme</strong>
-      <p>Faz 5 ile hesap silme, gizlilik metni, inceleyici hesabı, hata takibi, yeni ilk kurulum, hatırlatıcılar, su takibi ve kilo tahmini tamamlandı. Uygulama ikonu da seçildi (topaç). Geriye dış test onayı ve arkadaşlarla deneme kaldı.</p>
+      <strong>Sahip: mağaza kurulum listesi ve App Store gönderimi</strong>
+      <p>Faz 5 ile hesap silme, gizlilik metni, inceleyici hesabı, hata takibi, yeni ilk kurulum, hatırlatıcılar, su takibi ve kilo tahmini tamamlandı. Uygulama ikonu da seçildi (topaç). Kod tarafı yayına hazır; sahip listesi docs/STORE_HAZIRLIK.md içinde (Supabase, Codemagic, App Store Connect).</p>
     </div>
   </header>
 
@@ -230,6 +230,7 @@ p{margin:0}
       <li><b>Ürün hazırlığı · Kokpit<small>Tur 2</small></b><p>Bildirime dokununca ilgili sekme açılır (görev/rutin İşler, sağlık Sağlık); + ile eklenen tarihsiz iş Kokpit'te saatsiz satır olur; hatırlatması bugün olan görev listelenir; AI ayrıştırması kapatılarak iptal edilebilir; öne gelişte 60 sn içinde tekrar tazeleme yok; gün dönünce ölçü günü satırı tazelenir; kas yapmada hedefi geçmek hata sayılmaz.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>Ürün hazırlığı · İçgörü<small>Tur 2</small></b><p>AI onayı yoksa İçgörü "AI yorumu kapalı" der ve onayı oradan aldırır (kota harcanmaz); yorum üretilemezse eski yorum korunur ve hak iade edilir; boş dönemde ve onaysız hesapta Gemini çağrılmaz; bu dönemin raporu yoksa "Geçen haftayı / Dünü gör"; haftanın check-in hissi hafta görünümünde; saat dilimi açılışta cihazdan eşitlenir, batı dilimleri için ikinci haftalık çalıştırma; ai-proxy'de günlük 30 istek, genel günlük sınır, düşünme düzeyi low, 8.000 karakter; Türkçe sağlık süzgeci genişledi; kalori sıralaması ve madalyası kaldırıldı; Bildir onaylı, gerekçeli ve "Ayrıca engelle" seçenekli.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>Ürün hazırlığı · güvenlik<small>Tur 2</small></b><p>Kayıtta e-posta onayı uygulamada kodla (yeniden gönder); oturum Anahtar Zinciri'nde; haftalık hedef hikâyesi yeniden yayımlanıyor ve seri adı sabit listeden; engelleme e-posta sızdırmıyor; AI hızlı giriş tekrar denemede çift yazmıyor ve 50 kalem sınırlı; raporlar sayfa sayfa üretiliyor (çok kullanıcıya ölçeklenir); kullanıcı başına boyut sınırları; hata kayıtları 90 günde siliniyor.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Yayın kapısı<small>Tur 3</small></b><p>Tüm testler yeşil; Gemini anahtarı derlemeye gömülmez (doluysa derleme durur); mağaza yapısı Google girişini gizler (Guideline 4.8); yapı numarası TestFlight ve App Store'un büyüğünden artar; sahip için sıralı App Store hazırlık listesi.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
     </ol>
   </section>
 
@@ -239,6 +240,10 @@ p{margin:0}
       <p>Öncelik sırasıyla.</p>
     </div>
     <div class="todo">
+      <div class="grp k1">
+        <header><div><h3>Şimdi</h3><span class="cnt">1</span></div><p>Sahipte</p></header>
+        <ul><li><b>Mağaza kurulumu</b><span>Supabase SMTP, şifre kodu şablonu, fonksiyon dağıtımı ve secrets; Codemagic'ten GEMINI_API_KEY silme; App Store Connect kaydı, gizlilik etiketleri, ekran görüntüleri, gönderim (docs/STORE_HAZIRLIK.md).</span></li></ul>
+      </div>
       <div class="grp k3">
         <header><div><h3>Sonra</h3><span class="cnt">1</span></div><p>Dağıtımdan sonra</p></header>
         <ul><li><b>Yeni özellikler</b><span>Ana ekran widget'ı, haftalık meydan okuma, konuma göre hatırlatma.</span></li></ul>

@@ -16,12 +16,9 @@
 #     "Fetch profiles" ile BUNDLE_ID için App Store (ve istersen Ad-Hoc) profilini çek.
 #  4) Codemagic > Environment variables > "app_secrets" grubu (hepsi Secure):
 #     SUPABASE_URL, SUPABASE_ANON_KEY
-#     GEMINI_API_KEY artık gerekmez: boş bırakılırsa uygulama AI çağrılarını Supabase'teki
-#     ai-proxy Edge Function'ından yapar (anahtar yalnızca fonksiyon secret'ındadır).
-#     Eski doğrudan çağrı için doldurulabilir (geçiş); ai-proxy doğrulanınca sil.
-#     İsteğe bağlı GEMINI_MODEL (yalnızca doğrudan çağrıda kullanılır; proxy modelini
-#     fonksiyonun GEMINI_MODEL secret'ı belirler): Google bir modeli kaldırınca kod
-#     değiştirmeden yeni model adını buradan ver (varsayılan gemini-3.8-flash).
+#     GEMINI_API_KEY bu gruba EKLENMEZ: AI çağrıları Supabase'teki ai-proxy fonksiyonundan
+#     geçer; anahtar yalnızca fonksiyon secret'ındadır. Doluysa "Ortam değişkenlerini
+#     doğrula" adımı derlemeyi durdurur (anahtar IPA'ya gömülmesin).
 #     İsteğe bağlı GOOGLE_IOS_CLIENT_ID: Google Health (Fitbit) bağlantısı için
 #     Google Cloud'daki iOS OAuth istemci kimliği (…apps.googleusercontent.com).
 #     Gizli değildir (uygulamanın içinde durur); verilmezse uygulama Google
@@ -52,6 +49,10 @@ definitions:
       script: |
         #!/usr/bin/env bash
         set -e
+        if [ -n "${GEMINI_API_KEY:-}" ]; then
+          echo "HATA: GEMINI_API_KEY uygulamaya gömülmez; app_secrets grubundan sil (AI, Supabase ai-proxy üzerinden çalışır)." >&2
+          exit 1
+        fi
         for key in SUPABASE_URL SUPABASE_ANON_KEY; do
           if [ -z "${!key}" ]; then
             echo "Eksik ortam değişkeni: $key (app_secrets grubuna ekle)"
@@ -209,8 +210,11 @@ workflows:
             echo "HATA: codemagic.yaml içindeki APP_STORE_APPLE_ID hâlâ örnek değer." >&2
             exit 1
           fi
-          LATEST="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)"
-          case "$LATEST" in ''|*[!0-9]*) LATEST=0 ;; esac
+          TF="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)"
+          AS="$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)"
+          case "$TF" in ''|*[!0-9]*) TF=0 ;; esac
+          case "$AS" in ''|*[!0-9]*) AS=0 ;; esac
+          LATEST=$(( TF > AS ? TF : AS ))
           NEXT=$((LATEST + 1))
           echo "Yapı numarası: $NEXT"
           APP_VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //;s/+.*//')+$NEXT"
@@ -220,10 +224,10 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
-            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}" \
             --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}" \
-            --dart-define=GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}"
+            --dart-define=GOOGLE_WEB_CLIENT_ID=""
+          # Mağaza yapısında Google girişi kapalı: Sign in with Apple eklenene kadar
+          # Guideline 4.8 gereği yalnızca e-posta girişi sunulur (Google Health bağlantısı etkilenmez).
 
     artifacts: *artifacts
 
@@ -268,8 +272,6 @@ workflows:
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=GEMINI_API_KEY="${GEMINI_API_KEY:-}" \
-            --dart-define=GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.8-flash}" \
             --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}" \
             --dart-define=GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}"
 
