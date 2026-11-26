@@ -24,6 +24,8 @@ import {
 export interface ProxyStore {
   /** Kullanıcı JWT'sini doğrular; geçersizse null. Ağ/sunucu hatasında fırlatır. */
   userIdFromJwt(token: string): Promise<string | null>;
+  /** user_settings.ai_consent_at dolu mu. Ağ/sunucu hatasında fırlatır. */
+  hasAiConsent(userId: string): Promise<boolean>;
   /** consume_ai_quota: kota içindeyse sayacı atomik artırıp true. */
   consumeQuota: ConsumeQuota;
   /** Upstream geçici hatasında düşülen birimi geri verir (en iyi çaba). */
@@ -88,6 +90,16 @@ export function createHandler(deps: ProxyDeps): (req: Request) => Promise<Respon
       return fail(500, MESSAGES.authCheckFailed);
     }
     if (userId === null) return fail(401, MESSAGES.unauthorized);
+
+    // 1b) AI onayı: onayı olmayanın metni Gemini'ye gitmez, kota harcanmaz.
+    let consent: boolean;
+    try {
+      consent = await deps.store.hasAiConsent(userId);
+    } catch (error) {
+      deps.log(`AI onayı okunamadı: ${error instanceof Error ? error.message : String(error)}`);
+      return fail(500, MESSAGES.consentCheckFailed);
+    }
+    if (!consent) return fail(403, MESSAGES.consentRequired);
 
     // 2) Sunucu yapılandırması (secret'lar). Kota harcanmadan reddedilir.
     if (deps.geminiApiKey === "" || !isValidModel(deps.geminiModel)) {

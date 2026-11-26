@@ -16,13 +16,30 @@ class _Backend implements SignInBackend {
     if (sendError != null) throw sendError!;
   }
 
+  final List<(String, String)> verified = [];
+  Object? passwordErrorOnce;
+  bool session = false;
+
   @override
-  Future<void> resetPassword({
+  Future<void> verifyResetCode({
     required String email,
     required String code,
-    required String newPassword,
-  }) async =>
-      resets.add((email, code, newPassword));
+  }) async {
+    verified.add((email, code));
+    session = true;
+  }
+
+  @override
+  Future<void> setNewPassword(String newPassword) async {
+    final error = passwordErrorOnce;
+    passwordErrorOnce = null;
+    if (error != null) throw error;
+    final (email, code) = verified.last;
+    resets.add((email, code, newPassword));
+  }
+
+  @override
+  bool get hasSession => session;
 
   @override
   Future<void> signInWithGoogleIdToken({
@@ -80,5 +97,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(resetCodeSentMessage), findsOneWidget);
     expect(find.byKey(const Key('reset-error')), findsNothing);
+  });
+
+  testWidgets('şifre reddedilirse tekrar denemede kod yeniden doğrulanmaz',
+      (tester) async {
+    final backend = await pump(tester);
+    await tester.tap(find.byKey(const Key('reset-submit')));
+    await tester.pumpAndSettle();
+    backend.passwordErrorOnce = const AuthException('network');
+    await tester.enterText(find.byKey(const Key('reset-code')), '123456');
+    await tester.enterText(
+        find.byKey(const Key('reset-password')), 'yeniSifre1');
+    await tester.tap(find.byKey(const Key('reset-submit')));
+    await tester.pumpAndSettle();
+    expect(backend.resets, isEmpty);
+    expect(backend.verified.length, 1);
+
+    await tester.tap(find.byKey(const Key('reset-submit')));
+    await tester.pumpAndSettle();
+    expect(backend.verified.length, 1);
+    expect(backend.resets, [('kisi@example.com', '123456', 'yeniSifre1')]);
   });
 }

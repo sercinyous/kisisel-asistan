@@ -7,7 +7,7 @@
 //   POST {SUPABASE_URL}/functions/v1/ai-proxy
 //   Authorization: Bearer <oturum JWT'si>
 //   gövde = Gemini generateContent gövdesi, yanıt = Gemini yanıt JSON'u
-//   hatalar: {"error": "<Türkçe ileti>"} — 401 oturum, 402 fatura,
+//   hatalar: {"error": "<Türkçe ileti>"} — 401 oturum, 403 AI onayı yok, 402 fatura,
 //            413 büyük gövde, 429 günlük kota, 5xx geçici/yapılandırma.
 //
 // Oturum burada doğrulandığı için fonksiyon `--no-verify-jwt` ile dağıtılır:
@@ -37,6 +37,16 @@ const store: ProxyStore = {
     const { data, error } = await admin.auth.getUser(token);
     if (error !== null || data.user === null) return null;
     return data.user.id;
+  },
+
+  async hasAiConsent(userId) {
+    const { data, error } = await admin
+      .from("user_settings")
+      .select("ai_consent_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error !== null) throw new Error(error.message);
+    return data?.ai_consent_at != null;
   },
 
   async consumeQuota(userId, kind, limit) {

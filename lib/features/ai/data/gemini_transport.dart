@@ -177,6 +177,10 @@ class GeminiTransport {
 
   // ------------------------------------------------------- hata eşleme
 
+  /// Sunucu AI onayı bulamadı (403); onay sayfası yeniden açılır.
+  static const String aiConsentRequiredMessage =
+      'AI kullanımına onay vermedin. Onay verip tekrar dene ya da elle ekle.';
+
   static const String _sessionMessage =
       'Oturum bulunamadı ya da süresi doldu. Çıkış yapıp yeniden giriş yapın.';
 
@@ -223,6 +227,7 @@ class GeminiTransport {
         400 => 'Bu metin işlenemedi. Biraz değiştirip tekrar dene '
             'ya da elle ekle.',
         401 => _sessionMessage,
+        403 => aiConsentRequiredMessage,
         413 => 'Metin çok uzun. Kısaltıp tekrar dene.',
         429 => serverMessage ??
             'Bugünkü AI hakkın doldu. Yarın tekrar dene ya da elle ekle.',

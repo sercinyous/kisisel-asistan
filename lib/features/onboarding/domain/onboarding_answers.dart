@@ -20,8 +20,11 @@ enum OnboardingGoal {
 /// Soru adımının metin alanları için doğrulayıcılar. Hata metni `null`
 /// dönerse alan geçerlidir. Sınırlar `UserSettings` ve schema.sql ile aynıdır.
 abstract final class OnboardingValidators {
-  /// En küçük kabul edilen yaş (Ayarlar'daki doğum yılı sınırıyla aynı).
-  static const int minAge = 10;
+  /// En küçük kabul edilen yaş (Kullanım koşulları ve Ayarlar ile aynı).
+  static const int minAge = 13;
+
+  static const String underAgeMessage =
+      "Ritim'i kullanmak için en az $minAge yaşında olmalısın.";
 
   /// Virgül ya da nokta ondalıklı sayı; sonlu değilse `null`.
   static double? parseDecimal(String? text) {
@@ -51,9 +54,11 @@ abstract final class OnboardingValidators {
 
   static String? birthYear(String? text, {required int nowYear}) {
     final value = parseInt(text);
+    if ((text ?? '').trim().isEmpty) return null;
     if (value == null) return 'Doğum yılını yaz.';
     final max = nowYear - minAge;
-    if (value < UserSettings.birthYearMin || value > max) {
+    if (value > max) return underAgeMessage;
+    if (value < UserSettings.birthYearMin) {
       return '${UserSettings.birthYearMin}–$max arasında olmalı.';
     }
     return null;
@@ -98,7 +103,16 @@ class OnboardingAnswers {
 
   final String displayName;
   final int heightCm;
-  final int birthYear;
+
+  /// Doğum yılı isteğe bağlıdır; boşsa `null`.
+  final int? birthYear;
+
+  /// Öneri hesabındaki yaş; doğum yılı yoksa [defaultAge].
+  int ageAt(int nowYear) =>
+      birthYear == null ? defaultAge : nowYear - birthYear!;
+
+  /// Doğum yılı verilmediğinde kalori önerisinde kullanılan yaş.
+  static const int defaultAge = 30;
   final Sex sex;
   final double weightKg;
   final double targetWeightKg;
@@ -141,7 +155,7 @@ class OnboardingAnswers {
     return OnboardingAnswers(
       displayName: displayName.trim(),
       heightCm: OnboardingValidators.parseInt(height)!,
-      birthYear: OnboardingValidators.parseInt(birthYear)!,
+      birthYear: OnboardingValidators.parseInt(birthYear),
       sex: sex ?? Sex.unspecified,
       weightKg: weightKg,
       targetWeightKg: target,

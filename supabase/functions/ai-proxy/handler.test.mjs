@@ -42,7 +42,7 @@ function memoryQuota() {
 }
 
 function setup(overrides = {}) {
-  const calls = { jwt: [], quota: [], fetch: [], log: [] };
+  const calls = { jwt: [], consent: [], quota: [], fetch: [], log: [] };
   const quota = memoryQuota();
   const store = {
     userIdFromJwt: async (token) => {
@@ -50,6 +50,10 @@ function setup(overrides = {}) {
       if (token === "jwt-ali") return "user-ali";
       if (token === "jwt-veli") return "user-veli";
       return null;
+    },
+    hasAiConsent: async (userId) => {
+      calls.consent.push(userId);
+      return true;
     },
     consumeQuota: async (userId, kind, limit) => {
       calls.quota.push({ userId, kind, limit });
@@ -466,4 +470,33 @@ test("Gemini 5xx ya da ağ hatasında düşülen kota iade edilir; 4xx'te edilme
     }));
     assert.equal(refunded.length, refunds);
   }
+});
+
+// ---------------------------------------------------------------- AI onayı
+
+test("AI onayı yoksa 403; Gemini çağrılmaz, kota harcanmaz", async () => {
+  const { handler, calls } = setup({ store: { hasAiConsent: async () => false } });
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 403);
+  assert.match(await errorOf(response), /onay/);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.fetch.length, 0);
+});
+
+test("AI onayı okunamazsa 500; Gemini çağrılmaz, kota harcanmaz", async () => {
+  const { handler, calls } = setup({
+    store: { hasAiConsent: async () => { throw new Error("db"); } },
+  });
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 500);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.fetch.length, 0);
+});
+
+test("AI onayı varsa istek Gemini'ye gider ve onay kullanıcı kimliğiyle sorulur", async () => {
+  const { handler, calls } = setup();
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.consent, ["user-ali"]);
+  assert.equal(calls.fetch.length, 1);
 });

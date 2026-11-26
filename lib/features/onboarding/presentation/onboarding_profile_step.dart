@@ -81,7 +81,7 @@ class OnboardingProfileStep extends StatelessWidget {
         OnboardingField(
           key: const Key('onboarding-birth-year'),
           controller: birthYear,
-          label: 'Doğum yılı',
+          label: 'Doğum yılı (isteğe bağlı)',
           keyboardType: TextInputType.number,
           inputFormatters: OnboardingField.digitsOnly,
           maxLength: 4,

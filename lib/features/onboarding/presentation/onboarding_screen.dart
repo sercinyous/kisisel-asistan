@@ -123,6 +123,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       c.addListener(_refresh);
     }
     unawaited(_loadDeviceTimezone());
+    _prefillName();
+  }
+
+  /// Google/Apple hesabındaki ad varsa ad alanı onunla başlar.
+  void _prefillName() {
+    if (_name.text.isNotEmpty) return;
+    try {
+      final meta =
+          ref.read(supabaseClientProvider).auth.currentUser?.userMetadata;
+      final raw = (meta?['full_name'] ?? meta?['name'] ?? '').toString();
+      final name = raw.trim();
+      if (name.isNotEmpty && OnboardingValidators.displayName(name) == null) {
+        _name.text = name;
+      }
+    } catch (_) {
+      // İstemci yoksa (test, demo) alan boş kalır.
+    }
   }
 
   Future<void> _loadDeviceTimezone() async {
@@ -349,6 +366,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       await ref.read(supabaseClientProvider).auth.signOut();
     } catch (_) {
+      // Yerel oturum silindiyse (çevrimdışı) çıkış başarılıdır.
+      if (ref.read(supabaseClientProvider).auth.currentSession == null) return;
       messenger
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -528,7 +547,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         final weight = OnboardingValidators.parseDecimal(_weight.text) ?? 70;
         final answers = _answers;
         return OnboardingTargetsStep(
-          age: answers == null ? null : _now().year - answers.birthYear,
+          age: answers == null || answers.birthYear == null
+              ? null
+              : _now().year - answers.birthYear!,
           lossUsesEngine: answers != null && usesPlanEngine(answers),
           goal: _goal,
           onGoal: _onGoal,

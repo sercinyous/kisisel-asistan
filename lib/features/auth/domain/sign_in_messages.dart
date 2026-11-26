@@ -2,6 +2,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/google_auth.dart';
 
+/// Kayıt, sıfırlama ve şifre değiştirmede en kısa şifre.
+const int minPasswordLength = 8;
+
 /// Sunucu yeni hesabı kaydedemediğinde (GoTrue "Database error saving new
 /// user") gösterilen genel metin.
 const String signUpFailedMessage =
@@ -34,7 +37,7 @@ String _authMessage(AuthException error) {
     return 'Bu e-postayla zaten bir hesap var. Giriş yap.';
   }
   if (code == 'weak_password' || message.contains('password should be')) {
-    return 'Şifre çok zayıf. En az 6 karakter kullan.';
+    return 'Şifre çok zayıf. En az $minPasswordLength karakter kullan.';
   }
   if (code == 'signup_disabled' || message.contains('signups not allowed')) {
     return 'Yeni kayıtlar şu an kapalı. Biraz sonra tekrar dene.';

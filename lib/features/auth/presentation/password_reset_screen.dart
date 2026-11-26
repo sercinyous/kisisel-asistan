@@ -31,6 +31,9 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
   final _password = TextEditingController();
   bool _codeSent = false;
   bool _busy = false;
+
+  /// Kod doğrulandı (oturum açık); tekrar denemede yalnızca şifre yazılır.
+  bool _verified = false;
   String? _error;
   String? _info;
 
@@ -74,11 +77,11 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           _info = resetCodeSentMessage;
         });
       } else {
-        await backend.resetPassword(
-          email: email,
-          code: _code.text.trim(),
-          newPassword: _password.text,
-        );
+        if (!_verified && !backend.hasSession) {
+          await backend.verifyResetCode(email: email, code: _code.text.trim());
+        }
+        _verified = true;
+        await backend.setNewPassword(_password.text);
         if (!mounted) return;
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
           const SnackBar(content: Text('Şifren güncellendi.')),

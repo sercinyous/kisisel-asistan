@@ -1339,6 +1339,21 @@ create index if not exists friend_requests_from_user_idx
 create index if not exists friend_requests_target_user_idx
   on public.friend_requests (target_user) where target_user is not null;
 
+-- Engeller: engelleyen + engellenenin küçük harf e-postası. Engellenen
+-- hesabını silip aynı e-postayla yeniden açsa da engel sürer (uid değişir,
+-- e-posta değişmez). Yalnızca security definer fonksiyonlar okur/yazar.
+create table if not exists public.blocked_emails (
+  blocker        uuid not null references auth.users (id) on delete cascade,
+  blocked_email  text not null
+                 check (blocked_email = lower(btrim(blocked_email))
+                        and char_length(blocked_email) between 3 and 254),
+  created_at     timestamptz not null default now(),
+  primary key (blocker, blocked_email)
+);
+alter table public.blocked_emails enable row level security;
+revoke all on table public.blocked_emails from public, anon, authenticated;
+grant select, insert, delete on table public.blocked_emails to service_role;
+
 -- Arkadaşlık: sıralı çift (user_a < user_b), çift başına tek satır.
 create table if not exists public.friendships (
   user_a      uuid not null references auth.users (id) on delete cascade,
@@ -1605,7 +1620,14 @@ begin
   end if;
 
   -- Karşı taraf daha önce reddettiyse ya da engellediyse istek sessizce
-  -- düşer (gönderene fark ettirilmez; taciz döngüsü kırılır).
+  -- düşer (gönderene fark ettirilmez; taciz döngüsü kırılır). E-posta
+  -- engeli hesap silinip yeniden açılınca da geçerlidir.
+  if v_target is not null and v_my_email is not null and exists (
+    select 1 from public.blocked_emails b
+    where b.blocker = v_target and b.blocked_email = v_my_email
+  ) then
+    return c_ok;
+  end if;
   if exists (
     select 1 from public.friend_requests r
     where r.from_user = v_uid and r.status = 'declined'
@@ -1765,12 +1787,19 @@ declare
   v_uid   uuid := auth.uid();
   v_other uuid := block_user.target;
   v_email text;
+  v_other_email text;
 begin
   if v_uid is null then
     raise exception 'Oturum bulunamadı' using errcode = '28000';
   end if;
   if v_other is null or v_other = v_uid then
     return;
+  end if;
+  select lower(btrim(u.email)) into v_other_email from auth.users u where u.id = v_other;
+  if v_other_email is not null and char_length(v_other_email) between 3 and 254 then
+    insert into public.blocked_emails (blocker, blocked_email)
+    values (v_uid, v_other_email)
+    on conflict do nothing;
   end if;
   delete from public.friendships f
   where f.user_a = least(v_uid, v_other) and f.user_b = greatest(v_uid, v_other);

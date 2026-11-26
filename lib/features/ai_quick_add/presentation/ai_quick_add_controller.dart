@@ -108,6 +108,8 @@ class QuickAddController
         otherDomainSummary: entry.otherDomainSummary,
       );
     } on AiParseException catch (e) {
+      // Sunucu onay bulamadı: önbellekteki onay düşer, + yeniden onay sorar.
+      if (e.statusCode == 403) ref.invalidate(aiConsentProvider);
       state = state.copyWith(
         status: QuickAddStatus.idle,
         errorMessage: e.message,

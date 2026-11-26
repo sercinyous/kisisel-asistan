@@ -47,13 +47,24 @@ select tf.ok('ikinci engel çift kayıt açmaz', (
   select count(*) from public.friend_requests
   where from_user = '5ec00000-0000-0000-0000-000000000003' and status = 'declined') = 1);
 
+-- Engel hesap silinip aynı e-postayla yeniden açılınca da sürer.
+delete from auth.users where id = '5ec00000-0000-0000-0000-000000000003';
+select tf.mkuser('5ec00000-0000-0000-0000-000000000004', 'sec-cem@example.com');
+select tf.run('authenticated', '5ec00000-0000-0000-0000-000000000004',
+  $q$select to_jsonb(public.send_friend_request('sec-bora@example.com'))$q$);
+select tf.eq('yeniden açılan engelli hesap istek açamaz',
+  tf.run('authenticated', '5ec00000-0000-0000-0000-000000000002',
+    $q$select to_jsonb(count(*)) from public.my_incoming_requests()$q$), '0');
+select tf.ok('engel kaydı istemciye kapalı',
+  not has_table_privilege('authenticated', 'public.blocked_emails', 'select'));
+
 -- Günlük istek sınırı: 30.
 do $$
 begin
   update public.ai_usage set count = 30
-   where user_id = '5ec00000-0000-0000-0000-000000000003' and kind = 'friend_request';
+   where user_id = '5ec00000-0000-0000-0000-000000000004' and kind = 'friend_request';
   begin
-    perform tf.run('authenticated', '5ec00000-0000-0000-0000-000000000003',
+    perform tf.run('authenticated', '5ec00000-0000-0000-0000-000000000004',
       $q$select to_jsonb(public.send_friend_request('yeni@example.com'))$q$);
     raise exception 'BAŞARISIZ: günlük istek sınırı uygulanmadı';
   exception when sqlstate '54000' then

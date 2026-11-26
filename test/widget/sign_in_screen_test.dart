@@ -21,7 +21,6 @@ class _Google implements GoogleIdentityClient {
 class _Backend implements SignInBackend {
 
   final List<String> resetRequests = [];
-  final List<({String email, String code, String password})> resets = [];
 
   @override
   Future<void> sendPasswordReset({required String email}) async {
@@ -30,14 +29,16 @@ class _Backend implements SignInBackend {
   }
 
   @override
-  Future<void> resetPassword({
+  Future<void> verifyResetCode({
     required String email,
     required String code,
-    required String newPassword,
-  }) async {
-    resets.add((email: email, code: code, password: newPassword));
-    if (error != null) throw error!;
-  }
+  }) async {}
+
+  @override
+  Future<void> setNewPassword(String newPassword) async {}
+
+  @override
+  bool get hasSession => false;
   Object? error;
   int googleCalls = 0;
   int passwordCalls = 0;

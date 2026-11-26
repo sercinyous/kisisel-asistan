@@ -11,6 +11,7 @@ import 'package:kisisel_asistan/core/services/notification_service.dart';
 import 'package:kisisel_asistan/core/services/supabase_providers.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/features/health/data/health_repository.dart';
+import 'package:kisisel_asistan/features/onboarding/domain/onboarding_answers.dart';
 import 'package:kisisel_asistan/features/onboarding/data/onboarding_op_key_store.dart';
 import 'package:kisisel_asistan/features/onboarding/data/onboarding_repository.dart';
 import 'package:kisisel_asistan/features/onboarding/presentation/onboarding_gate.dart';
@@ -260,7 +261,7 @@ void main() {
   });
 
   group('Sıra: profil, sağlık, boy-kilo, hedefler, rutinler', () {
-    testWidgets('profil: ad ve doğum yılı zorunlu, cinsiyet isteğe bağlı',
+    testWidgets('profil: ad zorunlu; doğum yılı ve cinsiyet isteğe bağlı',
         (tester) async {
       await pumpGate(tester);
       await skipIntro(tester);
@@ -269,7 +270,10 @@ void main() {
       expect(find.text('Belirtmek istemiyorum'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
       await type(tester, 'onboarding-name', 'Ayşe');
-      expect(nextEnabled(tester), isFalse, reason: 'doğum yılı yok');
+      expect(nextEnabled(tester), isTrue, reason: 'doğum yılı isteğe bağlı');
+      await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 12}');
+      expect(nextEnabled(tester), isFalse, reason: '13 yaş altı');
+      expect(find.text(OnboardingValidators.underAgeMessage), findsOneWidget);
       await type(tester, 'onboarding-birth-year', '${DateTime.now().year - 36}');
       expect(nextEnabled(tester), isTrue, reason: 'cinsiyet isteğe bağlı');
 

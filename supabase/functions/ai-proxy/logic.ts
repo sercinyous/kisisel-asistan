@@ -40,6 +40,8 @@ export const MESSAGES = {
   badJson: "Gövde geçerli bir JSON nesnesi olmalı.",
   badContents: "contents en az bir metin içerikli girdi içermeli.",
   badParts: "İçerikte yalnızca metin parçaları desteklenir.",
+  consentRequired: "AI kullanımına onay vermedin. Onay verip tekrar dene ya da elle ekle.",
+  consentCheckFailed: "AI onayı denetlenemedi. Biraz sonra yeniden dene.",
   quotaCheckFailed: "Kullanım kotası denetlenemedi. Biraz sonra yeniden dene.",
   upstreamBadRequest: "AI isteği geçersiz bulundu.",
   upstreamBilling: "AI servisinin faturalandırması tükendi. Sunucu sahibi krediyi yenilemeli.",

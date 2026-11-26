@@ -27,8 +27,8 @@ void main() {
   const maleKey = Key('settings-sex-male');
   const unspecifiedKey = Key('settings-sex-unspecified');
 
-  /// Doğum yılı üst sınırı: bu yıl − 10.
-  final maxBirthYear = DateTime.now().year - 10;
+  /// Doğum yılı üst sınırı: bu yıl − 13.
+  final maxBirthYear = DateTime.now().year - 13;
 
   setUp(() {
     settings = FakeSettingsRepository();

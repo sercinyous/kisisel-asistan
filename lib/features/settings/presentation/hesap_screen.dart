@@ -15,6 +15,7 @@ import '../../friends/presentation/friends_screen.dart';
 import '../../onboarding/presentation/onboarding_screen.dart';
 import 'appearance_page.dart';
 import 'categories_team_page.dart';
+import 'change_password_sheet.dart';
 import 'connections_page.dart';
 import 'delete_account_screen.dart';
 import 'feedback_sheet.dart';
@@ -77,6 +78,12 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
       // Oturum kapanınca kök ekran giriş sayfasına döner.
       navigator.popUntil((route) => route.isFirst);
     } catch (_) {
+      // gotrue yerel oturumu önce siler, sunucu hatasını sonra fırlatır:
+      // oturum kapandıysa çıkış başarılıdır.
+      if (ref.read(supabaseClientProvider).auth.currentSession == null) {
+        navigator.popUntil((route) => route.isFirst);
+        return;
+      }
       if (mounted) setState(() => _signingOut = false);
       messenger
         ..hideCurrentSnackBar()
@@ -92,6 +99,11 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
     final settings = ref.watch(userSettingsProvider).valueOrNull;
     final email = ref.watch(
       authSessionProvider.select((s) => s.valueOrNull?.user.email),
+    );
+    final emailAccount = ref.watch(
+      authSessionProvider.select(
+        (s) => s.valueOrNull?.user.appMetadata['provider'] == 'email',
+      ),
     );
     final pending =
         ref.watch(pendingFriendRequestCountProvider).valueOrNull ?? 0;
@@ -248,6 +260,14 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                   onTap: () => FeedbackSheet.show(context),
                 ),
                 // END faz5_account
+                if (emailAccount)
+                  _MenuRow(
+                    key: const Key('settings-change-password'),
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Şifreyi değiştir',
+                    compact: true,
+                    onTap: () => ChangePasswordSheet.show(context),
+                  ),
                 _MenuRow(
                   key: const Key('settings-sign-out'),
                   icon: Icons.logout_outlined,
@@ -338,6 +358,12 @@ class _MenuRow extends StatelessWidget {
           ),
           child: Row(
             children: [
+              Icon(
+                icon,
+                size: 20,
+                color: danger ? AppColors.danger : AppColors.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
                   title,

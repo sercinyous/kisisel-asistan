@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/ritim_top/ritim_top.dart';
 import '../../../core/widgets/sunset_stripe.dart';
 import '../../settings/presentation/terms_screen.dart';
+import '../domain/sign_in_messages.dart';
 import 'password_reset_screen.dart';
 import 'sign_in_controller.dart';
 
@@ -14,7 +16,6 @@ import 'sign_in_controller.dart';
 /// formu görünür. Kayıt herkese açıktır: Google ilk girişte hesap açar, e-posta
 /// formunda "Kayıt ol" ile yeni hesap oluşturulur.
 /// Yeni hesap şifresinin en kısa uzunluğu.
-const int minPasswordLength = 8;
 
 final RegExp _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
 
@@ -104,7 +105,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           : () => ref
                               .read(signInControllerProvider.notifier)
                               .signInWithGoogle(),
-                      icon: const Icon(Icons.g_mobiledata_outlined, size: 28),
+                      icon: SvgPicture.asset(
+                        'assets/brand/google_g.svg',
+                        width: 20,
+                        height: 20,
+                      ),
                       label: Text(
                         state.busy == SignInMethod.google
                             ? 'Google ile giriş yapılıyor…'
@@ -242,7 +247,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       key: const Key('sign-in-mode-toggle'),
                       onPressed: busy
                           ? null
-                          : () => setState(() => _signUp = !_signUp),
+                          : () {
+                              ref
+                                  .read(signInControllerProvider.notifier)
+                                  .clearMessages();
+                              setState(() => _signUp = !_signUp);
+                            },
                       child: Text(
                         _signUp
                             ? 'Hesabın var mı? Giriş yap'
