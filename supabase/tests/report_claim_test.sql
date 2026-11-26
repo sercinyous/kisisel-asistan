@@ -92,6 +92,19 @@ select rc.ok('complete: sürüm aynıysa true döner',
 select rc.ok('complete: dirty temizlendi, kira bırakıldı',
   (select not dirty and claim_token is null from public.daily_reports where user_id = :U));
 
+-- 7) Yalnızca sayılar (AI onayı yok, ICG2-05): sayılar yazılır, yorum kalır, dirty temizlenir.
+insert into public.daily_health_metrics (user_id, metric_date, steps) values (:U, '2026-11-16', 1)
+  on conflict (user_id, metric_date) do update set steps = 13000;
+update public.daily_reports set dirty_at = now() - interval '1 hour' where user_id = :U;
+create temp table c6 as select * from public.claim_dirty_reports(40, interval '10 minutes', interval '15 minutes');
+select public.save_refreshed_metrics('daily', :U, '2026-11-16',
+  public.report_daily_metrics(:U, '2026-11-16'),
+  (select claim_token from c6), (select dirty_version from c6));
+select rc.ok('yalnızca sayılar: dirty temizlenir, yorum korunur, yeni adım yazılır',
+  (select not dirty and claim_token is null and ai_summary is not null
+          and (metrics #>> '{health,steps}')::numeric = 13000
+   from public.daily_reports where user_id = :U));
+
 delete from auth.users where id = :U;
 drop schema rc cascade;
 \echo RAPOR KIRA TESTLERI GECTI

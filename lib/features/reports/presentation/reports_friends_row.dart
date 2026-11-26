@@ -8,9 +8,10 @@ import '../../../core/widgets/ritim_avatar.dart';
 import 'reports_widgets.dart';
 
 /// Arkadaşlar arasında bu haftaki sıra (haftalık adım); 1'den başlar.
-/// Arkadaş yoksa ya da kişinin kendi satırı yoksa `null`.
+/// Adımını paylaşan arkadaş yoksa ya da kişinin kendi satırı yoksa `null`.
 int? weeklyFriendRank(List<LeaderboardEntry> entries) {
-  if (!entries.any((e) => !e.isSelf)) return null;
+  // Adımını paylaşan arkadaş yoksa sıra anlamsızdır ("1. sıradasın" yanıltır).
+  if (!entries.any((e) => !e.isSelf && e.stepsWeek != null)) return null;
   final ranked = rankEntries(entries, GoalMetric.steps, RankPeriod.week);
   final index = ranked.indexWhere((e) => e.isSelf);
   return index < 0 ? null : index + 1;

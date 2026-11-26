@@ -109,7 +109,7 @@ class GeminiParserService {
       generationConfig: {
         // Sıcaklık verilmez: Gemini 3 serisinde 1.0'ın altı döngüye sokabiliyor.
         // Gemini 3 serisinde düşünme belirteçleri de bu sınıra sayılır.
-        'maxOutputTokens': 8192,
+        'maxOutputTokens': 4096,
         'responseMimeType': 'application/json',
         'responseSchema': _mode == QuickAddMode.work
             ? _workSchema(_taskCategories)

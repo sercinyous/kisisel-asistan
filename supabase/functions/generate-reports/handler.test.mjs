@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { createHandler } from "./handler.ts";
 
 const NOW = new Date("2026-11-16T20:45:00Z"); // Pazartesi 23:45 İstanbul
-const METRICS = { work: { rate: 75 } };
+const METRICS = { work: { rate: 75, tasks_total: 4 } };
 
 function geminiOk(text = "Güzel bir gün.") {
   return async () =>
@@ -108,7 +108,7 @@ test("cron: tüm kullanıcılar için günlük rapor (kullanıcının bugünü)"
   const response = await handler(post({ kind: "daily" }, { "x-cron-secret": "cron-gizli" }));
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
-    ok: true, kind: "daily", date: "2026-11-16", users: 2, failed: 0, ai_failed: 0,
+    ok: true, kind: "daily", date: "2026-11-16", users: 2, failed: 0, skipped: 0, ai_failed: 0, ai_disabled: 0, ai_inactive: 0,
   });
   assert.deepEqual(calls.save.map((s) => s.userId).sort(), ["user-1", "user-2"]);
   for (const saved of calls.save) {
@@ -134,7 +134,7 @@ test("JWT: yalnızca o kullanıcı için üretir", async () => {
   );
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
-    ok: true, kind: "weekly", date: "2026-11-02", users: 1, failed: 0, ai_failed: 0,
+    ok: true, kind: "weekly", date: "2026-11-02", users: 1, failed: 0, skipped: 0, ai_failed: 0, ai_disabled: 0, ai_inactive: 0,
   });
   assert.deepEqual(calls.save.map((s) => s.userId), ["user-1"]);
 });
@@ -288,12 +288,18 @@ for (const [name, fetchImpl] of [
   ["JSON olmayan yanıt", async () => new Response("<html>", { status: 200 })],
 ]) {
   test(`Gemini başarısız (${name}): rapor sayılarla ve 'failed' olarak kaydedilir`, async () => {
-    const { handler, calls } = setup({ fetch: fetchImpl });
-    const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), {
-      ok: true, kind: "daily", date: "2026-11-16", users: 1, failed: 0, ai_failed: 1,
+    const refunds = [];
+    const { handler, calls } = setup({
+      fetch: fetchImpl,
+      store: { refundQuota: async (userId, kind) => refunds.push({ userId, kind }) },
     });
+    const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
+    // Yeniden üretimde yorum gelmezse hata döner ve hak iade edilir (ICG2-04).
+    assert.equal(response.status, 503);
+    const body = await response.json();
+    assert.equal(body.ok, false);
+    assert.match(body.error, /eski yorum korundu/);
+    assert.deepEqual(refunds, [{ userId: "user-1", kind: "report_regen" }]);
     assert.equal(calls.save.length, 1);
     assert.equal(calls.save[0].status, "failed");
     assert.equal(calls.save[0].summary, null);
@@ -362,7 +368,7 @@ test("kullanıcı yoksa 200 ve users 0", async () => {
   const response = await handler(post({ kind: "daily" }, { "x-cron-secret": "cron-gizli" }));
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
-    ok: true, kind: "daily", date: null, users: 0, failed: 0, ai_failed: 0,
+    ok: true, kind: "daily", date: null, users: 0, failed: 0, skipped: 0, ai_failed: 0, ai_disabled: 0, ai_inactive: 0,
   });
 });
 
@@ -561,4 +567,74 @@ test("refresh: AI onayı yoksa kota düşülmez, Gemini çağrılmaz", async () 
   assert.equal(body.deferred, 2);
   assert.equal(calls.fetch.length, 0);
   assert.equal(calls.quota.length, 0);
+});
+
+// ------------------------------------------------------ tur 2 (ICG2-01/03/05/06)
+
+test("JWT, AI onayı yok: kota düşülmez, Gemini çağrılmaz, 'pending' kaydedilir, ai_disabled 1", async () => {
+  const { handler, calls } = setup({
+    store: {
+      userOf: async (id) => ({ id, timeZone: "Europe/Istanbul", onboarded: true, aiConsent: false }),
+    },
+  });
+  const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.ok, true);
+  assert.equal(body.ai_disabled, 1);
+  assert.equal(body.ai_failed, 0);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.fetch.length, 0);
+  assert.equal(calls.save[0].status, "pending");
+});
+
+test("cron: dönemde hiç kayıt yoksa Gemini çağrılmaz, rapor 'pending' kaydedilir", async () => {
+  const { handler, calls } = setup({
+    store: {
+      metrics: async () => ({ work: { tasks_total: 0, routines_planned: 0 }, nutrition: { days_logged: 0 }, health: { days_with_data: 0 } }),
+    },
+  });
+  const response = await handler(post({ kind: "daily" }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.ai_inactive, 2);
+  assert.equal(calls.fetch.length, 0);
+  assert.deepEqual(calls.save.map((s) => s.status), ["pending", "pending"]);
+});
+
+test("cron: başarılı yorumu zaten olan dönem atlanır (ikinci haftalık çalıştırma)", async () => {
+  const { handler, calls } = setup({
+    store: { hasOkReport: async (_kind, userId) => userId === "user-1" },
+  });
+  const response = await handler(post({ kind: "weekly" }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.skipped, 1);
+  assert.deepEqual(calls.save.map((s) => s.userId), ["user-2"]);
+  assert.equal(calls.fetch.length, 1);
+});
+
+test("JWT yeniden üretim, başarılı yorum olsa da atlanmaz", async () => {
+  const { handler, calls } = setup({ store: { hasOkReport: async () => true } });
+  const response = await handler(post({ kind: "daily" }, { Authorization: "Bearer gecerli-jwt" }));
+  assert.equal(response.status, 200);
+  assert.equal(calls.save.length, 1);
+});
+
+test("yenileme: sahibinin AI onayı yoksa sayılar yazılır, dirty temizlenir, Gemini çağrılmaz", async () => {
+  const metricsOnly = [];
+  const report = { kind: "daily", userId: "user-1", date: "2026-11-15", token: "t", version: 3 };
+  const { handler, calls } = setup({
+    store: {
+      claimDirty: async () => [report],
+      userOf: async (id) => ({ id, timeZone: "Europe/Istanbul", onboarded: true, aiConsent: false }),
+      saveRefreshedMetrics: async (r, metrics) => metricsOnly.push({ ...r, metrics }),
+    },
+  });
+  const response = await handler(post({ kind: "refresh" }, { "x-cron-secret": "cron-gizli" }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(metricsOnly, [{ ...report, metrics: METRICS }]);
+  assert.equal(calls.saveRefreshed.length, 0);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.fetch.length, 0);
 });

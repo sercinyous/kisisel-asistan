@@ -36,7 +36,7 @@ test("sanitizeRequest: geçerli istek olduğu gibi (izinli alanlarla) geçer", (
   assert.deepEqual(result.body.contents, [userContent("öğlen 200 gr tavuk")]);
   assert.deepEqual(result.body.systemInstruction, { parts: [{ text: "talimat" }] });
   const config = result.body.generationConfig;
-  assert.equal(config.maxOutputTokens, 8192);
+  assert.equal(config.maxOutputTokens, 4096);
   assert.equal(config.responseMimeType, "application/json");
   assert.deepEqual(config.responseSchema, { type: "OBJECT", properties: {} });
   assert.deepEqual(config.thinkingConfig, { thinkingLevel: "low" });
@@ -50,6 +50,7 @@ test("sanitizeRequest: systemInstruction ve generationConfig yoksa da geçer; va
   assert.deepEqual(result.body.generationConfig, {
     maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
     candidateCount: 1,
+    thinkingConfig: { thinkingLevel: "low" },
   });
 });
 
@@ -93,8 +94,8 @@ test("sanitizeRequest: izin verilmeyen generationConfig alanları atılır, cand
 test("clampMaxOutputTokens: tavana kırpar; eksik/bozuk değer varsayılana döner", () => {
   assert.equal(clampMaxOutputTokens(100), 100);
   assert.equal(clampMaxOutputTokens(2048), 2048);
-  assert.equal(clampMaxOutputTokens(8192), 8192);
-  assert.equal(clampMaxOutputTokens(8193), MAX_OUTPUT_TOKENS_LIMIT);
+  assert.equal(clampMaxOutputTokens(4096), 4096);
+  assert.equal(clampMaxOutputTokens(8192), MAX_OUTPUT_TOKENS_LIMIT);
   assert.equal(clampMaxOutputTokens(1_000_000), MAX_OUTPUT_TOKENS_LIMIT);
   assert.equal(clampMaxOutputTokens(Number.MAX_SAFE_INTEGER), MAX_OUTPUT_TOKENS_LIMIT);
   assert.equal(clampMaxOutputTokens(99.9), 99);

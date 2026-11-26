@@ -38,13 +38,17 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       ..showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  /// İşlemi çalıştırır; başarılıysa `true`. Hata kullanıcıya bildirilir.
+  Future<bool> _run(Future<void> Function() action) async {
+    var ok = true;
     try {
       await action();
     } catch (_) {
+      ok = false;
       _toast('İşlem yapılamadı. Bağlantını kontrol edip tekrar dene.');
     }
     if (mounted) refreshFriends(ref);
+    return ok;
   }
 
   Future<void> _send() async {
@@ -116,17 +120,42 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     }
   }
 
-  Future<void> _report(String subject, {String? requestId}) async {
+  /// Kullanıcıyı bildirir: onay + isteğe bağlı kısa gerekçe; isterse aynı
+  /// anda engeller. Bildirim kullanıcı kimliğini (ve varsa istek kimliğini) taşır.
+  Future<void> _report(
+    String subject, {
+    String? userId,
+    String? requestId,
+  }) async {
+    final choice = await showDialog<({String reason, bool block})>(
+      context: context,
+      builder: (_) => _ReportDialog(subject: subject, canBlock: userId != null),
+    );
+    if (choice == null || !mounted) return;
     final repo = ref.read(friendsRepositoryProvider);
-    await _run(() async {
+    final ok = await _run(() async {
       await repo.report(
         subject: subject,
-        reason: requestId == null ? 'kullanıcı' : 'arkadaşlık isteği $requestId',
+        // Gelen istekte gönderenin kimliği istemciye açılmaz; istek kimliği
+        // sunucuda gönderene götürür (friend_requests.from_user).
+        reason: [
+          if (userId != null) 'kullanıcı $userId',
+          if (requestId != null) 'arkadaşlık isteği $requestId',
+          if (choice.reason.isNotEmpty) 'gerekçe: ${choice.reason}',
+        ].join(' · '),
       );
-      // Bildirilen istek reddedilir; ret kalıcıdır (yeniden gönderilemez).
-      if (requestId != null) await repo.respond(requestId, accept: false);
+      if (choice.block && userId != null) {
+        await repo.block(userId);
+      } else if (requestId != null) {
+        // Bildirilen istek reddedilir.
+        await repo.respond(requestId, accept: false);
+      }
     });
-    _toast('Bildirimin alındı. Teşekkürler.');
+    if (ok) {
+      _toast(choice.block
+          ? 'Bildirimin alındı ve kullanıcı engellendi.'
+          : 'Bildirimin alındı. Teşekkürler.');
+    }
   }
 
   @override
@@ -417,7 +446,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     final label = value == null && !e.isSelf
         ? formatGoalDays(goal) ?? formatMetricValue(metric, period, null)
         : formatMetricValue(metric, period, value);
-    final medal = value != null && value > 0 ? _medalColor(index) : null;
+    // Kalori sıralaması yapılmaz: çok yiyene madalya verilmez (ICG2-11).
+    final ranked = metric != GoalMetric.calories;
+    final medal =
+        ranked && value != null && value > 0 ? _medalColor(index) : null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
@@ -434,7 +466,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     ),
                   )
                 : Text(
-                    '${index + 1}',
+                    ranked ? '${index + 1}' : '·',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelMedium
                         ?.copyWith(color: AppColors.textMuted),
@@ -481,7 +513,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   size: 20, color: AppColors.textMuted),
               onSelected: (v) => switch (v) {
                 'block' => _confirmBlock(e),
-                'report' => _report(e.displayName),
+                'report' => _report(e.displayName, userId: e.userId),
                 _ => _confirmLeave(e),
               },
               itemBuilder: (_) => [
@@ -673,4 +705,71 @@ class _Avatar extends StatelessWidget {
         userId: entry.userId,
         size: 40,
       );
+}
+
+/// Bildirim onayı: isteğe bağlı kısa gerekçe ve "engelle" seçeneği.
+class _ReportDialog extends StatefulWidget {
+  const _ReportDialog({required this.subject, required this.canBlock});
+
+  final String subject;
+
+  /// Engelleme seçeneği (kullanıcı kimliği biliniyorsa).
+  final bool canBlock;
+
+  @override
+  State<_ReportDialog> createState() => _ReportDialogState();
+}
+
+class _ReportDialogState extends State<_ReportDialog> {
+  final _reason = TextEditingController();
+  bool _block = false;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('${widget.subject} bildirilsin mi?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const ValueKey('report-reason'),
+            controller: _reason,
+            maxLength: 200,
+            decoration: const InputDecoration(
+              hintText: 'Kısa gerekçe (isteğe bağlı)',
+            ),
+          ),
+          if (widget.canBlock)
+            CheckboxListTile(
+              key: const ValueKey('report-block'),
+              contentPadding: EdgeInsets.zero,
+              value: _block,
+              onChanged: (v) => setState(() => _block = v ?? false),
+              title: const Text('Ayrıca engelle'),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Vazgeç'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            (reason: _reason.text.trim(), block: _block),
+          ),
+          child: Text('Bildir', style: TextStyle(color: AppColors.danger)),
+        ),
+      ],
+    );
+  }
 }

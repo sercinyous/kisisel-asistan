@@ -11,6 +11,7 @@ import {
   buildPrompt,
   extractBearer,
   filterHealthAdvice,
+  hasActivity,
   healthSafetyOf,
   parseGeminiText,
   parseRequest,
@@ -35,12 +36,22 @@ export interface ReportUser {
 export interface ReportStore {
   /** Kullanıcı JWT'sini doğrular; geçersizse null. */
   userIdFromJwt(token: string): Promise<string | null>;
-  /** Tüm kullanıcılar (zamanlanmış çalıştırma); onboarded olmayanı işleyici eler. */
+  /**
+   * Tüm kullanıcılar (zamanlanmış çalıştırma); onboarded olmayanı işleyici eler.
+   * Gerçek uygulama satırları sayfa sayfa okur (PostgREST 1000 satır sınırı).
+   */
   listUsers(): Promise<ReportUser[]>;
+  /**
+   * Bu dönemin raporu başarılı yorumla zaten var mı. Zamanlanmış çalıştırma
+   * bunları atlar (ikinci haftalık çalıştırma ve batı saat dilimleri için).
+   */
+  hasOkReport?(kind: ReportKind, userId: string, date: string): Promise<boolean>;
   /** Tek kullanıcının ayarı; ayar satırı yoksa null. */
   userOf(userId: string): Promise<ReportUser | null>;
   /** consume_ai_quota: kota içindeyse sayacı atomik artırıp true. */
   consumeQuota: ConsumeQuota;
+  /** refund_ai_quota: AI yorum üretemediyse düşülen birimi geri verir. */
+  refundQuota?(userId: string, kind: string): Promise<void>;
   metrics(kind: ReportKind, userId: string, date: string): Promise<unknown>;
   save(
     kind: ReportKind,
@@ -48,7 +59,7 @@ export interface ReportStore {
     date: string,
     metrics: unknown,
     summary: string | null,
-    status: "ok" | "failed",
+    status: "ok" | "failed" | "pending",
   ): Promise<void>;
   /** claim_dirty_reports: işaretli raporları kiralar (dirty iş bitene dek kalır). */
   claimDirty(limit: number): Promise<DirtyReport[]>;
@@ -63,6 +74,12 @@ export interface ReportStore {
    * dirty kalır; doluysa sürüm değişmediyse dirty temizlenir. Her durumda kira bırakılır.
    */
   saveRefreshed(report: DirtyReport, metrics: unknown, summary: string | null): Promise<void>;
+  /**
+   * save_refreshed_metrics (jetonlu): yalnızca sayılar yazılır, yorum olduğu gibi
+   * kalır ve yeni veri gelmediyse dirty temizlenir. AI hiç çağrılmayacaksa
+   * (onay yok, kayıt yok) kullanılır; rapor her saat yeniden alınmaz.
+   */
+  saveRefreshedMetrics?(report: DirtyReport, metrics: unknown): Promise<void>;
 }
 
 export interface DirtyReport {
@@ -159,8 +176,18 @@ async function generateSummary(
   }
 }
 
+/** Yorumun neden üretilmediği: AI onayı yok ya da dönemde hiç kayıt yok. */
+type AiSkip = "disabled" | "inactive" | null;
+
+function aiSkipOf(user: ReportUser | null, metrics: unknown): AiSkip {
+  if (user === null || user.aiConsent === false) return "disabled";
+  if (!hasActivity(metrics)) return "inactive";
+  return null;
+}
+
 type UserOutcome =
-  | { status: "saved"; date: string; aiOk: boolean }
+  | { status: "saved"; date: string; aiOk: boolean; skip: AiSkip }
+  | { status: "skipped"; date: string }
   | { status: "rejected"; error: string }
   | { status: "failed" };
 
@@ -170,23 +197,31 @@ async function generateForUser(
   requestedDate: string | null,
   previous: boolean,
   user: ReportUser,
+  skipExisting: boolean,
 ): Promise<UserOutcome> {
   const target = resolveTarget(kind, requestedDate, user.timeZone, deps.now(), previous);
   if (!target.ok) return { status: "rejected", error: target.error };
   try {
+    if (
+      skipExisting && deps.store.hasOkReport !== undefined &&
+      await deps.store.hasOkReport(kind, user.id, target.date)
+    ) {
+      return { status: "skipped", date: target.date };
+    }
     const metrics = await deps.store.metrics(kind, user.id, target.date);
-    const summary = user.aiConsent === false
-      ? null
-      : await generateSummary(deps, kind, target.date, metrics);
+    // Onay yoksa ya da dönemde hiç kayıt yoksa Gemini çağrılmaz (maliyet yok);
+    // rapor sayılarla "pending" kaydedilir, "failed" (üretilemedi) sayılmaz.
+    const skip = aiSkipOf(user, metrics);
+    const summary = skip !== null ? null : await generateSummary(deps, kind, target.date, metrics);
     await deps.store.save(
       kind,
       user.id,
       target.date,
       metrics,
       summary,
-      summary === null ? "failed" : "ok",
+      summary !== null ? "ok" : skip !== null ? "pending" : "failed",
     );
-    return { status: "saved", date: target.date, aiOk: summary !== null };
+    return { status: "saved", date: target.date, aiOk: summary !== null, skip };
   } catch (error) {
     // Bir kullanıcının hatası diğerlerini durdurmaz.
     deps.log(
@@ -217,6 +252,11 @@ async function refreshOne(
       return "unchanged";
     }
     const owner = await deps.store.userOf(report.userId);
+    if (aiSkipOf(owner, fresh.metrics) !== null && deps.store.saveRefreshedMetrics !== undefined) {
+      // AI hiç çağrılmayacak: sayılar yazılır, dirty temizlenir (saatlik döngü olmaz).
+      await deps.store.saveRefreshedMetrics(report, fresh.metrics);
+      return "unchanged";
+    }
     const allowed = owner !== null && owner.aiConsent !== false &&
       await deps.store.consumeQuota(
         report.userId,
@@ -277,6 +317,10 @@ async function runRefresh(deps: HandlerDeps, refreshLimit: number): Promise<Resp
     failed,
   });
 }
+
+/** Yeniden üretimde AI yorum veremediğinde istemciye dönen ileti. */
+export const REGEN_AI_FAILED_MESSAGE =
+  "Yorum şu an üretilemedi; sayılar güncellendi, varsa eski yorum korundu. Biraz sonra yeniden dene.";
 
 export function regenQuotaMessage(limit: number): string {
   return `Bugünlük rapor yenileme hakkın doldu (${limit}). Yarın yeniden dene.`;
@@ -342,9 +386,13 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
 
     // "Raporu yeniden oluştur": kişi başına günlük sınır. Geçersiz tarih
     // (gelecek) kotayı yemez; kota düşülemezse maliyeti korumak için reddedilir.
+    // AI onayı yoksa Gemini çağrılmayacağı için kota da düşülmez.
+    let regenCharged = false;
     if (jwtUserId !== null) {
       const target = resolveTarget(kind, parsed.date, users[0].timeZone, deps.now(), parsed.previous);
       if (!target.ok) return json(400, { ok: false, error: target.error });
+    }
+    if (jwtUserId !== null && users[0].aiConsent !== false) {
       let allowed: boolean;
       try {
         allowed = await deps.store.consumeQuota(jwtUserId, REPORT_REGEN_QUOTA_KIND, regenLimit);
@@ -353,6 +401,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
         return json(500, { ok: false, error: "Kullanım kotası denetlenemedi." });
       }
       if (!allowed) return json(429, { ok: false, error: regenQuotaMessage(regenLimit) });
+      regenCharged = true;
     }
 
     const outcomes: UserOutcome[] = new Array(users.length);
@@ -366,6 +415,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
           parsed.date,
           parsed.previous,
           users[index],
+          jwtUserId === null,
         );
       }
     };
@@ -379,7 +429,32 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     }
 
     const saved = outcomes.filter((o) => o.status === "saved");
-    const failed = outcomes.length - saved.length;
+    const skipped = outcomes.filter((o) => o.status === "skipped").length;
+    const failed = outcomes.length - saved.length - skipped;
+
+    if (jwtUserId !== null && saved.length === 1) {
+      const only = saved[0];
+      // Yorum gerçekten üretilemediyse (onay ve kayıt varken) hak iade edilir;
+      // istemci hatayı görür, eski yorum veritabanında korunur.
+      if (!only.aiOk && only.skip === null) {
+        if (regenCharged) {
+          try {
+            await deps.store.refundQuota?.(jwtUserId, REPORT_REGEN_QUOTA_KIND);
+          } catch (error) {
+            deps.log(`Kota iade edilemedi: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+        return json(503, { ok: false, error: REGEN_AI_FAILED_MESSAGE, date: only.date });
+      }
+      if (only.skip === "inactive" && regenCharged) {
+        try {
+          await deps.store.refundQuota?.(jwtUserId, REPORT_REGEN_QUOTA_KIND);
+        } catch (error) {
+          deps.log(`Kota iade edilemedi: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    }
+
     const result = {
       ok: failed === 0,
       kind,
@@ -387,9 +462,12 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       date: saved.length > 0 ? saved[0].date : parsed.date,
       users: users.length,
       failed,
-      ai_failed: saved.filter((o) => !o.aiOk).length,
+      skipped,
+      ai_failed: saved.filter((o) => !o.aiOk && o.skip === null).length,
+      ai_disabled: saved.filter((o) => o.skip === "disabled").length,
+      ai_inactive: saved.filter((o) => o.skip === "inactive").length,
     };
     // Hiçbir rapor yazılamadıysa çağıran (uygulama, pg_net günlüğü) hata görmeli.
-    return json(users.length > 0 && saved.length === 0 ? 500 : 200, result);
+    return json(users.length > 0 && saved.length === 0 && skipped === 0 ? 500 : 200, result);
   };
 }

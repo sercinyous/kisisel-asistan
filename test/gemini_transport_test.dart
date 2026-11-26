@@ -508,7 +508,7 @@ void main() {
       expect(body.keys,
           containsAll(['systemInstruction', 'contents', 'generationConfig']));
       final config = body['generationConfig'] as Map<String, dynamic>;
-      expect(config['maxOutputTokens'], 8192);
+      expect(config['maxOutputTokens'], 4096);
       expect(config['responseMimeType'], 'application/json');
     });
 

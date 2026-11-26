@@ -10,7 +10,19 @@ export const MAX_BODY_BYTES = 64 * 1024;
 export const DEFAULT_MAX_OUTPUT_TOKENS = 2048;
 
 /** `maxOutputTokens` için sunucu tavanı (Gemini 3'te düşünme belirteçleri de sayılır). */
-export const MAX_OUTPUT_TOKENS_LIMIT = 8192;
+export const MAX_OUTPUT_TOKENS_LIMIT = 4096;
+
+/**
+ * Kullanıcı metninin (contents) toplam karakter üst sınırı. Uygulama hızlı
+ * eklemede 2000 karakter gönderir; talimat (systemInstruction) ayrı sınırlıdır.
+ */
+export const MAX_CONTENT_CHARS = 8000;
+
+/** systemInstruction metninin toplam karakter üst sınırı (istemci talimatı ~15 KB). */
+export const MAX_INSTRUCTION_CHARS = 24000;
+
+/** Düşünme düzeyi her zaman en düşüktür; istemci değeri yok sayılır. */
+export const FORCED_THINKING_CONFIG = { thinkingLevel: "low" } as const;
 
 /** İçerik girdisi ve parça sayısı üst sınırları (gövde sınırının yanında ek önlem). */
 export const MAX_CONTENT_ENTRIES = 20;
@@ -43,6 +55,8 @@ export const MESSAGES = {
   consentRequired: "AI kullanımına onay vermedin. Onay verip tekrar dene ya da elle ekle.",
   consentCheckFailed: "AI onayı denetlenemedi. Biraz sonra yeniden dene.",
   quotaCheckFailed: "Kullanım kotası denetlenemedi. Biraz sonra yeniden dene.",
+  globalQuotaExceeded: "AI servisi bugünlük genel kullanım sınırına ulaştı. Yarın yeniden dene ya da elle ekle.",
+  tooLong: "Metin çok uzun. Kısaltıp yeniden dene.",
   upstreamBadRequest: "AI isteği geçersiz bulundu.",
   upstreamBilling: "AI servisinin faturalandırması tükendi. Sunucu sahibi krediyi yenilemeli.",
   upstreamConfig: "AI servisi yapılandırması geçersiz. Sunucu sahibine haber ver.",
@@ -77,11 +91,15 @@ const ALLOWED_CONFIG_KEYS = [
   "responseMimeType",
   "responseSchema",
   "responseJsonSchema",
-  "thinkingConfig",
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Bir içeriğin parçalarındaki toplam karakter sayısı. */
+function textLength(content: Record<string, unknown>): number {
+  return (content.parts as { text: string }[]).reduce((sum, p) => sum + p.text.length, 0);
 }
 
 /** Bir içerik (rol + yalnızca metin parçaları); geçersizse null. */
@@ -129,12 +147,16 @@ export function sanitizeRequest(body: unknown): Sanitized {
     if (clean === null) return { ok: false, error: MESSAGES.badParts };
     cleanContents.push(clean);
   }
+  if (cleanContents.reduce((sum, c) => sum + textLength(c), 0) > MAX_CONTENT_CHARS) {
+    return { ok: false, error: MESSAGES.tooLong };
+  }
 
   const result: GeminiBody = { contents: cleanContents, generationConfig: {} };
 
   if (body.systemInstruction !== undefined && body.systemInstruction !== null) {
     const clean = cleanContent(body.systemInstruction);
     if (clean === null) return { ok: false, error: MESSAGES.badParts };
+    if (textLength(clean) > MAX_INSTRUCTION_CHARS) return { ok: false, error: MESSAGES.tooLong };
     result.systemInstruction = clean;
   }
 
@@ -145,6 +167,7 @@ export function sanitizeRequest(body: unknown): Sanitized {
   }
   cleanConfig.maxOutputTokens = clampMaxOutputTokens(config.maxOutputTokens);
   cleanConfig.candidateCount = 1;
+  cleanConfig.thinkingConfig = { ...FORCED_THINKING_CONFIG };
   result.generationConfig = cleanConfig;
 
   return { ok: true, body: result };

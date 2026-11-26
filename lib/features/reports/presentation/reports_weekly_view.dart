@@ -14,6 +14,9 @@ import 'reports_format.dart';
 import 'reports_providers.dart';
 import 'reports_state.dart';
 import 'reports_widgets.dart';
+import 'weekly_checkin_card.dart';
+import '../../../core/widgets/bento.dart';
+import '../domain/weekly_checkin.dart';
 
 /// İçinde bulunulan hafta ve seçili hafta (gelecek haftaya gidilmez).
 ({DateTime current, DateTime selected}) reportsWeekSelection(
@@ -48,9 +51,18 @@ class ReportsWeeklyView extends ConsumerWidget {
           kind: ReportKind.weekly,
           date: selected,
           title: 'Haftalık değerlendirme',
-          emptyMessage: 'Bu hafta için rapor henüz oluşmadı',
-          emptyHint: 'Haftalık rapor Pazartesi sabahı otomatik oluşur. '
-              'Beklemeden şimdi de oluşturabilirsin.',
+          emptyMessage: selected == current
+              ? 'Bu haftanın raporu hafta bitince oluşur'
+              : 'Bu hafta için rapor oluşmadı',
+          emptyHint: selected == current
+              ? 'Haftalık rapor Pazartesi sabahı otomatik hazırlanır. '
+                  'Geçen haftaya bakabilir ya da şimdi oluşturabilirsin '
+                  '(AI hakkı kullanır).'
+              : 'Bu hafta için rapor üretilmemiş. İstersen şimdi oluşturabilirsin.',
+          onShowPrevious: selected == current
+              ? () => show(AppDates.addDays(current, -7))
+              : null,
+          previousLabel: 'Geçen haftayı gör',
           exists: value != null,
           status: value?.aiStatus ?? ReportAiStatus.pending,
           summary: value?.aiSummary,
@@ -89,6 +101,7 @@ class ReportsWeeklyView extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               aiCard(value),
+              ReportsCheckinLine(week: selected),
               if (value != null) ...[
                 const SizedBox(height: AppSpacing.grid),
                 ReportDailyCompletionCard(days: value.metrics.days),
@@ -152,3 +165,44 @@ List<({String label, String value})> weeklyAverages(ReportMetrics m) => [
             : ReportsFormat.none,
       ),
     ];
+
+/// Seçili haftanın check-in'i (ruh hali + not); kayıt yoksa yer kaplamaz.
+/// Not yalnızca burada gösterilir; AI'ya gönderilmez.
+class ReportsCheckinLine extends ConsumerWidget {
+  const ReportsCheckinLine({super.key, required this.week});
+
+  final DateTime week;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final checkin = ref.watch(weeklyCheckinProvider(week)).valueOrNull;
+    if (checkin == null || !isValidCheckinMood(checkin.mood)) {
+      return const SizedBox.shrink();
+    }
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.grid),
+      child: BentoCard(
+        key: const ValueKey('reports-checkin'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Haftanın hissi · ${checkin.mood}/5 · '
+              '${weeklyCheckinMoodLabels[checkin.mood - 1]}',
+              style: theme.textTheme.titleSmall,
+            ),
+            if (checkin.note != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                checkin.note!,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

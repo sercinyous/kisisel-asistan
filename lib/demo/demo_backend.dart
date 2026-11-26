@@ -1045,6 +1045,16 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> setAiConsent(bool granted) async => aiConsent = granted;
 
+  /// Sunucudaki saat dilimi (demo); [syncTimezone] günceller.
+  String timezone = 'Europe/Istanbul';
+
+  @override
+  Future<bool> syncTimezone(String value) async {
+    if (value == timezone) return false;
+    timezone = value;
+    return true;
+  }
+
   /// Doluysa [fetch] bu hatayı fırlatır.
   Object? fetchError;
 

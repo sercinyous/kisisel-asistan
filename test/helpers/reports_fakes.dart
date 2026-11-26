@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/theme/app_theme.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
+import 'package:kisisel_asistan/demo/demo_health_extras.dart';
+import 'package:kisisel_asistan/features/reports/data/weekly_checkin_repository.dart';
 import 'package:kisisel_asistan/features/friends/domain/friends_models.dart';
 import 'package:kisisel_asistan/features/friends/presentation/friends_providers.dart';
 import 'package:kisisel_asistan/features/health/domain/health_models.dart';
@@ -10,6 +12,7 @@ import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.da
 import 'package:kisisel_asistan/features/operations/presentation/dashboard/task_dashboard_providers.dart';
 import 'package:kisisel_asistan/features/operations/presentation/dashboard/task_dashboard_stats.dart';
 import 'package:kisisel_asistan/features/routines/presentation/routines_providers.dart';
+import 'package:kisisel_asistan/features/settings/presentation/settings_providers.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_providers.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_screen.dart';
 
@@ -166,6 +169,12 @@ class ReportsHarness {
   /// Arkadaş sıralaması (kendin dahil); boşsa arkadaş satırı gizlenir.
   List<LeaderboardEntry> leaderboard = const [];
 
+  /// Haftalık check-in'ler (ruh hali + not).
+  final FakeWeeklyCheckinRepository checkins = FakeWeeklyCheckinRepository();
+
+  /// AI kullanım onayı (`aiConsentProvider`).
+  bool aiConsent = true;
+
   /// Ay görünümünün özeti; `null` ise boş bir ay döner.
   MonthOverview? monthOverview;
 
@@ -188,6 +197,8 @@ class ReportsHarness {
     final container = ProviderContainer(
       overrides: [
         reportsRepositoryProvider.overrideWithValue(reports),
+        aiConsentProvider.overrideWith((ref) async => aiConsent),
+        weeklyCheckinRepositoryProvider.overrideWithValue(checkins),
         friendsLeaderboardProvider.overrideWith((ref) async => leaderboard),
         monthOverviewProvider.overrideWith(
           (ref, month) async =>

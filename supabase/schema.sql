@@ -1138,8 +1138,11 @@ as $$
   values (p_user, p_day, coalesce(p_metrics, '{}'::jsonb), p_summary, p_status, now())
   on conflict (user_id, report_date) do update
     set metrics      = excluded.metrics,
-        ai_summary   = excluded.ai_summary,
-        ai_status    = excluded.ai_status,
+        -- Yorum üretilemediyse (summary null) var olan başarılı yorum korunur.
+        ai_summary   = case when excluded.ai_summary is null and daily_reports.ai_status = 'ok'
+                            then daily_reports.ai_summary else excluded.ai_summary end,
+        ai_status    = case when excluded.ai_summary is null and daily_reports.ai_status = 'ok'
+                            then daily_reports.ai_status else excluded.ai_status end,
         generated_at = excluded.generated_at;
 $$;
 
@@ -1203,9 +1206,12 @@ begin
         avg_sleep_minutes    = excluded.avg_sleep_minutes,
         weight_start_kg      = excluded.weight_start_kg,
         weight_end_kg        = excluded.weight_end_kg,
-        ai_summary           = excluded.ai_summary,
+        -- Yorum üretilemediyse (summary null) var olan başarılı yorum korunur.
+        ai_summary           = case when excluded.ai_summary is null and weekly_reports.ai_status = 'ok'
+                                    then weekly_reports.ai_summary else excluded.ai_summary end,
         metrics              = excluded.metrics,
-        ai_status            = excluded.ai_status,
+        ai_status            = case when excluded.ai_summary is null and weekly_reports.ai_status = 'ok'
+                                    then weekly_reports.ai_status else excluded.ai_status end,
         generated_at         = excluded.generated_at;
 end;
 $$;
@@ -2183,6 +2189,39 @@ $$;
 revoke all on function public.refund_ai_quota(uuid, text) from public, anon, authenticated;
 grant execute on function public.refund_ai_quota(uuid, text) to service_role;
 
+-- Proje geneli günlük AI sayacı (ai-proxy maliyet emniyeti, ICG2-02). Kullanıcıya
+-- bağlı değildir; RLS açık ve politika yok: yalnızca aşağıdaki işlev yazar.
+create table if not exists public.ai_global_usage (
+  day   date primary key,
+  count integer not null default 0 check (count >= 0)
+);
+alter table public.ai_global_usage enable row level security;
+revoke all on table public.ai_global_usage from public, anon, authenticated;
+
+create or replace function public.consume_global_ai_quota(p_limit integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_count integer;
+begin
+  if p_limit is null or p_limit <= 0 then
+    return false;
+  end if;
+  insert into public.ai_global_usage as g (day, count)
+  values ((now() at time zone 'UTC')::date, 1)
+  on conflict (day)
+  do update set count = g.count + 1 where g.count < p_limit
+  returning g.count into v_count;
+  return v_count is not null;
+end;
+$$;
+
+revoke all on function public.consume_global_ai_quota(integer) from public, anon, authenticated;
+grant execute on function public.consume_global_ai_quota(integer) to service_role;
+
 -- =====================================================================
 -- BEGIN friend_leaderboard (arkadaş sıralaması: ham sayılar + profil)
 -- Tekrar çalıştırılabilir. Kabul edilmiş arkadaşlar + çağıranın kendisi için
@@ -3019,6 +3058,27 @@ begin
 end;
 $$;
 
+-- Yalnızca sayılar (AI hiç çağrılmayacak: onay yok ya da kayıt yok). Yorum
+-- olduğu gibi kalır; yeni veri gelmediyse dirty temizlenir, kira bırakılır.
+create or replace function public.save_refreshed_metrics(
+  p_kind text, p_user uuid, p_date date, p_metrics jsonb, p_token uuid, p_version bigint
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform public.save_refreshed_report(p_kind, p_user, p_date, p_metrics, null);
+  perform public.complete_report_claim(p_kind, p_user, p_date, p_token, p_version);
+end;
+$$;
+
+revoke all on function public.save_refreshed_metrics(text, uuid, date, jsonb, uuid, bigint)
+  from public, anon, authenticated;
+grant execute on function public.save_refreshed_metrics(text, uuid, date, jsonb, uuid, bigint)
+  to service_role;
+
 revoke all on function public.claim_dirty_reports(integer, interval, interval) from public, anon, authenticated;
 revoke all on function public.release_report_claim(text, uuid, date, uuid) from public, anon, authenticated;
 revoke all on function public.complete_report_claim(text, uuid, date, uuid, bigint) from public, anon, authenticated;
@@ -3203,7 +3263,8 @@ begin
            sum(n.protein_g) as protein_g,
            sum(n.carbs_g)   as carbs_g,
            sum(n.fat_g)     as fat_g,
-           count(*)         as entries
+           -- 0 kcal kayıtlar günü "kayıtlı" saymaz (istemciyle aynı, SAG-13).
+           count(*) filter (where n.calories > 0) as entries
     from nutrition_logs n
     where n.user_id = p_user and n.eaten_at >= v_t0 and n.eaten_at < v_t1
     group by 1

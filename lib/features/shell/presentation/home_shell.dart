@@ -28,6 +28,7 @@ import '../../reports/presentation/reports_screen.dart';
 import '../../routines/presentation/routines_providers.dart';
 import '../../friends/presentation/friends_providers.dart';
 import '../../stories/presentation/stories_providers.dart';
+import '../../settings/data/timezone_sync.dart';
 
 /// + butonunun sekmeye göre açacağı giriş alanı. `null`: sekme bir alana
 /// bağlı değildir (Kokpit, Raporlar), kullanıcıya sorulur.
@@ -100,9 +101,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
       if (!mounted) return;
       // Uygulama bildirime dokunularak açıldıysa ilgili sekme.
       _openNotificationTarget();
-      unawaited(
-        backfillHealthKit(ProviderScope.containerOf(context, listen: false)),
-      );
+      final container = ProviderScope.containerOf(context, listen: false);
+      unawaited(backfillHealthKit(container));
+      unawaited(syncDeviceTimezone(container));
     });
   }
 
@@ -159,6 +160,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
       ..invalidate(reminderDoneProvider);
     unawaited(_refreshNotifications(dayChanged: dayChanged));
     final container = ProviderScope.containerOf(context, listen: false);
+    // Yolculukta cihazın saat dilimi değişmiş olabilir; raporlar ona göre.
+    unawaited(syncDeviceTimezone(container));
     ref.read(kokpitClockProvider.notifier).state = DateTime.now();
     ref.invalidate(todayOccurrencesProvider);
     ref.invalidate(upcomingRemindersProvider);

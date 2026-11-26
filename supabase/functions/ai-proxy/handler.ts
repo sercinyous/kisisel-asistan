@@ -5,7 +5,11 @@
 // Sıra: yöntem → oturum (JWT) → yapılandırma → gövde boyutu → doğrulama →
 // günlük kota → Gemini. Kota yalnızca geçerli bir istek Gemini'ye gitmeden
 // hemen önce düşer; geçersiz istekler kotayı yemez.
-import { AI_QUOTA_KIND, type ConsumeQuota } from "../_shared/quota.ts";
+import {
+  AI_QUOTA_KIND,
+  type ConsumeQuota,
+  DEFAULT_AI_GLOBAL_DAILY_LIMIT,
+} from "../_shared/quota.ts";
 import {
   buildUpstreamUrl,
   CORS_HEADERS,
@@ -28,6 +32,8 @@ export interface ProxyStore {
   hasAiConsent(userId: string): Promise<boolean>;
   /** consume_ai_quota: kota içindeyse sayacı atomik artırıp true. */
   consumeQuota: ConsumeQuota;
+  /** consume_global_ai_quota: proje geneli günlük sayaç; sınır içindeyse true. */
+  consumeGlobalQuota?: (limit: number) => Promise<boolean>;
   /** Upstream geçici hatasında düşülen birimi geri verir (en iyi çaba). */
   refundQuota?: (userId: string, kind: string) => Promise<void>;
 }
@@ -39,6 +45,8 @@ export interface ProxyDeps {
   geminiModel: string;
   /** Kişi başına günlük çağrı sınırı. */
   dailyLimit: number;
+  /** Tüm kullanıcılar için günlük toplam çağrı sınırı (varsayılan 500). */
+  globalDailyLimit?: number;
   fetch: typeof fetch;
   log: (message: string) => void;
   maxBodyBytes?: number;
@@ -128,6 +136,25 @@ export function createHandler(deps: ProxyDeps): (req: Request) => Promise<Respon
       return fail(500, MESSAGES.quotaCheckFailed);
     }
     if (!allowed) return fail(429, quotaExceededMessage(deps.dailyLimit));
+
+    // 4b) Proje geneli günlük sınır (maliyet emniyeti). Dolarsa kişisel birim iade edilir.
+    if (deps.store.consumeGlobalQuota !== undefined) {
+      let globalAllowed: boolean;
+      try {
+        globalAllowed = await deps.store.consumeGlobalQuota(
+          deps.globalDailyLimit ?? DEFAULT_AI_GLOBAL_DAILY_LIMIT,
+        );
+      } catch (error) {
+        deps.log(`Genel kota düşülemedi: ${error instanceof Error ? error.message : String(error)}`);
+        await refund(userId);
+        return fail(500, MESSAGES.quotaCheckFailed);
+      }
+      if (!globalAllowed) {
+        deps.log("Genel günlük AI sınırı doldu.");
+        await refund(userId);
+        return fail(503, MESSAGES.globalQuotaExceeded);
+      }
+    }
 
     // 5) Gemini. Anahtar başlıkta gider; günlüğe yalnızca durum kodu yazılır
     // (yanıt ve istek gövdesi kullanıcı metni ya da anahtar ayrıntısı içerebilir).

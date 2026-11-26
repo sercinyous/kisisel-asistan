@@ -42,6 +42,7 @@ $$;
 select cron.unschedule(jobid)
 from cron.job
 where jobname in ('kisisel-asistan-gunluk-rapor', 'kisisel-asistan-haftalik-rapor',
+                  'kisisel-asistan-haftalik-rapor-bati',
                   'kisisel-asistan-kota-temizlik', 'kisisel-asistan-rapor-yenile');
 
 -- Adres ve gizli anahtar her çalışmada Vault'tan okunur; iş tanımında
@@ -67,6 +68,27 @@ select cron.schedule(
 select cron.schedule(
   'kisisel-asistan-haftalik-rapor',
   '0 4 * * 1',
+  $job$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
+           || '/functions/v1/generate-reports',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret',
+      (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    ),
+    body := jsonb_build_object('kind', 'weekly'),
+    timeout_milliseconds := 120000
+  );
+  $job$
+);
+
+-- İkinci haftalık çalıştırma (Pazartesi 14:00 UTC): 04:00 UTC'de hâlâ Pazar
+-- olan batı saat dilimleri (Amerika) biten haftayı bu çalıştırmada alır.
+-- Başarılı yorumu zaten olan raporlar atlanır (Gemini maliyeti tekrarlanmaz).
+select cron.schedule(
+  'kisisel-asistan-haftalik-rapor-bati',
+  '0 14 * * 1',
   $job$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
@@ -109,6 +131,7 @@ select cron.schedule(
   '30 3 * * 0',
   $job$
   delete from public.ai_usage where day < current_date - 60;
+  delete from public.ai_global_usage where day < current_date - 60;
   $job$
 );
 

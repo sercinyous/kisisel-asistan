@@ -7,10 +7,12 @@ import {
   aiSafeSentence,
   buildGeminiRequest,
   filterHealthAdvice,
+  hasActivity,
   healthSafetyOf,
   buildPrompt,
   extractBearer,
   lastFinishedWeekStart,
+  numberWordsToDigits,
   parseGeminiText,
   parseRequest,
   resolveTarget,
@@ -306,4 +308,63 @@ test("filterHealthAdvice: taban altı, hızlı kayıp, oruç, 16:8, pas geç de�
   for (const bad of ["1.000 kcal", "16:8", "pas geç", "1,5 kg", "1200", "900 kcal"]) {
     assert.ok(!out.includes(bad), bad);
   }
+});
+
+test("resolveTarget: batı saat diliminde Pazartesi 14:00 UTC çalıştırması biten haftayı bulur (ICG2-06)", () => {
+  // 04:00 UTC'de New York hâlâ Pazar: bir önceki hafta çıkar (o yüzden ikinci çalıştırma var).
+  assert.deepEqual(
+    resolveTarget("weekly", null, "America/New_York", new Date("2026-11-30T04:00:00Z")),
+    { ok: true, date: "2026-11-16" },
+  );
+  assert.deepEqual(
+    resolveTarget("weekly", null, "America/New_York", new Date("2026-11-30T14:00:00Z")),
+    { ok: true, date: "2026-11-23" },
+  );
+  assert.deepEqual(
+    resolveTarget("weekly", null, "Pacific/Honolulu", new Date("2026-11-30T14:00:00Z")),
+    { ok: true, date: "2026-11-23" },
+  );
+});
+
+test("hasActivity: kayıt yoksa false, herhangi bir kayıt varsa true", () => {
+  assert.equal(hasActivity(null), false);
+  assert.equal(hasActivity({ work: { tasks_total: 0, routines_planned: 0 }, nutrition: { days_logged: 0 } }), false);
+  assert.equal(hasActivity({ work: { routines_planned: 2 } }), true);
+  assert.equal(hasActivity({ nutrition: { days_logged: 1 } }), true);
+  assert.equal(hasActivity({ health: { days_with_data: 3 } }), true);
+});
+
+test("filterHealthAdvice: Türkçe biçimler ve takviye değiştirilir (ICG2-08)", () => {
+  const s = { ...healthSafetyOf(healthMetrics), floorKcal: 1500 };
+  for (const bad of [
+    "Su orucu dene.",
+    "Günde 1000 kalorinin altına düş.",
+    "Kahvaltıyı es geç.",
+    "Akşam yemeğini yemeden yat.",
+    "Günlük alımını bin kaloriye çek.",
+    "Haftada bir kilo vermeyi dene.",
+    "Haftada iki kg ver.",
+    "Kreatin takviyesi al.",
+    "18:6 düzenini dene.",
+  ]) {
+    assert.equal(filterHealthAdvice(bad, s), aiSafeSentence(1500), bad);
+  }
+});
+
+test("filterHealthAdvice: geçmiş zaman bilgi ve skor oranı kalır (ICG2-08)", () => {
+  const s = { ...healthSafetyOf(healthMetrics), floorKcal: 1500 };
+  for (const ok of [
+    "Bu hafta 1,2 kg verdin, harika.",
+    "Skor 14/7 oldu.",
+    "Bu hafta bir kilo kaybettin.",
+    "Günde 2000 kalori aldın.",
+  ]) {
+    assert.equal(filterHealthAdvice(ok, s), ok, ok);
+  }
+});
+
+test("numberWordsToDigits: Türkçe sayı sözcükleri", () => {
+  assert.equal(numberWordsToDigits("bin iki yüz kalori"), "1200 kalori");
+  assert.equal(numberWordsToDigits("bir buçuk kilo"), "1,5 kilo");
+  assert.equal(numberWordsToDigits("bin kaloriye"), "1000 kaloriye");
 });

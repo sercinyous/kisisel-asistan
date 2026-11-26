@@ -44,9 +44,16 @@ class ReportsDailyView extends ConsumerWidget {
           kind: ReportKind.daily,
           date: selected,
           title: 'Günlük değerlendirme',
-          emptyMessage: 'Bu tarihte rapor henüz oluşmadı',
-          emptyHint: 'Günlük rapor gece yarısından sonra (00:15) biten gün için otomatik oluşur. '
-              'Beklemeden şimdi de oluşturabilirsin.',
+          emptyMessage: selected == today
+              ? 'Bugünün raporu gün bitince oluşur'
+              : 'Bu tarihte rapor henüz oluşmadı',
+          emptyHint:
+              'Günlük rapor gece yarısından sonra biten gün için otomatik oluşur. '
+              'Beklemeden şimdi de oluşturabilirsin (AI hakkı kullanır).',
+          onShowPrevious: selected == today
+              ? () => show(AppDates.addDays(today, -1))
+              : null,
+          previousLabel: 'Dünü gör',
           exists: value != null,
           status: value?.aiStatus ?? ReportAiStatus.pending,
           summary: value?.aiSummary,

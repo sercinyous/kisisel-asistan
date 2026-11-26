@@ -271,13 +271,22 @@ class LeaderboardEntry {
   String get initials => initialsFor(displayName);
 }
 
-/// En iyi değer önce; paylaşılmayanlar sona, eşitlikte ada göre.
+/// En iyi değer önce; paylaşılmayanlar sona, eşitlikte ada göre. Kaloride
+/// sıralama yapılmaz (çok yemek ödüllendirilmez).
 List<LeaderboardEntry> rankEntries(
   List<LeaderboardEntry> entries,
   GoalMetric metric,
   RankPeriod period,
 ) {
   final list = [...entries];
+  if (metric == GoalMetric.calories) {
+    // Kalori yarış değildir: kendin önce, sonra ada göre (madalya yok).
+    list.sort((a, b) {
+      if (a.isSelf != b.isSelf) return a.isSelf ? -1 : 1;
+      return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+    });
+    return list;
+  }
   list.sort((a, b) {
     final va = a.value(metric, period);
     final vb = b.value(metric, period);

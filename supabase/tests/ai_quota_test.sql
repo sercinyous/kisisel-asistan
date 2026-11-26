@@ -124,4 +124,14 @@ select tf.eq('iade sayacı 0 yapar, negatife indirmez',
   (select to_jsonb(count) from public.ai_usage where user_id='c2000000-0000-0000-0000-000000000002' and kind='iade'),
   '0'::jsonb);
 
+-- Proje geneli günlük sayaç (ICG2-02): yalnızca service_role; sınırda durur.
+select tf.fails('authenticated consume_global_ai_quota çalıştıramaz', 'authenticated', :A,
+  $q$select to_jsonb(public.consume_global_ai_quota(10))$q$, '42501');
+select tf.eq('genel kota: limit 2 → true, true, false',
+  jsonb_build_array(public.consume_global_ai_quota(2), public.consume_global_ai_quota(2),
+                    public.consume_global_ai_quota(2)),
+  '[true, true, false]'::jsonb);
+select tf.eq('genel kota: limit 0 her zaman false',
+  to_jsonb(public.consume_global_ai_quota(0)), 'false'::jsonb);
+
 \echo tamam: AI kotası testleri geçti

@@ -106,8 +106,21 @@ class SettingsRepository {
   /// üreticisi onay yoksa Gemini'yi çağırmaz.
   Future<void> setAiConsent(bool granted) async {
     await _client.from('user_settings').update({
-      'ai_consent_at': granted ? DateTime.now().toUtc().toIso8601String() : null,
+      'ai_consent_at':
+          granted ? DateTime.now().toUtc().toIso8601String() : null,
     }).eq('user_id', _userId);
+  }
+
+  /// Sunucudaki saat dilimini cihazınkine eşitler (raporlar ve arkadaş
+  /// sıralamasındaki "bugün" bu dilime göre hesaplanır). Değiştiyse `true`.
+  Future<bool> syncTimezone(String timezone) async {
+    final rows = await _client
+        .from('user_settings')
+        .update({'timezone': timezone})
+        .eq('user_id', _userId)
+        .neq('timezone', timezone)
+        .select('user_id');
+    return rows.isNotEmpty;
   }
 
   Future<UserSettings> save(UserSettings settings) async {

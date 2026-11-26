@@ -10,7 +10,13 @@ export const AI_QUOTA_KIND = "ai";
 export const REPORT_REGEN_QUOTA_KIND = "report_regen";
 
 /** Kişi başına günlük AI çağrısı üst sınırı (AI_DAILY_LIMIT secret'ı ile ayarlanır). */
-export const DEFAULT_AI_DAILY_LIMIT = 100;
+export const DEFAULT_AI_DAILY_LIMIT = 30;
+
+/**
+ * Tüm kullanıcılar için günlük toplam ai-proxy çağrısı (AI_GLOBAL_DAILY_LIMIT).
+ * Dolunca proxy 503 döner: açık kayıtlı bir hesabın maliyeti sınırsız büyütmesini önler.
+ */
+export const DEFAULT_AI_GLOBAL_DAILY_LIMIT = 500;
 
 /** Kişi başına günde en çok rapor yeniden üretimi (REPORT_REGEN_DAILY_LIMIT ile ayarlanır). */
 export const DEFAULT_REPORT_REGEN_DAILY_LIMIT = 10;
