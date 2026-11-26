@@ -104,7 +104,7 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
     if (_saving) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final draft = _draft;
-    final problem = draft.validationError;
+    final problem = draft.validationErrorAt(DateTime.now());
     if (problem != null) {
       setState(() => _error = problem);
       return;
@@ -194,7 +194,6 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
               for (final (index, label) in ReminderDays.shortLabels.indexed)
                 FilterChip(
                   label: Text(label),
-                  showCheckmark: false,
                   selected: _days.contains(index + 1),
                   onSelected: (selected) => setState(() {
                     selected ? _days.add(index + 1) : _days.remove(index + 1);

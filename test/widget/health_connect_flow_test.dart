@@ -33,9 +33,9 @@ class CountingHealthService extends FakeHealthService {
   int requests = 0;
 
   @override
-  Future<bool> requestAccess() async {
+  Future<bool> requestAccess({bool body = false}) async {
     requests++;
-    return super.requestAccess();
+    return super.requestAccess(body: body);
   }
 }
 

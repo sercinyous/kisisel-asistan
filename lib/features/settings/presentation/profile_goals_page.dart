@@ -498,7 +498,6 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
               ChoiceChip(
                 key: Key('settings-sex-$value'),
                 label: Text(label),
-                showCheckmark: false,
                 selected: _sex == value,
                 // Seçili çipe yeniden dokunmak seçimi kaldırır (alan boş kalır).
                 onSelected: (on) => setState(() => _sex = on ? value : null),
@@ -526,7 +525,6 @@ class _ProfileGoalsFormState extends ConsumerState<_ProfileGoalsForm> {
               ChoiceChip(
                 key: Key('settings-activity-${level.name}'),
                 label: Text(level.label),
-                showCheckmark: false,
                 selected: _activity == level,
                 onSelected: (_) => setState(() => _activity = level),
               ),

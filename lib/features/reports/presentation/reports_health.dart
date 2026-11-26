@@ -136,8 +136,11 @@ class ReportsHealthWeekCard extends ConsumerWidget {
         final target = week.targetKcal;
         return BentoCard(
           key: const ValueKey('reports-health-week'),
-          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-              builder: (_) => const WeeklyDetailScreen())),
+          // Ayrıntı ekranı yalnızca güncel 7 günü gösterir; geçmiş haftada kapalı.
+          onTap: isCurrent
+              ? () => Navigator.of(context).push(MaterialPageRoute<void>(
+                  builder: (_) => const WeeklyDetailScreen()))
+              : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

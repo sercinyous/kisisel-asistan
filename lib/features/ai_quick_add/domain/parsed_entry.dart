@@ -10,6 +10,7 @@ import '../../reminders/domain/reminder.dart';
 import '../../routines/domain/routine.dart';
 import '../../settings/domain/user_settings.dart';
 import 'quick_add_mode.dart';
+import '../../../core/text_limits.dart';
 
 DateTime? _parseDate(Object? value) {
   if (value is! String || value.trim().isEmpty) return null;
@@ -189,10 +190,10 @@ class ParsedTask {
 
   Map<String, dynamic> toJson() => {
         'title': title,
-        'description': description,
+        'description': clipText(description, TextLimits.taskDescription),
         'category': category,
         'priority': priority,
-        'assignee': assignee,
+        'assignee': clipText(assignee, TextLimits.taskAssignee),
         'due_at': _utcIso(dueAt),
         'remind_at': _utcIso(remindAt),
       };
@@ -246,7 +247,7 @@ class ParsedNutrition {
   Map<String, dynamic> toJson() => {
         'meal_type': mealType,
         'food_name': foodName,
-        'quantity_text': quantityText,
+        'quantity_text': clipText(quantityText, TextLimits.quantityText),
         'calories': calories,
         'protein_g': proteinG,
         'carbs_g': carbsG,
@@ -317,7 +318,7 @@ class ParsedWorkout {
         'calories_burned': caloriesBurned != null && caloriesBurned! >= 0
             ? caloriesBurned
             : null,
-        'notes': notes,
+        'notes': clipText(notes, TextLimits.workoutNotes),
         'performed_at': _utcIso(performedAt),
       };
 }
@@ -412,7 +413,7 @@ class ParsedRoutine {
   bool get isMonthly => frequency == RoutineFrequency.monthly;
 
   String get categoryLabel => switch (category) {
-        'operasyon' => 'Operasyon',
+        'operasyon' => 'İş',
         'spor' => 'Spor',
         'beslenme' => 'Beslenme',
         'finans' => 'Finans',

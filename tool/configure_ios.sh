@@ -51,15 +51,18 @@ set_array() { # anahtar, öğeler...
   done
 }
 
-set_string NSHealthShareUsageDescription "'Adım, uyku ve aktif kalori verilerin günlük kokpitinde gösterilmek ve haftalık raporlara eklenmek için okunur.'"
-set_string NSHealthUpdateUsageDescription "'Bu uygulama Sağlık verilerine yazmaz; yalnızca okuma yapar.'"
-set_string NSPhotoLibraryUsageDescription "'Profil fotoğrafı seçmek için fotoğraf arşivine erişilir; yalnızca seçtiğin fotoğraf kırpılıp yüklenir.'"
-set_string NSCameraUsageDescription "'Profil fotoğrafı çekmek için kamera kullanılır.'"
+set_string NSHealthShareUsageDescription "'Adım, uyku, aktif kalori, antrenman, boy ve kilo verilerin günlük kokpitinde gösterilmek ve haftalık raporlara eklenmek için okunur; boy ve kilo yalnızca ilk kurulumda formu doldurmak için okunur.'"
+set_string NSHealthUpdateUsageDescription "'Ritim Sağlık verilerine kayıt eklemez; bu izin istenmez.'"
+set_string NSPhotoLibraryUsageDescription "'Profil ve ilerleme fotoğrafı seçmek için fotoğraf arşivine erişilir; yalnızca seçtiğin fotoğraf küçültülüp sana özel alana yüklenir.'"
+set_string NSCameraUsageDescription "'Profil ve ilerleme fotoğrafı çekmek için kamera kullanılır; fotoğraf yalnızca sana özel alana yüklenir.'"
 set_string CFBundleDisplayName "Ritim"
+set_string CFBundleName "Ritim"
 set_string CFBundleDevelopmentRegion "tr"
 set_bool ITSAppUsesNonExemptEncryption false
 set_array CFBundleLocalizations tr
 set_array UISupportedInterfaceOrientations UIInterfaceOrientationPortrait
+# Yalnızca iPhone: iPad yönleri anahtarı kaldırılır.
+"$BUDDY" -c "Delete :UISupportedInterfaceOrientations~ipad" "$PLIST" 2>/dev/null || true
 echo "✓ Info.plist güncellendi"
 
 # --- 2) HealthKit entitlement ---------------------------------------------
@@ -74,6 +77,21 @@ if ! grep -q "CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;" "$PBXPROJ"; 
 fi
 echo "✓ HealthKit entitlement bağlandı"
 
+# --- iPhone-only (iPad'de uyumluluk modunda çalışır) ------------------------
+perl -pi -e 's/TARGETED_DEVICE_FAMILY = "?[0-9,]+"?;/TARGETED_DEVICE_FAMILY = 1;/g' "$PBXPROJ"
+if grep -q "TARGETED_DEVICE_FAMILY" "$PBXPROJ" && grep "TARGETED_DEVICE_FAMILY" "$PBXPROJ" | grep -vq "TARGETED_DEVICE_FAMILY = 1;"; then
+  echo "HATA: TARGETED_DEVICE_FAMILY 1 değil." >&2
+  exit 1
+fi
+if ! grep -q "TARGETED_DEVICE_FAMILY = 1;" "$PBXPROJ"; then
+  perl -pi -e 's/^(\s*)(ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;)/$1$2\n$1TARGETED_DEVICE_FAMILY = 1;/' "$PBXPROJ"
+fi
+if ! grep -q "TARGETED_DEVICE_FAMILY = 1;" "$PBXPROJ"; then
+  echo "HATA: TARGETED_DEVICE_FAMILY = 1 ayarlanamadı." >&2
+  exit 1
+fi
+echo "✓ Yalnızca iPhone (TARGETED_DEVICE_FAMILY = 1)"
+
 # --- 2b) Uygulama ikonu ----------------------------------------------------
 # Tek 1024 px ikon (Xcode 14+ "single size"); diğer boyutları Xcode üretir.
 ICONSET="ios/Runner/Assets.xcassets/AppIcon.appiconset"
@@ -81,6 +99,27 @@ rm -rf "$ICONSET"
 mkdir -p "$ICONSET"
 cp ios_setup/AppIcon.appiconset/* "$ICONSET/"
 echo "✓ Uygulama ikonu (Ritim topaç)"
+
+# --- 2c) Açılış ekranı ve gizlilik bildirimi ------------------------------
+# Siyah zeminli açılış ekranı (varsayılan OLED koyu temayla aynı; beyaz
+# flaş olmaz) ve uygulama hedefinin PrivacyInfo.xcprivacy dosyası.
+cp ios_setup/LaunchScreen.storyboard ios/Runner/Base.lproj/LaunchScreen.storyboard
+cp ios_setup/PrivacyInfo.xcprivacy ios/Runner/PrivacyInfo.xcprivacy
+if ! grep -q "PrivacyInfo.xcprivacy in Resources" "$PBXPROJ"; then
+  # Runner hedefinin Resources aşamasına dosya referansı ekler (Info.plist
+  # ile aynı gruba). Sabit kimlikler yalnızca bu dosyaya aittir.
+  perl -0pi -e 's/(\/\* Begin PBXBuildFile section \*\/\n)/$1\t\tA1B2C3D4E5F60718293A4B01 \/\* PrivacyInfo.xcprivacy in Resources \*\/ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B02 \/\* PrivacyInfo.xcprivacy \*\/; };\n/' "$PBXPROJ"
+  perl -0pi -e 's/(\/\* Begin PBXFileReference section \*\/\n)/$1\t\tA1B2C3D4E5F60718293A4B02 \/\* PrivacyInfo.xcprivacy \*\/ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };\n/' "$PBXPROJ"
+  perl -0pi -e 's/(\n(\s*)[0-9A-F]{24} \/\* Info\.plist \*\/,\n)/$1$2A1B2C3D4E5F60718293A4B02 \/\* PrivacyInfo.xcprivacy \*\/,\n/' "$PBXPROJ"
+  # Yalnızca Runner hedefinin Resources aşaması (LaunchScreen.storyboard'u
+  # içeren blok); ilk eşleşme RunnerTests aşaması olabilir.
+  perl -0pi -e 's/(\n\s*[0-9A-F]{24} \/\* Resources \*\/ = \{\n\s*isa = PBXResourcesBuildPhase;\n\s*buildActionMask = \d+;\n\s*files = \(\n)(?=(?:[^)]*\n)*?\s*[0-9A-F]{24} \/\* LaunchScreen\.storyboard in Resources \*\/)/$1\t\t\t\tA1B2C3D4E5F60718293A4B01 \/\* PrivacyInfo.xcprivacy in Resources \*\/,\n/' "$PBXPROJ"
+fi
+if [[ "$(grep -c "A1B2C3D4E5F60718293A4B0" "$PBXPROJ")" -lt 4 ]] || ! perl -0ne 'exit((/files = \(\n(?:[^)]*\n)*?\s*A1B2C3D4E5F60718293A4B01 [^\n]*\n(?:[^)]*\n)*?[^\n]*LaunchScreen\.storyboard in Resources/ || /files = \(\n(?:[^)]*\n)*?[^\n]*LaunchScreen\.storyboard in Resources[^\n]*\n(?:[^)]*\n)*?\s*A1B2C3D4E5F60718293A4B01 /) ? 0 : 1)' "$PBXPROJ"; then
+  echo "HATA: PrivacyInfo.xcprivacy Runner hedefine eklenemedi." >&2
+  exit 1
+fi
+echo "✓ Açılış ekranı (siyah) ve PrivacyInfo.xcprivacy"
 
 # --- 3) En düşük iOS sürümü ------------------------------------------------
 perl -pi -e "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = ${MIN_IOS};/" "$PBXPROJ"

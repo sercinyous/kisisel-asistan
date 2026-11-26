@@ -123,7 +123,7 @@ abstract final class GoalSuggestion {
     OnboardingAnswers answers, {
     required int nowYear,
   }) {
-    final age = nowYear - answers.birthYear;
+    final age = answers.ageAt(nowYear);
     final basal = basalKcal(
       weightKg: answers.weightKg,
       heightCm: answers.heightCm,

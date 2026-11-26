@@ -9,6 +9,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const String appVersion =
     String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
 
+/// "1.2.0+14" biçimini "1.2.0 (14)" olarak gösterir; yapı numarası yoksa
+/// sürüm olduğu gibi döner.
+String appVersionLabel(String version) {
+  final parts = version.split('+');
+  if (parts.length != 2 || parts[1].isEmpty) return version;
+  return '${parts[0]} (${parts[1]})';
+}
+
 /// Sunucuya gidecek tek hata kaydı (`public.app_errors`).
 class ErrorReport {
   const ErrorReport({
@@ -72,7 +80,7 @@ class ErrorReporter {
   bool report(Object error, StackTrace? stack) {
     try {
       final now = _now();
-      final message = _clip(error.toString(), ErrorReport.maxMessage);
+      final message = _clip(scrubMessage(error), ErrorReport.maxMessage);
       final stackText = stack == null || stack.toString().isEmpty
           ? null
           : _clip(stack.toString(), ErrorReport.maxStack);
@@ -139,6 +147,22 @@ class ErrorReporter {
 
   static String _clip(String value, int max) =>
       value.length <= max ? value : value.substring(0, max);
+
+  static final RegExp _doubleQuoted = RegExp(r'"[^"\n]*"');
+  static final RegExp _singleQuoted = RegExp(r"'[^'\n]*'");
+
+  /// Hata metninden kullanıcının yazdığı değerler sızmasın: tırnak içindeki
+  /// değerler silinir; sunucu/biçim hatalarında yalnızca tür ve ilk satır
+  /// tutulur (gizlilik politikası, SEC-12).
+  static String scrubMessage(Object error) {
+    var text = error.toString();
+    if (error is PostgrestException || error is FormatException) {
+      text = '${error.runtimeType}: ${text.split('\n').first}';
+    }
+    return text
+        .replaceAll(_doubleQuoted, '"…"')
+        .replaceAll(_singleQuoted, "'…'");
+  }
 
   static String _firstFrame(String? stack) {
     if (stack == null) return '';

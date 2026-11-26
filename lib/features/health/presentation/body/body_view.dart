@@ -189,7 +189,7 @@ String? weeksToTargetText(WeightEta eta, DateTime now) {
     case WeightEtaStatus.onTrack:
       final days = eta.eta!.difference(AppDates.startOfDay(now)).inDays;
       final weeks = (days / 7).ceil();
-      return weeks <= 1 ? 'Hedefe ~1 hafta' : 'Hedefe ~$weeks hafta';
+      return weeks <= 1 ? 'Gerçek gidişle ~1 hafta' : 'Gerçek gidişle ~$weeks hafta';
     case WeightEtaStatus.reached:
       return 'Hedefe ulaşıldı';
     case WeightEtaStatus.notTowards:
@@ -444,7 +444,7 @@ class _MeasurementRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.chip),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 34),
+          constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
             border: divider

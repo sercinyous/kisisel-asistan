@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/services/notification_service.dart';
@@ -12,6 +14,7 @@ import 'package:kisisel_asistan/features/health/presentation/energy_providers.da
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/routines/presentation/routines_providers.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
+import 'package:kisisel_asistan/features/reminders/domain/reminder.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'helpers/quick_add_fakes.dart';
@@ -133,6 +136,25 @@ void main() {
       expect(harness.health.inputs, ['sağlık metni']);
       expect(stateOf(QuickAddMode.work).entry!.tasks, hasLength(1));
       expect(stateOf(QuickAddMode.health).entry!.nutrition, hasLength(1));
+    });
+
+    test('ayrıştırma iptal edilince geç gelen yanıt yok sayılır', () async {
+      final gate = Completer<void>();
+      harness.parserFor(QuickAddMode.work).handler = (_) async {
+        await gate.future;
+        return ParsedEntry.fromJson(const {
+          'tasks': [_task],
+        }).restrictedTo(QuickAddMode.work);
+      };
+      final controller = controllerFor(QuickAddMode.work);
+      final pending = controller.parse('süt al');
+      expect(stateOf(QuickAddMode.work).status, QuickAddStatus.parsing);
+      controller.cancelParse();
+      expect(stateOf(QuickAddMode.work).status, QuickAddStatus.idle);
+      gate.complete();
+      await pending;
+      expect(stateOf(QuickAddMode.work).status, QuickAddStatus.idle);
+      expect(stateOf(QuickAddMode.work).entry, isNull);
     });
 
     test('iki alanın durumu birbirinden bağımsızdır', () async {
@@ -257,6 +279,38 @@ void main() {
       expect(entry.routines, isEmpty);
       expect(entry.tasks, hasLength(1));
     });
+  });
+
+  test(
+      'hatırlatıcı yazılamazsa diğer kalemler tekrar yazılmaz; '
+      'yeniden kaydetme yalnız hatırlatıcıyı gönderir', () async {
+    harness.parserFor(QuickAddMode.work).handler = (_) async => ParsedEntry(
+          tasks: ParsedEntry.fromJson({
+            'tasks': [_undatedTask],
+          }).tasks,
+          reminders: const [
+            ParsedReminder(
+              title: 'İlaç',
+              time: TimeOfDayValue(9, 0),
+              repeat: ReminderRepeat.daily,
+            ),
+          ],
+        );
+    harness.repository.failReminders = true;
+    final controller = controllerFor(QuickAddMode.work);
+    await controller.parse('metin');
+
+    expect(await controller.save(), isFalse);
+    final state = stateOf(QuickAddMode.work);
+    expect(state.status, QuickAddStatus.preview);
+    expect(state.entry!.tasks, isEmpty);
+    expect(state.entry!.reminders, hasLength(1));
+    expect(state.errorMessage, contains('Hatırlatıcılar kaydedilemedi'));
+
+    expect(await controller.save(), isTrue);
+    expect(harness.repository.saved, hasLength(2));
+    expect(harness.repository.saved.last.tasks, isEmpty);
+    expect(stateOf(QuickAddMode.work).savedCount, 2);
   });
 
   group('save', () {
@@ -478,7 +532,7 @@ void main() {
       final state = stateOf(QuickAddMode.work);
       expect(state.status, QuickAddStatus.preview);
       expect(state.entry!.totalCount, 2);
-      expect(state.errorMessage, contains('hiçbir kayıt yazılmadı'));
+      expect(state.errorMessage, contains('doğrulanamadı'));
       // Sağlık dürtüleri kayıttan bağımsız planlanır; iş hatırlatması yok.
       expect(
         harness.notifications.scheduled
@@ -497,7 +551,7 @@ void main() {
       expect(ok, isFalse);
       expect(
         stateOf(QuickAddMode.work).errorMessage,
-        'Kaydedilemedi: routines_monthly_day ihlali',
+        'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.',
       );
     });
 

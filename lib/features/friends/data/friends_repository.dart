@@ -21,6 +21,12 @@ abstract class FriendsRepository {
   Future<List<GoalSummary>> goalSummary(String friendId, DateTime weekStart);
   Future<List<LeaderboardEntry>> leaderboard(DateTime weekStart);
   Future<void> leave(String friendId);
+
+  /// Arkadaşlığı bitirir; karşı taraf bir daha istek gönderemez.
+  Future<void> block(String userId);
+
+  /// Uygunsuz istek ya da kullanıcıyı geri bildirim olarak bildirir.
+  Future<void> report({required String subject, required String reason});
   Future<FriendSharing> mySharing();
   Future<FriendSharing> saveSharing(FriendSharing sharing);
 }
@@ -94,6 +100,17 @@ class SupabaseFriendsRepository implements FriendsRepository {
   @override
   Future<void> leave(String friendId) =>
       _client.rpc('leave_friendship', params: {'friend': friendId});
+
+  @override
+  Future<void> block(String userId) =>
+      _client.rpc('block_user', params: {'target': userId});
+
+  @override
+  Future<void> report({required String subject, required String reason}) =>
+      _client.from('feedback').insert({
+        'message': 'Bildirim: $reason ($subject)',
+        'category': 'diğer',
+      });
 
   @override
   Future<FriendSharing> mySharing() async => FriendSharing.fromMap(
@@ -251,6 +268,13 @@ class DemoFriendsRepository implements FriendsRepository {
   @override
   Future<void> leave(String friendId) async =>
       _friends.removeWhere((f) => f.friendId == friendId);
+
+  @override
+  Future<void> block(String userId) async =>
+      _friends.removeWhere((f) => f.friendId == userId);
+
+  @override
+  Future<void> report({required String subject, required String reason}) async {}
 
   @override
   Future<FriendSharing> mySharing() async => _sharing;

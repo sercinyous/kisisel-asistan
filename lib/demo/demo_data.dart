@@ -576,7 +576,7 @@ WeeklyReport demoWeeklyReport(DateTime weekStart, DateTime now) {
         ? null
         : 'İş tarafında ${(parsed.workRate ?? 0) >= 75 ? 'güçlü' : 'orta'} bir hafta: '
             'görevlerin $tasksDone / $tasksTotal kadarı kapandı, rutinler '
-            '%${parsed.routineRate ?? 0} düzeyinde. Form tarafında $workouts antrenman '
+            '%${parsed.routineRate ?? 0} düzeyinde. Sağlık tarafında $workouts antrenman '
             'yapıldı, protein hedefi $proteinDays gün tuttu.\n'
             'Kaçan antrenmanı sabaha al.\n'
             'Öğle öğününe 30 g protein ekle.\n'
@@ -649,7 +649,7 @@ class DemoQuickAddRepository implements QuickAddRepository {
   final DemoData _data;
 
   @override
-  Future<QuickAddResult> saveAll(ParsedEntry entry) async {
+  Future<QuickAddResult> saveAll(ParsedEntry entry, {String? opKey}) async {
     final saved = <SavedTask>[];
     for (final t in entry.tasks) {
       final id = _data.nextId('task');

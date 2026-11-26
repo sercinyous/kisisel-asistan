@@ -25,7 +25,7 @@ declare
   friend_u uuid := '5a000000-0000-0000-0000-000000000002';
   stranger uuid := '5a000000-0000-0000-0000-000000000003';
   ins      text := $q$insert into public.friend_stories (kind, day, payload)
-                    values ('streak_7', current_date, '{"days":7}') returning to_jsonb(id)$q$;
+                    values ('streak_7', current_date, '{"streak":"Adım"}') returning to_jsonb(id)$q$;
   sid      uuid;
   old_sid  uuid;
   r        jsonb;
@@ -63,7 +63,7 @@ begin
     '42501');
 
   -- Süresi dolmuş story arkadaşa görünmez, sahibe görünür.
-  insert into public.friend_stories (user_id, kind, day) values (owner_u, 'workout', current_date - 2)
+  insert into public.friend_stories (user_id, kind, day) values (owner_u, 'workout', current_date - 1)
     returning id into old_sid;
   update public.friend_stories set expires_at = now() - interval '1 minute' where id = old_sid;
   r := tf.run('authenticated', friend_u,
@@ -131,6 +131,23 @@ begin
     $q$insert into public.friend_stories (kind, day) values ('workout', current_date) returning to_jsonb(id)$q$);
   perform tf.eq('eski satır temizlenir',
     (select to_jsonb(count(*)) from public.friend_stories where id = old_sid), '0');
+
+  -- weekly_goal günü haftanın pazartesisidir (en çok 7 gün geride, G2-01).
+  perform tf.run('authenticated', owner_u,
+    $q$insert into public.friend_stories (kind, day) values ('weekly_goal', current_date - 4) returning to_jsonb(id)$q$);
+  perform tf.fails('diğer türler için 4 gün geri reddedilir', 'authenticated', owner_u,
+    $q$insert into public.friend_stories (kind, day) values ('streak_30', current_date - 4) returning to_jsonb(id)$q$,
+    '22023');
+  perform tf.fails('weekly_goal 8 gün geri reddedilir', 'authenticated', owner_u,
+    $q$insert into public.friend_stories (kind, day) values ('weekly_goal', current_date - 8) returning to_jsonb(id)$q$,
+    '22023');
+  -- Seri adı yalnızca bilinen listeden (G2-14).
+  perform tf.fails('bilinmeyen seri adı reddedilir', 'authenticated', owner_u,
+    $q$insert into public.friend_stories (kind, day, payload)
+       values ('streak_14', current_date, '{"streak":"reklam"}') returning to_jsonb(id)$q$, '23514');
+  perform tf.fails('ek payload anahtarı reddedilir', 'authenticated', owner_u,
+    $q$insert into public.friend_stories (kind, day, payload)
+       values ('streak_14', current_date, '{"streak":"Adım","x":1}') returning to_jsonb(id)$q$, '23514');
 
   -- 4) Paylaşım kapatılınca story'ler ve tepkileri silinir.
   update public.user_settings set share_stories = false where user_id = owner_u;

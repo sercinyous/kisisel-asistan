@@ -128,6 +128,8 @@ void main() {
         tasksRepositoryProvider.overrideWithValue(tasks),
         settingsRepositoryProvider.overrideWithValue(settings),
         notificationServiceProvider.overrideWithValue(notifications),
+        // Sağlık dürtüleri gerçek saate bağlıdır; burada yalnızca görevler.
+        healthNudgeSyncProvider.overrideWith((ref) async {}),
       ],
     );
     addTearDown(container.dispose);

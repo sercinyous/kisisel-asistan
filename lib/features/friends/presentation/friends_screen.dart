@@ -38,13 +38,17 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
       ..showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  Future<void> _run(Future<void> Function() action) async {
+  /// İşlemi çalıştırır; başarılıysa `true`. Hata kullanıcıya bildirilir.
+  Future<bool> _run(Future<void> Function() action) async {
+    var ok = true;
     try {
       await action();
     } catch (_) {
+      ok = false;
       _toast('İşlem yapılamadı. Bağlantını kontrol edip tekrar dene.');
     }
     if (mounted) refreshFriends(ref);
+    return ok;
   }
 
   Future<void> _send() async {
@@ -87,6 +91,70 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     );
     if (ok == true) {
       await _run(() => ref.read(friendsRepositoryProvider).leave(f.userId));
+    }
+  }
+
+  Future<void> _confirmBlock(LeaderboardEntry f) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Engelle'),
+        content: Text(
+          '${f.displayName} arkadaş listenden çıkar ve sana bir daha '
+          'istek gönderemez.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Engelle', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await _run(() => ref.read(friendsRepositoryProvider).block(f.userId));
+    }
+  }
+
+  /// Kullanıcıyı bildirir: onay + isteğe bağlı kısa gerekçe; isterse aynı
+  /// anda engeller. Bildirim kullanıcı kimliğini (ve varsa istek kimliğini) taşır.
+  Future<void> _report(
+    String subject, {
+    String? userId,
+    String? requestId,
+  }) async {
+    final choice = await showDialog<({String reason, bool block})>(
+      context: context,
+      builder: (_) => _ReportDialog(subject: subject, canBlock: userId != null),
+    );
+    if (choice == null || !mounted) return;
+    final repo = ref.read(friendsRepositoryProvider);
+    final ok = await _run(() async {
+      await repo.report(
+        subject: subject,
+        // Gelen istekte gönderenin kimliği istemciye açılmaz; istek kimliği
+        // sunucuda gönderene götürür (friend_requests.from_user).
+        reason: [
+          if (userId != null) 'kullanıcı $userId',
+          if (requestId != null) 'arkadaşlık isteği $requestId',
+          if (choice.reason.isNotEmpty) 'gerekçe: ${choice.reason}',
+        ].join(' · '),
+      );
+      if (choice.block && userId != null) {
+        await repo.block(userId);
+      } else if (requestId != null) {
+        // Bildirilen istek reddedilir.
+        await repo.respond(requestId, accept: false);
+      }
+    });
+    if (ok) {
+      _toast(choice.block
+          ? 'Bildirimin alındı ve kullanıcı engellendi.'
+          : 'Bildirimin alındı. Teşekkürler.');
     }
   }
 
@@ -252,6 +320,15 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                         ),
                       ),
                       IconButton(
+                        tooltip: 'Bildir',
+                        color: AppColors.textMuted,
+                        icon: const Icon(Icons.flag_outlined),
+                        onPressed: () => _report(
+                          r.fromName.isEmpty ? 'Bir kullanıcı' : r.fromName,
+                          requestId: r.id,
+                        ),
+                      ),
+                      IconButton(
                         tooltip: 'Reddet',
                         color: AppColors.danger,
                         icon: const Icon(Icons.close_outlined),
@@ -369,7 +446,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
     final label = value == null && !e.isSelf
         ? formatGoalDays(goal) ?? formatMetricValue(metric, period, null)
         : formatMetricValue(metric, period, value);
-    final medal = value != null && value > 0 ? _medalColor(index) : null;
+    // Kalori sıralaması yapılmaz: çok yiyene madalya verilmez (ICG2-11).
+    final ranked = metric != GoalMetric.calories;
+    final medal =
+        ranked && value != null && value > 0 ? _medalColor(index) : null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
@@ -386,7 +466,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     ),
                   )
                 : Text(
-                    '${index + 1}',
+                    ranked ? '${index + 1}' : '·',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelMedium
                         ?.copyWith(color: AppColors.textMuted),
@@ -406,7 +486,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   style: theme.textTheme.bodyLarge
                       ?.copyWith(fontWeight: FontWeight.w500),
                 ),
-                if (e.email.isNotEmpty && e.email != e.displayName)
+                if (e.isSelf && e.email.isNotEmpty && e.email != e.displayName)
                   Text(
                     e.email,
                     maxLines: 1,
@@ -431,7 +511,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
               tooltip: 'Seçenekler',
               icon: Icon(Icons.more_vert_outlined,
                   size: 20, color: AppColors.textMuted),
-              onSelected: (_) => _confirmLeave(e),
+              onSelected: (v) => switch (v) {
+                'block' => _confirmBlock(e),
+                'report' => _report(e.displayName, userId: e.userId),
+                _ => _confirmLeave(e),
+              },
               itemBuilder: (_) => [
                 PopupMenuItem(
                   value: 'leave',
@@ -440,6 +524,14 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                     style: TextStyle(color: AppColors.danger),
                   ),
                 ),
+                PopupMenuItem(
+                  value: 'block',
+                  child: Text(
+                    'Engelle',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                ),
+                const PopupMenuItem(value: 'report', child: Text('Bildir')),
               ],
             )
           else
@@ -613,4 +705,71 @@ class _Avatar extends StatelessWidget {
         userId: entry.userId,
         size: 40,
       );
+}
+
+/// Bildirim onayı: isteğe bağlı kısa gerekçe ve "engelle" seçeneği.
+class _ReportDialog extends StatefulWidget {
+  const _ReportDialog({required this.subject, required this.canBlock});
+
+  final String subject;
+
+  /// Engelleme seçeneği (kullanıcı kimliği biliniyorsa).
+  final bool canBlock;
+
+  @override
+  State<_ReportDialog> createState() => _ReportDialogState();
+}
+
+class _ReportDialogState extends State<_ReportDialog> {
+  final _reason = TextEditingController();
+  bool _block = false;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('${widget.subject} bildirilsin mi?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const ValueKey('report-reason'),
+            controller: _reason,
+            maxLength: 200,
+            decoration: const InputDecoration(
+              hintText: 'Kısa gerekçe (isteğe bağlı)',
+            ),
+          ),
+          if (widget.canBlock)
+            CheckboxListTile(
+              key: const ValueKey('report-block'),
+              contentPadding: EdgeInsets.zero,
+              value: _block,
+              onChanged: (v) => setState(() => _block = v ?? false),
+              title: const Text('Ayrıca engelle'),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Vazgeç'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            (reason: _reason.text.trim(), block: _block),
+          ),
+          child: Text('Bildir', style: TextStyle(color: AppColors.danger)),
+        ),
+      ],
+    );
+  }
 }

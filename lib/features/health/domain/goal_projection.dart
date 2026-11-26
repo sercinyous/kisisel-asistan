@@ -78,8 +78,8 @@ class GoalProjection {
   String? get etaText {
     final eta = etaWeeks;
     if (eta == null) return null;
-    if (eta > maxEtaWeeks) return 'Hedef kiloya bu hızla 2 yıldan uzun';
-    return 'Hedef kiloya ~$eta haftada';
+    if (eta > maxEtaWeeks) return 'Plana uyarsan hedef kiloya 2 yıldan uzun';
+    return 'Plana uyarsan hedef kiloya ~$eta haftada';
   }
 
   /// Kalori satırı: "2.150 kcal".

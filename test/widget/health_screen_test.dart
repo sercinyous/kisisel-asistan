@@ -366,7 +366,7 @@ void main() {
   });
 
   group('Plan', () {
-    testWidgets('dört tempo, rozetler ve hedefler 1.3 ölçekte taşmadan',
+    testWidgets('üç tempo, rozetler ve hedefler 1.3 ölçekte taşmadan',
         (tester) async {
       await pumpScreen(tester,
           textScale: 1.3, segment: HealthSegment.plan);
@@ -383,20 +383,19 @@ void main() {
       expect(find.text('Klasik (kg×26)'), findsWidgets);
       expect(find.text('0,50 kg/hafta'), findsWidgets);
       expect(find.text('0,75 kg/hafta'), findsWidgets);
-      expect(find.text('1 kg/hafta'), findsWidgets);
+      expect(find.text('1 kg/hafta'), findsNothing);
       expect(find.text('0,25 kg/hafta'), findsNothing);
       expect(find.byKey(const Key('plan-rate-half-badge')), findsOneWidget);
       expect(find.byKey(const Key('plan-rate-warning')), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('tempo değişince ayara yazılır; 1 kg uyarı gösterir',
+    testWidgets('tempo değişince ayara yazılır; 1 kg seçeneği yok',
         (tester) async {
       await pumpScreen(tester, segment: HealthSegment.plan);
-      await tapVisible(tester, find.byKey(const Key('plan-rate-one')));
-      expect(settingsRepo.settings!.weeklyRate, FatLossRate.one);
-      expect(find.byKey(const Key('plan-rate-warning')), findsOneWidget);
-      expect(find.text(FatLossRate.one.warning!), findsWidgets);
+      expect(find.byKey(const Key('plan-rate-one')), findsNothing);
+      await tapVisible(tester, find.byKey(const Key('plan-rate-half')));
+      expect(settingsRepo.settings!.weeklyRate, FatLossRate.half);
 
       await tapVisible(tester, find.byKey(const Key('plan-rate-threeQuarter')));
       expect(settingsRepo.settings!.weeklyRate, FatLossRate.threeQuarter);
@@ -471,8 +470,8 @@ void main() {
         tester,
         segment: HealthSegment.plan,
         settings: baseSettings().copyWith(
-          weeklyRate: FatLossRate.one,
-          expenditureKcalManual: 1800,
+          weeklyRate: FatLossRate.threeQuarter,
+          expenditureKcalManual: 1700,
         ),
       );
       expect(find.text(SafeTargets.clampedMessage), findsOneWidget);
@@ -491,12 +490,9 @@ void main() {
       await tapVisible(tester, find.byKey(const Key('plan-guide-toggle')));
       expect(find.byKey(const Key('plan-equivalents')), findsOneWidget);
       expect(find.byKey(const Key('plan-menu')), findsOneWidget);
-      await tester.ensureVisible(find.byKey(const Key('supplement-magnesium')));
-      expect(
-        find.textContaining(
-            'Takviye genelde 200–350 mg; takviyeden günde 350 mg\'ı aşma.'),
-        findsOneWidget,
-      );
+      await tester.ensureVisible(find.byKey(const Key('supplement-fiber')));
+      expect(find.byKey(const Key('supplement-magnesium')), findsNothing);
+      expect(find.text('Kaynaklar'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

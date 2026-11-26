@@ -29,6 +29,35 @@ class FakeGoogleIdentityClient implements GoogleIdentityClient {
 }
 
 class FakeSignInBackend implements SignInBackend {
+
+  final List<String> resetRequests = [];
+
+  @override
+  Future<void> sendPasswordReset({required String email}) async {
+    resetRequests.add(email);
+    if (error != null) throw error!;
+  }
+
+  @override
+  Future<void> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> setNewPassword(String newPassword) async {}
+
+  @override
+  bool get hasSession => false;
+
+  @override
+  Future<void> verifySignupCode({
+    required String email,
+    required String code,
+  }) async {}
+
+  @override
+  Future<void> resendSignupCode({required String email}) async {}
   Object? error;
   final List<({String idToken, String? accessToken})> googleCalls = [];
   final List<({String email, String password})> passwordCalls = [];
@@ -268,10 +297,10 @@ void main() {
       );
     });
 
-    test('tanınmayan sunucu hatası özgün metni korur', () {
+    test('tanınmayan sunucu hatası ham metni göstermez', () {
       expect(
         signInErrorMessage(const AuthApiException('Beklenmeyen', statusCode: '500')),
-        'Giriş başarısız: Beklenmeyen',
+        'Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene.',
       );
     });
   });

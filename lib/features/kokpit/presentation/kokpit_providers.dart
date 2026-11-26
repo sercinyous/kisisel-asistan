@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/health_service.dart';
-import '../../../core/utils/date_utils.dart';
 import '../../health/data/health_repository.dart';
 import '../../health/presentation/health_source_providers.dart';
 import '../../operations/data/tasks_repository.dart';
@@ -27,12 +26,13 @@ final kokpitMonthProvider = StateProvider<DateTime>((ref) {
 /// Takvimde seçili gün; seçim yoksa `null`.
 final kokpitSelectedDayProvider = StateProvider<DateTime?>((ref) => null);
 
-/// "Bugün ve yaklaşanlar": bugünün saati geçmiş açık kayıtları da listede
-/// kalsın diye pencere gün başından açılır.
+/// Kokpit'in bugünkü görevleri: yarından önceye düşen açık görevler
+/// (önceki günlerden gecikmişler dahil) ve bugün tamamlananlar. Liste
+/// kesilmez; sayılar doğru kalsın diye satır sınırı yalnızca ekrandadır.
 final upcomingRemindersProvider = FutureProvider<List<TaskItem>>(
   (ref) => ref
       .watch(tasksRepositoryProvider)
-      .fetchUpcoming(from: AppDates.startOfDay(DateTime.now())),
+      .fetchKokpitDay(ref.read(kokpitClockProvider)),
 );
 
 final todayNutritionProvider = FutureProvider<NutritionSummary>(

@@ -144,6 +144,16 @@ void main() {
       expect(weekTargetFor(_r(_s(goal: GoalMode.maintain))), 0);
       expect(weekTargetFor(_r(_s())), 3850);
     });
+
+    test('haftalık hedef: taban kırpmasında planın gerçek açığı × 7', () {
+      final r = _r(
+        _s(rate: FatLossRate.threeQuarter, manual: 1900, target: 65),
+        kg: 75,
+      );
+      expect(r.clamped, isTrue, reason: "$r");
+      expect(weekTargetFor(r), r.deficit * 7);
+      expect(weekTargetFor(r), lessThan(5775));
+    });
   });
 
   group('GoalProjection', () {
@@ -165,7 +175,7 @@ void main() {
       expect(p.horizonKg, closeTo(-6, 0.1));
       expect(p.headline, 'Bunu yaparsan ~12 haftada −6 kg');
       expect(p.etaWeeks, 12);
-      expect(p.etaText, 'Hedef kiloya ~12 haftada');
+      expect(p.etaText, 'Plana uyarsan hedef kiloya ~12 haftada');
       expect(p.weeklyText, '−0,50 kg/hafta');
     });
 
@@ -209,9 +219,9 @@ void main() {
       // 100 kcal açık ≈ 0,09 kg/hafta; 84 → 60 kg yüzlerce hafta.
       final p = classicFatLoss(manual: 2284, target: 60);
       expect(p.etaWeeks, greaterThan(GoalProjection.maxEtaWeeks));
-      expect(p.etaText, 'Hedef kiloya bu hızla 2 yıldan uzun');
+      expect(p.etaText, 'Plana uyarsan hedef kiloya 2 yıldan uzun');
       final near = classicFatLoss(manual: 2284, target: 82);
-      expect(near.etaText, 'Hedef kiloya ~${near.etaWeeks} haftada');
+      expect(near.etaText, 'Plana uyarsan hedef kiloya ~${near.etaWeeks} haftada');
     });
 
     test('klasik formülle hızlı kayıp uyarı verir', () {
@@ -362,7 +372,7 @@ void main() {
 
     test('kas yaparken yağ yakma tabana takılınca tempo denmez', () {
       final r = _r(_s(goal: GoalMode.recomp, manual: 1200));
-      expect(r.clamped, isTrue);
+      expect(r.clamped, isTrue, reason: "$r");
       expect(r.warnings, contains(SafeTargets.recompClampedMessage));
       expect(r.warnings, isNot(contains(SafeTargets.clampedMessage)));
     });

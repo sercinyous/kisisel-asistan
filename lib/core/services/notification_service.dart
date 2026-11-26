@@ -19,6 +19,29 @@ export '../../features/reminders/domain/reminder.dart'
 const String reminderCategoryId = 'hatirlatici';
 const String reminderDoneActionId = 'yaptim';
 
+/// Düz dokunuşla açılan bildirimin yükü; kabuk okuyup ilgili sekmeye geçer
+/// ve `null` yapar. Soğuk açılışta da kabuk kurulana kadar bekler.
+final ValueNotifier<String?> notificationTapPayload = ValueNotifier(null);
+
+/// Bildirim yükünün açacağı sekme: görev, rutin ve hatırlatıcı İşler (1),
+/// sağlık dürtüleri Sağlık (2). Bilinmeyen yük sekme değiştirmez.
+int? tabForNotificationPayload(String? payload) {
+  if (payload == null) return null;
+  if (payload.startsWith('task:') ||
+      payload.startsWith('routine:') ||
+      payload.startsWith('reminder:')) {
+    return 1;
+  }
+  if (payload.startsWith('health:')) return 2;
+  return null;
+}
+
+void _recordTap(NotificationResponse response) {
+  final action = response.actionId;
+  if (action != null && action.isNotEmpty) return;
+  notificationTapPayload.value = response.payload;
+}
+
 /// "Yaptım" eylemini gelen kutusuna yazar (oturum denetimi işlenirken yapılır).
 Future<void> recordReminderResponse(
   NotificationResponse response, {
@@ -117,8 +140,25 @@ class NotificationService {
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android);
 
+  /// Eklenti başlatılamazsa servis kapalı kalır (tüm yöntemler sessizce
+  /// döner); uygulama açılışı engellenmez.
   Future<void> init() async {
     if (!_supported || _ready) return;
+    try {
+      await _init();
+    } catch (error, stack) {
+      _ready = false;
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stack,
+          library: 'notification_service',
+        ),
+      );
+    }
+  }
+
+  Future<void> _init() async {
 
     tzdata.initializeTimeZones();
     try {
@@ -146,9 +186,10 @@ class NotificationService {
     );
     await _plugin.initialize(
       settings,
-      onDidReceiveNotificationResponse: (response) => unawaited(
-        recordReminderResponse(response).catchError((Object _) {}),
-      ),
+      onDidReceiveNotificationResponse: (response) {
+        _recordTap(response);
+        unawaited(recordReminderResponse(response).catchError((Object _) {}));
+      },
       onDidReceiveBackgroundNotificationResponse:
           reminderNotificationBackgroundHandler,
     );
@@ -159,10 +200,25 @@ class NotificationService {
       final launch = await _plugin.getNotificationAppLaunchDetails();
       final response = launch?.notificationResponse;
       if (launch?.didNotificationLaunchApp == true && response != null) {
+        _recordTap(response);
         await recordReminderResponse(response);
       }
     } catch (_) {
       // Açılış ayrıntısı okunamazsa eylem yalnızca kaybolur; uygulama sürer.
+    }
+  }
+
+  /// Cihaz saat dilimini yeniden okur (seyahat sonrası öne gelme). Değiştiyse
+  /// `true`; tekrarlayan rutin/hatırlatma bildirimleri yeniden planlanmalı.
+  Future<bool> refreshTimezone() async {
+    if (!_ready) return false;
+    try {
+      final name = await FlutterTimezone.getLocalTimezone();
+      if (name == tz.local.name) return false;
+      tz.setLocalLocation(tz.getLocation(name));
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

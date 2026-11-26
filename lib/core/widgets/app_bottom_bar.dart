@@ -25,13 +25,20 @@ class AppBottomBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onCreate;
 
-  /// Slot ölçüsü ve kapsülün iç boşluğu; kapsül içeriği kadar geniştir.
-  static const double slotWidth = 42;
-  static const double slotHeight = 34;
-  static const double padding = 6;
+  /// Seçim kapsülünün görünen ölçüsü.
+  static const double pillWidth = 42;
+  static const double pillHeight = 34;
+
+  /// Slotun dokunma alanı: barın tam yüksekliği ve en az 44 pt genişlik
+  /// (Apple HIG); slotlar arasında ölü bölge kalmaz.
+  static const double slotWidth = 46;
+  static const double slotHeight = height;
+
+  /// Kapsülün yatay iç boşluğu.
+  static const double padding = 4;
 
   /// Kapsülün yüksekliği.
-  static const double height = slotHeight + padding * 2;
+  static const double height = 46;
 
   /// Kapsülün ekran kenarlarından ve alttan boşluğu.
   static const double margin = 16;
@@ -85,7 +92,7 @@ class AppBottomBar extends StatelessWidget {
                 filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                 child: Container(
                   height: height,
-                  padding: const EdgeInsets.all(padding),
+                  padding: const EdgeInsets.symmetric(horizontal: padding),
                   decoration: BoxDecoration(
                     color: AppColors.glass,
                     borderRadius: radius,
@@ -120,13 +127,10 @@ class _Slot extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: SizedBox(
-          width: AppBottomBar.slotWidth,
-          height: AppBottomBar.slotHeight,
-          child: child,
-        ),
+  Widget build(BuildContext context) => SizedBox(
+        width: AppBottomBar.slotWidth,
+        height: AppBottomBar.slotHeight,
+        child: child,
       );
 }
 
@@ -165,15 +169,15 @@ class _TabButton extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutCubic,
-              width: AppBottomBar.slotWidth,
-              height: AppBottomBar.slotHeight,
+              width: AppBottomBar.pillWidth,
+              height: AppBottomBar.pillHeight,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.navSelected
                     : AppColors.navSelected.withValues(alpha: 0),
                 borderRadius:
-                    BorderRadius.circular(AppBottomBar.slotHeight / 2),
+                    BorderRadius.circular(AppBottomBar.pillHeight / 2),
               ),
               // Seçili sekme dolu ikonla değil, arkadaki kapsülle belirtilir.
               child: RitimLineIcon(

@@ -250,6 +250,10 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (combineDateTime(_date, _time).isAfter(DateTime.now())) {
+      setState(() => _error = 'Gelecekteki bir zaman seçilemez.');
+      return;
+    }
     final navigator = Navigator.of(context);
     final route = ModalRoute.of(context);
     final container = ProviderScope.containerOf(context, listen: false);
@@ -429,7 +433,6 @@ class _MealFormSheetState extends ConsumerState<MealFormSheet> {
                           '${portion.name} '
                           '(${HealthFormat.plain(portion.grams)} g)',
                         ),
-                        showCheckmark: false,
                         selected: portionIndex == index,
                         onSelected: (selected) =>
                             _onPortionSelected(food, index, selected),

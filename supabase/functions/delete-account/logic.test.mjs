@@ -126,3 +126,28 @@ test("purgeBodyPhotos hiçbir şey silinmezse durur", async () => {
   );
   assert.equal(lists, 2);
 });
+
+test("purgeBodyPhotos 1000'den fazla klasörü birden çok turda siler", async () => {
+  const objects = new Set();
+  for (let i = 0; i < 1500; i++) objects.add(`u1/d${String(i).padStart(4, "0")}/front.jpg`);
+  const LIMIT = 1000; // Storage list üst sınırı
+  const bucket = {
+    async list(prefix) {
+      const out = new Map();
+      for (const p of objects) {
+        if (!p.startsWith(`${prefix}/`)) continue;
+        const rest = p.slice(prefix.length + 1);
+        const [head, ...tail] = rest.split("/");
+        out.set(head, tail.length > 0 ? { name: head, id: null } : { name: head, id: "x" });
+      }
+      return [...out.values()].slice(0, LIMIT);
+    },
+    async remove(paths) {
+      let n = 0;
+      for (const p of paths) if (objects.delete(p)) n++;
+      return n;
+    },
+  };
+  await purgeBodyPhotos(bucket, "u1");
+  assert.equal(objects.size, 0);
+});

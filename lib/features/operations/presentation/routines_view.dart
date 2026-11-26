@@ -450,8 +450,8 @@ class _RoutineCheckState extends ConsumerState<_RoutineCheck> {
       label: label,
       excludeSemantics: true,
       child: SizedBox(
-        width: 32,
-        height: 32,
+        width: 44,
+        height: 44,
         child: InkResponse(
           onTap: _toggle,
           radius: 18,

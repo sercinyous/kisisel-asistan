@@ -84,7 +84,9 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // VoiceOver açıkken de slayt kendiliğinden geçmez.
+    _reduceMotion = MediaQuery.disableAnimationsOf(context) ||
+        MediaQuery.accessibleNavigationOf(context);
     if (!_started) {
       _started = true;
       _startSlide();
@@ -170,6 +172,8 @@ class _StoryViewerState extends ConsumerState<StoryViewer>
   }
 
   Future<void> _react(FriendStory story, String emoji) async {
+    // Gönderim sürerken ikinci dokunuş yok sayılır (çift silme/ekleme olmasın).
+    if (_reacting) return;
     final repo = ref.read(storiesRepositoryProvider);
     final before = _reactions.containsKey(story.id)
         ? _reactions[story.id]

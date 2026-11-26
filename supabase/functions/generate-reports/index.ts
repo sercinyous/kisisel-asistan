@@ -22,6 +22,7 @@ import {
   createHandler,
   DEFAULT_REPORT_REFRESH_DAILY_LIMIT,
   type ReportStore,
+  type ReportUser,
 } from "./handler.ts";
 import type { ReportKind } from "./logic.ts";
 
@@ -41,21 +42,48 @@ const store: ReportStore = {
   },
 
   async listUsers() {
-    const { data, error } = await admin
-      .from("user_settings")
-      .select("user_id, timezone, onboarded_at");
+    // PostgREST tek yanıtta en çok 1000 satır döner; sayfa sayfa okunur.
+    const pageSize = 1000;
+    const users: ReportUser[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await admin
+        .from("user_settings")
+        .select("user_id, timezone, onboarded_at, ai_consent_at")
+        .order("user_id")
+        .range(from, from + pageSize - 1);
+      if (error !== null) throw new Error(error.message);
+      const rows = data ?? [];
+      for (const row of rows) {
+        users.push({
+          id: row.user_id as string,
+          timeZone: row.timezone as string,
+          onboarded: row.onboarded_at !== null,
+          aiConsent: row.ai_consent_at != null,
+        });
+      }
+      if (rows.length < pageSize) return users;
+    }
+  },
+
+  async hasOkReport(kind: ReportKind, userId, date) {
+    const { data, error } = kind === "daily"
+      ? await admin.from("daily_reports").select("ai_status")
+        .eq("user_id", userId).eq("report_date", date).maybeSingle()
+      : await admin.from("weekly_reports").select("ai_status")
+        .eq("user_id", userId).eq("week_start", date).maybeSingle();
     if (error !== null) throw new Error(error.message);
-    return (data ?? []).map((row) => ({
-      id: row.user_id as string,
-      timeZone: row.timezone as string,
-      onboarded: row.onboarded_at !== null,
-    }));
+    return data?.ai_status === "ok";
+  },
+
+  async refundQuota(userId, kind) {
+    const { error } = await admin.rpc("refund_ai_quota", { p_user: userId, p_kind: kind });
+    if (error !== null) throw new Error(error.message);
   },
 
   async userOf(userId) {
     const { data, error } = await admin
       .from("user_settings")
-      .select("timezone, onboarded_at")
+      .select("timezone, onboarded_at, ai_consent_at")
       .eq("user_id", userId)
       .maybeSingle();
     if (error !== null) throw new Error(error.message);
@@ -64,6 +92,7 @@ const store: ReportStore = {
       id: userId,
       timeZone: data.timezone as string,
       onboarded: data.onboarded_at !== null,
+      aiConsent: data.ai_consent_at != null,
     };
   },
 
@@ -154,6 +183,18 @@ const store: ReportStore = {
     return { metrics: result.metrics, changed: result.changed === true };
   },
 
+  async saveRefreshedMetrics(report, metrics) {
+    const { error } = await admin.rpc("save_refreshed_metrics", {
+      p_kind: report.kind,
+      p_user: report.userId,
+      p_date: report.date,
+      p_metrics: metrics,
+      p_token: report.token,
+      p_version: report.version,
+    });
+    if (error !== null) throw new Error(error.message);
+  },
+
   async saveRefreshed(report, metrics, summary) {
     const { error } = await admin.rpc("save_refreshed_report", {
       p_kind: report.kind,
@@ -184,6 +225,23 @@ const handler = createHandler({
   fetch,
   now: () => new Date(),
   log: (message) => console.error(message),
+  // Kalan kullanıcılar için kendine yeni istek; yanıt beklenmez, istek
+  // gönderilene dek çalışma ömrü uzatılır (G2-04).
+  continueCron: (body) => {
+    const pending = fetch(`${supabaseUrl}/functions/v1/generate-reports`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-cron-secret": Deno.env.get("CRON_SECRET") ?? "",
+      },
+      body: JSON.stringify(body),
+    }).then((response) => response.body?.cancel()).catch((error) => {
+      console.error(`Sonraki sayfa isteği başarısız: ${error instanceof Error ? error.message : "hata"}`);
+    });
+    // deno-lint-ignore no-explicit-any
+    (globalThis as any).EdgeRuntime?.waitUntil?.(pending);
+    return Promise.resolve();
+  },
 });
 
 Deno.serve((req) => {

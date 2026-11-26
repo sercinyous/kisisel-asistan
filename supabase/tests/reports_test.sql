@@ -396,11 +396,29 @@ select public.save_daily_report(:A, '2026-09-28',
   public.report_daily_metrics(:A, '2026-09-28'), null, 'failed');
 select public.save_daily_report(:B, '2026-09-28',
   public.report_daily_metrics(:B, '2026-09-28'), 'B özeti', 'ok');
-select t.eq('save_daily_report: upsert son değeri tutar',
+select t.eq('save_daily_report: AI başarısızsa eski başarılı yorum korunur, sayılar yenilenir',
   (select jsonb_agg(jsonb_build_object('d', report_date, 's', ai_summary, 'st', ai_status,
                                        'rate', metrics #> '{work,rate}'))
    from public.daily_reports where user_id = :A),
-  '[{"d": "2026-09-28", "s": null, "st": "failed", "rate": 75}]'::jsonb);
+  '[{"d": "2026-09-28", "s": "ilk", "st": "ok", "rate": 75}]'::jsonb);
+select public.save_daily_report(:A, '2026-09-28',
+  public.report_daily_metrics(:A, '2026-09-28'), 'yeni', 'ok');
+select t.eq('save_daily_report: yeni yorum eskisinin yerine geçer',
+  (select to_jsonb(ai_summary) from public.daily_reports where user_id = :A and report_date = '2026-09-28'),
+  '"yeni"'::jsonb);
+select public.save_weekly_report(:B, '2026-09-28', '{}'::jsonb, 'B hafta', 'ok');
+select public.save_weekly_report(:B, '2026-09-28', '{}'::jsonb, null, 'failed');
+select t.eq('save_weekly_report: AI başarısızsa eski başarılı yorum korunur',
+  (select to_jsonb(ai_summary || '/' || ai_status) from public.weekly_reports
+   where user_id = :B and week_start = '2026-09-28'),
+  '"B hafta/ok"'::jsonb);
+
+-- 0 kcal kayıtlar günü "kayıtlı" saymaz (ICG2-15).
+insert into public.nutrition_logs (user_id, food_name, calories, protein_g, eaten_at) values
+  (:C, 'su', 0, 0, '2026-10-20 12:00+00');
+select t.eq('0 kcal kayıt: days_logged 0',
+  public.report_daily_metrics(:C, '2026-10-20') #> '{nutrition,days_logged}',
+  '0'::jsonb);
 
 do $$
 begin

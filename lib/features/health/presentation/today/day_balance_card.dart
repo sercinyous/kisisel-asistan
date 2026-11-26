@@ -55,7 +55,7 @@ class DayBalanceCard extends ConsumerWidget {
             const _Notice(
               key: Key('day-low-intake'),
               text: '${SafeTargets.lowIntakeWarning}. Kalori tabanının altında '
-                  'kalmak kas kaybettirir; bugün hedefe yaklaşmaya çalış.',
+                  'kalmak kas kaybı riskini artırabilir; bugün hedefe yaklaşmaya çalış.',
             ),
           ],
           const SizedBox(height: 8),

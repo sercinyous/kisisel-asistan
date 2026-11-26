@@ -270,4 +270,18 @@ void main() {
       expect(result.single.fireAt, remind);
     });
   });
+
+  test('sessiz saat randevudan sonraya kaydırmaz; seçilen an korunur', () {
+    final early = plan(tasks: [
+      task('t', due: DateTime(2026, 11, 17, 6), remind: DateTime(2026, 11, 17, 5, 30)),
+    ]);
+    expect(early.single.fireAt, DateTime(2026, 11, 17, 5, 30));
+    final late = plan(tasks: [task('g', due: DateTime(2026, 11, 16, 23, 30))]);
+    expect(late.single.fireAt.isBefore(DateTime(2026, 11, 16, 23, 30)), isTrue);
+    // Termin sessiz saatten sonraysa yine sessiz saat sonuna ertelenir.
+    final ok = plan(tasks: [
+      task('o', due: DateTime(2026, 11, 17, 12), remind: DateTime(2026, 11, 17, 6)),
+    ]);
+    expect(ok.single.fireAt, DateTime(2026, 11, 17, 7, 30));
+  });
 }

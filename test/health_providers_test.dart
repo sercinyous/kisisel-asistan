@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
+import 'package:kisisel_asistan/features/health/presentation/energy_providers.dart';
 import 'package:kisisel_asistan/features/health/presentation/health_providers.dart';
+import 'package:kisisel_asistan/features/health/presentation/providers/week_deficit_providers.dart';
+import 'package:kisisel_asistan/features/settings/data/settings_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/data/kokpit_repository.dart';
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/routines/data/routines_repository.dart';
@@ -311,5 +314,27 @@ void main() {
     final summary = await container.read(todayNutritionProvider.future);
     expect(summary.entryCount, 1);
     expect(summary.calories, 420);
+  });
+
+  test('invalidateEnergyData: açık/seri girdisi (healthDaysProvider) tazelenir',
+      () async {
+    final container = ProviderContainer(
+      overrides: [
+        healthRepositoryProvider.overrideWithValue(health),
+        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+    final window = (from: today, to: today);
+    container.listen(healthDaysProvider(window), (_, __) {});
+    final before = await container.read(healthDaysProvider(window).future);
+    expect(before.days.single.mealCount, 0);
+
+    await health.createNutritionLog(meal('yeni', DateTime.now(), calories: 500));
+    invalidateEnergyData(container);
+
+    final after = await container.read(healthDaysProvider(window).future);
+    expect(after.days.single.mealCount, 1);
+    expect(after.days.single.intakeKcal, 500);
   });
 }

@@ -271,7 +271,10 @@ abstract final class StoryBuilder {
   /// Bir başarının arkadaşa görünen metni.
   static StorySlide achievementSlide(FriendStory story) {
     final streak = story.payload['streak'];
-    final streakName = streak is String && streak.length <= 20 ? streak : null;
+    // Yalnızca bilinen seri adları gösterilir (G2-14).
+    final streakName = StreakKind.values.any((k) => k.label == streak)
+        ? streak as String
+        : null;
     String serie(int days) => streakName == null
         ? '$days günlük seri'
         : '$days günlük $streakName serisi';

@@ -1,4 +1,5 @@
 import '../../../core/utils/date_utils.dart';
+import '../../../core/text_limits.dart';
 
 /// `daily_health_metrics` satırı (HealthKit günlük özeti).
 class DailyHealthMetric {
@@ -226,7 +227,7 @@ class NutritionLog {
   Map<String, dynamic> toWriteMap() => {
         'meal_type': mealType,
         'food_name': foodName,
-        'quantity_text': quantityText,
+        'quantity_text': clipText(quantityText, TextLimits.quantityText),
         'calories': calories,
         'protein_g': proteinG,
         'carbs_g': carbsG,
@@ -331,11 +332,11 @@ class WorkoutLog {
   Map<String, dynamic> toWriteMap() => {
         'log_type': 'workout',
         'workout_type': workoutType,
-        'title': title,
+        'title': clipText(title, TextLimits.workoutTitle),
         'duration_min': durationMin,
         'distance_km': distanceKm,
         'calories_burned': caloriesBurned,
-        'notes': notes,
+        'notes': clipText(notes, TextLimits.workoutNotes),
         'logged_at': loggedAt.toUtc().toIso8601String(),
       };
 

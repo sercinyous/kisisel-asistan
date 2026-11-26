@@ -231,7 +231,7 @@ void main() {
       expect(find.text('Gün'), findsNothing);
       expect(find.text('Ay'), findsNothing);
       expect(find.byTooltip('Ayarlar'), findsNothing);
-      expect(find.byTooltip('Hesap'), findsOneWidget);
+      expect(find.byTooltip('Hesap ve ayarlar'), findsOneWidget);
 
       await scrollThrough(tester);
       expect(find.text('Bugünün işleri'), findsOneWidget);
@@ -331,7 +331,7 @@ void main() {
     testWidgets('HealthKit reddedilince Bağlan düğmesi çıkar', (tester) async {
       health.snapshot = const HealthSnapshot(status: HealthStatus.denied);
       await pumpKokpit(tester);
-      expect(find.textContaining('HealthKit erişimi verilmedi'), findsOneWidget);
+      expect(find.textContaining('Apple Sağlık erişimi verilmedi'), findsOneWidget);
       expect(find.text('Bağlan'), findsOneWidget);
     });
 

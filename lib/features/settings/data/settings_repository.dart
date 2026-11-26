@@ -91,6 +91,38 @@ class SettingsRepository {
     return parseRow(Map<String, dynamic>.from(row as Map));
   }
 
+  /// AI özelliklerine (Gemini) açık onay verilmiş mi (`ai_consent_at` dolu).
+  /// Sütun henüz yoksa (eski şema) onay yok sayılır.
+  Future<bool> fetchAiConsent() async {
+    final row = await _client
+        .from('user_settings')
+        .select('ai_consent_at')
+        .eq('user_id', _userId)
+        .maybeSingle();
+    return row?['ai_consent_at'] != null;
+  }
+
+  /// AI onayını verir (şimdiki zaman) ya da geri alır (boş). Sunucudaki rapor
+  /// üreticisi onay yoksa Gemini'yi çağırmaz.
+  Future<void> setAiConsent(bool granted) async {
+    await _client.from('user_settings').update({
+      'ai_consent_at':
+          granted ? DateTime.now().toUtc().toIso8601String() : null,
+    }).eq('user_id', _userId);
+  }
+
+  /// Sunucudaki saat dilimini cihazınkine eşitler (raporlar ve arkadaş
+  /// sıralamasındaki "bugün" bu dilime göre hesaplanır). Değiştiyse `true`.
+  Future<bool> syncTimezone(String timezone) async {
+    final rows = await _client
+        .from('user_settings')
+        .update({'timezone': timezone})
+        .eq('user_id', _userId)
+        .neq('timezone', timezone)
+        .select('user_id');
+    return rows.isNotEmpty;
+  }
+
   Future<UserSettings> save(UserSettings settings) async {
     final row = await _client
         .from('user_settings')

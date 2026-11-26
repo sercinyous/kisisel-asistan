@@ -365,12 +365,16 @@ void main() {
     expect(find.text('Bugün'), findsOneWidget);
     expect(find.text('Bugünkü toplantı'), findsOneWidget);
     expect(find.text('Sonra'), findsOneWidget);
-    expect(find.text('Fatura ödemesi'), findsNothing);
+    // Tarihsiz görev kendi grubunda hep görünür; ileri tarihli Sonra'da gizli.
+    expect(find.text('Tarihsiz'), findsOneWidget);
+    expect(find.text('Fatura ödemesi'), findsOneWidget);
+    const later = 'Haftalık vardiya çizelgesini yayınla ve ekibe duyur';
+    expect(find.text(later), findsNothing);
     expect(find.byTooltip('Seçenekler'), findsNothing);
 
     await tester.tap(find.text('Sonra'));
     await tester.pumpAndSettle();
-    expect(find.text('Fatura ödemesi'), findsOneWidget);
+    expect(find.text(later), findsOneWidget);
   });
 
   testWidgets('filtre seçilince tek çip görünür ve kaldırılabilir',

@@ -191,7 +191,7 @@ class _TaskCategoriesCardState extends ConsumerState<TaskCategoriesCard> {
             ),
           const SizedBox(height: 12),
           Text(
-            'Kategori Taslakları',
+            'Kategori taslakları',
             style: theme.textTheme.labelLarge
                 ?.copyWith(color: AppColors.textSecondary),
           ),
@@ -383,7 +383,6 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                       size: 18,
                       color: taskCategoryRoleColor(_color),
                     ),
-                    showCheckmark: false,
                     selected: key == _icon,
                     onSelected: (_) => setState(() => _icon = key),
                   ),

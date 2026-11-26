@@ -29,7 +29,8 @@ http.Response geminiOk(
       ],
     });
 
-http.Response jsonResponse(Object body, [int status = 200]) => http.Response.bytes(
+http.Response jsonResponse(Object body, [int status = 200]) =>
+    http.Response.bytes(
       utf8.encode(jsonEncode(body)),
       status,
       headers: {'content-type': 'application/json; charset=UTF-8'},
@@ -112,8 +113,7 @@ void main() {
         'gemini-3.8-flash:generateContent',
       );
       expect(captured.headers['x-goog-api-key'], 'test-key');
-      expect(captured.headers['content-type'],
-          startsWith('application/json'));
+      expect(captured.headers['content-type'], startsWith('application/json'));
       expect(captured.headers['content-type']!.toLowerCase(),
           contains('charset=utf-8'));
     });
@@ -186,10 +186,11 @@ void main() {
             as Map<String, dynamic>;
 
     Map<String, dynamic> itemProps(Map<String, dynamic> schema, String key) =>
-        (((schema['properties'] as Map)[key] as Map)['items'] as Map)['properties']
-            as Map<String, dynamic>;
+        (((schema['properties'] as Map)[key] as Map)['items']
+            as Map)['properties'] as Map<String, dynamic>;
 
-    test('iş şeması: tasks, notes, routines, reminders + other_domain; sağlık dizisi yok',
+    test(
+        'iş şeması: tasks, notes, routines, reminders + other_domain; sağlık dizisi yok',
         () async {
       final schema = schemaOf(await bodyFor(QuickAddMode.work));
       final props = schema['properties'] as Map<String, dynamic>;
@@ -202,14 +203,16 @@ void main() {
         'other_domain',
         'other_domain_summary',
       });
-      expect(schema['required'], ['tasks', 'notes', 'routines', 'other_domain']);
+      expect(
+          schema['required'], ['tasks', 'notes', 'routines', 'other_domain']);
       final reminder = (props['reminders'] as Map)['items'] as Map;
       expect(reminder['required'], ['title', 'time_of_day', 'repeat']);
       for (final key in ['tasks', 'notes', 'routines']) {
         expect((props[key] as Map)['type'], 'ARRAY', reason: key);
       }
       expect(props['other_domain'], {'type': 'BOOLEAN'});
-      expect(props['other_domain_summary'], {'type': 'STRING', 'nullable': true});
+      expect(
+          props['other_domain_summary'], {'type': 'STRING', 'nullable': true});
 
       final taskProps = itemProps(schema, 'tasks');
       expect(taskProps.keys.toSet(), {
@@ -253,7 +256,8 @@ void main() {
       expect(routine['time_of_day'], {'type': 'STRING', 'nullable': true});
     });
 
-    test('sağlık şeması: nutrition, workouts, weights + other_domain; iş dizisi yok',
+    test(
+        'sağlık şeması: nutrition, workouts, weights + other_domain; iş dizisi yok',
         () async {
       final schema = schemaOf(await bodyFor(QuickAddMode.health));
       final props = schema['properties'] as Map<String, dynamic>;
@@ -376,9 +380,9 @@ void main() {
       expect(entry.routines.last.daysOfWeek, [1]);
     });
 
-    test('model diğer alanın dizisini doldursa da o kalemler atılır',
-        () async {
-      const mixed = '{"tasks":[{"title":"Toplantı","category":"Ekip","priority":"medium"}],'
+    test('model diğer alanın dizisini doldursa da o kalemler atılır', () async {
+      const mixed =
+          '{"tasks":[{"title":"Toplantı","category":"Ekip","priority":"medium"}],'
           '"nutrition":[{"meal_type":"lunch","food_name":"Pilav","calories":200,'
           '"protein_g":4,"carbs_g":44,"fat_g":1,"eaten_at":"2026-11-16T13:00:00+03:00"}],'
           '"weights":[{"weight_kg":84,"measured_at":"2026-11-16T08:00:00+03:00"}]}';
@@ -419,8 +423,7 @@ void main() {
       expect(entry.totalCount, 3);
     });
 
-    test('birden çok parça birleştirilir, düşünce parçaları atlanır',
-        () async {
+    test('birden çok parça birleştirilir, düşünce parçaları atlanır', () async {
       final half = sampleEntryJson.length ~/ 2;
       final service = serviceWith(
         (_) async => geminiOk('', parts: [
@@ -454,24 +457,26 @@ void main() {
 
     test('finishReason MAX_TOKENS -> bölerek deneyin', () async {
       final e = await errorFor(
-        geminiOk('{"nutrition":[{"food_name":"yarım', finishReason: 'MAX_TOKENS'),
+        geminiOk('{"nutrition":[{"food_name":"yarım',
+            finishReason: 'MAX_TOKENS'),
       );
-      expect(e.message, contains('Bölerek deneyin'));
+      expect(e.message, contains('Bölerek dene'));
     });
 
     test('boş candidates -> boş yanıt mesajı', () async {
       final e = await errorFor(jsonResponse({'candidates': <Object>[]}));
-      expect(e.message, 'AI boş yanıt döndürdü. Tekrar deneyin.');
+      expect(e.message, 'Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     });
 
     test('candidates alanı yok -> boş yanıt mesajı', () async {
-      final e = await errorFor(jsonResponse({'usageMetadata': <String, Object>{}}));
-      expect(e.message, 'AI boş yanıt döndürdü. Tekrar deneyin.');
+      final e =
+          await errorFor(jsonResponse({'usageMetadata': <String, Object>{}}));
+      expect(e.message, 'Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     });
 
     test('parça metni boş -> boş yanıt mesajı', () async {
       final e = await errorFor(geminiOk('   '));
-      expect(e.message, 'AI boş yanıt döndürdü. Tekrar deneyin.');
+      expect(e.message, 'Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     });
 
     test('gövde JSON değil -> geçersiz yanıt', () async {
@@ -481,18 +486,19 @@ void main() {
 
     test('model metni JSON değil -> çözümlenemedi', () async {
       final e = await errorFor(geminiOk('Üzgünüm, anlayamadım.'));
-      expect(e.message, contains('çözümlenemedi'));
+      expect(e.message, contains('anlaşılamadı'));
     });
 
     test('model metni JSON dizisi -> beklenmeyen yanıt', () async {
       final e = await errorFor(geminiOk('[]'));
-      expect(e.message, contains('beklenmeyen bir yanıt'));
+      expect(e.message, contains('anlaşılamadı'));
     });
   });
 
   group('yeniden denenmeyen HTTP hataları', () {
     final cases = <int, String>{
-      400: 'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
+      400:
+          'Bu metin işlenemedi. Biraz değiştirip tekrar dene ya da elle ekle.',
       401: 'Gemini API anahtarı geçersiz ya da yetkisiz.',
       402: 'Gemini bakiyesi ya da faturalandırma tükendi (402). '
           'AI Studio > Billing bölümünden kredi ekleyin.',
@@ -518,31 +524,31 @@ void main() {
   });
 
   // Not: aşağıdaki testler servis içindeki gerçek bekleme sürelerini
-  // (600 ms + 1200 ms) yaşar; gecikme lib tarafında enjekte edilemiyor.
+  // (600 ms) yaşar; gecikme lib tarafında enjekte edilemiyor.
   group('yeniden denenen hatalar', () {
-    test('429 -> 3 deneme, sonra kota mesajı', () async {
+    test('429 -> 2 deneme, sonra kota mesajı', () async {
       var calls = 0;
       final service = serviceWith((_) async {
         calls++;
         return jsonResponse({'error': 'quota'}, 429);
       });
       final e = await expectAiError(service.parse('metin', now: now));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.statusCode, 429);
       expect(e.message,
-          'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.');
+          'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.');
     });
 
-    test('503 -> 3 deneme, sonra servis hatası mesajı', () async {
+    test('503 -> 2 deneme, sonra servis hatası mesajı', () async {
       var calls = 0;
       final service = serviceWith((_) async {
         calls++;
         return jsonResponse({'error': 'overloaded'}, 503);
       });
       final e = await expectAiError(service.parse('metin', now: now));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.statusCode, 503);
-      expect(e.message, 'AI servisi hata verdi (503). Lütfen tekrar deneyin.');
+      expect(e.message, 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
 
     test('503 sonra 200 -> ikinci denemede başarı', () async {
@@ -558,7 +564,7 @@ void main() {
       expect(entry.totalCount, 3);
     });
 
-    test('zaman aşımı -> 3 deneme, sonra zaman aşımı mesajı', () async {
+    test('zaman aşımı -> 2 deneme, sonra zaman aşımı mesajı', () async {
       var calls = 0;
       final service = serviceWith(
         (_) async {
@@ -569,24 +575,28 @@ void main() {
         timeout: const Duration(milliseconds: 20),
       );
       final e = await expectAiError(service.parse('metin', now: now));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.statusCode, isNull);
       expect(e.message,
-          'AI servisi zamanında yanıt vermedi. Lütfen tekrar deneyin.');
+          'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
 
     test('ağ hataları (SocketException / ClientException) yeniden denenir',
         () async {
-      var calls = 0;
-      final service = serviceWith((_) async {
-        calls++;
-        if (calls == 1) throw const SocketException('offline');
-        if (calls == 2) throw http.ClientException('reset');
-        return geminiOk(sampleEntryJson);
-      });
-      final entry = await service.parse('metin', now: now);
-      expect(calls, 3);
-      expect(entry.totalCount, 3);
+      for (final error in <Exception>[
+        const SocketException('offline'),
+        http.ClientException('reset'),
+      ]) {
+        var calls = 0;
+        final service = serviceWith((_) async {
+          calls++;
+          if (calls == 1) throw error;
+          return geminiOk(sampleEntryJson);
+        });
+        final entry = await service.parse('metin', now: now);
+        expect(calls, 2);
+        expect(entry.totalCount, 3);
+      }
     });
   });
 
@@ -605,7 +615,7 @@ void main() {
     test('boş / yalnızca boşluk', () async {
       for (final input in ['', '   \n\t ']) {
         final e = await expectAiError(service.parse(input, now: now));
-        expect(e.message, 'Lütfen bir şeyler yazın.');
+        expect(e.message, 'Önce bir şeyler yaz.');
       }
       expect(calls, 0);
     });
@@ -632,7 +642,7 @@ void main() {
         apiKey: '',
       );
       final e = await expectAiError(noKey.parse('metin', now: now));
-      expect(e.message, contains('AI sunucusu yapılandırılmamış'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
       expect(calls, 0);
     });
   });

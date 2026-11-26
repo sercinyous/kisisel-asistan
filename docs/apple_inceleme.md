@@ -25,9 +25,11 @@ Supabase Dashboard'da ve App Store Connect'te kendin doldur.
 
 - iPhone'da `DEMO_EPOSTA` / `DEMO_SIFRE` ile giriş yap; Kokpit, İşler,
   Sağlık ve İçgörü dolu görünmeli.
-- Sağ üstteki profil ikonu > Hesap: Yardım ve gizlilik ile Sorun bildir satırları;
-  Hesabımı sil, Profil ve hedefler sayfasının en altında görünmeli
-  (demo hesabında **Hesabımı sil**'i deneme; denersen 1–2. adımları tekrarla).
+- Sağ üstteki profil ikonu > Hesap: Gizlilik ve koşullar (en üstte AI onayı
+  anahtarı), Sorun bildir ve kartın en altında Hesabımı sil satırları görünmeli
+  (Hesabımı sil, Profil ve hedefler sayfasının en altında da var; demo hesabında
+  **Hesabımı sil**'i deneme; denersen 1–2. adımları tekrarla).
+- Demo hesabında AI onayı boştur: ilk "+" kullanımında onay sayfası çıkmalı.
 - İçgörü sekmesinde "Raporu yeniden oluştur" bir kez denenebilir.
 
 ## 4. App Store Connect
@@ -43,24 +45,58 @@ Password: DEMO_SIFRE
 **Review Notes** (aynen yapıştır, yer tutucu yok):
 
 ```
-This is a personal-assistant app for a small group of friends. Anyone can sign
-up, but please use the demo account provided above (e-mail + password on the sign-in screen; do not use "Sign in
-with Google").
+Ritim is a Turkish personal assistant (tasks, routines, reminders, meals and
+health goals). Anyone can sign up; please use the demo account provided above
+(e-mail + password on the sign-in screen, after tapping "E-posta ile devam et").
 
 The demo account is pre-filled with sample, non-personal data (tasks, notes,
 routines, meals, workouts and 14 days of step/sleep/energy summaries).
 
-Health data: the app reads steps, sleep, active energy, height and weight from
+Health data: the app reads steps, sleep, active energy, workouts, height and weight from
 Apple Health only after the user grants permission and confirms import for the
-account (Health tab). It never writes to Apple Health. Health data is not used
+account (Sağlık tab). It never writes to Apple Health. Health data is not used
 for advertising and is not shared with third parties.
 
-AI quick add (center "+" button): the text the user types is sent through our
-server function to Google Gemini to turn it into a task/meal/note.
+Health calculations and citations (Guideline 1.4.1): calorie, protein, water
+and fiber targets are informational, not medical advice, and the app gives no
+supplement dosing. Sources with links are listed at Sağlık > Plan >
+"Kaynaklar" and at Hesap > "Gizlilik ve koşullar" > "Sağlık hesaplarının
+kaynakları" (Mifflin-St Jeor 1990, ISSN protein 2017, Hall 2008, CDC, EFSA).
 
-Account deletion: Settings (gear icon on Kokpit) > "Hesabımı sil", type SİL to
-confirm. This permanently deletes the account and all its data on the server.
-Privacy policy: Settings > "Gizlilik". Feedback: Settings > "Sorun bildir".
+AI (third-party data sharing, explicit consent): the first time the user taps
+the center "+" button, a consent sheet explains that the typed text is sent to
+Google Gemini; nothing is sent unless the user taps "Kabul ediyorum". Report
+comments use only computed numbers and are also skipped without consent.
+Consent can be withdrawn at: profile avatar (top right of Kokpit) > Hesap >
+"Gizlilik ve koşullar" > "AI özellikleri (Google Gemini)" switch.
+
+Account deletion (two taps from the home screen): profile avatar (top right of
+Kokpit) > Hesap > "Hesabımı sil" (last row of the bottom card). Type SİL or SIL
+(either spelling works with an English keyboard) and tap "Hesabımı kalıcı
+olarak sil". This permanently deletes the account and all its data on the
+server. It is also reachable during first-run setup ("Hesabı sil" at the top).
+
+Friends and stories (user-generated content, Guideline 1.2): friends are added
+by e-mail invite and see only what the user turns on (goal-hit day counts,
+optional stories that last 24 hours). Display names, profile photos and
+stories are visible only to accepted friends. Hesap > "Arkadaşlar": each friend
+row and each incoming request has "Engelle" (block; a blocked user cannot send
+requests again), "Bildir" (report, reviewed within 24 hours) and remove
+friend. The Terms forbid abusive content.
+
+Body progress photos (Sağlık > Vücut) are private: stored in a per-user
+private bucket, never shown to friends. Camera and photo library are used only
+for the profile photo and progress photos.
+
+Notifications are local only (task, routine and reminder alerts, optional
+health nudges); they can be turned off at Hesap > "Bildirimler". No push
+server, no marketing messages. The app is not a medical device and makes no
+diagnostic claims.
+
+Terms and privacy are linked on the sign-in screen before an account is
+created, and in the app at Hesap > "Kullanım koşulları" and Hesap >
+"Gizlilik ve koşullar".
+Feedback: Hesap > "Sorun bildir".
 
 The UI is in Turkish.
 ```

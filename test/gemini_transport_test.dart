@@ -219,7 +219,7 @@ void main() {
       );
       final e = await expectAiError(transport.post(geminiBody));
       expect(calls, 0);
-      expect(e.message, contains('AI sunucusu yapılandırılmamış'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
     });
 
     test('anon anahtarı boşsa apikey başlığı eklenmez', () async {
@@ -246,17 +246,17 @@ void main() {
           'Oturum bulunamadı ya da süresi doldu. Çıkış yapıp yeniden giriş yapın.');
     });
 
-    test('402 -> fatura mesajı', () async {
+    test('402 -> düz "kullanılamıyor" iletisi (teknik ayrıntı yok)', () async {
       final e = await errorFor(json({'error': 'fatura'}, 402));
       expect(e.statusCode, 402);
-      expect(e.message, contains('bakiyesi tükendi'));
-      expect(e.message, contains('402'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
+      expect(e.message, isNot(contains('402')));
     });
 
-    test('404 -> "AI sunucusu kurulmamış"', () async {
+    test('404 -> düz "kullanılamıyor" iletisi', () async {
       final e = await errorFor(http.Response('Function not found', 404));
       expect(e.statusCode, 404);
-      expect(e.message, contains('AI sunucusu kurulmamış'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
     });
 
     test('429 -> sunucunun Türkçe kota mesajı', () async {
@@ -276,7 +276,7 @@ void main() {
       ]) {
         final e = await errorFor(response);
         expect(e.message,
-            'Günlük AI kullanım sınırına ulaşıldı. Yarın tekrar deneyin.');
+            'Bugünkü AI hakkın doldu. Yarın tekrar dene ya da elle ekle.');
       }
     });
 
@@ -287,18 +287,18 @@ void main() {
 
     test('400 -> geçersiz istek (model adı önerisi yok)', () async {
       final e = await errorFor(json({'error': 'x'}, 400));
-      expect(e.message, contains('AI isteği geçersiz bulundu (400)'));
+      expect(e.message, contains('Bu metin işlenemedi'));
       expect(e.message, isNot(contains('Model adını')));
     });
 
     test('502 -> sunucu yapılandırması mesajı', () async {
       final e = await errorFor(json({'error': 'x'}, 502));
-      expect(e.message, contains('yapılandırması geçersiz (502)'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
     });
 
     test('sunucunun ham hata metni (500) kullanıcıya sızmaz', () async {
       final e = await errorFor(json({'error': 'iç ayrıntı: tablo yok'}, 500));
-      expect(e.message, 'AI servisi hata verdi (500). Lütfen tekrar deneyin.');
+      expect(e.message, 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
   });
 
@@ -327,14 +327,14 @@ void main() {
     }
 
     for (final status in [500, 503, 504]) {
-      test('$status 3 kez denenir', () async {
+      test('$status 2 kez denenir', () async {
         var calls = 0;
         final transport = proxyTransport((_) async {
           calls++;
           return json({'error': 'geçici'}, status);
         });
         final e = await expectAiError(transport.post(geminiBody));
-        expect(calls, 3);
+        expect(calls, 2);
         expect(e.statusCode, status);
       });
     }
@@ -360,7 +360,7 @@ void main() {
         },
       );
       await expectAiError(transport.post(geminiBody));
-      expect(delays, [1, 2]); // 3 denemede 2 bekleme
+      expect(delays, [1]); // 2 denemede 1 bekleme
     });
 
     test('ağ hataları ve zaman aşımı yeniden denenir', () async {
@@ -368,11 +368,19 @@ void main() {
       final transport = proxyTransport((_) async {
         calls++;
         if (calls == 1) throw const SocketException('offline');
-        if (calls == 2) throw http.ClientException('reset');
         return geminiOk('tamam');
       });
       await transport.post(geminiBody);
-      expect(calls, 3);
+      expect(calls, 2);
+
+      var resets = 0;
+      final reset = proxyTransport((_) async {
+        resets++;
+        if (resets == 1) throw http.ClientException('reset');
+        return geminiOk('tamam');
+      });
+      await reset.post(geminiBody);
+      expect(resets, 2);
 
       var slowCalls = 0;
       final slow = proxyTransport(
@@ -384,9 +392,9 @@ void main() {
         timeout: const Duration(milliseconds: 20),
       );
       final e = await expectAiError(slow.post(geminiBody));
-      expect(slowCalls, 3);
+      expect(slowCalls, 2);
       expect(e.message,
-          'AI servisi zamanında yanıt vermedi. Lütfen tekrar deneyin.');
+          'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
   });
 
@@ -432,9 +440,9 @@ void main() {
         return json({'error': 'quota'}, 429);
       });
       final e = await expectAiError(transport.post(geminiBody));
-      expect(calls, 3);
+      expect(calls, 2);
       expect(e.message,
-          'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.');
+          'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.');
     });
 
     test('504 doğrudan modda yeniden denenmez', () async {
@@ -457,8 +465,8 @@ void main() {
       for (final MapEntry(key: status, value: message) in messages.entries) {
         final transport =
             directTransport((_) async => json({'error': 'x'}, status));
-        expect((await expectAiError(transport.post(geminiBody))).message,
-            message);
+        expect(
+            (await expectAiError(transport.post(geminiBody))).message, message);
       }
     });
   });
@@ -500,7 +508,7 @@ void main() {
       expect(body.keys,
           containsAll(['systemInstruction', 'contents', 'generationConfig']));
       final config = body['generationConfig'] as Map<String, dynamic>;
-      expect(config['maxOutputTokens'], 8192);
+      expect(config['maxOutputTokens'], 4096);
       expect(config['responseMimeType'], 'application/json');
     });
 
@@ -552,7 +560,8 @@ void main() {
 
   group('rapor yeniden üretme günlük sınırı (429)', () {
     test('sunucunun Türkçe mesajı kullanıcıya gösterilir', () {
-      const message = 'Bugünlük rapor yenileme hakkın doldu (10). Yarın yeniden dene.';
+      const message =
+          'Bugünlük rapor yenileme hakkın doldu (10). Yarın yeniden dene.';
       expect(
         reportErrorMessage(429, {'ok': false, 'error': message}),
         message,

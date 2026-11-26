@@ -75,9 +75,10 @@ final photoCheckinsProvider = FutureProvider<List<PhotoCheckin>>((ref) async {
 /// Bir fotoğrafın 10 dakikalık imzalı adresi; ekrandan çıkınca atılır.
 final photoUrlProvider =
     FutureProvider.autoDispose.family<String?, String>((ref, path) {
-  final link = ref.keepAlive();
-  // İmza 10 dakikada biter; 9 dakika sonra yeniden imzalanır.
-  final timer = Timer(const Duration(minutes: 9), link.close);
+  ref.keepAlive();
+  // İmza 10 dakikada biter; 9 dakika sonra sağlayıcı kendini yeniler, izleyen
+  // ekran yeni imzalı adresi alır (izleyen yoksa autoDispose ile atılır).
+  final timer = Timer(const Duration(minutes: 9), ref.invalidateSelf);
   ref.onDispose(timer.cancel);
   return ref.watch(bodyRepositoryProvider).signedUrl(path);
 });

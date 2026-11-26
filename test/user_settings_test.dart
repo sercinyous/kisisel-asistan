@@ -128,7 +128,7 @@ void main() {
 
     test('eski cihaz tercihindeki hız adı da çözülür', () {
       expect(FatLossRate.parse('half'), FatLossRate.half);
-      expect(FatLossRate.parse('1.0'), FatLossRate.one);
+      expect(FatLossRate.parse('1.0'), FatLossRate.threeQuarter);
       expect(FatLossRate.parse(null), FatLossRate.classic);
     });
 

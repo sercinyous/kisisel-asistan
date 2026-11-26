@@ -90,7 +90,16 @@ class KokpitTaskItem extends KokpitTodayItem {
   final DateTime now;
 
   @override
-  DateTime? get time => task.scheduledAt ?? task.nextTime(now);
+  DateTime? get time {
+    // Son tarihi ileride ama hatırlatması bugün olan görev bugün listelenir;
+    // satırda hatırlatma saati görünür.
+    final remind = task.remindAt, due = task.dueAt;
+    if (remind != null && due != null) {
+      final tomorrow = AppDates.startOfDay(now).add(const Duration(days: 1));
+      if (!due.isBefore(tomorrow) && remind.isBefore(tomorrow)) return remind;
+    }
+    return task.scheduledAt ?? task.nextTime(now);
+  }
 
   @override
   bool get done => task.isDone;
@@ -124,10 +133,18 @@ List<KokpitTodayItem> kokpitTodayItems({
   final items = <KokpitTodayItem>[
     for (final o in routines) KokpitRoutineItem(o, day),
     for (final t in tasks)
-      if (!t.isDone)
-        if (KokpitTaskItem(t, now).time case final time?
-            when time.isBefore(tomorrow))
-          KokpitTaskItem(t, now),
+      if (t.isDone)
+        // Bugün tamamlanan görev üstü çizili satır olarak sayılır.
+        if (t.completedAt case final c? when !c.isBefore(day))
+          KokpitTaskItem(t, now)
+        else
+          ...const <KokpitTaskItem>[]
+      else if (t.dueAt == null && t.remindAt == null)
+        // Tarihsiz açık görev yalnız bugün eklendiyse gelir; saatsiz satır.
+        KokpitTaskItem(t, now)
+      else if (KokpitTaskItem(t, now).time case final time?
+          when time.isBefore(tomorrow))
+        KokpitTaskItem(t, now),
   ];
   bool overdue(KokpitTodayItem i) {
     final t = i.time;
@@ -371,11 +388,11 @@ class _HealthStatusMessage extends ConsumerWidget {
             icon: Icons.phonelink_off_outlined,
             message: snapshot.message ??
                 'Adım, uyku ve aktif kalori yalnızca iPhone\'da '
-                    'HealthKit üzerinden okunur.',
+                    'Apple Sağlık üzerinden okunur.',
           ),
         HealthStatus.denied => KokpitInlineMessage(
             icon: Icons.favorite_border_outlined,
-            message: 'HealthKit erişimi verilmedi. Sağlık uygulaması > '
+            message: 'Apple Sağlık erişimi verilmedi. Sağlık uygulaması > '
                 'Paylaşım > Uygulamalar bölümünden izin verebilirsin.',
             actionLabel: 'Bağlan',
             onAction: resync,
@@ -499,7 +516,7 @@ class _TodaySection extends ConsumerWidget {
                       title: task.title,
                       time: item.time,
                       now: now,
-                      done: false,
+                      done: task.isDone,
                       color: AppColors.ops,
                       onTap: () => completeKokpitTask(context, task),
                     ),
@@ -583,7 +600,7 @@ class _TodayTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
               if (icon != null && !done)

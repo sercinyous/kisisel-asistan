@@ -6,6 +6,8 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/bento.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_widgets.dart';
+import '../../ai_quick_add/presentation/ai_consent_sheet.dart';
+import '../../settings/presentation/settings_providers.dart';
 import 'reports_format.dart';
 import 'reports_providers.dart';
 import 'reports_state.dart';
@@ -276,6 +278,8 @@ class ReportAiCard extends ConsumerWidget {
     this.summary,
     this.generatedAt,
     this.header,
+    this.onShowPrevious,
+    this.previousLabel,
   });
 
   final ReportKind kind;
@@ -297,6 +301,10 @@ class ReportAiCard extends ConsumerWidget {
   /// Yorumun üstünde gösterilen içerik (yalnızca rapor varken).
   final Widget? header;
 
+  /// Rapor yokken önceki (biten) dönemin raporuna geçiş; `null` ise gizli.
+  final VoidCallback? onShowPrevious;
+  final String? previousLabel;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -308,6 +316,9 @@ class ReportAiCard extends ConsumerWidget {
       reportRegenerationProvider.select((s) => s.errors[target]),
     );
     final text = status == ReportAiStatus.ok ? summary : null;
+    // Onay okunurken (ya da okunamazsa) yorum kapalı sayılmaz; kesin "hayır"
+    // gelince yorum yerine onay çağrısı gösterilir.
+    final aiOff = ref.watch(aiConsentProvider).valueOrNull == false;
     final showButton = !exists || error != null;
 
     return BentoCard(
@@ -327,6 +338,12 @@ class ReportAiCard extends ConsumerWidget {
           const SizedBox(height: 10),
           if (!exists)
             _Notice(title: emptyMessage, detail: emptyHint)
+          else if (aiOff && text == null)
+            const _Notice(
+              title: 'AI yorumu kapalı',
+              detail: 'Sayılar hazır. Yorum için AI kullanımına onay ver; '
+                  'onayı Ayarlar > Gizlilik\'ten geri alabilirsin.',
+            )
           else if (text != null)
             _SummaryText(
               key: ValueKey('summary-$text'),
@@ -337,16 +354,24 @@ class ReportAiCard extends ConsumerWidget {
             )
           else if (status == ReportAiStatus.pending)
             const _Notice(
-              title: 'Yorum hazırlanıyor',
-              detail: 'Sayılar hazır. Yorum gelmezse yukarıdaki yenile '
-                  'simgesiyle raporu yeniden oluştur.',
+              title: 'Yorum bekleniyor',
+              detail: 'Sayılar hazır. Bu dönemde kayıt yoksa yorum oluşmaz; '
+                  'kayıt ekledikten sonra yıldız simgesiyle yenileyebilirsin.',
             )
           else
             const _Notice(
               title: 'Yorum üretilemedi',
-              detail: 'Sayılar kaydedildi. Yorum için yukarıdaki yenile '
-                  'simgesiyle raporu yeniden oluştur.',
+              detail: 'Sayılar kaydedildi. Yorum için yukarıdaki yıldız '
+                  'simgesiyle yorumu yenile.',
             ),
+          if (text != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Yapay zekâ yorumu bilgilendirme amaçlıdır; tıbbi tavsiye değildir.',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: AppColors.textMuted),
+            ),
+          ],
           if (exists && generatedAt != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -379,6 +404,29 @@ class ReportAiCard extends ConsumerWidget {
               ],
             ),
           ],
+          if (exists && aiOff && text == null) ...[
+            const SizedBox(height: 12),
+            FilledButton(
+              key: const ValueKey('reports-ai-enable'),
+              onPressed: busy
+                  ? null
+                  : () => _enableAiAndRegenerate(
+                        context,
+                        ref,
+                        kind: kind,
+                        date: date,
+                      ),
+              child: const Text('AI yorumunu aç'),
+            ),
+          ],
+          if (!exists && onShowPrevious != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton(
+              key: const ValueKey('reports-show-previous'),
+              onPressed: onShowPrevious,
+              child: Text(previousLabel ?? 'Önceki dönemi gör'),
+            ),
+          ],
           if (showButton) ...[
             const SizedBox(height: 12),
             FilledButton(
@@ -407,6 +455,17 @@ class ReportAiCard extends ConsumerWidget {
   }
 }
 
+/// AI onayını ister; verilirse raporu yorumla yeniden üretir.
+Future<void> _enableAiAndRegenerate(
+  BuildContext context,
+  WidgetRef ref, {
+  required ReportKind kind,
+  required DateTime date,
+}) async {
+  if (!await ensureAiConsent(context, ref) || !context.mounted) return;
+  await runRegeneration(ref, kind, date);
+}
+
 /// Başlıktaki küçük yenile simgesi: seçili dönemin raporunu yeniden üretir.
 /// Üretim sürerken döner gösterge çıkar ve dokunulamaz.
 class ReportRefreshButton extends ConsumerWidget {
@@ -427,8 +486,11 @@ class ReportRefreshButton extends ConsumerWidget {
     );
     return IconButton(
       key: const ValueKey('reports-refresh'),
-      tooltip: busy ? 'Oluşturuluyor…' : 'Raporu yeniden oluştur',
-      onPressed: busy ? null : () => runRegeneration(ref, kind, date),
+      tooltip: busy ? 'Oluşturuluyor…' : 'Yorumu yenile (AI hakkı kullanır)',
+      // AI onayı yoksa önce onay istenir (onaysız yenileme yorum üretmez).
+      onPressed: busy
+          ? null
+          : () => _enableAiAndRegenerate(context, ref, kind: kind, date: date),
       color: AppColors.textSecondary,
       icon: busy
           ? SizedBox.square(
@@ -438,7 +500,7 @@ class ReportRefreshButton extends ConsumerWidget {
                 color: AppColors.accent,
               ),
             )
-          : const Icon(Icons.refresh_outlined, size: 22),
+          : const Icon(Icons.auto_awesome_outlined, size: 22),
     );
   }
 }
@@ -468,7 +530,7 @@ class ReportScorePair extends StatelessWidget {
         const SizedBox(width: AppSpacing.grid),
         Expanded(
           child: _Score(
-            label: 'Form',
+            label: 'Sağlık',
             rate: formRate,
             color: AppColors.sleep,
           ),

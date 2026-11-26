@@ -365,6 +365,22 @@ export function healthSafetyLines(safety: HealthSafety): string[] {
   return lines;
 }
 
+
+/**
+ * Dönemde yorumlanacak bir kayıt var mı: görev/rutin planı, beslenme günü,
+ * sağlık verisi ya da antrenman. Yoksa Gemini çağrılmaz (terk edilmiş hesap
+ * her gün maliyet üretmesin).
+ */
+export function hasActivity(metrics: unknown): boolean {
+  if (typeof metrics !== "object" || metrics === null) return false;
+  const m = metrics as Record<string, Record<string, unknown> | undefined>;
+  const n = (v: unknown) => num(v) ?? 0;
+  return n(m.work?.tasks_total) + n(m.work?.routines_planned) > 0 ||
+    n(m.nutrition?.days_logged) > 0 ||
+    n(m.health?.days_with_data) > 0 ||
+    n(m.form?.workouts_done) > 0;
+}
+
 /** Sınır aşan cümlenin yerine konan güvenli cümle. */
 export function aiSafeSentence(floorKcal: number): string {
   const s = String(floorKcal).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -372,25 +388,69 @@ export function aiSafeSentence(floorKcal: number): string {
 }
 
 const FASTING = new RegExp(
-  "oruç|aralıklı açlık|(?<!\\d)(?:1[2-9]|2[0-3])\\s*[:/]\\s*[1-8](?!\\d)|" +
-    "(?:öğün|kahvaltı|yemeğ|yemek)\\p{L}*\\s+atla|" +
-    "pas\\s+geç|hiç\\s+yeme|aç\\s+kal(?!ma)",
+  "oru[çc]|aralıklı açlık|(?<!\\d)(?:16\\s*[:/]\\s*8|18\\s*[:/]\\s*6|20\\s*[:/]\\s*4|14\\s*[:/]\\s*10)(?!\\d)|" +
+    "(?:öğün|kahvaltı|yemeğ|yemek)\\p{L}*\\s+(?:atla|es\\s+geç)|es\\s+geç|" +
+    "pas\\s+geç|hiç\\s+yeme|aç\\s+kal(?!ma)|yeme(?:den|mek)\\s+(?:yat|uyu)|yemeyi\\s+bırak",
   "iu",
 );
+/** Uygulama talimatı takviye önermeyi yasaklar; bu cümleler de değiştirilir. */
+const SUPPLEMENT = /takviye|kreatin|protein\s+toz|multivitamin|vitamin\s+(?:al|kullan|iç)|supplement/iu;
 const KCAL = /(\d{1,2}(?:[.\s]\d{3})|\d{3,4})\s*(?:kcal|kalori)/giu;
 const KG_WEEK =
-  /(\d+(?:[,.]\d+)?)\s*kg\s*(?:\/\s*|(?:her\s+)?)hafta|hafta\p{L}*\s+(\d+(?:[,.]\d+)?)\s*kg/giu;
+  /(\d+(?:[,.]\d+)?)\s*(?:kg|kilo)\s*(?:\/\s*|(?:her\s+)?)hafta|hafta\p{L}*\s+(\d+(?:[,.]\d+)?)\s*(?:kg|kilo)/giu;
 /** Yeme/hedef fiilleri; tam kelime (ör. "kcal" içindeki "al" sayılmaz). */
 const INTAKE_VERB = new RegExp(
   `(?<!\\p{L})(?:ye|yemeye|yemeyi|yiyerek|al|alın|almaya|almayı|alarak|yetin\\p{L}*|` +
-    `tüket\\p{L}*|hedefle\\p{L}*|in|indir\\p{L}*|düşür\\p{L}*|sınırla\\p{L}*)(?!\\p{L})`,
+    `tüket\\p{L}*|hedefle\\p{L}*|in|inmeye|inmeyi|inerek|indir\\p{L}*|düş|düşmeye|düşmeyi|` +
+    `düşür\\p{L}*|çek|çekmeye|çekmeyi|sınırla\\p{L}*)(?!\\p{L})`,
+  "iu",
+);
+/**
+ * Kilo kaybı için öneri fiilleri (emir/istek). Geçmiş zaman ("verdin",
+ * "kaybettin") gerçek bilgidir, değiştirilmez.
+ */
+const LOSS_ADVICE_VERB = new RegExp(
+  `(?<!\\p{L})(?:ver|vermeye|vermeyi|vermek|vermelisin|verebilirsin|kaybet|kaybetmeye|kaybetmeyi|` +
+    `kaybetmelisin|kaybedebilirsin|hedefle\\p{L}*|zayıfla|zayıflamaya|zayıflamayı|eri|erit|eritmeye|eritmeyi|` +
+    `in|inmeye|inmeyi|dene)(?!\\p{L})`,
   "iu",
 );
 const DEFICIT_WORD = /açık/iu;
 
+const NUMBER_WORDS: Record<string, number> = {
+  bir: 1, iki: 2, "üç": 3, "dört": 4, "beş": 5, "altı": 6, yedi: 7, sekiz: 8, dokuz: 9,
+  on: 10, yirmi: 20, otuz: 30, "kırk": 40, elli: 50, "altmış": 60, "yetmiş": 70, seksen: 80,
+  doksan: 90,
+};
+const NUMBER_WORD_RUN = new RegExp(
+  `(?<!\\p{L})(?:(?:${[...Object.keys(NUMBER_WORDS), "yüz", "bin", "buçuk", "yarım"].join("|")})` +
+    `(?:\\s+|(?!\\p{L}))){1,6}`,
+  "giu",
+);
+
+/** "bin iki yüz" → "1200", "bir buçuk" → "1,5", "yarım" → "0,5" (yalnızca sayı arama için). */
+export function numberWordsToDigits(text: string): string {
+  return text.replace(NUMBER_WORD_RUN, (run) => {
+    let total = 0;
+    let current = 0;
+    for (const word of run.trim().split(/\s+/)) {
+      if (word === "yüz") current = (current === 0 ? 1 : current) * 100;
+      else if (word === "bin") {
+        total += (current === 0 ? 1 : current) * 1000;
+        current = 0;
+      } else if (word === "buçuk") current += 0.5;
+      else if (word === "yarım") current += 0.5;
+      else current += NUMBER_WORDS[word] ?? 0;
+    }
+    const value = total + current;
+    const trailing = /\s$/.test(run) ? " " : "";
+    return String(value).replace(".", ",") + trailing;
+  });
+}
+
 function unsafeSentence(sentence: string, safety: HealthSafety): boolean {
-  const lower = sentence.toLocaleLowerCase("tr");
-  if (FASTING.test(lower)) return true;
+  const lower = numberWordsToDigits(sentence.toLocaleLowerCase("tr"));
+  if (FASTING.test(lower) || SUPPLEMENT.test(lower)) return true;
   const intake = INTAKE_VERB.test(lower);
   for (const m of lower.matchAll(KCAL)) {
     const value = Number(m[1].replace(/[.\s]/g, ""));
@@ -401,9 +461,10 @@ function unsafeSentence(sentence: string, safety: HealthSafety): boolean {
     }
     if (value < safety.floorKcal && intake) return true;
   }
+  const lossAdvice = LOSS_ADVICE_VERB.test(lower);
   for (const m of lower.matchAll(KG_WEEK)) {
     const value = Number((m[1] ?? m[2]).replace(",", "."));
-    if (Number.isFinite(value) && value > AI_MAX_KG_PER_WEEK + 1e-9) return true;
+    if (lossAdvice && Number.isFinite(value) && value > AI_MAX_KG_PER_WEEK + 1e-9) return true;
   }
   return false;
 }

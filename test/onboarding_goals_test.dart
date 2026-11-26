@@ -138,7 +138,7 @@ void main() {
 
     test('tüm öneriler veritabanı sınırları içinde (uç kilo ve boylar)', () {
       for (final (weight, height, year) in [
-        (30.0, 100, 2016),
+        (30.0, 100, 2013),
         (250.0, 250, 1900),
         (45.0, 150, 1960),
         (120.0, 175, 1985),
@@ -246,14 +246,14 @@ void main() {
       expect(OnboardingValidators.height('1,8'), isNotNull);
     });
 
-    test('doğum yılı 1900 – (bu yıl − 10)', () {
+    test('doğum yılı isteğe bağlı, 1900 – (bu yıl − 13)', () {
       String? check(String v) =>
           OnboardingValidators.birthYear(v, nowYear: 2026);
       expect(check('1899'), isNotNull);
       expect(check('1900'), isNull);
-      expect(check('2016'), isNull);
-      expect(check('2017'), isNotNull);
-      expect(check(''), isNotNull);
+      expect(check('2013'), isNull);
+      expect(check('2014'), OnboardingValidators.underAgeMessage);
+      expect(check(''), isNull);
     });
 
     test('kilo 30–250, virgül kabul; hedef kilo boş olabilir', () {

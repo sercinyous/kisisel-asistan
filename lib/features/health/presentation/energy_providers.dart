@@ -5,6 +5,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../data/health_repository.dart';
 import '../domain/energy_balance.dart';
+import 'providers/week_deficit_providers.dart' show healthDaysProvider;
 import 'trend_providers.dart' show trendClockProvider;
 
 export '../domain/energy_balance.dart';
@@ -43,7 +44,9 @@ final energyRangeProvider =
 void invalidateEnergyData(ProviderContainer container) {
   container
     ..invalidate(energyDayProvider)
-    ..invalidate(energyRangeProvider);
+    ..invalidate(energyRangeProvider)
+    // Kalori açığı, Hafta kartı, seriler ve hikâyeler bu sağlayıcıdan okur.
+    ..invalidate(healthDaysProvider);
 }
 
 Future<List<EnergyDay>> _energyDays(

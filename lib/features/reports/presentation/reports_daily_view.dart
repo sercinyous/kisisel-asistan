@@ -44,9 +44,16 @@ class ReportsDailyView extends ConsumerWidget {
           kind: ReportKind.daily,
           date: selected,
           title: 'Günlük değerlendirme',
-          emptyMessage: 'Bu gün için rapor henüz oluşmadı',
-          emptyHint: 'Günlük rapor gün sonunda (23:45) otomatik oluşur. '
-              'Beklemeden şimdi de oluşturabilirsin.',
+          emptyMessage: selected == today
+              ? 'Bugünün raporu gün bitince oluşur'
+              : 'Bu tarihte rapor henüz oluşmadı',
+          emptyHint:
+              'Günlük rapor gece yarısından sonra biten gün için otomatik oluşur. '
+              'Beklemeden şimdi de oluşturabilirsin (AI hakkı kullanır).',
+          onShowPrevious: selected == today
+              ? () => show(AppDates.addDays(today, -1))
+              : null,
+          previousLabel: 'Dünü gör',
           exists: value != null,
           status: value?.aiStatus ?? ReportAiStatus.pending,
           summary: value?.aiSummary,
@@ -120,7 +127,7 @@ class ReportsDailyView extends ConsumerWidget {
                     title: ReportsFormat.dayShort(item.reportDate),
                     subtitle: [
                       'İş ${ReportsFormat.rate(item.metrics.workRate)}',
-                      'Form ${ReportsFormat.rate(item.metrics.formRate)}',
+                      'Sağlık ${ReportsFormat.rate(item.metrics.formRate)}',
                       if (item.metrics.hasHealth && item.metrics.steps > 0)
                         '${ReportsFormat.count(item.metrics.steps)} adım',
                     ].join(' · '),
@@ -178,7 +185,7 @@ class _DailyReportGrid extends StatelessWidget {
           span: 1,
           child: ReportRateCard(
             icon: Icons.fitness_center_outlined,
-            label: 'Form',
+            label: 'Sağlık',
             color: AppColors.sleep,
             rate: m.formRate,
             caption: 'Antrenman ${m.workoutsDone} / ${m.workoutsPlanned} · '
@@ -197,7 +204,7 @@ class _DailyReportGrid extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 if (!m.hasNutrition)
-                  Text('Bu gün için öğün kaydı yok.', style: muted)
+                  Text('Bu tarihte öğün kaydı yok.', style: muted)
                 else ...[
                   ReportTargetRow(
                     label: 'Kalori',
@@ -242,7 +249,7 @@ class _DailyReportGrid extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 if (!m.hasHealth)
-                  Text('Bu gün için sağlık verisi yok.', style: muted)
+                  Text('Bu tarihte sağlık verisi yok.', style: muted)
                 else ...[
                   ReportTargetRow(
                     label: 'Adım',

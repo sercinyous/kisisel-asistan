@@ -59,7 +59,7 @@ void main() {
     expect(find.text('Kalan 550 kcal'), findsOneWidget);
     expect(find.text('1.450 / 2.000 kcal'), findsOneWidget);
     expect(find.text('8.432 / 8.000 adım'), findsOneWidget);
-    expect(find.text('Seriler: Adım 7 · Kayıt 12 · Açık 4'), findsOneWidget);
+    expect(find.text('Seriler: Adım 7 · Kayıt 12 · Kalori açığı 4'), findsOneWidget);
     expect(find.byType(KokpitRing), findsOneWidget);
     expect(find.text('Ölçü ve fotoğraf günü · ~3 dk'), findsNothing);
   });

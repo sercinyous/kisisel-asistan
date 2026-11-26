@@ -1,15 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/ritim_top/ritim_top.dart';
 import '../../../core/widgets/sunset_stripe.dart';
+import '../../settings/presentation/terms_screen.dart';
+import '../domain/sign_in_messages.dart';
+import 'password_reset_screen.dart';
 import 'sign_in_controller.dart';
+import 'signup_confirm_screen.dart';
 
 /// Giriş ekranı: "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
 /// Google yapılandırılmamışsa (ya da tarayıcı demosunda) yalnızca e-posta
 /// formu görünür. Kayıt herkese açıktır: Google ilk girişte hesap açar, e-posta
 /// formunda "Kayıt ol" ile yeni hesap oluşturulur.
+/// Yeni hesap şifresinin en kısa uzunluğu.
+
+final RegExp _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
+
+/// Basit e-posta denetimi (boşluklar kırpılır).
+bool isValidEmail(String? value) =>
+    value != null && _emailPattern.hasMatch(value.trim());
+
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -23,6 +37,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _password = TextEditingController();
   bool _emailOpen = false;
   bool _signUp = false;
+  bool _showPassword = false;
 
   @override
   void dispose() {
@@ -37,13 +52,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       return;
     }
     final controller = ref.read(signInControllerProvider.notifier);
-    if (_signUp) {
-      await controller.signUpWithPassword(
-          email: _email.text, password: _password.text);
-    } else {
-      await controller.signInWithPassword(
-          email: _email.text, password: _password.text);
-    }
+    final email = _email.text.trim();
+    final ok = _signUp
+        ? await controller.signUpWithPassword(
+            email: email, password: _password.text)
+        : await controller.signInWithPassword(
+            email: email, password: _password.text);
+    // iOS'un şifreyi anahtar zincirine kaydetmeyi önermesi için.
+    if (ok) TextInput.finishAutofillContext();
   }
 
   @override
@@ -90,7 +106,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           : () => ref
                               .read(signInControllerProvider.notifier)
                               .signInWithGoogle(),
-                      icon: const Icon(Icons.g_mobiledata_outlined, size: 28),
+                      icon: SvgPicture.asset(
+                        'assets/brand/google_g.svg',
+                        width: 20,
+                        height: 20,
+                      ),
                       label: Text(
                         state.busy == SignInMethod.google
                             ? 'Google ile giriş yapılıyor…'
@@ -134,34 +154,49 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
                               autocorrect: false,
-                              autofillHints: const [AutofillHints.username],
+                              autofillHints: const [AutofillHints.email],
                               decoration:
                                   const InputDecoration(hintText: 'E-posta'),
-                              validator: (value) =>
-                                  value == null || !value.contains('@')
-                                      ? 'Geçerli bir e-posta gir.'
-                                      : null,
+                              validator: (value) => isValidEmail(value)
+                                  ? null
+                                  : 'Geçerli bir e-posta gir.',
                             ),
                             const SizedBox(height: AppSpacing.md),
                             TextFormField(
                               controller: _password,
                               enabled: !busy,
-                              obscureText: true,
+                              obscureText: !_showPassword,
                               textInputAction: TextInputAction.done,
                               autofillHints: [
                                 _signUp
                                     ? AutofillHints.newPassword
                                     : AutofillHints.password,
                               ],
-                              decoration:
-                                  const InputDecoration(hintText: 'Şifre'),
+                              decoration: InputDecoration(
+                                hintText: 'Şifre',
+                                suffixIcon: IconButton(
+                                  key: const Key('sign-in-toggle-password'),
+                                  tooltip: _showPassword
+                                      ? 'Şifreyi gizle'
+                                      : 'Şifreyi göster',
+                                  onPressed: () => setState(
+                                    () => _showPassword = !_showPassword,
+                                  ),
+                                  icon: Icon(
+                                    _showPassword
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                  ),
+                                ),
+                              ),
                               onFieldSubmitted: (_) => _submit(),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Şifreni gir.';
                                 }
-                                if (_signUp && value.length < 6) {
-                                  return 'Şifre en az 6 karakter olmalı.';
+                                if (_signUp && value.length < minPasswordLength) {
+                                  return 'Şifre en az $minPasswordLength '
+                                      'karakter olmalı.';
                                 }
                                 return null;
                               },
@@ -188,6 +223,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: AppColors.textSecondary),
                     ),
+                    if (state.info == confirmationSentMessage)
+                      TextButton(
+                        key: const Key('sign-in-confirm-code'),
+                        onPressed: busy
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => SignupConfirmScreen(
+                                      email: _email.text.trim(),
+                                    ),
+                                  ),
+                                ),
+                        child: const Text('Onay kodunu gir'),
+                      ),
                   ],
                   if (showForm) ...[
                     const SizedBox(height: AppSpacing.lg),
@@ -213,20 +262,81 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       key: const Key('sign-in-mode-toggle'),
                       onPressed: busy
                           ? null
-                          : () => setState(() => _signUp = !_signUp),
+                          : () {
+                              ref
+                                  .read(signInControllerProvider.notifier)
+                                  .clearMessages();
+                              setState(() => _signUp = !_signUp);
+                            },
                       child: Text(
                         _signUp
                             ? 'Hesabın var mı? Giriş yap'
                             : 'Hesabın yok mu? Kayıt ol',
                       ),
                     ),
+                    if (!_signUp)
+                      TextButton(
+                        key: const Key('sign-in-forgot'),
+                        onPressed: busy
+                            ? null
+                            : () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PasswordResetScreen(
+                                      initialEmail: _email.text.trim(),
+                                    ),
+                                  ),
+                                ),
+                        child: const Text('Şifremi unuttum'),
+                      ),
                   ],
+                  const SizedBox(height: AppSpacing.lg),
+                  const _LegalFooter(),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Hesap açılmadan önce okunabilen koşullar ve gizlilik metni bağlantıları.
+class _LegalFooter extends StatelessWidget {
+  const _LegalFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: AppColors.textMuted);
+    void open(Widget page) => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => page));
+    return Column(
+      key: const Key('sign-in-legal'),
+      children: [
+        Text(
+          'Devam ederek Kullanım Koşulları ve Gizlilik Metni\'ni kabul edersin.',
+          textAlign: TextAlign.center,
+          style: style,
+        ),
+        Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            TextButton(
+              key: const Key('sign-in-terms'),
+              onPressed: () => open(const LegalTextScreen.terms()),
+              child: const Text('Kullanım Koşulları'),
+            ),
+            TextButton(
+              key: const Key('sign-in-privacy'),
+              onPressed: () => open(const LegalTextScreen.privacy()),
+              child: const Text('Gizlilik Metni'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

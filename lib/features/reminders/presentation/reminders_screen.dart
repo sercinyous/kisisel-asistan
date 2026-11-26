@@ -166,6 +166,7 @@ class _ReminderCard extends StatelessWidget {
     final theme = Theme.of(context);
     final r = reminder;
     final scheduledToday = r.isScheduledOn(DateTime.now());
+    final expired = r.isExpired(DateTime.now());
     return BentoCard(
       key: ValueKey('reminder-${r.id}'),
       onTap: onEdit,
@@ -183,14 +184,14 @@ class _ReminderCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: r.enabled
+                        color: r.enabled && !expired
                             ? AppColors.textPrimary
                             : AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      r.scheduleLabel,
+                      expired ? '${r.scheduleLabel} · Geçti' : r.scheduleLabel,
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: AppColors.textSecondary),
                     ),

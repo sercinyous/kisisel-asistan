@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/error_reporter.dart';
 import '../../../core/services/health_service.dart';
 import '../../../core/services/health_source.dart';
 import '../../../core/services/notification_service.dart';
@@ -14,7 +15,9 @@ import '../../friends/presentation/friends_screen.dart';
 import '../../onboarding/presentation/onboarding_screen.dart';
 import 'appearance_page.dart';
 import 'categories_team_page.dart';
+import 'change_password_sheet.dart';
 import 'connections_page.dart';
+import 'delete_account_screen.dart';
 import 'feedback_sheet.dart';
 import 'my_avatar.dart';
 import 'notifications_page.dart';
@@ -22,6 +25,7 @@ import 'privacy_screen.dart';
 import 'profile_goals_page.dart';
 import 'settings_providers.dart';
 import 'share_stories_card.dart';
+import 'terms_screen.dart';
 
 /// Hesap menüsü: altı alt sayfa ve küçük yardım/çıkış grubu. Her alt sayfa
 /// kendi içinde kaydeder.
@@ -74,6 +78,12 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
       // Oturum kapanınca kök ekran giriş sayfasına döner.
       navigator.popUntil((route) => route.isFirst);
     } catch (_) {
+      // gotrue yerel oturumu önce siler, sunucu hatasını sonra fırlatır:
+      // oturum kapandıysa çıkış başarılıdır.
+      if (ref.read(supabaseClientProvider).auth.currentSession == null) {
+        navigator.popUntil((route) => route.isFirst);
+        return;
+      }
       if (mounted) setState(() => _signingOut = false);
       messenger
         ..hideCurrentSnackBar()
@@ -89,6 +99,11 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
     final settings = ref.watch(userSettingsProvider).valueOrNull;
     final email = ref.watch(
       authSessionProvider.select((s) => s.valueOrNull?.user.email),
+    );
+    final emailAccount = ref.watch(
+      authSessionProvider.select(
+        (s) => s.valueOrNull?.user.appMetadata['provider'] == 'email',
+      ),
     );
     final pending =
         ref.watch(pendingFriendRequestCountProvider).valueOrNull ?? 0;
@@ -214,9 +229,16 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                 _MenuRow(
                   key: const Key('settings-privacy'),
                   icon: Icons.privacy_tip_outlined,
-                  title: 'Yardım ve gizlilik',
+                  title: 'Gizlilik ve koşullar',
                   compact: true,
                   onTap: () => _open(const PrivacyScreen()),
+                ),
+                _MenuRow(
+                  key: const Key('settings-terms'),
+                  icon: Icons.description_outlined,
+                  title: 'Kullanım koşulları',
+                  compact: true,
+                  onTap: () => _open(const LegalTextScreen.terms()),
                 ),
                 _MenuRow(
                   key: const Key('settings-replay-guide'),
@@ -238,6 +260,14 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                   onTap: () => FeedbackSheet.show(context),
                 ),
                 // END faz5_account
+                if (emailAccount)
+                  _MenuRow(
+                    key: const Key('settings-change-password'),
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Şifreyi değiştir',
+                    compact: true,
+                    onTap: () => ChangePasswordSheet.show(context),
+                  ),
                 _MenuRow(
                   key: const Key('settings-sign-out'),
                   icon: Icons.logout_outlined,
@@ -247,11 +277,29 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                   showChevron: false,
                   onTap: _signingOut ? null : _signOut,
                 ),
+                _MenuRow(
+                  key: const Key('settings-delete-account'),
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Hesabımı sil',
+                  compact: true,
+                  danger: true,
+                  onTap: () => _open(const DeleteAccountScreen()),
+                ),
               ]),
             ),
           ),
           const SizedBox(height: AppSpacing.section),
           const ShareStoriesCard(),
+          const SizedBox(height: AppSpacing.section),
+          Text(
+            'Sürüm ${appVersionLabel(appVersion)}',
+            key: const Key('hesap-version'),
+            textAlign: TextAlign.center,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppColors.textMuted),
+          ),
         ],
       ),
     );
@@ -310,6 +358,12 @@ class _MenuRow extends StatelessWidget {
           ),
           child: Row(
             children: [
+              Icon(
+                icon,
+                size: 20,
+                color: danger ? AppColors.danger : AppColors.textSecondary,
+              ),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
                   title,

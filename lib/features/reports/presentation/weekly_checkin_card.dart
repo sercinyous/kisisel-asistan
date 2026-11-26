@@ -152,7 +152,6 @@ class _CheckinBodyState extends ConsumerState<_CheckinBody> {
                       width: double.infinity,
                       child: Text('$m', textAlign: TextAlign.center),
                     ),
-                    showCheckmark: false,
                     selected: _mood == m,
                     selectedColor: AppColors.accent,
                     labelStyle: TextStyle(

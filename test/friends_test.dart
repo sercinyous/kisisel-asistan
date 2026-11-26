@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kisisel_asistan/features/friends/data/friends_repository.dart';
 import 'package:kisisel_asistan/features/friends/domain/friends_models.dart';
 import 'package:kisisel_asistan/features/friends/presentation/friends_providers.dart';
+import 'package:kisisel_asistan/features/reports/presentation/reports_friends_row.dart';
 
 void main() {
   group('eşlemeler', () {
@@ -21,7 +22,8 @@ void main() {
       );
       expect(s.metric, GoalMetric.sleep);
       expect(s.goalDays, 3);
-      expect(GoalSummary.fromMap({'metric': 'x', 'shared': false}).metric, isNull);
+      expect(
+          GoalSummary.fromMap({'metric': 'x', 'shared': false}).metric, isNull);
     });
 
     test('istekler', () {
@@ -139,11 +141,46 @@ void main() {
 
     test('en iyi önce, paylaşmayan sona', () {
       final r = rankEntries(
-        [e('a', steps: 100), e('b'), e('c', steps: 900, self: true), e('d', steps: 500)],
+        [
+          e('a', steps: 100),
+          e('b'),
+          e('c', steps: 900, self: true),
+          e('d', steps: 500)
+        ],
         GoalMetric.steps,
         RankPeriod.today,
       );
       expect(r.map((x) => x.userId), ['c', 'd', 'a', 'b']);
+    });
+
+    test('kalori sıralanmaz: kendin önce, sonra ada göre (ICG2-11)', () {
+      LeaderboardEntry k(String id, num? kcal, {bool self = false}) =>
+          LeaderboardEntry(
+            userId: id,
+            isSelf: self,
+            displayName: id,
+            email: '$id@x.com',
+            kcalWeek: kcal,
+          );
+      final r = rankEntries(
+        [k('c', 9000), k('a', 3000), k('me', 5000, self: true)],
+        GoalMetric.calories,
+        RankPeriod.week,
+      );
+      expect(r.map((x) => x.userId), ['me', 'a', 'c']);
+    });
+
+    test('adımını paylaşan arkadaş yoksa sıra yok (ICG2-12)', () {
+      LeaderboardEntry w(String id, num? steps, {bool self = false}) =>
+          LeaderboardEntry(
+            userId: id,
+            isSelf: self,
+            displayName: id,
+            email: '$id@x.com',
+            stepsWeek: steps,
+          );
+      expect(weeklyFriendRank([w('me', 0, self: true), w('a', null)]), isNull);
+      expect(weeklyFriendRank([w('me', 100, self: true), w('a', 500)]), 2);
     });
 
     test('biçim', () {
@@ -156,7 +193,8 @@ void main() {
     });
 
     test('demo depo kendini ve arkadaşları döner', () async {
-      final l = await DemoFriendsRepository().leaderboard(DateTime(2026, 11, 16));
+      final l =
+          await DemoFriendsRepository().leaderboard(DateTime(2026, 11, 16));
       expect(l.where((x) => x.isSelf).length, 1);
       expect(l.length, 3);
     });

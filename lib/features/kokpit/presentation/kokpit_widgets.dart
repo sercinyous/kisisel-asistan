@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/services/notification_sync.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
 import '../../../core/widgets/ritim_ui.dart';
-import '../../operations/data/tasks_repository.dart';
+import '../../operations/presentation/operations_providers.dart';
 import '../../operations/domain/task_item.dart';
 import '../../routines/domain/routine.dart';
-import '../../routines/presentation/routines_providers.dart';
 import 'kokpit_format.dart';
 import 'kokpit_motion.dart';
-import 'kokpit_providers.dart';
 
 // Gün ve Ay görünümlerinin paylaştığı görsel parçalar.
 
@@ -226,25 +223,44 @@ class KokpitStatusChip extends StatelessWidget {
   }
 }
 
-/// Tek seferlik görevi tamamlar; Gün ve Ay listelerini, bildirim planını
-/// tazeler ve sonucu kullanıcıya bildirir.
+/// Kokpit görev satırına dokunma: açık görevi tamamlar (Geri al ile), bugün
+/// tamamlanmışı yeniden açar. Yazma [OpsTasksNotifier] üzerinden gider; aynı
+/// görev için ikinci dokunuş yok sayılır ve tazeleme oradan yayılır.
 Future<void> completeKokpitTask(BuildContext context, TaskItem task) async {
   // Yazma sürerken ekran kapanabilir; await sonrası context kullanılmaz.
   final messenger = ScaffoldMessenger.of(context);
   final container = ProviderScope.containerOf(context, listen: false);
-  try {
-    await container.read(tasksRepositoryProvider).complete(task.id);
-  } catch (_) {
-    messenger.showSnackBar(
+  final notifier = container.read(opsTasksProvider.notifier);
+  void fail() => messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
       const SnackBar(content: Text('Görev güncellenemedi. Tekrar dene.')),
     );
+  try {
+    if (task.isDone) {
+      await notifier.reopen(task);
+      return;
+    }
+    if (!await notifier.complete(task)) return;
+  } catch (_) {
+    fail();
     return;
   }
-  container
-    ..invalidate(upcomingRemindersProvider)
-    ..invalidate(monthOverviewProvider)
-    ..invalidate(notificationSyncProvider);
-  messenger.showSnackBar(
-    SnackBar(content: Text('Tamamlandı: ${task.title}')),
-  );
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text('Tamamlandı: ${task.title}'),
+        action: SnackBarAction(
+          label: 'Geri al',
+          onPressed: () async {
+            try {
+              await notifier.reopen(task);
+            } catch (_) {
+              fail();
+            }
+          },
+        ),
+      ),
+    );
 }

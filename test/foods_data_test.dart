@@ -31,7 +31,12 @@ const _pickerCategories = <String>{
   'Akşam Öğünleri',
 };
 
-bool _isUserRow(Map<String, dynamic> row) => row['source'] == _userSource;
+const _recipeSource = 'Standart tarif (yaklaşık)';
+
+/// Kayıt kimliği olmayan yaklaşık satırlar: kullanıcı listesi ve hazır yemek
+/// (standart tarif) satırları.
+bool _isUserRow(Map<String, dynamic> row) =>
+    row['source'] == _userSource || row['source'] == _recipeSource;
 const _numericFields = <String>['kcal100', 'protein100', 'carbs100', 'fat100'];
 
 final _usdaRef = RegExp(r'USDA FDC \d+');
@@ -138,6 +143,14 @@ void main() {
       }
       expect((row['kcal100'] as num) <= 900, isTrue,
           reason: '$label: kcal100 > 900');
+    }
+  });
+
+  test('ad tekil (aynı besin iki kez listelenmez)', () {
+    final seen = <String>{};
+    for (final row in rows) {
+      final name = (row['name'] as String).toLowerCase();
+      expect(seen.add(name), isTrue, reason: 'yinelenen ad: ${row['name']}');
     }
   });
 

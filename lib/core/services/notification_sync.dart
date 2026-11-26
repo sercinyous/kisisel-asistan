@@ -27,6 +27,10 @@ final notificationPermissionProvider = FutureProvider<bool>(
   (ref) => ref.watch(notificationServiceProvider).hasPermission(),
 );
 
+/// Bildirim planlarının "şimdi"si. Testler sabit saatle değiştirir.
+final notificationClockProvider =
+    Provider<DateTime Function()>((ref) => DateTime.now);
+
 /// Eşitleme turlarının eklenti çağrılarını tek sıraya dizer ve oturum
 /// bitince süren turları geçersiz kılar.
 final notificationSyncQueueProvider =
@@ -119,7 +123,7 @@ final notificationSyncProvider = FutureProvider<void>((ref) async {
   final granted = await notifications.requestPermission();
   if (!granted) return;
 
-  final now = DateTime.now();
+  final now = ref.read(notificationClockProvider)();
   final routines = await routinesRepository.fetchActive();
   final hasMonthly = routines.any((r) => r.isMonthly);
   // Aylık dönem anahtarı ayın 1'idir: bu ay ve gelecek ay.
@@ -204,7 +208,9 @@ final healthNudgeStateProvider = FutureProvider<HealthNudgeState>((ref) async {
   final week = await safe(() => ref.watch(currentWeekDeficitProvider.future));
   final checkin = await safe(() => ref.watch(checkinTodayProvider.future));
   final report = await safe(() => ref
-      .watch(weeklyReportProvider(AppDates.weekStart(DateTime.now())).future));
+      .watch(weeklyReportProvider(
+      AppDates.weekStart(ref.read(notificationClockProvider)()),
+    ).future));
   final hasWeek = week != null && week.days.any((d) => d.deficit != null);
   return HealthNudgeState(
     mealsLoggedToday: nutrition == null ? null : nutrition.entryCount > 0,
@@ -229,6 +235,10 @@ final healthNudgeSyncProvider = FutureProvider<void>((ref) async {
   final generation = queue.generation;
   bool current() => alive && queue.generation == generation;
 
+  // Oturum yoksa (çıkış sonrası) hiçbir şey planlanmaz; eklentiye dokunulmaz.
+  final session = await ref.watch(authSessionProvider.future);
+  if (session == null || !current()) return;
+
   UserSettings settings;
   try {
     settings = await ref.watch(userSettingsProvider.future);
@@ -239,7 +249,7 @@ final healthNudgeSyncProvider = FutureProvider<void>((ref) async {
   final state = await ref.watch(healthNudgeStateProvider.future);
   if (!current()) return;
 
-  final now = DateTime.now();
+  final now = ref.read(notificationClockProvider)();
   final plan =
       settings.notificationsEnabled && await notifications.hasPermission()
           ? buildHealthNudgePlan(
@@ -255,6 +265,8 @@ final healthNudgeSyncProvider = FutureProvider<void>((ref) async {
       await notifications.cancelReminder(key);
     }
     for (final p in plan) {
+      // Çıkıştan önce başlamış tur, çıkıştan sonra planlamayı sürdürmez.
+      if (!current()) return;
       await notifications.scheduleReminder(
         ReminderSchedule(
           taskId: p.key,

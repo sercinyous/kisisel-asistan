@@ -14,7 +14,7 @@ import {
 test("sözleşme sabitleri: tür adları ve varsayılan sınırlar", () => {
   assert.equal(AI_QUOTA_KIND, "ai");
   assert.equal(REPORT_REGEN_QUOTA_KIND, "report_regen");
-  assert.equal(DEFAULT_AI_DAILY_LIMIT, 100);
+  assert.equal(DEFAULT_AI_DAILY_LIMIT, 30);
   assert.equal(DEFAULT_REPORT_REGEN_DAILY_LIMIT, 10);
 });
 

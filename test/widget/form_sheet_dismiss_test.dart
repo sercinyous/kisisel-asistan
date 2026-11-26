@@ -325,7 +325,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'fatura öde');
     await tester.pump();
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('1 kaydı kaydet'));
     await tester.pump();

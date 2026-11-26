@@ -59,7 +59,7 @@ class FakeQuickAddRepository implements QuickAddRepository {
   final List<ParsedEntry> saved = [];
 
   @override
-  Future<QuickAddResult> saveAll(ParsedEntry entry) async {
+  Future<QuickAddResult> saveAll(ParsedEntry entry, {String? opKey}) async {
     if (gate != null) await gate!.future;
     if (error != null) throw error!;
     saved.add(entry);
@@ -88,6 +88,9 @@ class FakeNotificationService implements NotificationService {
 
   /// İzin penceresinin kaç kez istendiği ([hasPermission] saymaz).
   int permissionRequests = 0;
+
+  @override
+  Future<bool> refreshTimezone() async => false;
   final List<ReminderSchedule> scheduled = [];
   final List<String> cancelled = [];
   int resyncCount = 0;
@@ -163,7 +166,18 @@ class FakeHealthService implements HealthService {
   bool get isSupported => snapshot.status != HealthStatus.unavailable;
 
   @override
-  Future<bool> requestAccess() async => snapshot.status == HealthStatus.ok;
+  Future<bool> requestAccess({bool body = false}) async =>
+      snapshot.status == HealthStatus.ok;
+
+  /// [readWorkouts] ne dönerse o.
+  List<AppleWorkout> workouts = [];
+
+  @override
+  Future<List<AppleWorkout>> readWorkouts({
+    int days = HealthService.backfillDays,
+    DateTime? now,
+  }) async =>
+      workouts;
 
   @override
   Future<HealthSnapshot> readToday({DateTime? now}) async => snapshot;
@@ -546,15 +560,23 @@ class FakeTasksRepository implements TasksRepository {
   }
 
   @override
-  Future<List<TaskItem>> fetchUpcoming({DateTime? from, int limit = 6}) async {
+  Future<List<TaskItem>> fetchKokpitDay(
+    DateTime now, {
+    int lookbackDays = 30,
+  }) async {
     if (fetchError != null) throw fetchError!;
-    final now = from ?? DateTime.now();
-    bool upcoming(DateTime? t) => t != null && !t.isBefore(now);
-    final hits = [
+    final day = DateTime(now.year, now.month, now.day);
+    final tomorrow = day.add(const Duration(days: 1));
+    final since = day.subtract(Duration(days: lookbackDays));
+    bool inWindow(DateTime? t) =>
+        t != null && !t.isBefore(since) && t.isBefore(tomorrow);
+    return [
       for (final t in tasks)
-        if (!t.isDone && (upcoming(t.remindAt) || upcoming(t.dueAt))) t,
-    ]..sort((a, b) => a.nextTime(now)!.compareTo(b.nextTime(now)!));
-    return hits.take(limit).toList();
+        if (t.isDone
+            ? t.completedAt != null && !t.completedAt!.isBefore(day)
+            : inWindow(t.remindAt) || inWindow(t.dueAt))
+          t,
+    ];
   }
 
   @override
@@ -1010,9 +1032,28 @@ class FakeHealthRepository implements HealthRepository {
 /// Bellekte çalışan ayar deposu. [settings] boşsa ilk okuma varsayılanı
 /// "oluşturur" (gerçek deponun satır yokken yaptığı gibi).
 class FakeSettingsRepository implements SettingsRepository {
-  FakeSettingsRepository({this.settings});
+  FakeSettingsRepository({this.settings, this.aiConsent = true});
 
   UserSettings? settings;
+
+  /// AI onayı; demo ve mevcut testler onaylı başlar.
+  bool aiConsent;
+
+  @override
+  Future<bool> fetchAiConsent() async => aiConsent;
+
+  @override
+  Future<void> setAiConsent(bool granted) async => aiConsent = granted;
+
+  /// Sunucudaki saat dilimi (demo); [syncTimezone] günceller.
+  String timezone = 'Europe/Istanbul';
+
+  @override
+  Future<bool> syncTimezone(String value) async {
+    if (value == timezone) return false;
+    timezone = value;
+    return true;
+  }
 
   /// Doluysa [fetch] bu hatayı fırlatır.
   Object? fetchError;

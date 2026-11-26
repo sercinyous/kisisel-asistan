@@ -42,7 +42,7 @@ function memoryQuota() {
 }
 
 function setup(overrides = {}) {
-  const calls = { jwt: [], quota: [], fetch: [], log: [] };
+  const calls = { jwt: [], consent: [], quota: [], fetch: [], log: [] };
   const quota = memoryQuota();
   const store = {
     userIdFromJwt: async (token) => {
@@ -50,6 +50,10 @@ function setup(overrides = {}) {
       if (token === "jwt-ali") return "user-ali";
       if (token === "jwt-veli") return "user-veli";
       return null;
+    },
+    hasAiConsent: async (userId) => {
+      calls.consent.push(userId);
+      return true;
     },
     consumeQuota: async (userId, kind, limit) => {
       calls.quota.push({ userId, kind, limit });
@@ -183,8 +187,9 @@ test("gövde sınırı aşılınca 413; kota harcanmaz, Gemini çağrılmaz", as
 
 test("varsayılan sınır 64 KB: 64 KB altı geçer, üstü 413", async () => {
   const { handler } = setup();
-  const pad = (n) => geminiBody({ contents: [{ role: "user", parts: [{ text: "a".repeat(n) }] }] });
-  assert.equal((await handler(post(pad(60 * 1024)))).status, 200);
+  // Metin sınırı (8000) ayrı denetlenir; gövde boyutu talimatla sınanır.
+  const pad = (n) => geminiBody({ systemInstruction: { parts: [{ text: "a".repeat(n) }] } });
+  assert.equal((await handler(post(pad(20 * 1024)))).status, 200);
   assert.equal((await handler(post(pad(70 * 1024)))).status, 413);
 });
 
@@ -271,7 +276,8 @@ test("Gemini'ye giden gövde sınırlanır: araçlar atılır, maxOutputTokens t
   })));
   const sent = JSON.parse(calls.fetch[0].init.body);
   assert.deepEqual(Object.keys(sent).sort(), ["contents", "generationConfig", "systemInstruction"]);
-  assert.equal(sent.generationConfig.maxOutputTokens, 8192);
+  assert.equal(sent.generationConfig.maxOutputTokens, 4096);
+  assert.deepEqual(sent.generationConfig.thinkingConfig, { thinkingLevel: "low" });
   assert.equal(sent.generationConfig.candidateCount, 1);
   assert.equal(sent.generationConfig.responseMimeType, "application/json");
   assert.equal(sent.contents[0].parts[0].text, USER_TEXT);
@@ -466,4 +472,102 @@ test("Gemini 5xx ya da ağ hatasında düşülen kota iade edilir; 4xx'te edilme
     }));
     assert.equal(refunded.length, refunds);
   }
+});
+
+// ---------------------------------------------------------------- AI onayı
+
+test("AI onayı yoksa 403; Gemini çağrılmaz, kota harcanmaz", async () => {
+  const { handler, calls } = setup({ store: { hasAiConsent: async () => false } });
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 403);
+  assert.match(await errorOf(response), /onay/);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.fetch.length, 0);
+});
+
+test("AI onayı okunamazsa 500; Gemini çağrılmaz, kota harcanmaz", async () => {
+  const { handler, calls } = setup({
+    store: { hasAiConsent: async () => { throw new Error("db"); } },
+  });
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 500);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.fetch.length, 0);
+});
+
+test("AI onayı varsa istek Gemini'ye gider ve onay kullanıcı kimliğiyle sorulur", async () => {
+  const { handler, calls } = setup();
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.consent, ["user-ali"]);
+  assert.equal(calls.fetch.length, 1);
+});
+
+for (const [status, refunded] of [[400, false], [401, true], [402, true], [403, true], [404, true], [429, true], [500, true]]) {
+  test(`Gemini ${status}: kota ${refunded ? "iade edilir" : "iade edilmez"}`, async () => {
+    const refunds = [];
+    const { handler } = setup({
+      fetch: async () => new Response("{}", { status }),
+      store: { refundQuota: async (userId, kind) => { refunds.push({ userId, kind }); } },
+    });
+    await handler(post(geminiBody()));
+    assert.equal(refunds.length, refunded ? 1 : 0);
+  });
+}
+
+// ------------------------------------------------------- maliyet emniyeti (ICG2-02)
+
+test("genel günlük sınır dolunca 503 döner, Gemini çağrılmaz, kişisel birim iade edilir", async () => {
+  const refunds = [];
+  const { handler, calls } = setup({
+    store: {
+      consumeGlobalQuota: async (limit) => {
+        assert.equal(limit, 7);
+        return false;
+      },
+      refundQuota: async (userId, kind) => refunds.push({ userId, kind }),
+    },
+    deps: { globalDailyLimit: 7 },
+  });
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 503);
+  assert.match(await errorOf(response), /genel kullanım sınırına/);
+  assert.equal(calls.fetch.length, 0);
+  assert.deepEqual(refunds, [{ userId: "user-ali", kind: "ai" }]);
+});
+
+test("genel sınır içindeyse istek geçer", async () => {
+  let used = 0;
+  const { handler, calls } = setup({
+    store: { consumeGlobalQuota: async () => ++used <= 1 },
+  });
+  assert.equal((await handler(post(geminiBody()))).status, 200);
+  assert.equal(calls.fetch.length, 1);
+});
+
+test("onay yoksa 403; kota düşülmez, Gemini çağrılmaz", async () => {
+  const { handler, calls } = setup({ store: { hasAiConsent: async () => false } });
+  const response = await handler(post(geminiBody()));
+  assert.equal(response.status, 403);
+  assert.equal(calls.quota.length, 0);
+  assert.equal(calls.fetch.length, 0);
+});
+
+test("istemcinin düşünme düzeyi yok sayılır; her zaman low", async () => {
+  const { handler, calls } = setup();
+  await handler(post(geminiBody({
+    generationConfig: { thinkingConfig: { thinkingLevel: "high", thinkingBudget: 99999 } },
+  })));
+  const sent = JSON.parse(calls.fetch[0].init.body);
+  assert.deepEqual(sent.generationConfig.thinkingConfig, { thinkingLevel: "low" });
+});
+
+test("8000 karakteri aşan kullanıcı metni 400; kota düşülmez", async () => {
+  const { handler, calls } = setup();
+  const response = await handler(post(geminiBody({
+    contents: [{ role: "user", parts: [{ text: "a".repeat(8001) }] }],
+  })));
+  assert.equal(response.status, 400);
+  assert.match(await errorOf(response), /çok uzun/);
+  assert.equal(calls.quota.length, 0);
 });

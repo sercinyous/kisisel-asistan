@@ -819,10 +819,8 @@ void main() {
       final fresh = monthly('yeni', 5, createdAt: DateTime(2026, 11, 10));
       expect(monthlyForMonth([fresh], {}, 2026, 10, today), isEmpty);
       expect(monthlyForMonth([fresh], {}, 2025, 11, today), isEmpty);
-      expect(
-        monthlyForMonth([fresh], {}, 2026, 11, today).single.status,
-        OccurrenceStatus.overdue,
-      );
+      // Günü (5'i) oluşturulmadan önce geçti: ilk dönem Aralık.
+      expect(monthlyForMonth([fresh], {}, 2026, 11, today), isEmpty);
       expect(
         monthlyForMonth([fresh], {}, 2026, 12, today).single.status,
         OccurrenceStatus.upcoming,
@@ -904,5 +902,23 @@ void main() {
       expect(at(DateTime(2026, 3, 1)).daysUntilDue(DateTime(2026, 2, 28)), 1);
       expect(at(DateTime(2026, 11, 1)).daysUntilDue(DateTime(2026, 11, 30)), -29);
     });
+  });
+
+  test('günü geçtikten sonra eklenen aylık iş gecikmiş görünmez', () {
+    final r = Routine(
+      id: 'kira',
+      title: 'Kira',
+      frequency: RoutineFrequency.monthly,
+      dayOfMonth: 5,
+      createdAt: DateTime(2026, 11, 25),
+    );
+    final today = DateTime(2026, 11, 25);
+    expect(
+      monthlyForDay([r], {}, today, 3)
+          .where((o) => o.status == OccurrenceStatus.overdue),
+      isEmpty,
+    );
+    expect(monthlyForMonth([r], {}, 2026, 11, today), isEmpty);
+    expect(monthlyForMonth([r], {}, 2026, 12, today), hasLength(1));
   });
 }

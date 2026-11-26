@@ -81,7 +81,7 @@ class OnboardingProfileStep extends StatelessWidget {
         OnboardingField(
           key: const Key('onboarding-birth-year'),
           controller: birthYear,
-          label: 'Doğum yılı',
+          label: 'Doğum yılı (isteğe bağlı)',
           keyboardType: TextInputType.number,
           inputFormatters: OnboardingField.digitsOnly,
           maxLength: 4,
@@ -97,7 +97,6 @@ class OnboardingProfileStep extends StatelessWidget {
               ChoiceChip(
                 key: Key('onboarding-sex-${value.name}'),
                 label: Text(label),
-                showCheckmark: false,
                 selected: sex == value,
                 onSelected: (_) => onSex(value),
               ),

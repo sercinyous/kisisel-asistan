@@ -43,6 +43,12 @@ class SignInController extends Notifier<SignInState> {
   @override
   SignInState build() => const SignInState();
 
+  /// Giriş/kayıt arasında geçişte eski hata ve bilgi metnini siler.
+  void clearMessages() {
+    if (state.isBusy) return;
+    state = const SignInState();
+  }
+
   /// Başarıda `true`.
   Future<bool> signInWithGoogle() => _run(SignInMethod.google, () async {
         final identity = await ref.read(googleIdentityClientProvider).signIn();

@@ -145,7 +145,7 @@ OnboardingTargets suggestOnboardingTargets(
   final resolved = resolveTargets(
     settings: settings,
     latestWeightKg: answers.weightKg,
-    age: now.year - answers.birthYear,
+    age: answers.birthYear == null ? null : now.year - answers.birthYear!,
     sex: Sex.tryParse(answers.sex.name),
   );
   final written = planWrite(

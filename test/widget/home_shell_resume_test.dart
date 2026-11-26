@@ -288,13 +288,13 @@ void main() {
     await selectTab(tester, 'İçgörü');
     await tester.tap(find.text('Gün'));
     await tester.pumpAndSettle();
-    expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
+    expect(find.text('Bugünün raporu gün bitince oluşur'), findsOneWidget);
 
     // 23:45 zamanlayıcısı raporu yazdı.
     reports.daily = [dailyReport(today)];
     await backgroundAndResume(tester);
 
-    expect(find.text('Bu gün için rapor henüz oluşmadı'), findsNothing);
+    expect(find.text('Bugünün raporu gün bitince oluşur'), findsNothing);
     expect(find.text('Gün özeti.'), findsOneWidget);
   });
 
@@ -326,7 +326,20 @@ void main() {
     );
     await tester.tap(find.byTooltip('Önceki hafta'));
     await tester.pumpAndSettle();
-    expect(find.text('Bu hafta için rapor henüz oluşmadı'), findsNothing);
+    expect(find.text('Bu haftanın raporu hafta bitince oluşur'), findsNothing);
     expect(find.text('Hafta özeti.'), findsOneWidget);
+  });
+
+  testWidgets('60 sn içinde ikinci öne geliş ağır tazelemeyi tekrarlamaz',
+      (tester) async {
+    await pumpShell(tester);
+    await selectTab(tester, 'Sağlık');
+    health.log.clear();
+    await backgroundAndResume(tester);
+    final first = health.log.where((e) => e == 'meals').length;
+    expect(first, greaterThanOrEqualTo(1));
+    health.log.clear();
+    await backgroundAndResume(tester);
+    expect(health.log.where((e) => e == 'meals'), isEmpty);
   });
 }

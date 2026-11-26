@@ -11,6 +11,7 @@ import {
   buildPrompt,
   extractBearer,
   filterHealthAdvice,
+  hasActivity,
   healthSafetyOf,
   parseGeminiText,
   parseRequest,
@@ -24,18 +25,33 @@ export interface ReportUser {
   timeZone: string;
   /** user_settings.onboarded_at dolu mu; ilk kurulumunu bitirmeyen için rapor üretilmez. */
   onboarded: boolean;
+  /**
+   * user_settings.ai_consent_at dolu mu. false ise Gemini çağrılmaz, rapor
+   * yalnızca sayılarla kaydedilir. Belirtilmezse (eski testler) onaylı sayılır.
+   */
+  aiConsent?: boolean;
 }
 
 /** Veritabanı işlemleri (service_role istemcisiyle; yalnızca sunucuda). */
 export interface ReportStore {
   /** Kullanıcı JWT'sini doğrular; geçersizse null. */
   userIdFromJwt(token: string): Promise<string | null>;
-  /** Tüm kullanıcılar (zamanlanmış çalıştırma); onboarded olmayanı işleyici eler. */
+  /**
+   * Tüm kullanıcılar (zamanlanmış çalıştırma); onboarded olmayanı işleyici eler.
+   * Gerçek uygulama satırları sayfa sayfa okur (PostgREST 1000 satır sınırı).
+   */
   listUsers(): Promise<ReportUser[]>;
+  /**
+   * Bu dönemin raporu başarılı yorumla zaten var mı. Zamanlanmış çalıştırma
+   * bunları atlar (ikinci haftalık çalıştırma ve batı saat dilimleri için).
+   */
+  hasOkReport?(kind: ReportKind, userId: string, date: string): Promise<boolean>;
   /** Tek kullanıcının ayarı; ayar satırı yoksa null. */
   userOf(userId: string): Promise<ReportUser | null>;
   /** consume_ai_quota: kota içindeyse sayacı atomik artırıp true. */
   consumeQuota: ConsumeQuota;
+  /** refund_ai_quota: AI yorum üretemediyse düşülen birimi geri verir. */
+  refundQuota?(userId: string, kind: string): Promise<void>;
   metrics(kind: ReportKind, userId: string, date: string): Promise<unknown>;
   save(
     kind: ReportKind,
@@ -43,7 +59,7 @@ export interface ReportStore {
     date: string,
     metrics: unknown,
     summary: string | null,
-    status: "ok" | "failed",
+    status: "ok" | "failed" | "pending",
   ): Promise<void>;
   /** claim_dirty_reports: işaretli raporları kiralar (dirty iş bitene dek kalır). */
   claimDirty(limit: number): Promise<DirtyReport[]>;
@@ -58,6 +74,12 @@ export interface ReportStore {
    * dirty kalır; doluysa sürüm değişmediyse dirty temizlenir. Her durumda kira bırakılır.
    */
   saveRefreshed(report: DirtyReport, metrics: unknown, summary: string | null): Promise<void>;
+  /**
+   * save_refreshed_metrics (jetonlu): yalnızca sayılar yazılır, yorum olduğu gibi
+   * kalır ve yeni veri gelmediyse dirty temizlenir. AI hiç çağrılmayacaksa
+   * (onay yok, kayıt yok) kullanılır; rapor her saat yeniden alınmaz.
+   */
+  saveRefreshedMetrics?(report: DirtyReport, metrics: unknown): Promise<void>;
 }
 
 export interface DirtyReport {
@@ -97,7 +119,18 @@ export interface HandlerDeps {
   fetch: typeof fetch;
   now: () => Date;
   log: (message: string) => void;
+  /** Zamanlanmış çalıştırmada bir çağrının işlediği en çok kullanıcı (varsayılan 40). */
+  cronPageSize?: number;
+  /**
+   * Sayfa bitmeden kullanıcı kaldıysa aynı gövdeyi `after` imleciyle yeniden
+   * gönderir (index.ts kendi adresine x-cron-secret ile istek atar). Böylece
+   * tek çağrı Edge süre sınırına takılmadan tüm kullanıcılar işlenir (G2-04).
+   */
+  continueCron?: (body: Record<string, unknown>) => Promise<void>;
 }
+
+/** Zamanlanmış çalıştırmada sayfa başına varsayılan kullanıcı sayısı. */
+export const DEFAULT_CRON_PAGE_SIZE = 40;
 
 /** Gemini çağrısının üst süresi. */
 export const GEMINI_TIMEOUT_MS = 30_000;
@@ -154,8 +187,18 @@ async function generateSummary(
   }
 }
 
+/** Yorumun neden üretilmediği: AI onayı yok ya da dönemde hiç kayıt yok. */
+type AiSkip = "disabled" | "inactive" | null;
+
+function aiSkipOf(user: ReportUser | null, metrics: unknown): AiSkip {
+  if (user === null || user.aiConsent === false) return "disabled";
+  if (!hasActivity(metrics)) return "inactive";
+  return null;
+}
+
 type UserOutcome =
-  | { status: "saved"; date: string; aiOk: boolean }
+  | { status: "saved"; date: string; aiOk: boolean; skip: AiSkip }
+  | { status: "skipped"; date: string }
   | { status: "rejected"; error: string }
   | { status: "failed" };
 
@@ -165,21 +208,31 @@ async function generateForUser(
   requestedDate: string | null,
   previous: boolean,
   user: ReportUser,
+  skipExisting: boolean,
 ): Promise<UserOutcome> {
   const target = resolveTarget(kind, requestedDate, user.timeZone, deps.now(), previous);
   if (!target.ok) return { status: "rejected", error: target.error };
   try {
+    if (
+      skipExisting && deps.store.hasOkReport !== undefined &&
+      await deps.store.hasOkReport(kind, user.id, target.date)
+    ) {
+      return { status: "skipped", date: target.date };
+    }
     const metrics = await deps.store.metrics(kind, user.id, target.date);
-    const summary = await generateSummary(deps, kind, target.date, metrics);
+    // Onay yoksa ya da dönemde hiç kayıt yoksa Gemini çağrılmaz (maliyet yok);
+    // rapor sayılarla "pending" kaydedilir, "failed" (üretilemedi) sayılmaz.
+    const skip = aiSkipOf(user, metrics);
+    const summary = skip !== null ? null : await generateSummary(deps, kind, target.date, metrics);
     await deps.store.save(
       kind,
       user.id,
       target.date,
       metrics,
       summary,
-      summary === null ? "failed" : "ok",
+      summary !== null ? "ok" : skip !== null ? "pending" : "failed",
     );
-    return { status: "saved", date: target.date, aiOk: summary !== null };
+    return { status: "saved", date: target.date, aiOk: summary !== null, skip };
   } catch (error) {
     // Bir kullanıcının hatası diğerlerini durdurmaz.
     deps.log(
@@ -209,11 +262,18 @@ async function refreshOne(
       await deps.store.completeClaim(report);
       return "unchanged";
     }
-    const allowed = await deps.store.consumeQuota(
-      report.userId,
-      REPORT_REFRESH_QUOTA_KIND,
-      refreshLimit,
-    );
+    const owner = await deps.store.userOf(report.userId);
+    if (aiSkipOf(owner, fresh.metrics) !== null && deps.store.saveRefreshedMetrics !== undefined) {
+      // AI hiç çağrılmayacak: sayılar yazılır, dirty temizlenir (saatlik döngü olmaz).
+      await deps.store.saveRefreshedMetrics(report, fresh.metrics);
+      return "unchanged";
+    }
+    const allowed = owner !== null && owner.aiConsent !== false &&
+      await deps.store.consumeQuota(
+        report.userId,
+        REPORT_REFRESH_QUOTA_KIND,
+        refreshLimit,
+      );
     const summary = allowed
       ? await generateSummary(deps, report.kind, report.date, fresh.metrics)
       : null;
@@ -269,6 +329,10 @@ async function runRefresh(deps: HandlerDeps, refreshLimit: number): Promise<Resp
   });
 }
 
+/** Yeniden üretimde AI yorum veremediğinde istemciye dönen ileti. */
+export const REGEN_AI_FAILED_MESSAGE =
+  "Yorum şu an üretilemedi; sayılar güncellendi, varsa eski yorum korundu. Biraz sonra yeniden dene.";
+
 export function regenQuotaMessage(limit: number): string {
   return `Bugünlük rapor yenileme hakkın doldu (${limit}). Yarın yeniden dene.`;
 }
@@ -315,10 +379,20 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
     const kind = parsed.kind;
 
     let users: ReportUser[];
+    let nextCursor: string | null = null;
     try {
       if (jwtUserId === null) {
         // Zamanlanmış çalıştırma: yalnızca ilk kurulumunu bitirmiş kullanıcılar.
-        users = (await deps.store.listUsers()).filter((user) => user.onboarded);
+        // Sayfalı: kimliğe göre sıralanır, `after` imlecinden sonraki ilk N kişi.
+        const after = typeof (body as Record<string, unknown>).after === "string"
+          ? (body as Record<string, unknown>).after as string
+          : null;
+        const pageSize = deps.cronPageSize ?? DEFAULT_CRON_PAGE_SIZE;
+        const remaining = (await deps.store.listUsers())
+          .filter((user) => user.onboarded && (after === null || user.id > after))
+          .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        users = remaining.slice(0, pageSize);
+        if (remaining.length > pageSize) nextCursor = users[users.length - 1].id;
       } else {
         const user = await deps.store.userOf(jwtUserId);
         if (user === null || !user.onboarded) {
@@ -333,9 +407,13 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
 
     // "Raporu yeniden oluştur": kişi başına günlük sınır. Geçersiz tarih
     // (gelecek) kotayı yemez; kota düşülemezse maliyeti korumak için reddedilir.
+    // AI onayı yoksa Gemini çağrılmayacağı için kota da düşülmez.
+    let regenCharged = false;
     if (jwtUserId !== null) {
       const target = resolveTarget(kind, parsed.date, users[0].timeZone, deps.now(), parsed.previous);
       if (!target.ok) return json(400, { ok: false, error: target.error });
+    }
+    if (jwtUserId !== null && users[0].aiConsent !== false) {
       let allowed: boolean;
       try {
         allowed = await deps.store.consumeQuota(jwtUserId, REPORT_REGEN_QUOTA_KIND, regenLimit);
@@ -344,6 +422,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
         return json(500, { ok: false, error: "Kullanım kotası denetlenemedi." });
       }
       if (!allowed) return json(429, { ok: false, error: regenQuotaMessage(regenLimit) });
+      regenCharged = true;
     }
 
     const outcomes: UserOutcome[] = new Array(users.length);
@@ -357,6 +436,7 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
           parsed.date,
           parsed.previous,
           users[index],
+          jwtUserId === null,
         );
       }
     };
@@ -369,8 +449,41 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       return json(400, { ok: false, error: outcomes[0].error });
     }
 
+    if (nextCursor !== null && deps.continueCron !== undefined) {
+      try {
+        await deps.continueCron({ ...(body as Record<string, unknown>), after: nextCursor });
+      } catch (error) {
+        deps.log(`Sonraki sayfa başlatılamadı: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
     const saved = outcomes.filter((o) => o.status === "saved");
-    const failed = outcomes.length - saved.length;
+    const skipped = outcomes.filter((o) => o.status === "skipped").length;
+    const failed = outcomes.length - saved.length - skipped;
+
+    if (jwtUserId !== null && saved.length === 1) {
+      const only = saved[0];
+      // Yorum gerçekten üretilemediyse (onay ve kayıt varken) hak iade edilir;
+      // istemci hatayı görür, eski yorum veritabanında korunur.
+      if (!only.aiOk && only.skip === null) {
+        if (regenCharged) {
+          try {
+            await deps.store.refundQuota?.(jwtUserId, REPORT_REGEN_QUOTA_KIND);
+          } catch (error) {
+            deps.log(`Kota iade edilemedi: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+        return json(503, { ok: false, error: REGEN_AI_FAILED_MESSAGE, date: only.date });
+      }
+      if (only.skip === "inactive" && regenCharged) {
+        try {
+          await deps.store.refundQuota?.(jwtUserId, REPORT_REGEN_QUOTA_KIND);
+        } catch (error) {
+          deps.log(`Kota iade edilemedi: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    }
+
     const result = {
       ok: failed === 0,
       kind,
@@ -378,9 +491,13 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       date: saved.length > 0 ? saved[0].date : parsed.date,
       users: users.length,
       failed,
-      ai_failed: saved.filter((o) => !o.aiOk).length,
+      skipped,
+      ai_failed: saved.filter((o) => !o.aiOk && o.skip === null).length,
+      ai_disabled: saved.filter((o) => o.skip === "disabled").length,
+      ai_inactive: saved.filter((o) => o.skip === "inactive").length,
+      ...(nextCursor !== null ? { next: nextCursor } : {}),
     };
     // Hiçbir rapor yazılamadıysa çağıran (uygulama, pg_net günlüğü) hata görmeli.
-    return json(users.length > 0 && saved.length === 0 ? 500 : 200, result);
+    return json(users.length > 0 && saved.length === 0 && skipped === 0 ? 500 : 200, result);
   };
 }

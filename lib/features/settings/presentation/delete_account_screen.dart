@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/google_auth.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../../core/services/supabase_providers.dart';
@@ -10,6 +11,18 @@ import '../data/account_repository.dart';
 
 /// Hesap > Profil ve hedefler > Hesabımı sil: neyin silineceğini anlatır, "SİL" yazılınca
 /// sunucuda hesabı ve tüm verisini siler, cihazı temizler, oturumu kapatır.
+/// Onay kelimesi: klavye dilinden bağımsız olarak SİL / SIL / sil / sıl kabul edilir.
+/// Sunucuya her zaman sabit [AccountRepository.confirmWord] gönderilir.
+bool isDeleteConfirmWord(String input) {
+  final normalized = input
+      .trim()
+      .replaceAll('İ', 'i')
+      .replaceAll('I', 'i')
+      .replaceAll('ı', 'i')
+      .toLowerCase();
+  return normalized == 'sil';
+}
+
 class DeleteAccountScreen extends ConsumerStatefulWidget {
   const DeleteAccountScreen({super.key});
 
@@ -27,6 +40,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     'Profilin, hedeflerin ve tüm ayarların',
     'Görevler, notlar, rutinler ve hatırlatıcılar',
     'Öğünler, su, kilo ve sağlık özetleri (adım, uyku, kalori)',
+    'İlerleme fotoğrafların, vücut ölçülerin ve haftalık check-in\'lerin',
+    'Hikâyelerin ve hikâyelere verdiğin tepkiler',
     'Günlük ve haftalık raporlar, AI kullanım sayaçları',
     'Arkadaşlıkların (iki taraftan da), gönderdiğin ve sana gelen davetler',
     'Paylaşım ayarların, gönderdiğin hata kayıtları ve geri bildirimler',
@@ -45,9 +60,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     super.dispose();
   }
 
-  bool get _confirmed =>
-      _confirm.text.trim().replaceAll('i', 'İ').toUpperCase() ==
-      AccountRepository.confirmWord;
+  bool get _confirmed => isDeleteConfirmWord(_confirm.text);
 
   Future<void> _delete() async {
     final navigator = Navigator.of(context);
@@ -76,6 +89,12 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           .endSession(ref.read(notificationServiceProvider));
     } catch (_) {}
     if (userId != null) await repository.clearLocalData(userId);
+    try {
+      await ref
+          .read(googleAuthClientProvider)
+          .disconnect()
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
     try {
       await client.auth.signOut();
     } catch (_) {}
@@ -150,7 +169,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            'Onaylamak için SİL yaz',
+            'Onaylamak için SİL (ya da SIL) yaz',
             style: theme.textTheme.labelLarge,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -160,7 +179,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             enabled: !_busy,
             autocorrect: false,
             textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(hintText: 'SİL'),
+            decoration: const InputDecoration(hintText: 'SİL (ya da SIL)'),
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.sm),

@@ -9,6 +9,7 @@ import 'package:kisisel_asistan/features/ai_quick_add/domain/parsed_entry.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/domain/quick_add_mode.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/presentation/ai_quick_add_modal.dart';
 import 'package:kisisel_asistan/features/ai_quick_add/presentation/quick_add_mode_sheet.dart';
+import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/shell/presentation/home_shell.dart';
 
 import '../helpers/quick_add_fakes.dart';
@@ -180,7 +181,7 @@ void main() {
       'Her pazartesi 11:00 ekip toplantısı',
     );
     await tester.pump();
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('1 kaydı kaydet'));
     await tester.pumpAndSettle();
@@ -190,5 +191,30 @@ void main() {
     expect(harness.work.inputs, ['Her pazartesi 11:00 ekip toplantısı']);
     expect(harness.repository.saved.single.routines.single.title,
         'Ekip toplantısı');
+  });
+
+  testWidgets(
+      'uygulama açıkken saat dakikada ilerler; gün dönünce veriler '
+      'tazelenir', (tester) async {
+    await pumpShell(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeShell)),
+    );
+    final before = harness.tasks.fetchKokpitDayCount;
+
+    // Aynı gün içinde: yalnızca saat ilerler, veri okunmaz.
+    final clock = container.read(kokpitClockProvider.notifier);
+    clock.state = DateTime.now().subtract(const Duration(minutes: 5));
+    await tester.pump(const Duration(seconds: 61));
+    await tester.pumpAndSettle();
+    final now = DateTime.now();
+    expect(clock.state.difference(now).inMinutes.abs(), lessThan(2));
+
+    // Saat dünde kalmışsa (gece yarısı geçti) "bugün" verileri yeniden okunur.
+    clock.state = now.subtract(const Duration(days: 1));
+    await tester.pump(const Duration(seconds: 61));
+    await tester.pumpAndSettle();
+    expect(AppDates.startOfDay(clock.state), AppDates.startOfDay(now));
+    expect(harness.tasks.fetchKokpitDayCount, greaterThan(before));
   });
 }

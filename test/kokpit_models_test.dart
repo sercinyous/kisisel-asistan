@@ -43,7 +43,7 @@ void main() {
       expect(t.assignee, 'Ayşe');
       expect(t.dueAt!.isUtc, isFalse);
       expect(t.dueAt!.toUtc(), DateTime.utc(2026, 11, 17, 12));
-      expect(t.effectiveTime!.toUtc(), DateTime.utc(2026, 11, 17, 11, 30));
+      expect(t.remindAt!.toUtc(), DateTime.utc(2026, 11, 17, 11, 30));
     });
 
     test('varsayılanlar ve eksik tarihler', () {
@@ -53,10 +53,9 @@ void main() {
       expect(t.status, 'todo');
       expect(t.dueAt, isNull);
       expect(t.remindAt, isNull);
-      expect(t.effectiveTime, isNull);
     });
 
-    test('remind_at yoksa effectiveTime due_at olur; bozuk tarih null', () {
+    test('bozuk tarih null', () {
       final t = TaskItem.fromMap(const {
         'id': 't3',
         'title': 'x',
@@ -66,7 +65,7 @@ void main() {
       });
       expect(t.isDone, isTrue);
       expect(t.remindAt, isNull);
-      expect(t.effectiveTime!.toUtc(), DateTime.utc(2026, 11, 20, 18));
+      expect(t.dueAt!.toUtc(), DateTime.utc(2026, 11, 20, 18));
     });
   });
 }

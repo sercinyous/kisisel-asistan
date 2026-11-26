@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:kisisel_asistan/core/utils/date_utils.dart';
 import 'package:kisisel_asistan/features/friends/domain/friends_models.dart';
+import 'package:kisisel_asistan/features/reports/domain/weekly_checkin.dart';
 import 'package:kisisel_asistan/features/reports/presentation/reports_providers.dart';
 
 import '../helpers/reports_fakes.dart';
@@ -77,7 +78,7 @@ void main() {
       await tester.scrollUntilVisible(find.text('26 Eki – 1 Kas'), 150);
       expect(find.text('Geçmiş haftalar'), findsOneWidget);
       expect(find.text('9 – 15 Kasım'), findsOneWidget);
-      expect(find.text('İş %74 · Form %80 · −0,5 kg'), findsOneWidget);
+      expect(find.text('İş %74 · Sağlık %80 · −0,5 kg'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -92,7 +93,9 @@ void main() {
           find.textContaining('İş tarafında güçlü bir hafta'), findsOneWidget);
       // Büyük düğme yok; yenileme başlıktaki simgede.
       expect(find.text('Raporu yeniden oluştur'), findsNothing);
-      expect(find.byTooltip('Raporu yeniden oluştur'), findsOneWidget);
+      expect(find.textContaining('tıbbi tavsiye değildir'), findsOneWidget);
+      expect(
+          find.byTooltip('Yorumu yenile (AI hakkı kullanır)'), findsOneWidget);
       // Öneriler "Devamı" ile açılır.
       expect(find.text('Perşembe antrenmanını sabaha al.'), findsNothing);
       await harness.tapText(tester, 'Devamı');
@@ -136,13 +139,15 @@ void main() {
       expect(find.text('%78'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Yorum üretilemedi'), 200);
       expect(find.text('Yorum üretilemedi'), findsOneWidget);
-      expect(find.byTooltip('Raporu yeniden oluştur'), findsOneWidget);
+      expect(
+          find.byTooltip('Yorumu yenile (AI hakkı kullanır)'), findsOneWidget);
     });
 
     testWidgets('rapor yoksa oluşturma çağrısı gösterilir', (tester) async {
       await harness.pump(tester);
 
-      expect(find.text('Bu hafta için rapor henüz oluşmadı'), findsOneWidget);
+      expect(
+          find.text('Bu haftanın raporu hafta bitince oluşur'), findsOneWidget);
       expect(find.text('Raporu oluştur'), findsOneWidget);
       expect(find.text('Günlük tamamlama'), findsNothing);
     });
@@ -312,7 +317,8 @@ void main() {
         (kind: ReportKind.weekly, date: thisWeek),
       ]);
       expect(find.text('%78'), findsOneWidget);
-      expect(find.text('Bu hafta için rapor henüz oluşmadı'), findsNothing);
+      expect(
+          find.text('Bu haftanın raporu hafta bitince oluşur'), findsNothing);
     });
   });
 
@@ -399,7 +405,7 @@ void main() {
           (day) => dailyReport(day, summary: 'Bugünün özeti.');
       await openDaily(tester);
 
-      expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
+      expect(find.text('Bugünün raporu gün bitince oluşur'), findsOneWidget);
       await harness.tapText(tester, 'Raporu oluştur');
       await tester.pumpAndSettle();
 
@@ -408,6 +414,58 @@ void main() {
       ]);
       await tester.scrollUntilVisible(find.text('Bugünün özeti.'), 150);
       expect(find.text('Bugünün özeti.'), findsOneWidget);
+    });
+  });
+
+  group('tur 2 (ICG2)', () {
+    testWidgets('AI onayı yoksa "AI yorumu kapalı" ve onay düğmesi görünür',
+        (tester) async {
+      harness.aiConsent = false;
+      harness.reports.weekly = [
+        weeklyReport(thisWeek, summary: null, status: ReportAiStatus.pending),
+      ];
+      await harness.pump(tester);
+
+      expect(find.text('AI yorumu kapalı'), findsOneWidget);
+      expect(find.text('Yorum üretilemedi'), findsNothing);
+      expect(find.byKey(const ValueKey('reports-ai-enable')), findsOneWidget);
+    });
+
+    testWidgets('onay varken yorumsuz rapor "AI yorumu kapalı" demez',
+        (tester) async {
+      harness.reports.weekly = [weeklyReport(thisWeek, summary: null)];
+      await harness.pump(tester);
+
+      expect(find.text('AI yorumu kapalı'), findsNothing);
+      expect(find.byKey(const ValueKey('reports-ai-enable')), findsNothing);
+    });
+
+    testWidgets(
+        'bu haftanın raporu yoksa "Geçen haftayı gör" geçen haftayı açar',
+        (tester) async {
+      harness.reports.weekly = [weeklyReport(lastWeek, summary: 'Geçen özet.')];
+      await harness.pump(tester);
+
+      expect(
+          find.text('Bu haftanın raporu hafta bitince oluşur'), findsOneWidget);
+      await harness.tapKey(tester, 'reports-show-previous');
+      await tester.pumpAndSettle();
+      expect(find.text('9 – 15 Kasım'), findsOneWidget);
+      expect(find.textContaining('Geçen özet.'), findsOneWidget);
+    });
+
+    testWidgets('haftanın check-in\'i hafta görünümünde gösterilir',
+        (tester) async {
+      harness.reports.weekly = [weeklyReport(thisWeek)];
+      await harness.checkins.save(
+        WeeklyCheckin(weekStart: thisWeek, mood: 4, note: 'Yoğun ama iyi.'),
+      );
+      await harness.pump(tester);
+
+      await tester.scrollUntilVisible(
+          find.text('Haftanın hissi · 4/5 · İyi'), 150);
+      expect(find.text('Haftanın hissi · 4/5 · İyi'), findsOneWidget);
+      expect(find.text('Yoğun ama iyi.'), findsOneWidget);
     });
   });
 }

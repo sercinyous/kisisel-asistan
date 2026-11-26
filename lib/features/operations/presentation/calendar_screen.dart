@@ -5,6 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../kokpit/presentation/kokpit_month_view.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
+import 'tasks_view.dart' show openTaskForm;
 
 /// İşler › Takvim: ay takvimi ve seçilen günün görev ve aylık işleri.
 /// Her açılışta bugünün ayı gösterilir ve bugün seçilir.
@@ -37,7 +38,22 @@ class _OpsCalendarScreenState extends ConsumerState<OpsCalendarScreen> {
       ),
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(title: const Text('Takvim')),
+        appBar: AppBar(
+          title: const Text('Takvim'),
+          actions: [
+            IconButton(
+              key: const ValueKey('calendar-add-task'),
+              tooltip: 'Bu güne görev ekle',
+              icon: const Icon(Icons.add_rounded),
+              onPressed: () => openTaskForm(
+                context,
+                null,
+                ref.read(kokpitSelectedDayProvider) ??
+                    ref.read(kokpitClockProvider),
+              ),
+            ),
+          ],
+        ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.page,

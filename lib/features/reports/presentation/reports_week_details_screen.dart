@@ -98,7 +98,7 @@ class ReportsWeekDetailsScreen extends ConsumerWidget {
                       title: ReportsFormat.weekRange(item.weekStart),
                       subtitle: [
                         'İş ${ReportsFormat.rate(item.metrics.workRate)}',
-                        'Form ${ReportsFormat.rate(item.metrics.formRate)}',
+                        'Sağlık ${ReportsFormat.rate(item.metrics.formRate)}',
                         if (item.metrics.weightChangeKg case final change?)
                           KokpitFormat.weightChange(change),
                       ].join(' · '),
@@ -142,7 +142,7 @@ class _NumbersGrid extends StatelessWidget {
           span: 1,
           child: ReportRateCard(
             icon: Icons.fitness_center_outlined,
-            label: 'Form',
+            label: 'Sağlık',
             color: AppColors.sleep,
             rate: m.formRate,
             caption: 'Antrenman ${m.workoutsDone} / ${m.workoutsPlanned} · '

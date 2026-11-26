@@ -73,7 +73,7 @@ class StreakDetailScreen extends ConsumerWidget {
                   skipLoadingOnReload: true,
                   loading: () => const HealthCardLoading(height: 160),
                   error: (_, __) => HealthCompactMessage(
-                    text: 'Haftalık açık yüklenemedi.',
+                    text: 'Haftalık kalori açığı yüklenemedi.',
                     onRetry: () => ref.invalidate(pastWeekDeficitsProvider(8)),
                   ),
                   data: (list) => _WeeksBody(weeks: list),
@@ -221,7 +221,7 @@ class _WeeksBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         BentoLabel(
-          label: surplus ? 'Haftalık fazla' : 'Haftalık açık',
+          label: surplus ? 'Haftalık fazla' : 'Haftalık kalori açığı',
           trailing: 'son 8 hafta',
         ),
         const SizedBox(height: 8),

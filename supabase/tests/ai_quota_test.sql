@@ -69,27 +69,22 @@ select tf.fails('null tür reddedilir', 'service_role', null,
 select tf.fails('null kullanıcı reddedilir', 'service_role', null,
   $q$select to_jsonb(public.consume_ai_quota(null, 'ai', 5))$q$, '22023');
 
--- Gün, kullanıcının saat dilimindeki gündür (UTC+14 ile UTC-11 arası fark: 1 gün).
+-- Gün UTC günüdür; kullanıcının saat dilimi kotayı etkilemez (SEC-08).
 update public.user_settings set timezone = 'Pacific/Kiritimati' where user_id = :A;
 update public.user_settings set timezone = 'Pacific/Pago_Pago' where user_id = :B;
 select tf.run('service_role', null, $q$select jsonb_build_array(
   public.consume_ai_quota('c1000000-0000-0000-0000-000000000001', 'tz', 5),
   public.consume_ai_quota('c2000000-0000-0000-0000-000000000002', 'tz', 5))$q$);
-select tf.ok('kota günü kullanıcının saat dilimine göre',
+select tf.ok('kota günü UTC günü',
   (select day from public.ai_usage where user_id = :A and kind = 'tz') =
-    (now() at time zone 'Pacific/Kiritimati')::date
+    (now() at time zone 'UTC')::date
   and (select day from public.ai_usage where user_id = :B and kind = 'tz') =
-    (now() at time zone 'Pacific/Pago_Pago')::date);
-update public.user_settings set timezone = 'Boyle/BirYerYok' where user_id = :A;
-select tf.run('service_role', null, $q$select to_jsonb(public.consume_ai_quota('c1000000-0000-0000-0000-000000000001', 'tz-bozuk', 5))$q$);
-select tf.ok('bozuk saat dilimi adı kotayı düşürmez (İstanbul gününe düşer)',
-  (select day from public.ai_usage where user_id = :A and kind = 'tz-bozuk') =
-    (now() at time zone 'Europe/Istanbul')::date);
+    (now() at time zone 'UTC')::date);
 update public.user_settings set timezone = 'Europe/Istanbul' where user_id in (:A, :B);
 
 -- Önceki günün sayacı bugünü etkilemez.
 insert into public.ai_usage (user_id, kind, day, count)
-values (:B, 'dun', (now() at time zone 'Europe/Istanbul')::date - 1, 99);
+values (:B, 'dun', (now() at time zone 'UTC')::date - 1, 99);
 select tf.eq('dünkü dolu sayaç bugünkü kotayı tüketmez',
   tf.run('service_role', null, $q$select to_jsonb(public.consume_ai_quota('c2000000-0000-0000-0000-000000000002', 'dun', 5))$q$),
   'true'::jsonb);
@@ -128,5 +123,15 @@ select tf.run('service_role', null, $q$select to_jsonb(1) from (select public.re
 select tf.eq('iade sayacı 0 yapar, negatife indirmez',
   (select to_jsonb(count) from public.ai_usage where user_id='c2000000-0000-0000-0000-000000000002' and kind='iade'),
   '0'::jsonb);
+
+-- Proje geneli günlük sayaç (ICG2-02): yalnızca service_role; sınırda durur.
+select tf.fails('authenticated consume_global_ai_quota çalıştıramaz', 'authenticated', :A,
+  $q$select to_jsonb(public.consume_global_ai_quota(10))$q$, '42501');
+select tf.eq('genel kota: limit 2 → true, true, false',
+  jsonb_build_array(public.consume_global_ai_quota(2), public.consume_global_ai_quota(2),
+                    public.consume_global_ai_quota(2)),
+  '[true, true, false]'::jsonb);
+select tf.eq('genel kota: limit 0 her zaman false',
+  to_jsonb(public.consume_global_ai_quota(0)), 'false'::jsonb);
 
 \echo tamam: AI kotası testleri geçti

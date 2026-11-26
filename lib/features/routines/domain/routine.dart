@@ -268,10 +268,11 @@ bool _existsOn(Routine r, DateTime day) {
   return created == null || !day.isBefore(AppDates.startOfDay(created));
 }
 
-bool _existsInMonth(Routine r, int year, int month) {
+/// Aylık işin [due] günlü dönemi rutin için geçerli mi: günü geçtikten sonra
+/// oluşturulan rutinin ilk dönemi gelecek aydır (gecikmiş görünmez).
+bool _appliesToPeriod(Routine r, DateTime due) {
   final created = r.createdAt;
-  return created == null ||
-      !DateTime(year, month).isBefore(DateTime(created.year, created.month));
+  return created == null || !AppDates.startOfDay(created).isAfter(due);
 }
 
 int _compareByTime(Routine a, Routine b) {
@@ -343,6 +344,7 @@ List<RoutineOccurrence> monthlyForDay(
       if (_calendarDays(day, due) > leadDays) continue;
 
       final record = completions.lookup(RoutineCompletionKey(r.id, key));
+      if (record == null && !_appliesToPeriod(r, due)) continue;
       if (record != null) {
         final at = record.completedAt;
         final doneToday = at != null && AppDates.startOfDay(at) == day;
@@ -365,7 +367,7 @@ List<RoutineOccurrence> monthlyForDay(
 
 /// Ay ekranındaki "Aylık sabitler": verilen ayın tüm aylık işleri.
 /// Geçmiş ayda işaretlenmemiş iş `missed` (yapılmadı) olarak kapanır.
-/// Rutinin oluşturulduğu aydan önceki aylar listelenmez.
+/// Rutinin oluşturulmasından önce günü geçmiş dönemler listelenmez.
 List<RoutineOccurrence> monthlyForMonth(
   Iterable<Routine> routines,
   Set<RoutineCompletionKey> completions,
@@ -380,9 +382,9 @@ List<RoutineOccurrence> monthlyForMonth(
 
   for (final r in routines) {
     if (!r.isActive || !r.isMonthly) continue;
-    if (!_existsInMonth(r, key.year, key.month)) continue;
     final due = monthlyDueDate(r, key.year, key.month);
     final done = completions.contains(RoutineCompletionKey(r.id, key));
+    if (!done && !_appliesToPeriod(r, due)) continue;
     result.add(
       RoutineOccurrence(
         routine: r,

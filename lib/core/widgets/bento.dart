@@ -186,8 +186,11 @@ class BentoLabel extends StatelessWidget {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onTrailingTap,
+              // Dokunulabilirse dokunma alanı büyütülür (≈44 pt).
               child: Padding(
-                padding: const EdgeInsets.only(left: 8),
+                padding: onTrailingTap == null
+                    ? const EdgeInsets.only(left: 8)
+                    : const EdgeInsets.fromLTRB(16, 12, 0, 12),
                 child: Text(
                   meta,
                   style: TextStyle(

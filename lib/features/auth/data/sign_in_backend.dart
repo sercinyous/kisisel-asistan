@@ -22,6 +22,26 @@ abstract interface class SignInBackend {
     required String idToken,
     String? accessToken,
   });
+
+  /// Şifre sıfırlama kodunu e-postayla gönderir. Adres kayıtlı olmasa da
+  /// hata vermez (hesap varlığı sızmaz).
+  Future<void> sendPasswordReset({required String email});
+
+  /// E-postadaki sıfırlama kodunu doğrular; başarılıysa oturum açılır.
+  /// Kod tek kullanımlıktır.
+  Future<void> verifyResetCode({required String email, required String code});
+
+  /// Açık oturumun şifresini değiştirir (sıfırlama ve Hesap > Şifre).
+  Future<void> setNewPassword(String newPassword);
+
+  /// Açık bir oturum var mı (kod zaten doğrulanmış olabilir).
+  bool get hasSession;
+
+  /// Kayıt onay kodunu doğrular; başarılıysa oturum açılır.
+  Future<void> verifySignupCode({required String email, required String code});
+
+  /// Kayıt onay kodunu yeniden gönderir.
+  Future<void> resendSignupCode({required String email});
 }
 
 class SupabaseSignInBackend implements SignInBackend {
@@ -56,6 +76,39 @@ class SupabaseSignInBackend implements SignInBackend {
       idToken: idToken,
       accessToken: accessToken,
     );
+  }
+
+  @override
+  Future<void> sendPasswordReset({required String email}) =>
+      _auth.resetPasswordForEmail(email);
+
+  @override
+  Future<void> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    await _auth.verifyOTP(email: email, token: code, type: OtpType.recovery);
+  }
+
+  @override
+  Future<void> setNewPassword(String newPassword) async {
+    await _auth.updateUser(UserAttributes(password: newPassword));
+  }
+
+  @override
+  bool get hasSession => _auth.currentSession != null;
+
+  @override
+  Future<void> verifySignupCode({
+    required String email,
+    required String code,
+  }) async {
+    await _auth.verifyOTP(email: email, token: code, type: OtpType.signup);
+  }
+
+  @override
+  Future<void> resendSignupCode({required String email}) async {
+    await _auth.resend(type: OtpType.signup, email: email);
   }
 }
 

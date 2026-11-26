@@ -88,7 +88,6 @@ class WeightHistoryCard extends ConsumerWidget {
                     if (index > 0) const SizedBox(width: 8),
                     ChoiceChip(
                       label: Text('$days gün'),
-                      showCheckmark: false,
                       selected: days == window,
                       onSelected: (_) =>
                           ref.read(weightWindowProvider.notifier).state = days,

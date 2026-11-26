@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/services/error_reporter.dart';
+
 /// Kullanıcıya gösterilebilir (Türkçe) mesaj taşıyan AI hatası.
 class AiParseException implements Exception {
   const AiParseException(this.message, {this.statusCode});
@@ -61,7 +63,7 @@ class GeminiTransport {
     http.Client? client,
     Duration timeout = const Duration(seconds: 30),
     RetryDelay retryDelay = defaultRetryDelay,
-    int maxAttempts = 3,
+    int maxAttempts = 2,
   })  : _apiKey = apiKey.trim(),
         _model = model,
         _proxyUrl = proxyUrl,
@@ -112,15 +114,15 @@ class GeminiTransport {
         if (!_isRetryable(response.statusCode)) throw lastError;
       } on TimeoutException {
         lastError = const AiParseException(
-          'AI servisi zamanında yanıt vermedi. Lütfen tekrar deneyin.',
+          'Şu an yanıt alınamadı. Biraz sonra tekrar dene.',
         );
       } on SocketException {
         lastError = const AiParseException(
-          'İnternet bağlantısı kurulamadı. Bağlantınızı kontrol edin.',
+          'İnternete bağlanılamadı. Bağlantını kontrol edip tekrar dene.',
         );
       } on http.ClientException {
         lastError = const AiParseException(
-          'AI servisine ulaşılamadı. Bağlantınızı kontrol edin.',
+          'AI servisine ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
         );
       }
 
@@ -148,9 +150,7 @@ class GeminiTransport {
 
     final uri = Uri.tryParse(_proxyUrl);
     if (_proxyUrl.isEmpty || uri == null || !uri.hasAuthority) {
-      throw const AiParseException(
-        'AI sunucusu yapılandırılmamış. SUPABASE_URL tanımlı olmalı.',
-      );
+      throw _unavailable('ai-proxy: SUPABASE_URL tanımlı değil');
     }
     final token = await _accessToken?.call();
     if (token == null || token.isEmpty) {
@@ -177,11 +177,35 @@ class GeminiTransport {
 
   // ------------------------------------------------------- hata eşleme
 
+  /// Sunucu AI onayı bulamadı (403); onay sayfası yeniden açılır.
+  static const String aiConsentRequiredMessage =
+      'AI kullanımına onay vermedin. Onay verip tekrar dene ya da elle ekle.';
+
   static const String _sessionMessage =
       'Oturum bulunamadı ya da süresi doldu. Çıkış yapıp yeniden giriş yapın.';
 
+  /// Kullanıcının düzeltemeyeceği sunucu/kurulum hataları için tek düz
+  /// ileti; teknik ayrıntı hata kaydına gider.
+  static const String unavailableMessage =
+      'AI şu an kullanılamıyor. Biraz sonra tekrar dene; kayıtları elle de '
+      'ekleyebilirsin.';
+
+  static AiParseException _unavailable(String detail, {int? statusCode}) {
+    ErrorReporter.current?.report(
+      StateError('AI kullanılamıyor: $detail'),
+      StackTrace.current,
+    );
+    return AiParseException(unavailableMessage, statusCode: statusCode);
+  }
+
   AiParseException _errorFor(http.Response response) {
     final code = response.statusCode;
+    if (usesProxy && (code == 402 || code == 404 || code == 502)) {
+      return _unavailable(
+        'ai-proxy $code ${_serverMessage(response) ?? ''}'.trim(),
+        statusCode: code,
+      );
+    }
     final message = usesProxy
         ? _proxyMessage(code, _serverMessage(response))
         : _directMessage(code);
@@ -190,29 +214,24 @@ class GeminiTransport {
 
   String _directMessage(int code) => switch (code) {
         400 =>
-          'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
+          'Bu metin işlenemedi. Biraz değiştirip tekrar dene ya da elle ekle.',
         401 || 403 => 'Gemini API anahtarı geçersiz ya da yetkisiz.',
         404 => 'Gemini modeli bulunamadı: $_model',
         402 => 'Gemini bakiyesi ya da faturalandırma tükendi (402). '
             'AI Studio > Billing bölümünden kredi ekleyin.',
-        429 => 'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.',
-        _ => 'AI servisi hata verdi ($code). Lütfen tekrar deneyin.',
+        429 => 'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.',
+        _ => 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.',
       };
 
   String _proxyMessage(int code, String? serverMessage) => switch (code) {
-        400 => 'AI isteği geçersiz bulundu (400). Metni kontrol edip tekrar '
-            'deneyin.',
+        400 => 'Bu metin işlenemedi. Biraz değiştirip tekrar dene '
+            'ya da elle ekle.',
         401 => _sessionMessage,
-        402 => 'AI servisinin bakiyesi tükendi (402). Uygulama sahibine haber '
-            'verin.',
-        404 => 'AI sunucusu kurulmamış. ai-proxy fonksiyonu Supabase '
-            'projesine dağıtılmalı.',
-        413 => 'Metin çok uzun. Kısaltıp tekrar deneyin.',
+        403 => aiConsentRequiredMessage,
+        413 => 'Metin çok uzun. Kısaltıp tekrar dene.',
         429 => serverMessage ??
-            'Günlük AI kullanım sınırına ulaşıldı. Yarın tekrar deneyin.',
-        502 => 'AI sunucusu yapılandırması geçersiz (502). Uygulama sahibine '
-            'haber verin.',
-        _ => 'AI servisi hata verdi ($code). Lütfen tekrar deneyin.',
+            'Bugünkü AI hakkın doldu. Yarın tekrar dene ya da elle ekle.',
+        _ => 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.',
       };
 
   /// Proxy hata gövdesindeki `{"error": "<Türkçe ileti>"}`; yoksa `null`.

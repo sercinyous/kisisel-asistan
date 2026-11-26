@@ -20,8 +20,8 @@ abstract final class SettingsLimits {
   static const int heightMax = UserSettings.heightCmMax;
   static const int birthYearMin = UserSettings.birthYearMin;
 
-  /// Doğum yılı üst sınırı: bu yıl − 10 (en küçük kabul edilen yaş).
-  static const int birthYearMinAge = 10;
+  /// Doğum yılı üst sınırı: bu yıl − 13 (Kullanım koşullarındaki en küçük yaş).
+  static const int birthYearMinAge = 13;
   static const int leadDaysMin = 0, leadDaysMax = 14;
   static const int eventMinutesMin = 0, eventMinutesMax = 1440;
   static const int teamMax = 12;

@@ -287,7 +287,7 @@ void main() {
       ));
       expect(avatar.choice.mascotId, 'aslan');
       expect(find.text('1'), findsOneWidget, reason: 'bekleyen davet rozeti');
-      expect(find.byTooltip('Hesap (1 davet)'), findsOneWidget);
+      expect(find.byTooltip('Hesap ve ayarlar (1 davet)'), findsOneWidget);
     });
 
     testWidgets('İçgörü arkadaş satırı arkadaş avatarlarını üst üste gösterir',

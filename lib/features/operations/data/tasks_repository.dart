@@ -61,35 +61,58 @@ class TasksRepository {
     return [for (final row in rows) TaskItem.fromMap(row)];
   }
 
-  /// Tamamlanmamış ve zamanı gelecekte olan görev/hatırlatmalar.
-  Future<List<TaskItem>> fetchUpcoming({DateTime? from, int limit = 6}) async {
-    final now = from ?? DateTime.now();
-    final iso = now.toUtc().toIso8601String();
-    // İki sıralı sorgu: tek bir OR sorgusunda limit, sıralamadan önce kesilir
-    // ve en yakın hatırlatmalar listenin dışında kalabilir.
+  /// Kokpit "Bugünün işleri" için: zamanı yarından önceye düşen açık
+  /// görevler (son [lookbackDays] gün dahil; gecikmişler kaybolmasın) ve
+  /// bugün tamamlananlar. Liste kesilmez; satır sınırı yalnızca ekrandadır.
+  Future<List<TaskItem>> fetchKokpitDay(
+    DateTime now, {
+    int lookbackDays = 30,
+  }) async {
+    final day = DateTime(now.year, now.month, now.day);
+    final tomorrow = day.add(const Duration(days: 1)).toUtc().toIso8601String();
+    final since =
+        day.subtract(Duration(days: lookbackDays)).toUtc().toIso8601String();
     final results = await Future.wait([
       _client
           .from('tasks')
           .select()
           .neq('status', 'done')
-          .gte('remind_at', iso)
+          .gte('remind_at', since)
+          .lt('remind_at', tomorrow)
           .order('remind_at', ascending: true)
-          .limit(50),
+          .limit(200),
       _client
           .from('tasks')
           .select()
           .neq('status', 'done')
-          .gte('due_at', iso)
+          .gte('due_at', since)
+          .lt('due_at', tomorrow)
           .order('due_at', ascending: true)
-          .limit(50),
+          .limit(200),
+      _client
+          .from('tasks')
+          .select()
+          .eq('status', 'done')
+          .gte('completed_at', day.toUtc().toIso8601String())
+          .order('completed_at', ascending: true)
+          .limit(200),
+      // Bugün eklenen tarihsiz açık görevler ("süt al") saatsiz satır olur;
+      // yoksa + ile eklenen iş Kokpit'te kaybolmuş gibi görünür.
+      _client
+          .from('tasks')
+          .select()
+          .neq('status', 'done')
+          .isFilter('due_at', null)
+          .isFilter('remind_at', null)
+          .gte('created_at', day.toUtc().toIso8601String())
+          .order('created_at', ascending: true)
+          .limit(20),
     ]);
     final byId = <String, TaskItem>{
       for (final rows in results)
         for (final row in rows) row['id'] as String: TaskItem.fromMap(row),
     };
-    final tasks = byId.values.toList()
-      ..sort((a, b) => a.nextTime(now)!.compareTo(b.nextTime(now)!));
-    return tasks.take(limit).toList();
+    return byId.values.toList();
   }
 
   Future<TaskItem> create({

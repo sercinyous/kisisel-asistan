@@ -1,12 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/services/error_reporter.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../health/presentation/energy_providers.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../health/presentation/providers/targets_providers.dart';
+import '../../health/presentation/providers/week_deficit_providers.dart'
+    show healthDaysProvider;
 import '../../kokpit/presentation/kokpit_providers.dart';
+import '../../onboarding/data/onboarding_op_key_store.dart' show randomUuidV4;
 import '../../operations/presentation/operations_providers.dart';
 import '../../reminders/presentation/reminders_providers.dart';
 import '../../routines/presentation/routines_providers.dart';
@@ -75,9 +79,20 @@ class QuickAddController
     return const QuickAddState();
   }
 
+  /// Her ayrıştırmanın numarası; iptal edilen ya da eskiyen sonuç yok sayılır.
+  int _parseGeneration = 0;
+
+  /// Ayrıştırma sürerken kullanıcı vazgeçerse geç gelen yanıt atılır.
+  void cancelParse() {
+    if (state.status != QuickAddStatus.parsing) return;
+    _parseGeneration++;
+    state = state.copyWith(status: QuickAddStatus.idle);
+  }
+
   /// 1. adım: metni Gemini ile ayrıştır ve önizlemeye geç.
   Future<void> parse(String text) async {
     if (state.isBusy) return;
+    final generation = ++_parseGeneration;
     state = state.copyWith(
       status: QuickAddStatus.parsing,
       clearEntry: true,
@@ -86,6 +101,7 @@ class QuickAddController
     try {
       final entry =
           await ref.read(geminiParserServiceProvider(arg)).parse(text);
+      if (generation != _parseGeneration) return;
       if (entry.isEmpty) {
         // Metin tümüyle diğer alana aitse hata değil, yönlendirme gösterilir.
         state = entry.otherDomain
@@ -100,6 +116,7 @@ class QuickAddController
               );
         return;
       }
+      _opKey = null;
       state = QuickAddState(
         status: QuickAddStatus.preview,
         entry: entry,
@@ -107,14 +124,18 @@ class QuickAddController
         otherDomainSummary: entry.otherDomainSummary,
       );
     } on AiParseException catch (e) {
+      if (generation != _parseGeneration) return;
+      // Sunucu onay bulamadı: önbellekteki onay düşer, + yeniden onay sorar.
+      if (e.statusCode == 403) ref.invalidate(aiConsentProvider);
       state = state.copyWith(
         status: QuickAddStatus.idle,
         errorMessage: e.message,
       );
     } catch (_) {
+      if (generation != _parseGeneration) return;
       state = state.copyWith(
         status: QuickAddStatus.idle,
-        errorMessage: 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+        errorMessage: 'Bir şeyler ters gitti. Tekrar dene ya da elle ekle.',
       );
     }
   }
@@ -125,6 +146,7 @@ class QuickAddController
     final entry = state.entry;
     if (entry == null || state.isBusy) return;
     final next = entry.without(kind, index);
+    _opKey = null;
     state = next.isEmpty
         ? state.copyWith(status: QuickAddStatus.idle, clearEntry: true)
         : state.copyWith(entry: next);
@@ -133,6 +155,7 @@ class QuickAddController
   /// Önizlemeyi kapatıp metin düzenlemeye dön.
   void backToEdit() {
     if (state.isBusy) return;
+    _opKey = null;
     state = state.copyWith(
       status: QuickAddStatus.idle,
       clearEntry: true,
@@ -153,57 +176,92 @@ class QuickAddController
     final generation = queue.generation;
     bool current() => queue.generation == generation;
     try {
-      final result = await ref.read(quickAddRepositoryProvider).saveAll(entry);
-
-      // Tam eşitleme aşağıda tetiklenir ama yalnızca dinleyeni varsa çalışır;
-      // saatli görev o beklenmeden hemen planlanır. Bildirimler kapalıysa
-      // hiçbir şey planlanmaz.
-      final settings = ref.read(settingsOrDefaultProvider);
-      if (settings.notificationsEnabled) {
-        final notifications = ref.read(notificationServiceProvider);
-        for (final task in result.tasks) {
-          // buildNotificationPlan ile aynı kural: açık hatırlatma anı yoksa
-          // terminden "randevu kaç dk önce" süresi kadar önce.
-          final when = task.remindAt ??
-              task.dueAt?.subtract(
-                Duration(minutes: settings.eventRemindMinutes),
-              );
-          if (when == null) continue;
-          final reminder =
-              ReminderSchedule(taskId: task.id, title: task.title, when: when);
-          try {
-            // Eşitleme turlarıyla aynı sıradan geçer; oturum bittiyse düşer.
-            await queue.run(
-              current,
-              () => notifications.scheduleReminder(reminder),
-            );
-          } catch (_) {
-            // Bildirim planlanamasa da kayıt geçerlidir.
-          }
-        }
-      }
-
-      _refreshAfterSave(result);
-
+      // Aynı önizlemenin her denemesi aynı anahtarla gider (G2-09).
+      final opKey = _opKey ??= randomUuidV4();
+      final result = await ref
+          .read(quickAddRepositoryProvider)
+          .saveAll(entry, opKey: opKey);
+      _opKey = null;
+      await _afterWrite(result, queue, current);
+      final total = _savedEarlier + result.totalCount;
+      _savedEarlier = 0;
       state = state.copyWith(
         status: QuickAddStatus.saved,
-        savedCount: result.totalCount,
+        savedCount: total,
       );
       return true;
-    } on PostgrestException catch (e) {
+    } on QuickAddPartialSaveException catch (e) {
+      // RPC kalemleri yazıldı; yalnızca hatırlatıcılar önizlemede kalır ki
+      // tekrar kaydetme diğerlerini ikinci kez yazmasın.
+      _opKey = null;
+      await _afterWrite(e.saved, queue, current);
+      _savedEarlier += e.saved.totalCount;
       state = state.copyWith(
         status: QuickAddStatus.preview,
-        errorMessage: 'Kaydedilemedi: ${e.message}',
+        entry: ParsedEntry(reminders: entry.reminders),
+        errorMessage: 'Hatırlatıcılar kaydedilemedi; diğer '
+            '${e.saved.totalCount} kayıt eklendi. Tekrar dene.',
+      );
+      return false;
+    } on PostgrestException catch (e, st) {
+      ErrorReporter.current?.report(e, st);
+      state = state.copyWith(
+        status: QuickAddStatus.preview,
+        errorMessage: 'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.',
       );
       return false;
     } catch (_) {
       state = state.copyWith(
         status: QuickAddStatus.preview,
-        errorMessage:
-            'Kaydedilemedi. Bağlantını kontrol edip tekrar dene; hiçbir kayıt yazılmadı.',
+        // Yanıt kaybolmuş olabilir: kayıt sunucuda yazılmış olabilir.
+        errorMessage: 'Kayıt doğrulanamadı. Tekrar denemeden önce '
+            'listende eklenip eklenmediğine bak.',
       );
       return false;
     }
+  }
+
+  /// Önceki denemede kısmen yazılmış kalem sayısı (hatırlatıcı hatası).
+  int _savedEarlier = 0;
+
+  /// Bu önizlemenin kayıt anahtarı; önizleme değişince sıfırlanır.
+  String? _opKey;
+
+  /// Yazılan kalemler için bildirim planlar ve ekranları tazeler.
+  Future<void> _afterWrite(
+    QuickAddResult result,
+    NotificationSyncQueue queue,
+    bool Function() current,
+  ) async {
+    // Tam eşitleme aşağıda tetiklenir ama yalnızca dinleyeni varsa çalışır;
+    // saatli görev o beklenmeden hemen planlanır. Bildirimler kapalıysa
+    // hiçbir şey planlanmaz.
+    final settings = ref.read(settingsOrDefaultProvider);
+    if (settings.notificationsEnabled) {
+      final notifications = ref.read(notificationServiceProvider);
+      for (final task in result.tasks) {
+        // buildNotificationPlan ile aynı kural: açık hatırlatma anı yoksa
+        // terminden "randevu kaç dk önce" süresi kadar önce.
+        final when = task.remindAt ??
+            task.dueAt?.subtract(
+              Duration(minutes: settings.eventRemindMinutes),
+            );
+        if (when == null) continue;
+        final reminder =
+            ReminderSchedule(taskId: task.id, title: task.title, when: when);
+        try {
+          // Eşitleme turlarıyla aynı sıradan geçer; oturum bittiyse düşer.
+          await queue.run(
+            current,
+            () => notifications.scheduleReminder(reminder),
+          );
+        } catch (_) {
+          // Bildirim planlanamasa da kayıt geçerlidir.
+        }
+      }
+    }
+
+    _refreshAfterSave(result);
   }
 
   /// Yalnızca gerçekten yazılan türlerin beslediği sağlayıcılar tazelenir.
@@ -243,7 +301,9 @@ class QuickAddController
     if (wroteHealth) {
       ref
         ..invalidate(energyDayProvider)
-        ..invalidate(energyRangeProvider);
+        ..invalidate(energyRangeProvider)
+        // Kalori açığı, Hafta kartı ve seriler bu sağlayıcıdan okur.
+        ..invalidate(healthDaysProvider);
     }
     if (result.reminderCount > 0) ref.invalidate(remindersProvider);
     if (wroteRoutines || wroteTasks || result.reminderCount > 0) {

@@ -41,7 +41,9 @@ class _FriendsButtonState extends ConsumerState<FriendsButton>
   Widget build(BuildContext context) {
     final count = ref.watch(pendingFriendRequestCountProvider).valueOrNull ?? 0;
     return IconButton(
-      tooltip: count > 0 ? 'Hesap ($count davet)' : 'Hesap',
+      tooltip: count > 0
+          ? 'Hesap ve ayarlar ($count davet)'
+          : 'Hesap ve ayarlar',
       color: AppColors.textSecondary,
       onPressed: () async {
         await Navigator.of(context).push(

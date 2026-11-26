@@ -76,6 +76,7 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
   final Map<String, TaskItem> _doneInSession = {};
   final Set<String> _busy = {};
   List<TaskItem> _open = const [];
+  TasksRepository? _repo;
 
   List<TaskItem> _compose() => [
         ...[..._open]..sort(_byDate),
@@ -88,7 +89,16 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
     ref.listen(upcomingRemindersProvider, (previous, next) {
       if (_refreshedElsewhere(previous, next)) ref.invalidateSelf();
     });
-    final open = await ref.watch(tasksRepositoryProvider).fetchOpen();
+    final repo = ref.watch(tasksRepositoryProvider);
+    // Depo oturumdaki kullanıcıyla yeniden kurulur; önceki hesabın bu
+    // oturumda tamamlananları yeni hesaba taşınmaz.
+    if (!identical(repo, _repo)) {
+      _repo = repo;
+      _doneInSession.clear();
+      _busy.clear();
+      _open = const [];
+    }
+    final open = await repo.fetchOpen();
     _open = open;
     _doneInSession.removeWhere((id, _) => open.any((t) => t.id == id));
     return _compose();
@@ -114,14 +124,14 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
     }
   }
 
-  Future<void> complete(TaskItem task) => _guard(task.id, () async {
+  Future<bool> complete(TaskItem task) => _guard(task.id, () async {
         await ref.read(tasksRepositoryProvider).complete(task.id);
         _open = _open.where((t) => t.id != task.id).toList();
         _doneInSession[task.id] =
             task.copyWith(status: 'done', completedAt: DateTime.now());
       });
 
-  Future<void> reopen(TaskItem task) => _guard(task.id, () async {
+  Future<bool> reopen(TaskItem task) => _guard(task.id, () async {
         await ref.read(tasksRepositoryProvider).reopen(task.id);
         _doneInSession.remove(task.id);
         _open = [
@@ -130,16 +140,16 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
         ];
       });
 
-  Future<void> delete(TaskItem task) => _guard(task.id, () async {
+  Future<bool> delete(TaskItem task) => _guard(task.id, () async {
         await ref.read(tasksRepositoryProvider).delete(task.id);
         _doneInSession.remove(task.id);
         _open = _open.where((t) => t.id != task.id).toList();
       });
 
   /// Aynı görev için yazma sürerken ikinci dokunuş yok sayılır.
-  /// Hata çağırana iletilir.
-  Future<void> _guard(String id, Future<void> Function() write) async {
-    if (!_busy.add(id)) return;
+  /// Hata çağırana iletilir. Yazma yapıldıysa `true`.
+  Future<bool> _guard(String id, Future<void> Function() write) async {
+    if (!_busy.add(id)) return false;
     try {
       await write();
     } finally {
@@ -147,6 +157,7 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
     }
     if (state.hasValue) state = AsyncData(_compose());
     notifyTaskChange(ref.invalidate);
+    return true;
   }
 }
 
