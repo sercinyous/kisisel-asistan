@@ -88,6 +88,9 @@ class FakeNotificationService implements NotificationService {
 
   /// İzin penceresinin kaç kez istendiği ([hasPermission] saymaz).
   int permissionRequests = 0;
+
+  @override
+  Future<bool> refreshTimezone() async => false;
   final List<ReminderSchedule> scheduled = [];
   final List<String> cancelled = [];
   int resyncCount = 0;
@@ -574,18 +577,6 @@ class FakeTasksRepository implements TasksRepository {
             : inWindow(t.remindAt) || inWindow(t.dueAt))
           t,
     ];
-  }
-
-  @override
-  Future<List<TaskItem>> fetchUpcoming({DateTime? from, int limit = 6}) async {
-    if (fetchError != null) throw fetchError!;
-    final now = from ?? DateTime.now();
-    bool upcoming(DateTime? t) => t != null && !t.isBefore(now);
-    final hits = [
-      for (final t in tasks)
-        if (!t.isDone && (upcoming(t.remindAt) || upcoming(t.dueAt))) t,
-    ]..sort((a, b) => a.nextTime(now)!.compareTo(b.nextTime(now)!));
-    return hits.take(limit).toList();
   }
 
   @override

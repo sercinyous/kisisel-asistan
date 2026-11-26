@@ -15,12 +15,22 @@ import 'operations_widgets.dart';
 
 /// Görev ekleme / düzenleme formu.
 class TaskFormSheet extends ConsumerStatefulWidget {
-  const TaskFormSheet({super.key, this.task});
+  const TaskFormSheet({super.key, this.task, this.initialDate});
 
   final TaskItem? task;
 
-  static Future<bool> show(BuildContext context, {TaskItem? task}) =>
-      showOpsSheet(context, TaskFormSheet(task: task));
+  /// Yeni görev için önceden seçili gün (ör. Takvim'de seçilen gün).
+  final DateTime? initialDate;
+
+  static Future<bool> show(
+    BuildContext context, {
+    TaskItem? task,
+    DateTime? initialDate,
+  }) =>
+      showOpsSheet(
+        context,
+        TaskFormSheet(task: task, initialDate: initialDate),
+      );
 
   @override
   ConsumerState<TaskFormSheet> createState() => _TaskFormSheetState();
@@ -59,6 +69,8 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     _assignee = task?.assignee;
     _offsetMinutes = ref.read(settingsOrDefaultProvider).eventRemindMinutes;
 
+    final initial = widget.initialDate;
+    if (task == null && initial != null) _date = AppDates.startOfDay(initial);
     final when = task?.scheduledAt;
     if (task != null && when != null) {
       _date = AppDates.startOfDay(when);

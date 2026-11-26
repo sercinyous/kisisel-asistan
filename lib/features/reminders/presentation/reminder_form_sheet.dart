@@ -104,7 +104,7 @@ class _ReminderFormSheetState extends ConsumerState<ReminderFormSheet> {
     if (_saving) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final draft = _draft;
-    final problem = draft.validationError;
+    final problem = draft.validationErrorAt(DateTime.now());
     if (problem != null) {
       setState(() => _error = problem);
       return;

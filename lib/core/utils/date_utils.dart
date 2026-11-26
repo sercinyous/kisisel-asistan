@@ -16,6 +16,13 @@ abstract final class AppDates {
   static DateTime addDays(DateTime d, int days) =>
       DateTime(d.year, d.month, d.day + days);
 
+  /// [from]'dan [to]'ya takvim günü farkı; 23/25 saatlik yaz saati
+  /// günlerinde de doğru (UTC gün sayısı üzerinden).
+  static int calendarDaysBetween(DateTime from, DateTime to) =>
+      DateTime.utc(to.year, to.month, to.day)
+          .difference(DateTime.utc(from.year, from.month, from.day))
+          .inDays;
+
   /// Postgres `date` sütunları için `yyyy-MM-dd`.
   static String ymd(DateTime d) {
     final y = d.year.toString().padLeft(4, '0');
@@ -36,8 +43,7 @@ abstract final class AppDates {
   /// "Bugün 15:00", "Yarın 09:30", "18 Kas Çar 14:00"
   static String relativeDayTime(DateTime target, {DateTime? now}) {
     final local = target.toLocal();
-    final today = startOfDay(now ?? DateTime.now());
-    final diff = startOfDay(local).difference(today).inDays;
+    final diff = calendarDaysBetween(now ?? DateTime.now(), local);
     final time = hourMinute(local);
     if (diff == 0) return 'Bugün $time';
     if (diff == 1) return 'Yarın $time';

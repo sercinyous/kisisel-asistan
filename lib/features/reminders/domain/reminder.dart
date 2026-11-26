@@ -90,6 +90,19 @@ class ReminderDraft {
     return null;
   }
 
+  /// [validationError] + bir kezlik açık hatırlatıcının anı [now]'dan
+  /// sonra olmalı; yoksa hiç çalmadan kaydedilirdi.
+  String? validationErrorAt(DateTime now) {
+    final base = validationError;
+    if (base != null) return base;
+    final d = onDate;
+    if (repeat == ReminderRepeat.once && enabled && d != null) {
+      final at = DateTime(d.year, d.month, d.day, time.hour, time.minute);
+      if (!at.isAfter(now)) return 'Geçmiş bir saat seçtin.';
+    }
+    return null;
+  }
+
   Map<String, dynamic> toRow() => {
         'title': title.trim(),
         'time_of_day': '${time.format()}:00',
@@ -185,6 +198,14 @@ class Reminder {
       return d != null && reminderDay(d) == reminderDay(day);
     }
     return isoDays.contains(day.weekday);
+  }
+
+  /// Bir kezlik hatırlatıcının anı geçti (bir daha çalmaz).
+  bool isExpired(DateTime now) {
+    final d = onDate;
+    if (repeat != ReminderRepeat.once || d == null) return false;
+    return !DateTime(d.year, d.month, d.day, time.hour, time.minute)
+        .isAfter(now);
   }
 
   /// [now]'dan SONRAKİ ilk çalma anı (yerel); kapalıysa ya da bir kezlik

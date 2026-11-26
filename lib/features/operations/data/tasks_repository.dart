@@ -61,37 +61,6 @@ class TasksRepository {
     return [for (final row in rows) TaskItem.fromMap(row)];
   }
 
-  /// Tamamlanmamış ve zamanı gelecekte olan görev/hatırlatmalar.
-  Future<List<TaskItem>> fetchUpcoming({DateTime? from, int limit = 6}) async {
-    final now = from ?? DateTime.now();
-    final iso = now.toUtc().toIso8601String();
-    // İki sıralı sorgu: tek bir OR sorgusunda limit, sıralamadan önce kesilir
-    // ve en yakın hatırlatmalar listenin dışında kalabilir.
-    final results = await Future.wait([
-      _client
-          .from('tasks')
-          .select()
-          .neq('status', 'done')
-          .gte('remind_at', iso)
-          .order('remind_at', ascending: true)
-          .limit(50),
-      _client
-          .from('tasks')
-          .select()
-          .neq('status', 'done')
-          .gte('due_at', iso)
-          .order('due_at', ascending: true)
-          .limit(50),
-    ]);
-    final byId = <String, TaskItem>{
-      for (final rows in results)
-        for (final row in rows) row['id'] as String: TaskItem.fromMap(row),
-    };
-    final tasks = byId.values.toList()
-      ..sort((a, b) => a.nextTime(now)!.compareTo(b.nextTime(now)!));
-    return tasks.take(limit).toList();
-  }
-
   /// Kokpit "Bugünün işleri" için: zamanı yarından önceye düşen açık
   /// görevler (son [lookbackDays] gün dahil; gecikmişler kaybolmasın) ve
   /// bugün tamamlananlar. Liste kesilmez; satır sınırı yalnızca ekrandadır.

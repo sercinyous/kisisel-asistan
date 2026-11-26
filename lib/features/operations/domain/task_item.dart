@@ -33,9 +33,6 @@ class TaskItem {
 
   bool get isDone => status == 'done';
 
-  /// Hatırlatma saati varsa o, yoksa termin.
-  DateTime? get effectiveTime => remindAt ?? dueAt;
-
   /// Takvimde görevin yerleştiği an: termin, yoksa hatırlatma.
   DateTime? get scheduledAt => dueAt ?? remindAt;
 

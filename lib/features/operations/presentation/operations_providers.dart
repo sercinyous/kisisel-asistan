@@ -76,6 +76,7 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
   final Map<String, TaskItem> _doneInSession = {};
   final Set<String> _busy = {};
   List<TaskItem> _open = const [];
+  TasksRepository? _repo;
 
   List<TaskItem> _compose() => [
         ...[..._open]..sort(_byDate),
@@ -88,7 +89,16 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
     ref.listen(upcomingRemindersProvider, (previous, next) {
       if (_refreshedElsewhere(previous, next)) ref.invalidateSelf();
     });
-    final open = await ref.watch(tasksRepositoryProvider).fetchOpen();
+    final repo = ref.watch(tasksRepositoryProvider);
+    // Depo oturumdaki kullanıcıyla yeniden kurulur; önceki hesabın bu
+    // oturumda tamamlananları yeni hesaba taşınmaz.
+    if (!identical(repo, _repo)) {
+      _repo = repo;
+      _doneInSession.clear();
+      _busy.clear();
+      _open = const [];
+    }
+    final open = await repo.fetchOpen();
     _open = open;
     _doneInSession.removeWhere((id, _) => open.any((t) => t.id == id));
     return _compose();

@@ -233,7 +233,7 @@ void main() {
       await tester.tap(dayCell(DateTime(2026, 2, 3)));
       await tester.pumpAndSettle();
       expect(inPanel(find.text('3 Şubat Salı')), findsOneWidget);
-      expect(inPanel(find.text('Bu tarihte kayıt yok.')), findsOneWidget);
+      expect(inPanel(find.text('Bu tarihte görev ya da aylık iş yok.')), findsOneWidget);
       expect(inPanel(find.text('Maaş ödemeleri')), findsNothing);
 
       // Aynı güne ikinci dokunuş seçimi kaldırır.

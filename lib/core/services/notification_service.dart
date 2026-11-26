@@ -140,8 +140,25 @@ class NotificationService {
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android);
 
+  /// Eklenti başlatılamazsa servis kapalı kalır (tüm yöntemler sessizce
+  /// döner); uygulama açılışı engellenmez.
   Future<void> init() async {
     if (!_supported || _ready) return;
+    try {
+      await _init();
+    } catch (error, stack) {
+      _ready = false;
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stack,
+          library: 'notification_service',
+        ),
+      );
+    }
+  }
+
+  Future<void> _init() async {
 
     tzdata.initializeTimeZones();
     try {
@@ -188,6 +205,20 @@ class NotificationService {
       }
     } catch (_) {
       // Açılış ayrıntısı okunamazsa eylem yalnızca kaybolur; uygulama sürer.
+    }
+  }
+
+  /// Cihaz saat dilimini yeniden okur (seyahat sonrası öne gelme). Değiştiyse
+  /// `true`; tekrarlayan rutin/hatırlatma bildirimleri yeniden planlanmalı.
+  Future<bool> refreshTimezone() async {
+    if (!_ready) return false;
+    try {
+      final name = await FlutterTimezone.getLocalTimezone();
+      if (name == tz.local.name) return false;
+      tz.setLocalLocation(tz.getLocation(name));
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 

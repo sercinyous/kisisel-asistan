@@ -7,6 +7,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/item_actions.dart';
 import '../../settings/presentation/settings_providers.dart';
 import '../domain/task_item.dart';
+import '../../kokpit/presentation/kokpit_providers.dart' show kokpitClockProvider;
 import 'operations_providers.dart';
 import 'operations_screen.dart';
 import 'operations_widgets.dart';
@@ -16,9 +17,14 @@ import 'task_form_sheet.dart';
 /// Görev formunu açar (yeni ya da düzenleme) ve sonucu bildirir. Operasyon
 /// listesi ile Kokpit satırlarının ortak yoludur; kayıt sonrası sağlayıcıları
 /// ve bildirim planını form kendisi tazeler.
-Future<void> openTaskForm(BuildContext context, [TaskItem? task]) async {
+Future<void> openTaskForm(
+  BuildContext context, [
+  TaskItem? task,
+  DateTime? initialDate,
+]) async {
   final messenger = ScaffoldMessenger.of(context);
-  final saved = await TaskFormSheet.show(context, task: task);
+  final saved =
+      await TaskFormSheet.show(context, task: task, initialDate: initialDate);
   if (!saved) return;
   messenger
     ..hideCurrentSnackBar()
@@ -147,6 +153,8 @@ class TasksView extends ConsumerWidget {
     final filter = active.contains(selectedFilter) ? selectedFilter : null;
     final tasks = ref.watch(opsTasksProvider);
     final laterChoice = ref.watch(opsLaterExpandedProvider);
+    // Gün değişince (öne gelme, gece yarısı) gruplar ve gecikme rengi tazelenir.
+    final now = ref.watch(kokpitClockProvider);
 
     Widget row(TaskItem task) => TaskRowActions(
           // Durum konuma değil kayda bağlı kalsın: liste kayınca satır
@@ -203,30 +211,49 @@ class TasksView extends ConsumerWidget {
                   ),
                 ];
               }
-              final groups = groupTasks(visible, DateTime.now());
+              final groups = groupTasks(visible, now);
               final laterOpen =
                   laterChoice ?? (groups.today.isEmpty && groups.week.isEmpty);
-              return [
-                if (groups.today.isNotEmpty)
+              final sections = <Widget>[];
+              void section(Widget card) {
+                if (sections.isNotEmpty) {
+                  sections.add(const SizedBox(height: AppSpacing.grid));
+                }
+                sections.add(card);
+              }
+
+              if (groups.today.isNotEmpty) {
+                section(
                   OpsGroupCard(
                     key: const ValueKey('ops-group-today'),
                     title: 'Bugün',
                     count: groups.today.length,
                     children: rows(groups.today),
                   ),
-                if (groups.week.isNotEmpty) ...[
-                  if (groups.today.isNotEmpty)
-                    const SizedBox(height: AppSpacing.grid),
+                );
+              }
+              if (groups.week.isNotEmpty) {
+                section(
                   OpsGroupCard(
                     key: const ValueKey('ops-group-week'),
                     title: 'Bu hafta',
                     count: groups.week.length,
                     children: rows(groups.week),
                   ),
-                ],
-                if (groups.later.isNotEmpty) ...[
-                  if (groups.today.isNotEmpty || groups.week.isNotEmpty)
-                    const SizedBox(height: AppSpacing.grid),
+                );
+              }
+              if (groups.undated.isNotEmpty) {
+                section(
+                  OpsGroupCard(
+                    key: const ValueKey('ops-group-undated'),
+                    title: 'Tarihsiz',
+                    count: groups.undated.length,
+                    children: rows(groups.undated),
+                  ),
+                );
+              }
+              if (groups.later.isNotEmpty) {
+                section(
                   OpsGroupCard(
                     key: const ValueKey('ops-group-later'),
                     title: 'Sonra',
@@ -237,8 +264,9 @@ class TasksView extends ConsumerWidget {
                         .state = !laterOpen,
                     children: rows(groups.later),
                   ),
-                ],
-              ];
+                );
+              }
+              return sections;
             },
           ),
         ],
@@ -252,21 +280,25 @@ typedef TaskGroups = ({
   List<TaskItem> today,
   List<TaskItem> week,
   List<TaskItem> later,
+  List<TaskItem> undated,
 });
 
 /// Bugün: bugüne ya da geçmişe tarihli (geciken) görevler. Bu hafta: yarından
-/// pazar sonuna kadar. Sonra: daha ileri tarihli ve tarihsiz görevler. Bu
+/// pazar sonuna kadar. Sonra: daha ileri tarihli görevler. Tarihsiz: tarihi
+/// olmayanlar (hızlı eklenen yapılacaklar gizlenmesin diye hep açık). Bu
 /// oturumda tamamlananlar kendi tarihinin grubunda, grubun sonunda kalır.
 TaskGroups groupTasks(List<TaskItem> tasks, DateTime now) {
-  final tomorrow = AppDates.startOfDay(now).add(const Duration(days: 1));
-  final weekEnd = AppDates.startOfDay(now)
-      .add(Duration(days: DateTime.daysPerWeek - now.weekday + 1));
+  final tomorrow = AppDates.addDays(now, 1);
+  final weekEnd = AppDates.addDays(now, DateTime.daysPerWeek - now.weekday + 1);
   final today = <TaskItem>[], week = <TaskItem>[], later = <TaskItem>[];
+  final undated = <TaskItem>[];
   for (final task in tasks) {
     final when = task.scheduledAt;
-    if (when != null && when.isBefore(tomorrow)) {
+    if (when == null) {
+      undated.add(task);
+    } else if (when.isBefore(tomorrow)) {
       today.add(task);
-    } else if (when != null && when.isBefore(weekEnd)) {
+    } else if (when.isBefore(weekEnd)) {
       week.add(task);
     } else {
       later.add(task);
@@ -276,7 +308,12 @@ TaskGroups groupTasks(List<TaskItem> tasks, DateTime now) {
         ...list.where((t) => !t.isDone),
         ...list.where((t) => t.isDone),
       ];
-  return (today: doneLast(today), week: doneLast(week), later: doneLast(later));
+  return (
+    today: doneLast(today),
+    week: doneLast(week),
+    later: doneLast(later),
+    undated: doneLast(undated),
+  );
 }
 
 class _TaskRow extends StatelessWidget {
@@ -318,7 +355,8 @@ class _TaskRow extends StatelessWidget {
               checkColor: AppColors.onAccent,
               shape: const CircleBorder(),
               side: BorderSide(color: AppColors.textMuted, width: 1.5),
-              visualDensity: VisualDensity.compact,
+              // Dokunma alanı en az 48 pt (görünür boyut aynı).
+              materialTapTargetSize: MaterialTapTargetSize.padded,
             ),
             Expanded(
               child: Column(

@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/notification_service.dart'
-    show notificationTapPayload, tabForNotificationPayload;
+    show
+        notificationServiceProvider,
+        notificationTapPayload,
+        tabForNotificationPayload;
 import '../../../core/services/notification_sync.dart';
 import '../../../core/widgets/app_bottom_bar.dart';
 import '../../ai_quick_add/domain/quick_add_mode.dart';
@@ -17,6 +20,7 @@ import '../../health/presentation/health_screen.dart';
 import '../../health/presentation/providers/targets_providers.dart';
 import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../kokpit/presentation/kokpit_screen.dart';
+import '../../operations/presentation/operations_providers.dart';
 import '../../operations/presentation/operations_screen.dart';
 import '../../reminders/presentation/reminders_providers.dart';
 import '../../reports/presentation/reports_providers.dart';
@@ -143,7 +147,17 @@ class _HomeShellState extends ConsumerState<HomeShell>
   }
 
   void _refreshForNewMoment() {
+    final previous = _lastRefresh;
     _lastRefresh = DateTime.now();
+    final dayChanged =
+        previous == null || !DateUtils.isSameDay(previous, _lastRefresh);
+    // İşler listeleri başka cihazdaki değişiklikleri ve yeni günü görür.
+    ref
+      ..invalidate(opsTasksProvider)
+      ..invalidate(opsRoutinesProvider)
+      ..invalidate(remindersProvider)
+      ..invalidate(reminderDoneProvider);
+    unawaited(_refreshNotifications(dayChanged: dayChanged));
     final container = ProviderScope.containerOf(context, listen: false);
     ref.read(kokpitClockProvider.notifier).state = DateTime.now();
     ref.invalidate(todayOccurrencesProvider);
@@ -168,6 +182,26 @@ class _HomeShellState extends ConsumerState<HomeShell>
       ..invalidate(weeklyReportListProvider)
       ..invalidate(dailyReportProvider)
       ..invalidate(dailyReportListProvider);
+  }
+
+  /// iOS Ayarlar'da izin açılmış ya da saat dilimi değişmiş olabilir; plan
+  /// yalnız gerektiğinde (izin/dilim/gün değişti) yeniden kurulur.
+  Future<void> _refreshNotifications({required bool dayChanged}) async {
+    final before = ref.read(notificationPermissionProvider).valueOrNull;
+    final tzChanged =
+        await ref.read(notificationServiceProvider).refreshTimezone();
+    if (!mounted) return;
+    ref.invalidate(notificationPermissionProvider);
+    bool? after;
+    try {
+      after = await ref.read(notificationPermissionProvider.future);
+    } catch (_) {
+      after = before;
+    }
+    if (!mounted) return;
+    if (tzChanged || dayChanged || after != before) {
+      ref.invalidate(notificationSyncProvider);
+    }
   }
 
   Future<void> _openQuickAdd() async {
