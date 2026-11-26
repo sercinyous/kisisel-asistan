@@ -179,4 +179,19 @@ void main() {
     expect(notifications.pending, isEmpty,
         reason: 'çıkış öncesi başlamış tur yeniden planlayamaz');
   });
+
+  test('çıkıştan sonra sağlık dürtüsü planlanmaz', () async {
+    final c = ProviderContainer(
+      overrides: [
+        authSessionProvider.overrideWith((ref) => Stream.value(null)),
+        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+        notificationServiceProvider.overrideWithValue(notifications),
+      ],
+    );
+    addTearDown(c.dispose);
+    c.listen(authSessionProvider, (_, __) {});
+    await _settle();
+    await c.read(healthNudgeSyncProvider.future);
+    expect(notifications.pending.where((k) => k.contains('health')), isEmpty);
+  });
 }

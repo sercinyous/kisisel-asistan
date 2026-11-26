@@ -64,9 +64,9 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
     super.initState();
     final r = widget.routine;
     _title = TextEditingController(text: r?.title ?? '');
-    _scope = Routine.scopes.contains(r?.scope) ? r!.scope : Routine.scopeWork;
+    _scope = Routine.scopes.contains(r?.scope) ? r!.scope : Routine.scopePersonal;
     _category =
-        Routine.categories.contains(r?.category) ? r!.category : 'operasyon';
+        Routine.categories.contains(r?.category) ? r!.category : 'kisisel';
     _frequency = r?.frequency ?? RoutineFrequency.weekly;
     _days = {
       ...(r == null || r.isMonthly ? Routine.everyDay : r.daysOfWeek)

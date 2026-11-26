@@ -117,7 +117,7 @@ List<PlannedNotification> buildNotificationPlan({
         sourceId: t.id,
         title: t.title,
         body: t.assignee == null ? t.category : '${t.category} · ${t.assignee}',
-        fireAt: quiet.shift(when),
+        fireAt: _taskFireAt(quiet, when, due),
       ),
     );
   }
@@ -274,4 +274,13 @@ class _QuietHours {
       shifted % 60,
     );
   }
+}
+
+/// Görev/randevu hatırlatması sessiz saatte kalırsa sessiz saat sonuna
+/// ertelenir; ama ertelenen an terminden sonraya düşerse kullanıcının
+/// seçtiği an korunur (randevudan sonra hatırlatma işe yaramaz).
+DateTime _taskFireAt(_QuietHours quiet, DateTime when, DateTime? due) {
+  final shifted = quiet.shift(when);
+  if (due != null && shifted.isAfter(due)) return when;
+  return shifted;
 }
