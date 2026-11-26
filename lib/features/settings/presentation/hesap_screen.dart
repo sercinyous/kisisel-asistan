@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/error_reporter.dart';
 import '../../../core/services/health_service.dart';
 import '../../../core/services/health_source.dart';
 import '../../../core/services/notification_service.dart';
@@ -23,6 +24,7 @@ import 'privacy_screen.dart';
 import 'profile_goals_page.dart';
 import 'settings_providers.dart';
 import 'share_stories_card.dart';
+import 'terms_screen.dart';
 
 /// Hesap menüsü: altı alt sayfa ve küçük yardım/çıkış grubu. Her alt sayfa
 /// kendi içinde kaydeder.
@@ -220,6 +222,13 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
                   onTap: () => _open(const PrivacyScreen()),
                 ),
                 _MenuRow(
+                  key: const Key('settings-terms'),
+                  icon: Icons.description_outlined,
+                  title: 'Kullanım koşulları',
+                  compact: true,
+                  onTap: () => _open(const LegalTextScreen.terms()),
+                ),
+                _MenuRow(
                   key: const Key('settings-replay-guide'),
                   icon: Icons.menu_book_outlined,
                   title: 'Kılavuzu yeniden göster',
@@ -261,6 +270,16 @@ class _HesapScreenState extends ConsumerState<HesapScreen> {
           ),
           const SizedBox(height: AppSpacing.section),
           const ShareStoriesCard(),
+          const SizedBox(height: AppSpacing.section),
+          Text(
+            'Sürüm ${appVersionLabel(appVersion)}',
+            key: const Key('hesap-version'),
+            textAlign: TextAlign.center,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: AppColors.textMuted),
+          ),
         ],
       ),
     );

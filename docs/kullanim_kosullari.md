@@ -8,7 +8,8 @@ Ritim; görev, rutin, not ve sağlık verilerini tek yerde takip etmen için haz
 - Ritim ücretsizdir ve bireysel geliştirme aşamasındadır; özellikler habersiz değişebilir, eklenebilir ya da kaldırılabilir.
 - Hizmet "olduğu gibi" sunulur; kesintisiz ya da hatasız çalışacağı garanti edilmez.
 
-## 2. Hesap
+## 2. Yaş ve hesap
+- Ritim'i kullanmak için en az 13 yaşında olmalısın; 18 yaşından küçüksen velinin onayıyla kullanmalısın.
 - Google ya da e-posta ile hesap açabilirsin. Hesabının ve şifrenin güvenliğinden sen sorumlusun.
 - Hesabını istediğin zaman uygulama içinden silebilirsin: Hesap > Profil ve hedefler > Hesabımı sil. Silme kalıcıdır.
 
@@ -18,7 +19,9 @@ Ritim; görev, rutin, not ve sağlık verilerini tek yerde takip etmen için haz
 
 ## 4. Kabul edilebilir kullanım
 - Uygulamayı yasalara aykırı amaçlarla, başkalarının hesaplarına erişmek ya da hizmeti bozmak için kullanamazsın.
-- Arkadaş özelliğinde yalnızca tanıdığın kişileri ekle; paylaşılan bilgileri saygıyla kullan.
+- Arkadaş özelliğinde yalnızca tanıdığın kişileri ekle. Hakaret, taciz, müstehcen ya da yasa dışı içerik (görünen ad, profil fotoğrafı, hikâye) paylaşamazsın.
+- Rahatsız eden bir kişiyi Engelle ile engelleyebilir, Bildir ile bildirebilirsin. Şikayetler en geç 24 saat içinde incelenir; kurallara aykırı içerik kaldırılır ve hesap kapatılabilir.
+- Ritim bir tıbbi cihaz değildir.
 
 ## 5. Veriler ve gizlilik
 Hangi verilerin toplandığı ve nasıl kullanıldığı [Gizlilik Politikası](gizlilik.md)'nda anlatılır.

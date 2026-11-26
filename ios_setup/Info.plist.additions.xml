@@ -13,7 +13,7 @@
 
 <!-- HealthKit: yazma açıklaması. Uygulama veri yazmaz; health eklentisi bu anahtarın bulunmasını ister. -->
 <key>NSHealthUpdateUsageDescription</key>
-<string>Bu uygulama Sağlık verilerine yazmaz; yalnızca okuma yapar.</string>
+<string>Ritim Sağlık verilerine kayıt eklemez; bu izin istenmez.</string>
 
 <!-- Kamera ve fotoğraf arşivi: profil ve ilerleme fotoğrafı -->
 <key>NSCameraUsageDescription</key>
@@ -23,6 +23,8 @@
 
 <!-- Ana ekranda görünen ad -->
 <key>CFBundleDisplayName</key>
+<string>Ritim</string>
+<key>CFBundleName</key>
 <string>Ritim</string>
 
 <!-- Yalnızca HTTPS/standart şifreleme kullanılır: ihracat uyumluluğu sorusunu kapatır -->

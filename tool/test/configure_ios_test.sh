@@ -50,7 +50,7 @@ grep -q "GOOGLE_IOS_CLIENT_ID verilmedi" <<<"$out" || fail "atlama mesajı yok"
 [[ "$(value GIDClientID)" == "null" ]] || fail "GIDClientID yazılmamalıydı"
 [[ "$(value CFBundleURLTypes)" == "null" ]] || fail "URL şeması yazılmamalıydı"
 [[ "$(value CFBundleDisplayName)" == '"Ritim"' ]] || fail "diğer anahtarlar yazılmadı"
-[[ "$(value NSPhotoLibraryUsageDescription)" == *"Profil fotoğrafı"* ]] \
+[[ "$(value NSPhotoLibraryUsageDescription)" == *"fotoğraf"* ]] \
   || fail "NSPhotoLibraryUsageDescription yazılmadı: $(value NSPhotoLibraryUsageDescription)"
 [[ "$(value NSCameraUsageDescription)" == *"kamera"* ]] \
   || fail "NSCameraUsageDescription yazılmadı: $(value NSCameraUsageDescription)"
@@ -85,6 +85,21 @@ if GOOGLE_IOS_CLIENT_ID="abc.apps.googleusercontent.com" configure >/dev/null 2>
   fail "geçersiz kimlik kabul edildi"
 fi
 [[ "$(value CFBundleURLTypes)" == "$before" ]] || fail "geçersiz kimlikte plist değişti"
+echo "tamam"
+
+echo "== 6) mağaza ayarları: iPhone-only, ad, izin metinleri, açılış, gizlilik =="
+PBX="$APP/ios/Runner.xcodeproj/project.pbxproj"
+grep -q 'TARGETED_DEVICE_FAMILY = "1,2";' "$PBX" && fail "iPad hâlâ hedefte"
+[[ "$(value 'UISupportedInterfaceOrientations~ipad')" == "null" ]] || fail "iPad yönleri kaldı"
+[[ "$(value CFBundleName)" == '"Ritim"' ]] || fail "CFBundleName: $(value CFBundleName)"
+[[ "$(value NSCameraUsageDescription)" == *"ilerleme"* ]] || fail "kamera metni ilerleme fotoğrafını anmıyor"
+[[ "$(value NSPhotoLibraryUsageDescription)" == *"ilerleme"* ]] || fail "arşiv metni ilerleme fotoğrafını anmıyor"
+[[ "$(value NSHealthUpdateUsageDescription)" == *"kayıt eklemez"* ]] || fail "sağlık yazma metni"
+grep -q 'red="0" green="0" blue="0"' "$APP/ios/Runner/Base.lproj/LaunchScreen.storyboard" || fail "açılış ekranı siyah değil"
+[[ -f "$APP/ios/Runner/PrivacyInfo.xcprivacy" ]] || fail "PrivacyInfo.xcprivacy kopyalanmadı"
+[[ "$(grep -c 'PrivacyInfo.xcprivacy in Resources' "$PBX")" -ge 2 ]] || fail "PrivacyInfo Resources aşamasında değil"
+configure >/dev/null
+[[ "$(grep -c 'PrivacyInfo.xcprivacy in Resources' "$PBX")" -eq 2 ]] || fail "PrivacyInfo iki kez eklendi"
 echo "tamam"
 
 echo "TÜM configure_ios TESTLERİ GEÇTİ"

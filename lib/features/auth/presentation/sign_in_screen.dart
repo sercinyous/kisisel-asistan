@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/ritim_top/ritim_top.dart';
 import '../../../core/widgets/sunset_stripe.dart';
+import '../../settings/presentation/terms_screen.dart';
 import 'password_reset_screen.dart';
 import 'sign_in_controller.dart';
 
@@ -263,12 +264,54 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         child: const Text('Şifremi unuttum'),
                       ),
                   ],
+                  const SizedBox(height: AppSpacing.lg),
+                  const _LegalFooter(),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Hesap açılmadan önce okunabilen koşullar ve gizlilik metni bağlantıları.
+class _LegalFooter extends StatelessWidget {
+  const _LegalFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context)
+        .textTheme
+        .bodySmall
+        ?.copyWith(color: AppColors.textMuted);
+    void open(Widget page) => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => page));
+    return Column(
+      key: const Key('sign-in-legal'),
+      children: [
+        Text(
+          'Devam ederek Kullanım Koşulları ve Gizlilik Metni\'ni kabul edersin.',
+          textAlign: TextAlign.center,
+          style: style,
+        ),
+        Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            TextButton(
+              key: const Key('sign-in-terms'),
+              onPressed: () => open(const LegalTextScreen.terms()),
+              child: const Text('Kullanım Koşulları'),
+            ),
+            TextButton(
+              key: const Key('sign-in-privacy'),
+              onPressed: () => open(const LegalTextScreen.privacy()),
+              child: const Text('Gizlilik Metni'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

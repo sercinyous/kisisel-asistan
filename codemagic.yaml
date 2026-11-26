@@ -170,8 +170,9 @@ workflows:
       app_store_connect: kisisel-asistan-asc
 
     environment:
-      flutter: stable
-      xcode: latest
+      # Sabit araç zinciri: yükseltme bilinçli yapılır (yerel sürümle aynı).
+      flutter: 3.50.0
+      xcode: 26.1
       cocoapods: default
       groups:
         - app_secrets
@@ -212,8 +213,10 @@ workflows:
           case "$LATEST" in ''|*[!0-9]*) LATEST=0 ;; esac
           NEXT=$((LATEST + 1))
           echo "Yapı numarası: $NEXT"
+          APP_VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //;s/+.*//')+$NEXT"
           flutter build ipa --release \
             --build-number="$NEXT" \
+            --dart-define=APP_VERSION="$APP_VERSION" \
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
@@ -236,8 +239,9 @@ workflows:
     <<: *machine
 
     environment:
-      flutter: stable
-      xcode: latest
+      # Sabit araç zinciri: yükseltme bilinçli yapılır (yerel sürümle aynı).
+      flutter: 3.50.0
+      xcode: 26.1
       cocoapods: default
       groups:
         - app_secrets
@@ -257,8 +261,10 @@ workflows:
       - *use_profiles
       - name: Ad-Hoc IPA derle
         script: |
+          APP_VERSION="$(grep '^version:' pubspec.yaml | sed 's/version: //;s/+.*//')+$PROJECT_BUILD_NUMBER"
           flutter build ipa --release \
             --build-number="$PROJECT_BUILD_NUMBER" \
+            --dart-define=APP_VERSION="$APP_VERSION" \
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \

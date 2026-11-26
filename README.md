@@ -2,7 +2,7 @@
 
 App Store Connect adı: **Ritim: Rutin, İş ve Sağlık** · iPhone'da görünen ad: **Ritim**
 
-Tek kullanıcılı, iOS Ad-Hoc dağıtımlı Flutter uygulaması.
+Çok kullanıcılı (her kullanıcının verisi RLS ile ayrı), App Store'a hazırlanan iOS Flutter uygulaması.
 Flutter · Riverpod · Supabase · Gemini (`gemini-3.8-flash`) · HealthKit ya da Google Health (Fitbit) ·
 yerel bildirimler.
 
@@ -50,7 +50,7 @@ ayarını uygulama açıkken de izler. İki temanın ekran görüntüleri: `test
 kisisel_asistan/
 ├── pubspec.yaml
 ├── analysis_options.yaml
-├── codemagic.yaml                      # iOS Ad-Hoc .ipa derlemesi
+├── codemagic.yaml                      # iOS TestFlight/App Store ve Ad-Hoc .ipa derlemesi
 ├── dart_defines.example.json           # yerel derleme anahtar şablonu
 ├── supabase/
 │   ├── schema.sql                      # tablolar, indeksler, RLS, RPC, rapor fonksiyonları, seed
@@ -631,3 +631,10 @@ aynı yapılandırma ve kimlik adımları onun üzerinde çalışır.
 - **Ek tablolar**: istenen 6 tabloya ek olarak `routine_completions` (dönem bazlı tamamlanma),
   `daily_health_metrics` (seçili sağlık kaynağının günlük özeti), `user_settings` (kullanıcı başına tek satır) ve
   `daily_reports` (günlük rapor) vardır.
+
+
+## App Store yayını
+
+- İnceleme notları, demo hesap ve gizlilik etiketi: [docs/apple_inceleme.md](docs/apple_inceleme.md)
+- Kullanım koşulları: [docs/kullanim_kosullari.md](docs/kullanim_kosullari.md), gizlilik: [docs/gizlilik.md](docs/gizlilik.md)
+- Derleme: Codemagic `ios-testflight` iş akışı (Flutter 3.50.0, Xcode 26.1 sabit); `tool/configure_ios.sh` iPhone-only, siyah açılış ekranı ve `PrivacyInfo.xcprivacy` ekler.

@@ -76,7 +76,26 @@ Kokpit) > Hesap > "Hesabımı sil" (last row of the bottom card). Type SİL or S
 olarak sil". This permanently deletes the account and all its data on the
 server. It is also reachable during first-run setup ("Hesabı sil" at the top).
 
-Privacy policy in the app: Hesap > "Gizlilik ve koşullar".
+Friends and stories (user-generated content, Guideline 1.2): friends are added
+by e-mail invite and see only what the user turns on (goal-hit day counts,
+optional stories that last 24 hours). Display names, profile photos and
+stories are visible only to accepted friends. Hesap > "Arkadaşlar": each friend
+row and each incoming request has "Engelle" (block; a blocked user cannot send
+requests again), "Bildir" (report, reviewed within 24 hours) and remove
+friend. The Terms forbid abusive content.
+
+Body progress photos (Sağlık > Vücut) are private: stored in a per-user
+private bucket, never shown to friends. Camera and photo library are used only
+for the profile photo and progress photos.
+
+Notifications are local only (task, routine and reminder alerts, optional
+health nudges); they can be turned off at Hesap > "Bildirimler". No push
+server, no marketing messages. The app is not a medical device and makes no
+diagnostic claims.
+
+Terms and privacy are linked on the sign-in screen before an account is
+created, and in the app at Hesap > "Kullanım koşulları" and Hesap >
+"Gizlilik ve koşullar".
 Feedback: Hesap > "Sorun bildir".
 
 The UI is in Turkish.

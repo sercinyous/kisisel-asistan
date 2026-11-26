@@ -9,6 +9,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const String appVersion =
     String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
 
+/// "1.2.0+14" biçimini "1.2.0 (14)" olarak gösterir; yapı numarası yoksa
+/// sürüm olduğu gibi döner.
+String appVersionLabel(String version) {
+  final parts = version.split('+');
+  if (parts.length != 2 || parts[1].isEmpty) return version;
+  return '${parts[0]} (${parts[1]})';
+}
+
 /// Sunucuya gidecek tek hata kaydı (`public.app_errors`).
 class ErrorReport {
   const ErrorReport({
