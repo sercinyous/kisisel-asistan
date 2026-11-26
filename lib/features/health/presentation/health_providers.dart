@@ -7,6 +7,7 @@ import '../../kokpit/presentation/kokpit_providers.dart';
 import '../../routines/data/routines_repository.dart';
 import '../../routines/domain/routine.dart';
 import '../../routines/presentation/routines_providers.dart';
+import '../data/apple_workouts.dart';
 import '../data/health_repository.dart';
 import 'energy_providers.dart';
 import 'health_source_providers.dart';
@@ -238,10 +239,22 @@ Future<void> backfillHealthKit(ProviderContainer container) async {
       } else {
         // Onay denetimli kaynak: bu kullanıcı onay vermediyse HealthKit
         // okunmaz (boş liste); yazma da [HealthWriteGuard] ile engellenir.
-        final days =
-            await container.read(healthDataSourceProvider).readPastDays();
+        final source = container.read(healthDataSourceProvider);
+        final days = await source.readPastDays();
         if (guard.isValid) {
           await repository.upsertHealthDays(days, ownerId: guard.ownerId);
+        }
+        if (source is ConsentGatedHealthSource && guard.isValid) {
+          final workouts = await source.readWorkouts();
+          if (guard.isValid) {
+            workoutsImported = await importAppleWorkouts(
+                  repository,
+                  workouts,
+                  ownerId: guard.ownerId,
+                  isValid: () => guard.isValid,
+                ) >
+                0;
+          }
         }
       }
     }

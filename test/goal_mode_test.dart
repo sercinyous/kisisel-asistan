@@ -165,7 +165,7 @@ void main() {
       expect(p.horizonKg, closeTo(-6, 0.1));
       expect(p.headline, 'Bunu yaparsan ~12 haftada −6 kg');
       expect(p.etaWeeks, 12);
-      expect(p.etaText, 'Hedef kiloya ~12 haftada');
+      expect(p.etaText, 'Plana uyarsan hedef kiloya ~12 haftada');
       expect(p.weeklyText, '−0,50 kg/hafta');
     });
 
@@ -209,9 +209,9 @@ void main() {
       // 100 kcal açık ≈ 0,09 kg/hafta; 84 → 60 kg yüzlerce hafta.
       final p = classicFatLoss(manual: 2284, target: 60);
       expect(p.etaWeeks, greaterThan(GoalProjection.maxEtaWeeks));
-      expect(p.etaText, 'Hedef kiloya bu hızla 2 yıldan uzun');
+      expect(p.etaText, 'Plana uyarsan hedef kiloya 2 yıldan uzun');
       final near = classicFatLoss(manual: 2284, target: 82);
-      expect(near.etaText, 'Hedef kiloya ~${near.etaWeeks} haftada');
+      expect(near.etaText, 'Plana uyarsan hedef kiloya ~${near.etaWeeks} haftada');
     });
 
     test('klasik formülle hızlı kayıp uyarı verir', () {

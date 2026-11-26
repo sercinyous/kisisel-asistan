@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/bento.dart';
+import '../../health/domain/health_sources.dart';
 import '../data/settings_repository.dart';
 import '../domain/privacy_text.dart';
 import 'settings_providers.dart';
@@ -53,6 +54,25 @@ class PrivacyScreen extends StatelessWidget {
                 ),
               ),
             ),
+          BentoCard(
+            key: const Key('privacy-health-sources'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sağlık hesaplarının kaynakları',
+                    style: theme.textTheme.titleMedium),
+                for (final src in healthSources)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.sm),
+                    child: SelectableText(
+                      '${src.topic}: ${src.citation}\n${src.url}',
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );

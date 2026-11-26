@@ -117,7 +117,8 @@ class StreakStatus {
 
 /// Kayıt günü: ≥ 2 öğün ya da alınan ≥ hedefin %50'si.
 bool isLoggingDay(StreakDay d, StreakTargets t) =>
-    d.mealCount >= 2 || (d.mealCount > 0 && d.intakeKcal >= t.kcalTarget * 0.5);
+    d.intakeKcal > 0 &&
+    (d.mealCount >= 2 || (d.mealCount > 0 && d.intakeKcal >= t.kcalTarget * 0.5));
 
 /// Adım günü: adım ≥ hedef.
 bool isStepsDay(StreakDay d, StreakTargets t) =>

@@ -8,7 +8,7 @@ final healthServiceProvider = Provider<HealthService>((ref) => HealthService());
 /// `daily_health_metrics` tablosunu ve arayüzü besler (ikisi birden çift
 /// sayardı); seçim cihazda saklanır (`health_source.dart`).
 enum HealthSourceKind {
-  appleHealth('Apple Health', 'HealthKit'),
+  appleHealth('Apple Sağlık', 'Apple Sağlık'),
   googleHealth('Google Health', 'Google Health');
 
   const HealthSourceKind(this.label, this.shortLabel);
@@ -237,7 +237,7 @@ class HealthService implements HealthDataSource {
     HealthDataType.STEPS,
     HealthDataType.ACTIVE_ENERGY_BURNED,
     ..._sleepTypes,
-    ..._bodyTypes,
+    HealthDataType.WORKOUT,
   ];
 
   /// İlk kurulumda boy ve kilo ön doldurması için okunan tipler.
@@ -260,13 +260,14 @@ class HealthService implements HealthDataSource {
 
   /// HealthKit izin sayfasını açar. iOS, okuma izninin reddedildiğini
   /// uygulamaya bildirmez; reddedilirse sorgular boş döner.
-  Future<bool> requestAccess() async {
+  Future<bool> requestAccess({bool body = false}) async {
     if (!isSupported) return false;
     await _ensureConfigured();
+    final types = body ? _bodyTypes : _types;
     return _health.requestAuthorization(
-      _types,
+      types,
       permissions: List<HealthDataAccess>.filled(
-        _types.length,
+        types.length,
         HealthDataAccess.READ,
       ),
     );
@@ -325,7 +326,7 @@ class HealthService implements HealthDataSource {
   Future<BodyMeasurements> readLatestBody({DateTime? now}) async {
     if (!isSupported) return const BodyMeasurements();
     try {
-      if (!await requestAccess()) return const BodyMeasurements();
+      if (!await requestAccess(body: true)) return const BodyMeasurements();
       final end = now ?? DateTime.now();
       final points = await _health.getHealthDataFromTypes(
         types: _bodyTypes,
@@ -395,4 +396,59 @@ class HealthService implements HealthDataSource {
       readAt: readAt,
     );
   }
+
+  /// Son [days] günün Apple Sağlık antrenmanları (Apple Watch, Fitness vb.).
+  /// İzin yoksa, desteklenmiyorsa ya da okuma hata verirse boş liste döner.
+  Future<List<AppleWorkout>> readWorkouts({
+    int days = backfillDays,
+    DateTime? now,
+  }) async {
+    if (!isSupported || days <= 0) return const [];
+    try {
+      if (!await requestAccess()) return const [];
+      final end = now ?? DateTime.now();
+      final points = await _health.getHealthDataFromTypes(
+        types: const [HealthDataType.WORKOUT],
+        startTime: end.subtract(Duration(days: days)),
+        endTime: end,
+      );
+      return [
+        for (final p in points)
+          if (p.value is WorkoutHealthValue && p.uuid.isNotEmpty)
+            AppleWorkout(
+              uuid: p.uuid,
+              activityType:
+                  (p.value as WorkoutHealthValue).workoutActivityType.name,
+              start: p.dateFrom,
+              end: p.dateTo,
+              kcal: (p.value as WorkoutHealthValue).totalEnergyBurned,
+              meters: (p.value as WorkoutHealthValue).totalDistance,
+            ),
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+}
+
+/// Apple Sağlık'tan okunan bir antrenman (ham değerler; eşleme
+/// `features/health/data/apple_workouts.dart` içinde).
+class AppleWorkout {
+  const AppleWorkout({
+    required this.uuid,
+    required this.activityType,
+    required this.start,
+    required this.end,
+    this.kcal,
+    this.meters,
+  });
+
+  final String uuid;
+
+  /// `HealthWorkoutActivityType` adı (ör. `RUNNING`).
+  final String activityType;
+  final DateTime start;
+  final DateTime end;
+  final int? kcal;
+  final int? meters;
 }

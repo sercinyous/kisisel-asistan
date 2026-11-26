@@ -28,8 +28,7 @@ void main() {
     test('84 kg, harcama 3000: hızlara göre kalori ve gerçek hız', () {
       expect(_rate(84, 3000, FatLossRate.half).kcal, 2450);
       expect(_rate(84, 3000, FatLossRate.threeQuarter).kcal, 2175);
-      expect(_rate(84, 3000, FatLossRate.one).kcal, 1900);
-      expect(_rate(84, 3000, FatLossRate.one).clamped, isFalse);
+      expect(_rate(84, 3000, FatLossRate.threeQuarter).clamped, isFalse);
       expect(_rate(84, 3000, FatLossRate.half).kgPerWeek, closeTo(0.5, 1e-9));
     });
 
@@ -57,13 +56,12 @@ void main() {
       }
     });
 
-    test('klasik taban altı bayrağı', () {
-      // 45 kg, 150 cm, hedef 43: 45 × 26 = 1.170 < 1.200.
-      expect(
-          _rate(45, 3000, FatLossRate.classic, height: 150, target: 43)
-              .asRateResult
-              .classicBelowFloor,
-          isTrue);
+    test('klasik taban altına inmez (kırpılır)', () {
+      // 45 kg, 150 cm, hedef 43: 45 × 26 = 1.170 < 1.200 → 1.200.
+      final low = _rate(45, 3000, FatLossRate.classic, height: 150, target: 43);
+      expect(low.kcal, greaterThanOrEqualTo(1200));
+      expect(low.clamped, isTrue);
+      expect(low.asRateResult.classicBelowFloor, isFalse);
       expect(_rate(84, 3000, FatLossRate.classic).asRateResult.classicBelowFloor,
           isFalse);
     });
@@ -90,21 +88,27 @@ void main() {
   });
 
   test('FatLossRate.parse tanınmayanı klasiğe düşürür', () {
-    expect(FatLossRate.parse('one'), FatLossRate.one);
+    expect(FatLossRate.parse('one'), FatLossRate.threeQuarter);
+    expect(FatLossRate.parse('1.0'), FatLossRate.threeQuarter);
     expect(FatLossRate.parse('x'), FatLossRate.classic);
     expect(FatLossRate.parse(null), FatLossRate.classic);
   });
 
   test('artılar/eksiler gerçek hızın sınıfına göre', () {
-    // 84 kg, 3000: 1 kg agresif; 120 kg'da (harcama 3600) 1 kg hızlı.
-    final agg = rateInfo(_rate(84, 3000, FatLossRate.one).asRateResult);
-    expect(agg.pros.first, rateOptionLine(FatLossRate.one));
+    // 50 kg, 3000: 0,75 kg agresif; 90 kg'da (harcama 3300) 0,75 kg hızlı.
+    final agg =
+        rateInfo(_rate(50, 3000, FatLossRate.threeQuarter,
+                height: 155, target: 47)
+            .asRateResult);
+    expect(agg.pros.first, rateOptionLine(FatLossRate.threeQuarter));
     expect(agg.cons.any((c) => c.contains('doktora danış')), isTrue);
-    final fast = rateInfo(_rate(120, 3600, FatLossRate.one).asRateResult);
+    final fast =
+        rateInfo(_rate(90, 3300, FatLossRate.threeQuarter).asRateResult);
     expect(fast.cons.any((c) => c.contains('doktora danış')), isFalse);
     expect(fast.cons, contains('Bazı günler açlık hissi olabilir.'));
-    // 60 kg, 160 cm, 1900, 1 kg: tabana (bazal 1.425) takılır.
-    final clampedTargets = _rate(60, 1900, FatLossRate.one, height: 160);
+    // 60 kg, 160 cm, 1800, 0,75 kg: tabana (bazal 1.425) takılır.
+    final clampedTargets =
+        _rate(60, 1800, FatLossRate.threeQuarter, height: 160);
     expect(clampedTargets.clamped, isTrue);
     final clamped = rateInfo(clampedTargets.asRateResult);
     expect(clamped.cons.first, rateClampLine(clampedTargets.floorKcal));

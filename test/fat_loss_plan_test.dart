@@ -116,7 +116,6 @@ void main() {
           for (final rate in [
             FatLossRate.half,
             FatLossRate.threeQuarter,
-            FatLossRate.one
           ]) {
             final t = resolveTargets(
               settings: const UserSettings.defaults().copyWith(

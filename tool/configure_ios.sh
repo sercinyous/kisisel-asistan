@@ -51,7 +51,7 @@ set_array() { # anahtar, öğeler...
   done
 }
 
-set_string NSHealthShareUsageDescription "'Adım, uyku ve aktif kalori verilerin günlük kokpitinde gösterilmek ve haftalık raporlara eklenmek için okunur.'"
+set_string NSHealthShareUsageDescription "'Adım, uyku, aktif kalori, antrenman, boy ve kilo verilerin günlük kokpitinde gösterilmek ve haftalık raporlara eklenmek için okunur; boy ve kilo yalnızca ilk kurulumda formu doldurmak için okunur.'"
 set_string NSHealthUpdateUsageDescription "'Bu uygulama Sağlık verilerine yazmaz; yalnızca okuma yapar.'"
 set_string NSPhotoLibraryUsageDescription "'Profil ve ilerleme fotoğrafı seçmek için fotoğraf arşivine erişilir; yalnızca seçtiğin fotoğraf küçültülüp sana özel alana yüklenir.'"
 set_string NSCameraUsageDescription "'Profil ve ilerleme fotoğrafı çekmek için kamera kullanılır; fotoğraf yalnızca sana özel alana yüklenir.'"

@@ -411,8 +411,8 @@ Expenditure planExpenditure({
 }
 
 /// Bir günün gerçek harcaması (gün dengesi, haftalık açık ve seriler aynı
-/// modeli kullanır). Sıra: elle girilen; bazal + sağlık kaynağının aktif
-/// kalorisi; bazal × 1,2 + adım × 0,04. Bugün için bazal (ve elle girilen
+/// modeli kullanır). Sıra: elle girilen; max(bazal + sağlık kaynağının aktif
+/// kalorisi, bazal × 1,2 + adım × 0,04); bazal × 1,2 + adım × 0,04. Bugün için bazal (ve elle girilen
 /// değer) günün geçen oranıyla ölçeklenir ("şu ana kadar"). Bazal da elle
 /// değer de yoksa `null`.
 Expenditure? dayExpenditure({
@@ -431,14 +431,15 @@ Expenditure? dayExpenditure({
         (manualKcal * fraction).round(), ExpenditureSource.manual);
   }
   if (basal == null || !basal.isFinite || basal <= 0) return null;
+  final estimate = basal * ExpenditureModel.baseFactor * fraction +
+      math.max(0, steps) * ExpenditureModel.kcalPerStep;
   if (activeKcal != null && activeKcal > 0) {
+    // Saat takılmayan iPhone'da aktif kalori düşük gelir ve bazal + aktif,
+    // günlük hareket ile sindirimi (NEAT/TEF) saymaz; adım tahmininden
+    // düşük kalamaz (plan harcamasıyla tutarlılık).
     return Expenditure(
-        (basal * fraction + activeKcal).round(), ExpenditureSource.health);
+        math.max(basal * fraction + activeKcal, estimate).round(),
+        ExpenditureSource.health);
   }
-  return Expenditure(
-    (basal * ExpenditureModel.baseFactor * fraction +
-            math.max(0, steps) * ExpenditureModel.kcalPerStep)
-        .round(),
-    ExpenditureSource.estimate,
-  );
+  return Expenditure(estimate.round(), ExpenditureSource.estimate);
 }

@@ -54,7 +54,10 @@ class WeekCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   DayBarChart(
-                    values: [for (final d in w.days) w.dayBalance(d)],
+                    values: [
+                      for (var i = 0; i < 7; i++)
+                        i < w.days.length ? w.dayBalance(w.days[i]) : null,
+                    ],
                     color: AppColors.accent,
                     labels: TodayFormat.weekdayShort,
                     highlightIndex: todayIndex < 0 ? null : todayIndex,

@@ -163,7 +163,18 @@ class FakeHealthService implements HealthService {
   bool get isSupported => snapshot.status != HealthStatus.unavailable;
 
   @override
-  Future<bool> requestAccess() async => snapshot.status == HealthStatus.ok;
+  Future<bool> requestAccess({bool body = false}) async =>
+      snapshot.status == HealthStatus.ok;
+
+  /// [readWorkouts] ne dönerse o.
+  List<AppleWorkout> workouts = [];
+
+  @override
+  Future<List<AppleWorkout>> readWorkouts({
+    int days = HealthService.backfillDays,
+    DateTime? now,
+  }) async =>
+      workouts;
 
   @override
   Future<HealthSnapshot> readToday({DateTime? now}) async => snapshot;

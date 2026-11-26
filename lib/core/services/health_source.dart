@@ -304,4 +304,11 @@ class ConsentGatedHealthSource implements HealthDataSource {
     if (!await _allowed()) return const [];
     return inner.readPastDays(days: days, now: now);
   }
+
+  /// Onay varsa ve iç kaynak HealthKit ise son günlerin antrenmanları.
+  Future<List<AppleWorkout>> readWorkouts({DateTime? now}) async {
+    final source = inner;
+    if (source is! HealthService || !await _allowed()) return const [];
+    return source.readWorkouts(now: now);
+  }
 }

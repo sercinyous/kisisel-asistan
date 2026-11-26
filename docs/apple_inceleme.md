@@ -57,6 +57,12 @@ Apple Health only after the user grants permission and confirms import for the
 account (Sağlık tab). It never writes to Apple Health. Health data is not used
 for advertising and is not shared with third parties.
 
+Health calculations and citations (Guideline 1.4.1): calorie, protein, water
+and fiber targets are informational, not medical advice, and the app gives no
+supplement dosing. Sources with links are listed at Sağlık > Plan >
+"Kaynaklar" and at Hesap > "Gizlilik ve koşullar" > "Sağlık hesaplarının
+kaynakları" (Mifflin-St Jeor 1990, ISSN protein 2017, Hall 2008, CDC, EFSA).
+
 AI (third-party data sharing, explicit consent): the first time the user taps
 the center "+" button, a consent sheet explains that the typed text is sent to
 Google Gemini; nothing is sent unless the user taps "Kabul ediyorum". Report

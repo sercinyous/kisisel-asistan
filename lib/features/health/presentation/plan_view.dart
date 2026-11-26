@@ -14,6 +14,7 @@ import '../domain/energy_balance.dart';
 import '../domain/fat_loss_plan.dart';
 import '../domain/fat_loss_rate.dart';
 import '../domain/goal_projection.dart';
+import '../domain/health_sources.dart';
 import 'health_format.dart';
 import 'health_widgets.dart';
 import 'providers/targets_providers.dart';
@@ -618,9 +619,7 @@ class _TargetsCard extends ConsumerWidget {
               ),
             ),
           ],
-          // Hız uyarısı (1 kg) yalnızca Tempo kartında.
-          for (final w
-              in resolved.warnings.where((w) => w != resolved.rate.warning))
+          for (final w in resolved.warnings)
             _WarningLine(
               key: Key('plan-warning-${resolved.warnings.indexOf(w)}'),
               text: w,
@@ -678,12 +677,6 @@ class _TempoCard extends ConsumerWidget {
               result: options?[r],
               selected: r == selected,
               onTap: r == selected ? null : () => _select(context, ref, r),
-            ),
-          if (resolved.mode == TargetsMode.rate && selected.warning != null)
-            _WarningLine(
-              key: const Key('plan-rate-warning'),
-              text: selected.warning!,
-              color: AppColors.danger,
             ),
           const SizedBox(height: 12),
           Text(
@@ -1384,11 +1377,6 @@ class _SupplementSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final guide = supplementGuide(
-      weightKg: targets.weightKg,
-      sex: sex,
-      kcal: targets.kcal,
-    );
     final title = theme.textTheme.titleSmall?.copyWith(
       color: AppColors.textPrimary,
       fontWeight: FontWeight.w700,
@@ -1414,34 +1402,7 @@ class _SupplementSection extends StatelessWidget {
       key: const Key('plan-supplements'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SectionTitle('Takviyeler'),
-        item(
-            'd3',
-            'D3 vitamini',
-            '1.000–2.000 IU/gün (üst sınır 4.000 IU; kan değeri ölçtürmeden '
-                'yüksek doz alma). Yağlı öğünle al.'),
-        item(
-            'magnesium',
-            'Magnezyum',
-            '${guide.magnesiumText}. ${SupplementGuide.magnesiumSupplementText} Sitrat/'
-                'bisglisinat, akşam. Böbrek hastalığında doktora sor.'),
-        item(
-            'omega3',
-            'Omega-3 (EPA+DHA)',
-            '250–500 mg/gün. Haftada 2 porsiyon yağlı balık yemiyorsan '
-                'takviye. Kan sulandırıcı kullanıyorsan doktora sor.'),
-        item(
-          'multivitamin',
-          guide.multivitaminHighlighted
-              ? 'Multivitamin · önerilir'
-              : 'Multivitamin',
-          guide.multivitaminHighlighted
-              ? 'Günde 1. Kalorin 1.500 kcal\'nin altında; besin eksikliği '
-                  'riskine karşı özellikle önerilir.'
-              : 'Günde 1; kalori 1.500 kcal\'nin altına inerse özellikle '
-                  'önerilir.',
-          hot: guide.multivitaminHighlighted,
-        ),
+        const _SectionTitle('Su ve lif'),
         item(
             'water',
             'Su',
@@ -1460,6 +1421,17 @@ class _SupplementSection extends StatelessWidget {
           style:
               theme.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
         ),
+        const SizedBox(height: 16),
+        const _SectionTitle('Kaynaklar'),
+        for (final src in healthSources)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SelectableText(
+              '${src.topic}: ${src.citation}\n${src.url}',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
       ],
     );
   }

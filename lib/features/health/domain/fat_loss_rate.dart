@@ -11,8 +11,7 @@ import 'safe_targets.dart';
 enum FatLossRate {
   classic(null, 'Klasik (kg×26)'),
   half(0.5, '0,50 kg/hafta'),
-  threeQuarter(0.75, '0,75 kg/hafta'),
-  one(1.0, '1 kg/hafta');
+  threeQuarter(0.75, '0,75 kg/hafta');
 
   const FatLossRate(this.kgPerWeek, this.label);
 
@@ -20,28 +19,23 @@ enum FatLossRate {
   final double? kgPerWeek;
   final String label;
 
-  /// `user_settings.weekly_rate` değeri: 'classic', '0.5', '0.75', '1.0'.
+  /// `user_settings.weekly_rate` değeri: 'classic', '0.5', '0.75'. Eski
+  /// '1.0' kayıtları (kaldırılan 1 kg/hafta seçeneği) 0,75'e çözülür.
   String get dbValue => switch (this) {
         FatLossRate.classic => 'classic',
         FatLossRate.half => '0.5',
         FatLossRate.threeQuarter => '0.75',
-        FatLossRate.one => '1.0',
       };
 
   /// Saklanan değeri çözer (veritabanı değeri ya da eski cihaz tercihindeki
   /// enum adı); tanınmayan değer klasiğe düşer.
   static FatLossRate parse(String? value) {
+    if (value == '1.0' || value == 'one') return FatLossRate.threeQuarter;
     for (final r in FatLossRate.values) {
       if (r.name == value || r.dbValue == value) return r;
     }
     return FatLossRate.classic;
   }
-
-  /// 1 kg/hafta seçilince gösterilen uyarı; diğerlerinde `null`.
-  String? get warning => this == FatLossRate.one
-      ? '1 kg/hafta agresif bir hızdır: kas kaybı, yorgunluk ve besin eksikliği '
-          'riski artar. 2–4 haftadan uzun sürdürmeden önce doktora danış.'
-      : null;
 }
 
 /// Hız değerlendirmesinin sabitleri. Hedef sayıları tek motordan
@@ -134,8 +128,6 @@ String rateOptionLine(FatLossRate rate) => switch (rate) {
         '0,50 kg/hafta: en yavaş seçenek; alışkanlık kalıcı olur.',
       FatLossRate.threeQuarter =>
         '0,75 kg/hafta: çoğu kişi için hız ve sürdürülebilirlik dengesi.',
-      FatLossRate.one =>
-        '1 kg/hafta: yüksek kilolularda başlangıçta uygun olabilir.',
     };
 
 /// Kalori tabanına takılınca seçilen hız yerine gösterilen satır.
@@ -146,7 +138,7 @@ String rateClampLine(int floorKcal) =>
 const Map<RateHealth, RateInfo> _healthInfo = {
   RateHealth.sustainable: RateInfo(
     pros: [
-      'Kas kaybı en az.',
+      'Kas korunması daha kolay.',
       'Açlık ve halsizlik az.',
       'Antrenman performansı korunur.',
     ],
@@ -170,9 +162,9 @@ const Map<RateHealth, RateInfo> _healthInfo = {
       'Hızlı sonuç.',
     ],
     cons: [
-      'Kas kaybı riski artar.',
+      'Kas kaybı olasılığı artabilir.',
       'Yorgunluk, açlık ve sinirlilik.',
-      'Besin eksikliği ve safra kesesi taşı riski.',
+      'Besin eksikliği olasılığı artar.',
       'Uzun süre sürdürmek zor; 2–4 haftadan uzun sürdürmeden önce '
           'doktora danış.',
     ],

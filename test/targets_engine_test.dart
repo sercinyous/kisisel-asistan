@@ -43,24 +43,21 @@ void main() {
       expect(r.clamped, isFalse);
     });
 
-    test('0,5 / 0,75 / 1 kg: harcama − r × 7700 / 7', () {
+    test('0,5 / 0,75 kg: harcama − r × 7700 / 7', () {
       expect(_r(_s(rate: FatLossRate.half)).kcal, 2450);
-      expect(_r(_s(rate: FatLossRate.threeQuarter)).kcal, 2175);
-      final one = _r(_s(rate: FatLossRate.one));
-      expect(one.kcal, 1900);
-      expect(one.mode, TargetsMode.rate);
-      expect(one.warnings, contains(FatLossRate.one.warning));
+      final tq = _r(_s(rate: FatLossRate.threeQuarter));
+      expect(tq.kcal, 2175);
+      expect(tq.mode, TargetsMode.rate);
     });
 
     test('rozet vücut ağırlığının yüzdesine göre', () {
       expect(_r(_s(rate: FatLossRate.half)).health, RateHealth.sustainable);
       expect(_r(_s(rate: FatLossRate.threeQuarter)).health, RateHealth.fast);
-      expect(_r(_s(rate: FatLossRate.one), kg: 84).health, RateHealth.aggressive);
     });
 
     test('taban max(1200, bazal) altına inince clamped', () {
-      // Bazal 10×84 + 6,25×180 − 5×36 + 5 = 1790; 2000 − 1100 = 900 < 1790.
-      final r = _r(_s(rate: FatLossRate.one, manual: 2000));
+      // Bazal 10×84 + 6,25×180 − 5×36 + 5 = 1790; 2000 − 825 = 1175 < 1790.
+      final r = _r(_s(rate: FatLossRate.threeQuarter, manual: 2000));
       expect(r.clamped, isTrue);
       expect(r.kcal, 1790);
       expect(r.floorKcal, 1790);
@@ -79,15 +76,15 @@ void main() {
       }
     });
 
-    test('Klasik 1200 altı: uyarı, sayılar değişmez', () {
+    test('Klasik 1200 altı: tabana kırpılır', () {
       final r = _r(_s(target: 30, height: null), kg: 40);
-      expect(r.kcal, 1040);
-      expect(r.classicBelowFloor, isTrue);
-      expect(r.clamped, isFalse);
+      expect(r.kcal, 1200);
+      expect(r.classicBelowFloor, isFalse);
+      expect(r.clamped, isTrue);
     });
 
     test('18 yaş altı: kilit, koruma (harcama kadar)', () {
-      final r = _r(_s(rate: FatLossRate.one), age: 16);
+      final r = _r(_s(rate: FatLossRate.threeQuarter), age: 16);
       expect(r.mode, TargetsMode.locked);
       expect(r.kcal, 3000);
       expect(r.deficit, 0);
@@ -267,7 +264,8 @@ void main() {
           resolved: _r(s, kg: 30),
           trigger: PlanTrigger.rateChanged,
           now: now)!;
-      expect(w.settings.dailyCalories, 800);
+      // Klasik 30 × 26 = 780 kcal tabana (1.200) kırpılır.
+      expect(w.settings.dailyCalories, 1200);
       expect(w.settings.dailyProteinG, 60);
     });
   });

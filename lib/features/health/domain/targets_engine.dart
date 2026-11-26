@@ -161,7 +161,6 @@ class ResolvedTargets {
         if (clamped) clampedText,
         if (classicBelowFloor) SafeTargets.classicBelowFloorWarning,
         if (classicSurplus) SafeTargets.classicSurplusWarning,
-        if (mode == TargetsMode.rate && rate.warning != null) rate.warning!,
       ];
 
   /// "Ne kadar sağlıklı?" metinlerinin ([rateInfo]) biçimi.
@@ -296,10 +295,13 @@ ResolvedTargets resolveTargets({
 
   // Kas yapmada yalnızca yaş kilidi geçerlidir (düşük VKİ'de kilo almak
   // kilit sebebi değildir); diğer hedeflerde mevcut kilit kuralı.
+  // Yaş yalnızca doğum yılından bilinir: doğum günü henüz gelmemiş olabilir,
+  // kilitte ihtiyatlı yaş (yıl farkı − 1) kullanılır.
+  final lockAge = age == null ? null : age - 1;
   final locked = goal == GoalMode.leanGain
-      ? age != null && age < SafeTargets.adultAge
+      ? lockAge != null && lockAge < SafeTargets.adultAge
       : planLocked(
-          age: age,
+          age: lockAge,
           weightKg: weight,
           targetWeightKg: settings.targetWeightKg,
           heightCm: settings.heightCm,
@@ -354,12 +356,15 @@ ResolvedTargets resolveTargets({
 
   final r = rate.kgPerWeek;
   if (r == null) {
-    final kcal = (weight * FatLossRules.kcalPerKg).floor();
+    final raw = (weight * FatLossRules.kcalPerKg).floor();
+    final clamped = raw < floor;
+    final kcal = clamped ? floor : raw;
     return build(
       mode: TargetsMode.classic,
       kcal: kcal,
       protein: startProtein,
       fat: kcal ~/ FatLossRules.kcalPerFatGram,
+      clamped: clamped,
     );
   }
   final raw = (expenditure.kcal - r * FatLossRules.kcalPerKgFat / 7).round();

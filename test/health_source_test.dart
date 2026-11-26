@@ -29,9 +29,9 @@ void main() {
     });
 
     test('etiketler ve kısa adlar', () {
-      expect(HealthSourceKind.appleHealth.label, 'Apple Health');
+      expect(HealthSourceKind.appleHealth.label, 'Apple Sağlık');
       expect(HealthSourceKind.googleHealth.label, 'Google Health');
-      expect(HealthSourceKind.appleHealth.shortLabel, 'HealthKit');
+      expect(HealthSourceKind.appleHealth.shortLabel, 'Apple Sağlık');
       expect(HealthSourceKind.googleHealth.shortLabel, 'Google Health');
     });
   });

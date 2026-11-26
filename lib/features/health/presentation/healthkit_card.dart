@@ -18,13 +18,13 @@ abstract final class _HealthSourceActions {
           HealthSnapshot data) =>
       switch (data.status) {
         HealthStatus.unavailable => (
-            'Adım, uyku ve aktif kalori yalnızca iPhone\'da HealthKit '
+            'Adım, uyku ve aktif kalori yalnızca iPhone\'da Apple Sağlık '
                 'üzerinden okunur.',
             null,
             _CardAction.resync,
           ),
         HealthStatus.denied => (
-            'HealthKit erişimi verilmedi. Sağlık uygulaması > Paylaşım > '
+            'Apple Sağlık erişimi verilmedi. Sağlık uygulaması > Paylaşım > '
                 'Uygulamalar bölümünden izin verebilirsin.',
             'Yeniden bağlan',
             _CardAction.resync,
@@ -44,7 +44,7 @@ abstract final class _HealthSourceActions {
             _CardAction.approveApple,
           ),
         HealthStatus.reconnect || HealthStatus.failed => (
-            data.message ?? 'HealthKit verisi okunamadı.',
+            data.message ?? 'Apple Sağlık verisi okunamadı.',
             'Tekrar dene',
             _CardAction.resync,
           ),

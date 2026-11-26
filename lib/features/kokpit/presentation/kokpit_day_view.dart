@@ -371,11 +371,11 @@ class _HealthStatusMessage extends ConsumerWidget {
             icon: Icons.phonelink_off_outlined,
             message: snapshot.message ??
                 'Adım, uyku ve aktif kalori yalnızca iPhone\'da '
-                    'HealthKit üzerinden okunur.',
+                    'Apple Sağlık üzerinden okunur.',
           ),
         HealthStatus.denied => KokpitInlineMessage(
             icon: Icons.favorite_border_outlined,
-            message: 'HealthKit erişimi verilmedi. Sağlık uygulaması > '
+            message: 'Apple Sağlık erişimi verilmedi. Sağlık uygulaması > '
                 'Paylaşım > Uygulamalar bölümünden izin verebilirsin.',
             actionLabel: 'Bağlan',
             onAction: resync,

@@ -48,7 +48,18 @@ class WaterTodayNotifier extends AsyncNotifier<WaterToday> {
   }
 
   /// [ml] ekler. Gün değiştiyse önce yeniden yüklenir.
-  Future<void> add(int ml) async {
+  Future<void> add(int ml) => _serial(() => _add(ml));
+
+  /// Su işlemlerini sıraya alır: hızlı art arda dokunuşlar birbirinin
+  /// sonucunu ezmez (her işlem öncekinin bitmesini bekler).
+  Future<void> _queue = Future.value();
+  Future<void> _serial(Future<void> Function() op) {
+    final next = _queue.catchError((_) {}).then((_) => op());
+    _queue = next;
+    return next;
+  }
+
+  Future<void> _add(int ml) async {
     var current = await future;
     final today = AppDates.startOfDay(DateTime.now());
     if (current.day != today) {
@@ -56,7 +67,8 @@ class WaterTodayNotifier extends AsyncNotifier<WaterToday> {
       current = await future;
     }
     final log = await ref.read(waterRepositoryProvider).add(current.day, ml);
-    state = AsyncData(current.copyWith(logs: [...current.logs, log]));
+    final latest = state.valueOrNull ?? current;
+    state = AsyncData(latest.copyWith(logs: [...latest.logs, log]));
   }
 
   /// Günlük hedefi [ml] yapar (Plan > Rehber "Hedefi … yap").
@@ -68,13 +80,15 @@ class WaterTodayNotifier extends AsyncNotifier<WaterToday> {
   }
 
   /// Bugünün son kaydını siler; kayıt yoksa bir şey yapmaz.
-  Future<void> undo() async {
+  Future<void> undo() => _serial(_undo);
+
+  Future<void> _undo() async {
     final current = await future;
     if (current.logs.isEmpty) return;
     final last = current.logs.last;
     await ref.read(waterRepositoryProvider).delete(last.id);
-    state = AsyncData(
-      current.copyWith(logs: current.logs.sublist(0, current.logs.length - 1)),
-    );
+    final latest = state.valueOrNull ?? current;
+    state = AsyncData(latest.copyWith(
+        logs: [for (final l in latest.logs) if (l.id != last.id) l]));
   }
 }

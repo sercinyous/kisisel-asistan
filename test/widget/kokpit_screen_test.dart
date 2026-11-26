@@ -331,7 +331,7 @@ void main() {
     testWidgets('HealthKit reddedilince Bağlan düğmesi çıkar', (tester) async {
       health.snapshot = const HealthSnapshot(status: HealthStatus.denied);
       await pumpKokpit(tester);
-      expect(find.textContaining('HealthKit erişimi verilmedi'), findsOneWidget);
+      expect(find.textContaining('Apple Sağlık erişimi verilmedi'), findsOneWidget);
       expect(find.text('Bağlan'), findsOneWidget);
     });
 

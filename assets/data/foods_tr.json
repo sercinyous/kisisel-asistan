@@ -20,14 +20,18 @@
   ],
   "source": "USDA FDC 174924",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Temel Gıdalar",
+   "Kahvaltılık Ürünler"
+  ]
  },
  {
   "id": "ekmek-tam-bugday",
   "name": "Tam buğday ekmeği",
   "aliases": [
    "kepekli ekmek",
-   "tam tahıllı ekmek"
+   "tam tahıllı ekmek",
+   "ekmek"
   ],
   "category": "tahıl-ekmek",
   "kcal100": 252.0,
@@ -42,7 +46,9 @@
   ],
   "source": "USDA FDC 172688",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Temel Gıdalar"
+  ]
  },
  {
   "id": "ekmek-cavdar",
@@ -276,7 +282,8 @@
   "id": "makarna-kuru",
   "name": "Makarna (kuru)",
   "aliases": [
-   "çiğ makarna"
+   "çiğ makarna",
+   "makarna"
   ],
   "category": "tahıl-ekmek",
   "kcal100": 371.0,
@@ -286,7 +293,9 @@
   "portions": [],
   "source": "USDA FDC 169736",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Temel Gıdalar"
+  ]
  },
  {
   "id": "makarna-tam-bugday",
@@ -1268,7 +1277,8 @@
   "name": "Zeytinyağı",
   "aliases": [
    "sızma zeytinyağı",
-   "zeytin yağı"
+   "zeytin yağı",
+   "yağ"
   ],
   "category": "kuruyemiş-yağ",
   "kcal100": 884.0,
@@ -1283,11 +1293,17 @@
    {
     "name": "1 çay kaşığı",
     "grams": 4.5
+   },
+   {
+    "name": "1 yemek kaşığı",
+    "grams": 10
    }
   ],
   "source": "USDA FDC 171413",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Temel Gıdalar"
+  ]
  },
  {
   "id": "aycicek-yagi",
@@ -1376,11 +1392,17 @@
    {
     "name": "1 küçük boy",
     "grams": 3.2
+   },
+   {
+    "name": "5 adet",
+    "grams": 30
    }
   ],
   "source": "USDA FDC 169094",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
  },
  {
   "id": "zeytin-yesil",
@@ -1420,17 +1442,25 @@
   "id": "findik",
   "name": "Fındık",
   "aliases": [
-   "fındık içi"
+   "fındık içi",
+   "kuruyemiş"
   ],
   "category": "kuruyemiş-yağ",
   "kcal100": 628.0,
   "protein100": 14.95,
   "carbs100": 16.7,
   "fat100": 60.75,
-  "portions": [],
+  "portions": [
+   {
+    "name": "1 avuç",
+    "grams": 30
+   }
+  ],
   "source": "USDA FDC 170581",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
  },
  {
   "id": "badem-cig",
@@ -2175,7 +2205,9 @@
   "portions": [],
   "source": "USDA FDC 170457",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Sebzeler"
+  ]
  },
  {
   "id": "domates-sos",
@@ -2416,7 +2448,9 @@
   ],
   "source": "USDA FDC 170393",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Sebzeler"
+  ]
  },
  {
   "id": "lahana-beyaz",
@@ -2594,7 +2628,9 @@
   "portions": [],
   "source": "USDA FDC 169986",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Sebzeler"
+  ]
  },
  {
   "id": "brokoli",
@@ -2963,10 +2999,18 @@
   "protein100": 1.09,
   "carbs100": 22.84,
   "fat100": 0.33,
-  "portions": [],
+  "portions": [
+   {
+    "name": "1 orta boy",
+    "grams": 118
+   }
+  ],
   "source": "USDA FDC 173944",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler",
+   "Öğle Atıştırmalıkları"
+  ]
  },
  {
   "id": "portakal",
@@ -2982,7 +3026,9 @@
   "portions": [],
   "source": "USDA FDC 169097",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "mandalina",
@@ -2998,7 +3044,9 @@
   "portions": [],
   "source": "USDA FDC 169105",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "greyfurt",
@@ -3062,7 +3110,9 @@
   ],
   "source": "USDA FDC 174683",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "cilek",
@@ -3078,7 +3128,9 @@
   "portions": [],
   "source": "USDA FDC 167762",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "seftali",
@@ -3094,7 +3146,9 @@
   "portions": [],
   "source": "USDA FDC 169928",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "kayisi",
@@ -3193,7 +3247,9 @@
   "portions": [],
   "source": "USDA FDC 167765",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "kavun",
@@ -3336,7 +3392,9 @@
   "portions": [],
   "source": "USDA FDC 168153",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "erik",
@@ -3370,7 +3428,9 @@
   "portions": [],
   "source": "USDA FDC 171705",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Meyveler"
+  ]
  },
  {
   "id": "ananas",
@@ -3831,11 +3891,17 @@
    {
     "name": "1 yemek kaşığı",
     "grams": 21
+   },
+   {
+    "name": "1 tatlı kaşığı",
+    "grams": 10
    }
   ],
   "source": "USDA FDC 169640",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
  },
  {
   "id": "seker",
@@ -3858,11 +3924,17 @@
    {
     "name": "1 kupa (240 ml)",
     "grams": 200
+   },
+   {
+    "name": "2 tatlı kaşığı",
+    "grams": 10
    }
   ],
   "source": "USDA FDC 169655",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Temel Gıdalar"
+  ]
  },
  {
   "id": "seker-pudra",
@@ -3925,7 +3997,9 @@
   ],
   "source": "USDA FDC 169641",
   "verification": "tek kaynak",
-  "categories": []
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
  },
  {
   "id": "akcaagac-surubu",
@@ -4674,53 +4748,6 @@
   "note": "Yağ miktarına göre değişir"
  },
  {
-  "id": "k-ekmek-beyaz",
-  "name": "Beyaz ekmek",
-  "aliases": [
-   "ekmek"
-  ],
-  "category": "tahıl-ekmek",
-  "categories": [
-   "Temel Gıdalar",
-   "Kahvaltılık Ürünler"
-  ],
-  "kcal100": 265.0,
-  "protein100": 8.85,
-  "carbs100": 49.42,
-  "fat100": 3.33,
-  "portions": [
-   {
-    "name": "1 dilim",
-    "grams": 30
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-ekmek-tam-bugday",
-  "name": "Tam buğday ekmeği",
-  "aliases": [
-   "ekmek"
-  ],
-  "category": "tahıl-ekmek",
-  "categories": [
-   "Temel Gıdalar"
-  ],
-  "kcal100": 247.0,
-  "protein100": 12.45,
-  "carbs100": 42.71,
-  "fat100": 3.5,
-  "portions": [
-   {
-    "name": "1 dilim",
-    "grams": 30
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
   "id": "k-yulaf",
   "name": "Yulaf (kuru)",
   "aliases": [
@@ -4763,47 +4790,6 @@
   "verification": "yaklaşık"
  },
  {
-  "id": "k-makarna-kuru",
-  "name": "Makarna (kuru)",
-  "aliases": [
-   "makarna"
-  ],
-  "category": "tahıl-ekmek",
-  "categories": [
-   "Temel Gıdalar"
-  ],
-  "kcal100": 371.0,
-  "protein100": 13.04,
-  "carbs100": 74.67,
-  "fat100": 1.51,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-zeytinyagi",
-  "name": "Zeytinyağı",
-  "aliases": [
-   "yağ"
-  ],
-  "category": "kuruyemiş-yağ",
-  "categories": [
-   "Temel Gıdalar"
-  ],
-  "kcal100": 880.0,
-  "protein100": 0.0,
-  "carbs100": 0.0,
-  "fat100": 100.0,
-  "portions": [
-   {
-    "name": "1 yemek kaşığı",
-    "grams": 10
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
   "id": "k-tereyagi",
   "name": "Tereyağı",
   "aliases": [
@@ -4820,29 +4806,6 @@
   "portions": [
    {
     "name": "1 porsiyon",
-    "grams": 10
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-seker",
-  "name": "Toz şeker",
-  "aliases": [
-   "şeker"
-  ],
-  "category": "diğer",
-  "categories": [
-   "Temel Gıdalar"
-  ],
-  "kcal100": 400.0,
-  "protein100": 0.0,
-  "carbs100": 99.98,
-  "fat100": 0.0,
-  "portions": [
-   {
-    "name": "2 tatlı kaşığı",
     "grams": 10
    }
   ],
@@ -4868,108 +4831,6 @@
     "grams": 182
    }
   ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-muz",
-  "name": "Muz",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler",
-   "Öğle Atıştırmalıkları"
-  ],
-  "kcal100": 89.0,
-  "protein100": 1.09,
-  "carbs100": 22.84,
-  "fat100": 0.33,
-  "portions": [
-   {
-    "name": "1 orta boy",
-    "grams": 118
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-portakal",
-  "name": "Portakal",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 47.0,
-  "protein100": 0.94,
-  "carbs100": 11.75,
-  "fat100": 0.12,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-mandalina",
-  "name": "Mandalina",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 53.0,
-  "protein100": 0.81,
-  "carbs100": 13.34,
-  "fat100": 0.31,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-cilek",
-  "name": "Çilek",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 32.0,
-  "protein100": 0.67,
-  "carbs100": 7.68,
-  "fat100": 0.3,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-uzum",
-  "name": "Üzüm",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 69.0,
-  "protein100": 0.72,
-  "carbs100": 18.1,
-  "fat100": 0.16,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-karpuz",
-  "name": "Karpuz",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 30.0,
-  "protein100": 0.61,
-  "carbs100": 7.55,
-  "fat100": 0.15,
-  "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık"
  },
@@ -5006,70 +4867,6 @@
   "verification": "yaklaşık"
  },
  {
-  "id": "k-seftali",
-  "name": "Şeftali",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 39.0,
-  "protein100": 0.91,
-  "carbs100": 9.54,
-  "fat100": 0.25,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-kivi",
-  "name": "Kivi",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 61.0,
-  "protein100": 1.14,
-  "carbs100": 14.66,
-  "fat100": 0.52,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-avokado",
-  "name": "Avokado",
-  "aliases": [],
-  "category": "meyve",
-  "categories": [
-   "Meyveler"
-  ],
-  "kcal100": 160.0,
-  "protein100": 2.0,
-  "carbs100": 8.53,
-  "fat100": 14.66,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-domates",
-  "name": "Domates",
-  "aliases": [],
-  "category": "sebze",
-  "categories": [
-   "Sebzeler"
-  ],
-  "kcal100": 18.0,
-  "protein100": 0.88,
-  "carbs100": 3.89,
-  "fat100": 0.2,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
   "id": "k-salatalik",
   "name": "Salatalık",
   "aliases": [],
@@ -5081,22 +4878,6 @@
   "protein100": 0.65,
   "carbs100": 3.63,
   "fat100": 0.11,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-havuc",
-  "name": "Havuç",
-  "aliases": [],
-  "category": "sebze",
-  "categories": [
-   "Sebzeler"
-  ],
-  "kcal100": 41.0,
-  "protein100": 0.93,
-  "carbs100": 9.58,
-  "fat100": 0.24,
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık"
@@ -5214,22 +4995,6 @@
   "verification": "yaklaşık"
  },
  {
-  "id": "k-karnabahar",
-  "name": "Karnabahar",
-  "aliases": [],
-  "category": "sebze",
-  "categories": [
-   "Sebzeler"
-  ],
-  "kcal100": 25.0,
-  "protein100": 1.92,
-  "carbs100": 4.97,
-  "fat100": 0.28,
-  "portions": [],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
   "id": "k-peynir-beyaz",
   "name": "Beyaz peynir",
   "aliases": [
@@ -5301,71 +5066,6 @@
   "verification": "yaklaşık"
  },
  {
-  "id": "k-zeytin-siyah",
-  "name": "Siyah zeytin",
-  "aliases": [
-   "zeytin"
-  ],
-  "category": "kuruyemiş-yağ",
-  "categories": [
-   "Kahvaltılık Ürünler"
-  ],
-  "kcal100": 116.7,
-  "protein100": 0.84,
-  "carbs100": 6.04,
-  "fat100": 10.9,
-  "portions": [
-   {
-    "name": "5 adet",
-    "grams": 30
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-bal",
-  "name": "Bal",
-  "aliases": [],
-  "category": "diğer",
-  "categories": [
-   "Kahvaltılık Ürünler"
-  ],
-  "kcal100": 300.0,
-  "protein100": 0.3,
-  "carbs100": 82.4,
-  "fat100": 0.0,
-  "portions": [
-   {
-    "name": "1 tatlı kaşığı",
-    "grams": 10
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-recel",
-  "name": "Reçel",
-  "aliases": [],
-  "category": "diğer",
-  "categories": [
-   "Kahvaltılık Ürünler"
-  ],
-  "kcal100": 250.0,
-  "protein100": 0.37,
-  "carbs100": 68.86,
-  "fat100": 0.07,
-  "portions": [
-   {
-    "name": "1 yemek kaşığı",
-    "grams": 20
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
   "id": "k-simit",
   "name": "Simit",
   "aliases": [],
@@ -5423,29 +5123,6 @@
   "protein100": 15.23,
   "carbs100": 13.71,
   "fat100": 65.21,
-  "portions": [
-   {
-    "name": "1 avuç",
-    "grams": 30
-   }
-  ],
-  "source": "Kullanıcı listesi (yaklaşık)",
-  "verification": "yaklaşık"
- },
- {
-  "id": "k-findik",
-  "name": "Fındık",
-  "aliases": [
-   "kuruyemiş"
-  ],
-  "category": "kuruyemiş-yağ",
-  "categories": [
-   "Öğle Atıştırmalıkları"
-  ],
-  "kcal100": 626.7,
-  "protein100": 14.95,
-  "carbs100": 16.7,
-  "fat100": 60.75,
   "portions": [
    {
     "name": "1 avuç",
@@ -5579,5 +5256,777 @@
   "portions": [],
   "source": "Kullanıcı listesi (yaklaşık)",
   "verification": "yaklaşık"
+ },
+ {
+  "id": "mercimek-corbasi",
+  "name": "Mercimek çorbası",
+  "aliases": [
+   "mercimek",
+   "kırmızı mercimek çorbası"
+  ],
+  "category": "diğer",
+  "kcal100": 62,
+  "protein100": 3.6,
+  "carbs100": 9.0,
+  "fat100": 1.4,
+  "portions": [
+   {
+    "name": "1 kase",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "ezogelin-corbasi",
+  "name": "Ezogelin çorbası",
+  "aliases": [
+   "ezogelin"
+  ],
+  "category": "diğer",
+  "kcal100": 65,
+  "protein100": 3.2,
+  "carbs100": 10.0,
+  "fat100": 1.5,
+  "portions": [
+   {
+    "name": "1 kase",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "tavuk-suyu-corba",
+  "name": "Tavuk suyu çorba",
+  "aliases": [
+   "şehriyeli tavuk çorbası",
+   "tavuk çorbası"
+  ],
+  "category": "diğer",
+  "kcal100": 45,
+  "protein100": 3.0,
+  "carbs100": 5.5,
+  "fat100": 1.2,
+  "portions": [
+   {
+    "name": "1 kase",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "yayla-corbasi",
+  "name": "Yayla çorbası",
+  "aliases": [
+   "yoğurt çorbası"
+  ],
+  "category": "diğer",
+  "kcal100": 60,
+  "protein100": 2.8,
+  "carbs100": 7.5,
+  "fat100": 2.1,
+  "portions": [
+   {
+    "name": "1 kase",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "doner-tavuk",
+  "name": "Tavuk döner",
+  "aliases": [
+   "döner",
+   "tavuk döner dürüm içi"
+  ],
+  "category": "et-balık",
+  "kcal100": 190,
+  "protein100": 20.0,
+  "carbs100": 3.0,
+  "fat100": 11.0,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "doner-et",
+  "name": "Et döner",
+  "aliases": [
+   "et döner",
+   "döner kebap"
+  ],
+  "category": "et-balık",
+  "kcal100": 250,
+  "protein100": 18.0,
+  "carbs100": 3.0,
+  "fat100": 19.0,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "durum-tavuk",
+  "name": "Tavuk dürüm",
+  "aliases": [
+   "dürüm",
+   "döner dürüm"
+  ],
+  "category": "diğer",
+  "kcal100": 220,
+  "protein100": 13.0,
+  "carbs100": 24.0,
+  "fat100": 8.0,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "iskender",
+  "name": "İskender",
+  "aliases": [
+   "iskender kebap"
+  ],
+  "category": "diğer",
+  "kcal100": 180,
+  "protein100": 10.0,
+  "carbs100": 12.0,
+  "fat100": 10.0,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 350
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "lahmacun",
+  "name": "Lahmacun",
+  "aliases": [
+   "lahmacun"
+  ],
+  "category": "diğer",
+  "kcal100": 235,
+  "protein100": 10.0,
+  "carbs100": 32.0,
+  "fat100": 7.5,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 130
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "pide-kiymali",
+  "name": "Kıymalı pide",
+  "aliases": [
+   "pide",
+   "etli pide"
+  ],
+  "category": "diğer",
+  "kcal100": 260,
+  "protein100": 12.0,
+  "carbs100": 32.0,
+  "fat100": 9.5,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 300
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "pide-kasarli",
+  "name": "Kaşarlı pide",
+  "aliases": [
+   "peynirli pide"
+  ],
+  "category": "diğer",
+  "kcal100": 285,
+  "protein100": 12.5,
+  "carbs100": 33.0,
+  "fat100": 11.5,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 280
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "pizza-karisik",
+  "name": "Pizza (karışık)",
+  "aliases": [
+   "pizza"
+  ],
+  "category": "diğer",
+  "kcal100": 265,
+  "protein100": 11.0,
+  "carbs100": 31.0,
+  "fat100": 10.5,
+  "portions": [
+   {
+    "name": "1 dilim",
+    "grams": 110
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "menemen",
+  "name": "Menemen",
+  "aliases": [
+   "menemen"
+  ],
+  "category": "diğer",
+  "kcal100": 105,
+  "protein100": 5.5,
+  "carbs100": 4.0,
+  "fat100": 7.5,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 200
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
+ },
+ {
+  "id": "sucuklu-yumurta",
+  "name": "Sucuklu yumurta",
+  "aliases": [
+   "sucuklu"
+  ],
+  "category": "diğer",
+  "kcal100": 250,
+  "protein100": 14.0,
+  "carbs100": 1.5,
+  "fat100": 21.0,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
+ },
+ {
+  "id": "manti",
+  "name": "Mantı (yoğurtlu)",
+  "aliases": [
+   "mantı"
+  ],
+  "category": "diğer",
+  "kcal100": 180,
+  "protein100": 8.0,
+  "carbs100": 22.0,
+  "fat100": 6.5,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "izgara-kofte",
+  "name": "Izgara köfte",
+  "aliases": [
+   "köfte",
+   "kasap köfte"
+  ],
+  "category": "et-balık",
+  "kcal100": 240,
+  "protein100": 18.0,
+  "carbs100": 5.0,
+  "fat100": 16.5,
+  "portions": [
+   {
+    "name": "1 porsiyon (6 adet)",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "karniyarik",
+  "name": "Karnıyarık",
+  "aliases": [
+   "karnıyarık"
+  ],
+  "category": "diğer",
+  "kcal100": 120,
+  "protein100": 4.5,
+  "carbs100": 7.0,
+  "fat100": 8.5,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "kuru-fasulye-yemegi",
+  "name": "Kuru fasulye (yemek)",
+  "aliases": [
+   "kuru fasulye yemeği",
+   "etli kuru fasulye"
+  ],
+  "category": "baklagil",
+  "kcal100": 115,
+  "protein100": 6.5,
+  "carbs100": 13.0,
+  "fat100": 4.0,
+  "portions": [
+   {
+    "name": "1 kase",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "nohut-yemegi",
+  "name": "Nohut yemeği",
+  "aliases": [
+   "etli nohut"
+  ],
+  "category": "baklagil",
+  "kcal100": 120,
+  "protein100": 6.5,
+  "carbs100": 14.5,
+  "fat100": 4.0,
+  "portions": [
+   {
+    "name": "1 kase",
+    "grams": 250
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "pilav-pirinc",
+  "name": "Pirinç pilavı",
+  "aliases": [
+   "pilav",
+   "tereyağlı pilav"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 160,
+  "protein100": 2.8,
+  "carbs100": 28.0,
+  "fat100": 4.0,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "bulgur-pilavi",
+  "name": "Bulgur pilavı",
+  "aliases": [
+   "bulgur pilavı"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 130,
+  "protein100": 3.5,
+  "carbs100": 22.0,
+  "fat100": 3.0,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "tavuk-sote",
+  "name": "Tavuk sote",
+  "aliases": [
+   "tavuk sote"
+  ],
+  "category": "et-balık",
+  "kcal100": 140,
+  "protein100": 16.0,
+  "carbs100": 4.0,
+  "fat100": 6.5,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 200
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "taze-fasulye-zeytinyagli",
+  "name": "Zeytinyağlı taze fasulye",
+  "aliases": [
+   "taze fasulye"
+  ],
+  "category": "sebze",
+  "kcal100": 75,
+  "protein100": 1.8,
+  "carbs100": 7.5,
+  "fat100": 4.5,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 200
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Akşam Öğünleri"
+  ]
+ },
+ {
+  "id": "sigara-boregi",
+  "name": "Sigara böreği",
+  "aliases": [
+   "börek",
+   "peynirli börek"
+  ],
+  "category": "diğer",
+  "kcal100": 300,
+  "protein100": 9.0,
+  "carbs100": 27.0,
+  "fat100": 17.0,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 35
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
+ },
+ {
+  "id": "su-boregi",
+  "name": "Su böreği",
+  "aliases": [
+   "su böreği"
+  ],
+  "category": "diğer",
+  "kcal100": 250,
+  "protein100": 10.0,
+  "carbs100": 24.0,
+  "fat100": 12.5,
+  "portions": [
+   {
+    "name": "1 dilim",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
+ },
+ {
+  "id": "pogaca",
+  "name": "Peynirli poğaça",
+  "aliases": [
+   "poğaça"
+  ],
+  "category": "tahıl-ekmek",
+  "kcal100": 340,
+  "protein100": 8.5,
+  "carbs100": 38.0,
+  "fat100": 17.0,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 80
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
+ },
+ {
+  "id": "baklava",
+  "name": "Baklava",
+  "aliases": [
+   "fıstıklı baklava",
+   "cevizli baklava"
+  ],
+  "category": "diğer",
+  "kcal100": 430,
+  "protein100": 7.0,
+  "carbs100": 52.0,
+  "fat100": 22.0,
+  "portions": [
+   {
+    "name": "1 dilim",
+    "grams": 40
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "sutlac",
+  "name": "Sütlaç",
+  "aliases": [
+   "fırın sütlaç"
+  ],
+  "category": "diğer",
+  "kcal100": 125,
+  "protein100": 3.5,
+  "carbs100": 21.0,
+  "fat100": 3.0,
+  "portions": [
+   {
+    "name": "1 kase",
+    "grams": 180
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "kunefe",
+  "name": "Künefe",
+  "aliases": [
+   "künefe"
+  ],
+  "category": "diğer",
+  "kcal100": 340,
+  "protein100": 7.5,
+  "carbs100": 40.0,
+  "fat100": 17.0,
+  "portions": [
+   {
+    "name": "1 porsiyon",
+    "grams": 150
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "hamburger",
+  "name": "Hamburger",
+  "aliases": [
+   "burger"
+  ],
+  "category": "diğer",
+  "kcal100": 250,
+  "protein100": 13.0,
+  "carbs100": 24.0,
+  "fat100": 11.0,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 200
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "tost-kasarli",
+  "name": "Kaşarlı tost",
+  "aliases": [
+   "tost"
+  ],
+  "category": "diğer",
+  "kcal100": 290,
+  "protein100": 13.0,
+  "carbs100": 30.0,
+  "fat100": 13.0,
+  "portions": [
+   {
+    "name": "1 adet",
+    "grams": 130
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Kahvaltılık Ürünler"
+  ]
+ },
+ {
+  "id": "whey-protein",
+  "name": "Protein tozu (whey)",
+  "aliases": [
+   "protein tozu",
+   "whey"
+  ],
+  "category": "diğer",
+  "kcal100": 380,
+  "protein100": 75.0,
+  "carbs100": 10.0,
+  "fat100": 5.0,
+  "portions": [
+   {
+    "name": "1 ölçek",
+    "grams": 30
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
+ },
+ {
+  "id": "cig-kofte",
+  "name": "Çiğ köfte (etsiz)",
+  "aliases": [
+   "çiğ köfte",
+   "çiğköfte"
+  ],
+  "category": "diğer",
+  "kcal100": 190,
+  "protein100": 5.5,
+  "carbs100": 35.0,
+  "fat100": 3.0,
+  "portions": [
+   {
+    "name": "1 dürüm içi",
+    "grams": 100
+   }
+  ],
+  "source": "Standart tarif (yaklaşık)",
+  "verification": "yaklaşık",
+  "categories": [
+   "Öğle Atıştırmalıkları"
+  ]
  }
 ]
