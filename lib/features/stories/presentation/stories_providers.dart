@@ -15,8 +15,11 @@ import '../data/story_seen_store.dart';
 import '../domain/story_builder.dart';
 import '../domain/story_models.dart';
 
-final storySeenStoreProvider =
-    Provider<StorySeenStore>((ref) => StorySeenStore());
+final storySeenStoreProvider = Provider<StorySeenStore>(
+  (ref) => StorySeenStore(
+    userId: ref.watch(storiesRepositoryProvider).currentUserId,
+  ),
+);
 
 /// Görülmüş kart anahtarları (cihazda).
 final storySeenProvider = AsyncNotifierProvider<StorySeenNotifier, Set<String>>(

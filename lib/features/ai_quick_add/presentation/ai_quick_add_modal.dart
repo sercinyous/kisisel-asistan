@@ -35,6 +35,10 @@ class AiQuickAddModal extends ConsumerStatefulWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.scrim,
+      // Sürükleyerek kapatma PopScope'u atlar; yazılan metin ve meşgul
+      // durum kazara kaybolmasın diye kapalı. Arka plana dokunma PopScope'a
+      // uğrar.
+      enableDrag: false,
       builder: (_) => AiQuickAddModal(mode: mode, initialText: initialText),
     );
   }
@@ -156,122 +160,134 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                         : _switchMode,
               );
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            border: Border(top: BorderSide(color: AppColors.border)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _Header(
-                    mode: _mode,
-                    inPreview: inPreview,
-                    onClose: state.isBusy ? null : _close,
-                  ),
-                  const SizedBox(height: 16),
-                  if (inPreview)
-                    Flexible(
-                      child: _PreviewList(
-                        entry: state.entry!,
-                        enabled: !state.isBusy,
-                        onRemove: controller.remove,
-                        header: otherDomainBanner,
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: _InputSection(
-                          controller: _textController,
-                          focusNode: _focusNode,
-                          enabled: !state.isBusy,
-                          hint: _hints[_mode]!,
-                          examples: _examples[_mode]!,
-                          notice: otherDomainBanner ??
-                              (_savedBeforeSwitch > 0
-                                  ? _SavedNotice(count: _savedBeforeSwitch)
-                                  : null),
-                          onExample: (text) {
-                            _textController.text = text;
-                            _textController.selection =
-                                TextSelection.collapsed(offset: text.length);
-                          },
+    // Ayrıştırma/kaydetme sürerken kapanmaz; boştayken arka plana dokunma
+    // da X gibi kapatır ve önceki alanda kaydedilenlerin sayısını döndürür.
+    return PopScope<int>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || ref.read(quickAddControllerProvider(_mode)).isBusy) {
+          return;
+        }
+        _close();
+      },
+      child: Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(22)),
+              border: Border(top: BorderSide(color: AppColors.border)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
-                  if (state.errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    _ErrorBanner(message: state.errorMessage!),
-                  ],
-                  const SizedBox(height: 16),
-                  if (inPreview)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed:
-                                state.isBusy ? null : controller.backToEdit,
-                            child: const Text('Düzenle'),
+                    const SizedBox(height: 16),
+                    _Header(
+                      mode: _mode,
+                      inPreview: inPreview,
+                      onClose: state.isBusy ? null : _close,
+                    ),
+                    const SizedBox(height: 16),
+                    if (inPreview)
+                      Flexible(
+                        child: _PreviewList(
+                          entry: state.entry!,
+                          enabled: !state.isBusy,
+                          onRemove: controller.remove,
+                          header: otherDomainBanner,
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: _InputSection(
+                            controller: _textController,
+                            focusNode: _focusNode,
+                            enabled: !state.isBusy,
+                            hint: _hints[_mode]!,
+                            examples: _examples[_mode]!,
+                            notice: otherDomainBanner ??
+                                (_savedBeforeSwitch > 0
+                                    ? _SavedNotice(count: _savedBeforeSwitch)
+                                    : null),
+                            onExample: (text) {
+                              _textController.text = text;
+                              _textController.selection =
+                                  TextSelection.collapsed(offset: text.length);
+                            },
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: FilledButton.icon(
-                            onPressed: state.isBusy ? null : _save,
-                            icon: state.status == QuickAddStatus.saving
-                                ? const _ButtonSpinner()
-                                : const Icon(Icons.check_outlined),
-                            label: Text(
-                              state.status == QuickAddStatus.saving
-                                  ? 'Kaydediliyor…'
-                                  : '${state.entry!.totalCount} kaydı kaydet',
+                      ),
+                    if (state.errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      _ErrorBanner(message: state.errorMessage!),
+                    ],
+                    const SizedBox(height: 16),
+                    if (inPreview)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed:
+                                  state.isBusy ? null : controller.backToEdit,
+                              child: const Text('Düzenle'),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              onPressed: state.isBusy ? null : _save,
+                              icon: state.status == QuickAddStatus.saving
+                                  ? const _ButtonSpinner()
+                                  : const Icon(Icons.check_outlined),
+                              label: Text(
+                                state.status == QuickAddStatus.saving
+                                    ? 'Kaydediliyor…'
+                                    : '${state.entry!.totalCount} kaydı kaydet',
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      if (state.status == QuickAddStatus.parsing) ...[
+                        const Center(child: RitimTop(size: 40)),
+                        const SizedBox(height: 12),
                       ],
-                    )
-                  else ...[
-                    if (state.status == QuickAddStatus.parsing) ...[
-                      const Center(child: RitimTop(size: 40)),
-                      const SizedBox(height: 12),
-                    ],
-                    FilledButton.icon(
-                      onPressed:
-                          state.isBusy || _textController.text.trim().isEmpty
-                              ? null
-                              : _parse,
-                      icon: const Icon(Icons.auto_awesome_outlined),
-                      label: Text(
-                        state.status == QuickAddStatus.parsing
-                            ? 'Ayrıştırılıyor…'
-                            : 'Ayrıştır',
+                      FilledButton.icon(
+                        onPressed:
+                            state.isBusy || _textController.text.trim().isEmpty
+                                ? null
+                                : _parse,
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                        label: Text(
+                          state.status == QuickAddStatus.parsing
+                              ? 'Ayrıştırılıyor…'
+                              : 'Ayrıştır',
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

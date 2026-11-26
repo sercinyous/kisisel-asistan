@@ -58,7 +58,7 @@ void main() {
   test('paylaşılan kişisel anahtarlar kaynaklarıyla aynı', () {
     expect(AccountRepository.sharedPersonalKeys, [
       RecentFoodsStore.key,
-      StorySeenStore.prefsKey,
+      StorySeenStore.basePrefsKey,
       CheckinDismissNotifier.prefsKey,
       HealthNudgePrefs.prefsKey,
     ]);

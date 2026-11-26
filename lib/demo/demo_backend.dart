@@ -557,6 +557,26 @@ class FakeTasksRepository implements TasksRepository {
   }
 
   @override
+  Future<List<TaskItem>> fetchKokpitDay(
+    DateTime now, {
+    int lookbackDays = 30,
+  }) async {
+    if (fetchError != null) throw fetchError!;
+    final day = DateTime(now.year, now.month, now.day);
+    final tomorrow = day.add(const Duration(days: 1));
+    final since = day.subtract(Duration(days: lookbackDays));
+    bool inWindow(DateTime? t) =>
+        t != null && !t.isBefore(since) && t.isBefore(tomorrow);
+    return [
+      for (final t in tasks)
+        if (t.isDone
+            ? t.completedAt != null && !t.completedAt!.isBefore(day)
+            : inWindow(t.remindAt) || inWindow(t.dueAt))
+          t,
+    ];
+  }
+
+  @override
   Future<List<TaskItem>> fetchUpcoming({DateTime? from, int limit = 6}) async {
     if (fetchError != null) throw fetchError!;
     final now = from ?? DateTime.now();

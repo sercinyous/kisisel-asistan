@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/services/error_reporter.dart';
+
 /// Kullanıcıya gösterilebilir (Türkçe) mesaj taşıyan AI hatası.
 class AiParseException implements Exception {
   const AiParseException(this.message, {this.statusCode});
@@ -148,9 +150,7 @@ class GeminiTransport {
 
     final uri = Uri.tryParse(_proxyUrl);
     if (_proxyUrl.isEmpty || uri == null || !uri.hasAuthority) {
-      throw const AiParseException(
-        'AI sunucusu yapılandırılmamış. SUPABASE_URL tanımlı olmalı.',
-      );
+      throw _unavailable('ai-proxy: SUPABASE_URL tanımlı değil');
     }
     final token = await _accessToken?.call();
     if (token == null || token.isEmpty) {
@@ -180,8 +180,28 @@ class GeminiTransport {
   static const String _sessionMessage =
       'Oturum bulunamadı ya da süresi doldu. Çıkış yapıp yeniden giriş yapın.';
 
+  /// Kullanıcının düzeltemeyeceği sunucu/kurulum hataları için tek düz
+  /// ileti; teknik ayrıntı hata kaydına gider.
+  static const String unavailableMessage =
+      'AI şu an kullanılamıyor. Biraz sonra tekrar dene; kayıtları elle de '
+      'ekleyebilirsin.';
+
+  static AiParseException _unavailable(String detail, {int? statusCode}) {
+    ErrorReporter.current?.report(
+      StateError('AI kullanılamıyor: $detail'),
+      StackTrace.current,
+    );
+    return AiParseException(unavailableMessage, statusCode: statusCode);
+  }
+
   AiParseException _errorFor(http.Response response) {
     final code = response.statusCode;
+    if (usesProxy && (code == 402 || code == 404 || code == 502)) {
+      return _unavailable(
+        'ai-proxy $code ${_serverMessage(response) ?? ''}'.trim(),
+        statusCode: code,
+      );
+    }
     final message = usesProxy
         ? _proxyMessage(code, _serverMessage(response))
         : _directMessage(code);
@@ -203,15 +223,9 @@ class GeminiTransport {
         400 => 'AI isteği geçersiz bulundu (400). Metni kontrol edip tekrar '
             'deneyin.',
         401 => _sessionMessage,
-        402 => 'AI servisinin bakiyesi tükendi (402). Uygulama sahibine haber '
-            'verin.',
-        404 => 'AI sunucusu kurulmamış. ai-proxy fonksiyonu Supabase '
-            'projesine dağıtılmalı.',
         413 => 'Metin çok uzun. Kısaltıp tekrar deneyin.',
         429 => serverMessage ??
             'Günlük AI kullanım sınırına ulaşıldı. Yarın tekrar deneyin.',
-        502 => 'AI sunucusu yapılandırması geçersiz (502). Uygulama sahibine '
-            'haber verin.',
         _ => 'AI servisi hata verdi ($code). Lütfen tekrar deneyin.',
       };
 

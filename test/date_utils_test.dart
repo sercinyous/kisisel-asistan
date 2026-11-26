@@ -96,9 +96,13 @@ void main() {
       expect(at(12), 'İyi günler');
       expect(at(17, 59), 'İyi günler');
     });
-    test('18:00–23:59 İyi akşamlar', () {
+    test('18:00–21:59 İyi akşamlar', () {
       expect(at(18), 'İyi akşamlar');
-      expect(at(23, 59), 'İyi akşamlar');
+      expect(at(21, 59), 'İyi akşamlar');
+    });
+    test('22:00–23:59 İyi geceler (gün evresiyle aynı)', () {
+      expect(at(22), 'İyi geceler');
+      expect(at(23, 59), 'İyi geceler');
     });
   });
 
@@ -106,7 +110,8 @@ void main() {
     test('haftanın Pazartesi gece yarısı', () {
       expect(AppDates.weekStart(DateTime(2026, 11, 16, 14, 30)),
           DateTime(2026, 11, 16)); // Pazartesi
-      expect(AppDates.weekStart(DateTime(2026, 11, 18)), DateTime(2026, 11, 16));
+      expect(
+          AppDates.weekStart(DateTime(2026, 11, 18)), DateTime(2026, 11, 16));
       expect(AppDates.weekStart(DateTime(2026, 11, 22, 23, 59)),
           DateTime(2026, 11, 16)); // Pazar
     });
@@ -115,9 +120,11 @@ void main() {
       expect(AppDates.weekStart(DateTime(2027, 1, 1)), DateTime(2026, 12, 28));
     });
     test('addDays takvim günü ekler', () {
-      expect(AppDates.addDays(DateTime(2026, 11, 30), 1), DateTime(2026, 12, 1));
+      expect(
+          AppDates.addDays(DateTime(2026, 11, 30), 1), DateTime(2026, 12, 1));
       expect(AppDates.addDays(DateTime(2026, 3, 1), -1), DateTime(2026, 2, 28));
-      expect(AppDates.addDays(DateTime(2026, 11, 16), 7), DateTime(2026, 11, 23));
+      expect(
+          AppDates.addDays(DateTime(2026, 11, 16), 7), DateTime(2026, 11, 23));
     });
   });
 }

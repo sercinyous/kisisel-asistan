@@ -45,9 +45,11 @@ abstract final class AppDates {
     return '${DateFormat('d MMM EEE', locale).format(local)} $time';
   }
 
+  /// Sınırlar Kokpit'in gün evresiyle (Sabah/Öğle/Akşam/Gece) aynıdır;
+  /// başlık ile evre çipi çelişmez.
   static String greeting(DateTime now) {
     final h = now.hour;
-    if (h < 5) return 'İyi geceler';
+    if (h < 5 || h >= 22) return 'İyi geceler';
     if (h < 12) return 'Günaydın';
     if (h < 18) return 'İyi günler';
     return 'İyi akşamlar';

@@ -432,7 +432,7 @@ void main() {
   });
 
   testWidgets(
-    'kaydetme sürerken modal dışına dokunulursa kayıt ve bildirim yine tamamlanır',
+    'kaydetme sürerken modal dışına dokunmak kapatmaz; kayıt bitince sayı döner',
     (tester) async {
       repository.gate = Completer<void>();
       final host = await openModal(tester);
@@ -442,16 +442,17 @@ void main() {
       await tester.pump();
       expect(find.text('Kaydediliyor…'), findsOneWidget);
 
-      // Kapat (X) düğmesi meşgulken kapalıdır ama arka plana dokunmak
-      // modalı yine de kapatır.
+      // Meşgulken arka plana dokunmak modalı kapatmaz.
       await tester.tapAt(const Offset(20, 20));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(host.closed, isFalse);
+      expect(find.text('Kaydediliyor…'), findsOneWidget);
 
       repository.gate!.complete();
       await tester.pumpAndSettle();
 
       expect(host.closed, isTrue);
-      expect(host.result, isNull);
+      expect(host.result, 3);
       expect(repository.saved, hasLength(1));
       expect(
         notifications.scheduled,
@@ -460,6 +461,14 @@ void main() {
       );
     },
   );
+  testWidgets('boştayken arka plana dokunmak X gibi kapatır', (tester) async {
+    final host = await openModal(tester);
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+    expect(host.closed, isTrue);
+    expect(host.result, isNull);
+  });
+
   group('alanlar', () {
     testWidgets('iş girişi kendi başlığı, kapsamı ve örnekleriyle açılır',
         (tester) async {
@@ -477,7 +486,8 @@ void main() {
       await openModal(tester, mode: QuickAddMode.health);
 
       expect(find.text('Sağlık & beslenme girişi'), findsOneWidget);
-      expect(find.textContaining('Öğün, antrenman ya da kilo.'), findsOneWidget);
+      expect(
+          find.textContaining('Öğün, antrenman ya da kilo.'), findsOneWidget);
       expect(find.text('Bugün 45 dk ağırlık çalıştım'), findsOneWidget);
       expect(find.textContaining('maaş ödemesi'), findsNothing);
     });
@@ -519,7 +529,8 @@ void main() {
       expect(find.text('3 kaydı kaydet'), findsOneWidget);
     });
 
-    testWidgets('rutin önizlemeden çıkarılabilir; kalanlar RPC yüküyle kaydedilir',
+    testWidgets(
+        'rutin önizlemeden çıkarılabilir; kalanlar RPC yüküyle kaydedilir',
         (tester) async {
       final host = await openModal(tester);
       await typeAndParse(tester, 'metin');
@@ -587,7 +598,8 @@ void main() {
       expect(repository.saved, hasLength(1));
     });
 
-    testWidgets('iş girişinde tümüyle sağlık metni: sağlık girişine yönlendirir',
+    testWidgets(
+        'iş girişinde tümüyle sağlık metni: sağlık girişine yönlendirir',
         (tester) async {
       harness.work.handler = (_) async => otherDomainOnly('Öğlen tavuk');
       await openModal(tester);
@@ -633,7 +645,8 @@ void main() {
       expect(find.text('Bunları anladım'), findsOneWidget);
     });
 
-    testWidgets('karışık metin: bu alanın kayıtları önizlenir, üstte uyarı durur',
+    testWidgets(
+        'karışık metin: bu alanın kayıtları önizlenir, üstte uyarı durur',
         (tester) async {
       harness.health.handler = (_) async => healthEntry(
             otherDomain: true,
@@ -691,7 +704,8 @@ void main() {
       expect(harness.work.inputs, [text]);
       expect(find.text('3 kaydı kaydet'), findsOneWidget);
       expect(find.textContaining('sağlık kaydı gibi görünüyor'), findsNothing,
-          reason: 'sağlık kısmı zaten kaydedildi; geri yönlendirme çift kayıt olur');
+          reason:
+              'sağlık kısmı zaten kaydedildi; geri yönlendirme çift kayıt olur');
 
       await tester.tap(find.text('3 kaydı kaydet'));
       await tester.pumpAndSettle();
@@ -730,7 +744,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(host.closed, isTrue);
-      expect(host.result, 1, reason: 'ilk alanda kaydedilen kalem bildirilmeli');
+      expect(host.result, 1,
+          reason: 'ilk alanda kaydedilen kalem bildirilmeli');
     });
 
     testWidgets('karışık önizlemede son kalem çıkarılırsa uyarı girişte kalır',

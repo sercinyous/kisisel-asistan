@@ -1,11 +1,18 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Görülen story kartları cihazda saklanır (sunucuya gitmez).
+/// Görülen story kartları cihazda saklanır (sunucuya gitmez). Anahtar
+/// kullanıcıya göre ayrılır: aynı telefonda başka hesap açılınca görülmüşler
+/// karışmaz.
 class StorySeenStore {
-  StorySeenStore({Future<SharedPreferences> Function()? openPrefs})
-      : _openPrefs = openPrefs ?? SharedPreferences.getInstance;
+  StorySeenStore({
+    String? userId,
+    Future<SharedPreferences> Function()? openPrefs,
+  })  : prefsKey = userId == null ? basePrefsKey : '$basePrefsKey:$userId',
+        _openPrefs = openPrefs ?? SharedPreferences.getInstance;
 
-  static const String prefsKey = 'stories.seen.v1';
+  static const String basePrefsKey = 'stories.seen.v1';
+
+  final String prefsKey;
 
   /// Saklanan en çok anahtar; eskiler baştan atılır.
   static const int maxKeys = 400;

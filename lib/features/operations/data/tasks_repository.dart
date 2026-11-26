@@ -92,6 +92,49 @@ class TasksRepository {
     return tasks.take(limit).toList();
   }
 
+  /// Kokpit "Bugünün işleri" için: zamanı yarından önceye düşen açık
+  /// görevler (son [lookbackDays] gün dahil; gecikmişler kaybolmasın) ve
+  /// bugün tamamlananlar. Liste kesilmez; satır sınırı yalnızca ekrandadır.
+  Future<List<TaskItem>> fetchKokpitDay(
+    DateTime now, {
+    int lookbackDays = 30,
+  }) async {
+    final day = DateTime(now.year, now.month, now.day);
+    final tomorrow = day.add(const Duration(days: 1)).toUtc().toIso8601String();
+    final since =
+        day.subtract(Duration(days: lookbackDays)).toUtc().toIso8601String();
+    final results = await Future.wait([
+      _client
+          .from('tasks')
+          .select()
+          .neq('status', 'done')
+          .gte('remind_at', since)
+          .lt('remind_at', tomorrow)
+          .order('remind_at', ascending: true)
+          .limit(200),
+      _client
+          .from('tasks')
+          .select()
+          .neq('status', 'done')
+          .gte('due_at', since)
+          .lt('due_at', tomorrow)
+          .order('due_at', ascending: true)
+          .limit(200),
+      _client
+          .from('tasks')
+          .select()
+          .eq('status', 'done')
+          .gte('completed_at', day.toUtc().toIso8601String())
+          .order('completed_at', ascending: true)
+          .limit(200),
+    ]);
+    final byId = <String, TaskItem>{
+      for (final rows in results)
+        for (final row in rows) row['id'] as String: TaskItem.fromMap(row),
+    };
+    return byId.values.toList();
+  }
+
   Future<TaskItem> create({
     required String title,
     String? description,

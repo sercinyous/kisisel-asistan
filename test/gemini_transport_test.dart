@@ -219,7 +219,7 @@ void main() {
       );
       final e = await expectAiError(transport.post(geminiBody));
       expect(calls, 0);
-      expect(e.message, contains('AI sunucusu yapılandırılmamış'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
     });
 
     test('anon anahtarı boşsa apikey başlığı eklenmez', () async {
@@ -246,17 +246,17 @@ void main() {
           'Oturum bulunamadı ya da süresi doldu. Çıkış yapıp yeniden giriş yapın.');
     });
 
-    test('402 -> fatura mesajı', () async {
+    test('402 -> düz "kullanılamıyor" iletisi (teknik ayrıntı yok)', () async {
       final e = await errorFor(json({'error': 'fatura'}, 402));
       expect(e.statusCode, 402);
-      expect(e.message, contains('bakiyesi tükendi'));
-      expect(e.message, contains('402'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
+      expect(e.message, isNot(contains('402')));
     });
 
-    test('404 -> "AI sunucusu kurulmamış"', () async {
+    test('404 -> düz "kullanılamıyor" iletisi', () async {
       final e = await errorFor(http.Response('Function not found', 404));
       expect(e.statusCode, 404);
-      expect(e.message, contains('AI sunucusu kurulmamış'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
     });
 
     test('429 -> sunucunun Türkçe kota mesajı', () async {
@@ -293,7 +293,7 @@ void main() {
 
     test('502 -> sunucu yapılandırması mesajı', () async {
       final e = await errorFor(json({'error': 'x'}, 502));
-      expect(e.message, contains('yapılandırması geçersiz (502)'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
     });
 
     test('sunucunun ham hata metni (500) kullanıcıya sızmaz', () async {
@@ -457,8 +457,8 @@ void main() {
       for (final MapEntry(key: status, value: message) in messages.entries) {
         final transport =
             directTransport((_) async => json({'error': 'x'}, status));
-        expect((await expectAiError(transport.post(geminiBody))).message,
-            message);
+        expect(
+            (await expectAiError(transport.post(geminiBody))).message, message);
       }
     });
   });
@@ -552,7 +552,8 @@ void main() {
 
   group('rapor yeniden üretme günlük sınırı (429)', () {
     test('sunucunun Türkçe mesajı kullanıcıya gösterilir', () {
-      const message = 'Bugünlük rapor yenileme hakkın doldu (10). Yarın yeniden dene.';
+      const message =
+          'Bugünlük rapor yenileme hakkın doldu (10). Yarın yeniden dene.';
       expect(
         reportErrorMessage(429, {'ok': false, 'error': message}),
         message,

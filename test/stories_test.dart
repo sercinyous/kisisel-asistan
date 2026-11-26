@@ -300,7 +300,8 @@ void main() {
       await tester.pump();
       expect(find.text('Bugünün işleri'), findsOneWidget);
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getStringList(StorySeenStore.prefsKey), daily.seenKeys);
+      expect(prefs.getStringList(StorySeenStore(userId: 'me').prefsKey),
+          daily.seenKeys);
     });
 
     testWidgets('kendiliğinden ilerler; hareket azaltmada ilerlemez',

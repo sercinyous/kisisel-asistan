@@ -28,13 +28,36 @@ class RecordingQuickAddRepository implements QuickAddRepository {
   /// Doluysa [saveAll] bu tamamlanana kadar bekler.
   Completer<void>? gate;
 
+  /// `true`: RPC kalemleri yazılır, hatırlatıcılar yazılamaz (bir kez).
+  bool failReminders = false;
+
   final List<ParsedEntry> saved = [];
 
   @override
   Future<QuickAddResult> saveAll(ParsedEntry entry) async {
     if (gate != null) await gate!.future;
     if (error != null) throw error!;
+    if (failReminders && entry.reminders.isNotEmpty) {
+      failReminders = false;
+      final rpcOnly = ParsedEntry(
+        tasks: entry.tasks,
+        nutrition: entry.nutrition,
+        workouts: entry.workouts,
+        weights: entry.weights,
+        notes: entry.notes,
+        routines: entry.routines,
+      );
+      saved.add(rpcOnly);
+      throw QuickAddPartialSaveException(
+        _resultFor(rpcOnly),
+        StateError('reminders insert'),
+      );
+    }
     saved.add(entry);
+    return _resultFor(entry);
+  }
+
+  QuickAddResult _resultFor(ParsedEntry entry) {
     return QuickAddResult(
       tasks: [
         for (final (i, t) in entry.tasks.indexed)
@@ -68,13 +91,13 @@ class CountingKokpitRepository implements KokpitRepository {
 
 /// Okuma sayılarını tutan görev deposu.
 class CountingTasksRepository extends FakeTasksRepository {
-  int fetchUpcomingCount = 0;
+  int fetchKokpitDayCount = 0;
   int fetchInRangeCount = 0;
 
   @override
-  Future<List<TaskItem>> fetchUpcoming({DateTime? from, int limit = 6}) {
-    fetchUpcomingCount++;
-    return super.fetchUpcoming(from: from, limit: limit);
+  Future<List<TaskItem>> fetchKokpitDay(DateTime now, {int lookbackDays = 30}) {
+    fetchKokpitDayCount++;
+    return super.fetchKokpitDay(now, lookbackDays: lookbackDays);
   }
 
   @override
@@ -111,7 +134,8 @@ class QuickAddHarness {
       mode == QuickAddMode.work ? work : health;
 
   List<Override> get overrides => [
-        geminiParserServiceProvider.overrideWith((ref, mode) => parserFor(mode)),
+        geminiParserServiceProvider
+            .overrideWith((ref, mode) => parserFor(mode)),
         quickAddRepositoryProvider.overrideWithValue(repository),
         notificationServiceProvider.overrideWithValue(notifications),
         settingsRepositoryProvider.overrideWithValue(settings),

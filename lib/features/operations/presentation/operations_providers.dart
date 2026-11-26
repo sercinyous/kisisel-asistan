@@ -114,14 +114,14 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
     }
   }
 
-  Future<void> complete(TaskItem task) => _guard(task.id, () async {
+  Future<bool> complete(TaskItem task) => _guard(task.id, () async {
         await ref.read(tasksRepositoryProvider).complete(task.id);
         _open = _open.where((t) => t.id != task.id).toList();
         _doneInSession[task.id] =
             task.copyWith(status: 'done', completedAt: DateTime.now());
       });
 
-  Future<void> reopen(TaskItem task) => _guard(task.id, () async {
+  Future<bool> reopen(TaskItem task) => _guard(task.id, () async {
         await ref.read(tasksRepositoryProvider).reopen(task.id);
         _doneInSession.remove(task.id);
         _open = [
@@ -130,16 +130,16 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
         ];
       });
 
-  Future<void> delete(TaskItem task) => _guard(task.id, () async {
+  Future<bool> delete(TaskItem task) => _guard(task.id, () async {
         await ref.read(tasksRepositoryProvider).delete(task.id);
         _doneInSession.remove(task.id);
         _open = _open.where((t) => t.id != task.id).toList();
       });
 
   /// Aynı görev için yazma sürerken ikinci dokunuş yok sayılır.
-  /// Hata çağırana iletilir.
-  Future<void> _guard(String id, Future<void> Function() write) async {
-    if (!_busy.add(id)) return;
+  /// Hata çağırana iletilir. Yazma yapıldıysa `true`.
+  Future<bool> _guard(String id, Future<void> Function() write) async {
+    if (!_busy.add(id)) return false;
     try {
       await write();
     } finally {
@@ -147,6 +147,7 @@ class OpsTasksNotifier extends AsyncNotifier<List<TaskItem>> {
     }
     if (state.hasValue) state = AsyncData(_compose());
     notifyTaskChange(ref.invalidate);
+    return true;
   }
 }
 

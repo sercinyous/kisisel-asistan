@@ -12,6 +12,7 @@ import 'package:kisisel_asistan/features/health/presentation/energy_providers.da
 import 'package:kisisel_asistan/features/kokpit/presentation/kokpit_providers.dart';
 import 'package:kisisel_asistan/features/routines/presentation/routines_providers.dart';
 import 'package:kisisel_asistan/features/settings/domain/user_settings.dart';
+import 'package:kisisel_asistan/features/reminders/domain/reminder.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'helpers/quick_add_fakes.dart';
@@ -257,6 +258,38 @@ void main() {
       expect(entry.routines, isEmpty);
       expect(entry.tasks, hasLength(1));
     });
+  });
+
+  test(
+      'hatırlatıcı yazılamazsa diğer kalemler tekrar yazılmaz; '
+      'yeniden kaydetme yalnız hatırlatıcıyı gönderir', () async {
+    harness.parserFor(QuickAddMode.work).handler = (_) async => ParsedEntry(
+          tasks: ParsedEntry.fromJson({
+            'tasks': [_undatedTask],
+          }).tasks,
+          reminders: const [
+            ParsedReminder(
+              title: 'İlaç',
+              time: TimeOfDayValue(9, 0),
+              repeat: ReminderRepeat.daily,
+            ),
+          ],
+        );
+    harness.repository.failReminders = true;
+    final controller = controllerFor(QuickAddMode.work);
+    await controller.parse('metin');
+
+    expect(await controller.save(), isFalse);
+    final state = stateOf(QuickAddMode.work);
+    expect(state.status, QuickAddStatus.preview);
+    expect(state.entry!.tasks, isEmpty);
+    expect(state.entry!.reminders, hasLength(1));
+    expect(state.errorMessage, contains('Hatırlatıcılar kaydedilemedi'));
+
+    expect(await controller.save(), isTrue);
+    expect(harness.repository.saved, hasLength(2));
+    expect(harness.repository.saved.last.tasks, isEmpty);
+    expect(stateOf(QuickAddMode.work).savedCount, 2);
   });
 
   group('save', () {

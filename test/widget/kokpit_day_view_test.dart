@@ -96,7 +96,7 @@ void main() {
           reason: 'tüm satırlar görünüyorsa kısayol yok');
     });
 
-    testWidgets('bugünün gecikmiş görevi önce, yarınki ve dünkü yok',
+    testWidgets('gecikmiş görevler (dünkü dahil) önce, yarınki yok',
         (tester) async {
       harness.tasks.tasks = [
         TaskItem(
@@ -125,11 +125,16 @@ void main() {
         ),
       ];
       await harness.pump(tester);
-      expect(find.text('0 / 3'), findsOneWidget);
+      expect(find.text('0 / 4'), findsOneWidget);
       await harness.scrollThrough(tester);
       expect(find.text('Sabah toplantısı'), findsOneWidget);
-      expect(find.text('Dünkü iş'), findsNothing);
+      expect(find.text('Dünkü iş'), findsOneWidget,
+          reason: 'önceki günden kalan açık görev kaybolmaz');
       expect(find.text('Yarınki iş'), findsNothing);
+      expect(
+        tester.getTopLeft(find.text('Dünkü iş')).dy,
+        lessThan(tester.getTopLeft(find.text('Sabah toplantısı')).dy),
+      );
       final first = tester.getTopLeft(find.text('Sabah toplantısı')).dy;
       final routine = tester.getTopLeft(find.text('Gelen kutusu kontrolü')).dy;
       expect(first, lessThan(routine), reason: 'gecikmiş kayıt en üstte');
@@ -162,6 +167,34 @@ void main() {
         ],
         ['Sabah açık', 'Sabah yapıldı', 'Akşam', 'Saatsiz'],
       );
+    });
+
+    testWidgets('bugün 8 görev: sayılar kesilmez, 5 satır görünür',
+        (tester) async {
+      harness.routines.routines = [];
+      harness.tasks.tasks = [for (var i = 0; i < 8; i++) dueToday('g$i')];
+      await harness.pump(tester);
+      expect(find.text('0 / 8'), findsOneWidget);
+      await harness.scrollThrough(tester);
+      expect(find.text('Tümünü gör (8)'), findsOneWidget);
+    });
+
+    testWidgets('bugün tamamlanan görev ilerlemeye sayılır', (tester) async {
+      harness.routines.routines = [];
+      harness.tasks.tasks = [
+        dueToday('a'),
+        dueToday('b').copyWith(
+          status: 'done',
+          completedAt: DateTime.now(),
+        ),
+        dueToday('c').copyWith(
+          status: 'done',
+          completedAt: today().subtract(const Duration(hours: 2)),
+        ),
+      ];
+      await harness.pump(tester);
+      expect(find.text('1 / 2'), findsOneWidget,
+          reason: 'dün tamamlanan sayılmaz');
     });
 
     testWidgets('en fazla 5 satır; Tümünü gör toplamı gösterir',

@@ -29,7 +29,8 @@ http.Response geminiOk(
       ],
     });
 
-http.Response jsonResponse(Object body, [int status = 200]) => http.Response.bytes(
+http.Response jsonResponse(Object body, [int status = 200]) =>
+    http.Response.bytes(
       utf8.encode(jsonEncode(body)),
       status,
       headers: {'content-type': 'application/json; charset=UTF-8'},
@@ -112,8 +113,7 @@ void main() {
         'gemini-3.8-flash:generateContent',
       );
       expect(captured.headers['x-goog-api-key'], 'test-key');
-      expect(captured.headers['content-type'],
-          startsWith('application/json'));
+      expect(captured.headers['content-type'], startsWith('application/json'));
       expect(captured.headers['content-type']!.toLowerCase(),
           contains('charset=utf-8'));
     });
@@ -186,10 +186,11 @@ void main() {
             as Map<String, dynamic>;
 
     Map<String, dynamic> itemProps(Map<String, dynamic> schema, String key) =>
-        (((schema['properties'] as Map)[key] as Map)['items'] as Map)['properties']
-            as Map<String, dynamic>;
+        (((schema['properties'] as Map)[key] as Map)['items']
+            as Map)['properties'] as Map<String, dynamic>;
 
-    test('iş şeması: tasks, notes, routines, reminders + other_domain; sağlık dizisi yok',
+    test(
+        'iş şeması: tasks, notes, routines, reminders + other_domain; sağlık dizisi yok',
         () async {
       final schema = schemaOf(await bodyFor(QuickAddMode.work));
       final props = schema['properties'] as Map<String, dynamic>;
@@ -202,14 +203,16 @@ void main() {
         'other_domain',
         'other_domain_summary',
       });
-      expect(schema['required'], ['tasks', 'notes', 'routines', 'other_domain']);
+      expect(
+          schema['required'], ['tasks', 'notes', 'routines', 'other_domain']);
       final reminder = (props['reminders'] as Map)['items'] as Map;
       expect(reminder['required'], ['title', 'time_of_day', 'repeat']);
       for (final key in ['tasks', 'notes', 'routines']) {
         expect((props[key] as Map)['type'], 'ARRAY', reason: key);
       }
       expect(props['other_domain'], {'type': 'BOOLEAN'});
-      expect(props['other_domain_summary'], {'type': 'STRING', 'nullable': true});
+      expect(
+          props['other_domain_summary'], {'type': 'STRING', 'nullable': true});
 
       final taskProps = itemProps(schema, 'tasks');
       expect(taskProps.keys.toSet(), {
@@ -253,7 +256,8 @@ void main() {
       expect(routine['time_of_day'], {'type': 'STRING', 'nullable': true});
     });
 
-    test('sağlık şeması: nutrition, workouts, weights + other_domain; iş dizisi yok',
+    test(
+        'sağlık şeması: nutrition, workouts, weights + other_domain; iş dizisi yok',
         () async {
       final schema = schemaOf(await bodyFor(QuickAddMode.health));
       final props = schema['properties'] as Map<String, dynamic>;
@@ -376,9 +380,9 @@ void main() {
       expect(entry.routines.last.daysOfWeek, [1]);
     });
 
-    test('model diğer alanın dizisini doldursa da o kalemler atılır',
-        () async {
-      const mixed = '{"tasks":[{"title":"Toplantı","category":"Ekip","priority":"medium"}],'
+    test('model diğer alanın dizisini doldursa da o kalemler atılır', () async {
+      const mixed =
+          '{"tasks":[{"title":"Toplantı","category":"Ekip","priority":"medium"}],'
           '"nutrition":[{"meal_type":"lunch","food_name":"Pilav","calories":200,'
           '"protein_g":4,"carbs_g":44,"fat_g":1,"eaten_at":"2026-11-16T13:00:00+03:00"}],'
           '"weights":[{"weight_kg":84,"measured_at":"2026-11-16T08:00:00+03:00"}]}';
@@ -419,8 +423,7 @@ void main() {
       expect(entry.totalCount, 3);
     });
 
-    test('birden çok parça birleştirilir, düşünce parçaları atlanır',
-        () async {
+    test('birden çok parça birleştirilir, düşünce parçaları atlanır', () async {
       final half = sampleEntryJson.length ~/ 2;
       final service = serviceWith(
         (_) async => geminiOk('', parts: [
@@ -454,7 +457,8 @@ void main() {
 
     test('finishReason MAX_TOKENS -> bölerek deneyin', () async {
       final e = await errorFor(
-        geminiOk('{"nutrition":[{"food_name":"yarım', finishReason: 'MAX_TOKENS'),
+        geminiOk('{"nutrition":[{"food_name":"yarım',
+            finishReason: 'MAX_TOKENS'),
       );
       expect(e.message, contains('Bölerek deneyin'));
     });
@@ -465,7 +469,8 @@ void main() {
     });
 
     test('candidates alanı yok -> boş yanıt mesajı', () async {
-      final e = await errorFor(jsonResponse({'usageMetadata': <String, Object>{}}));
+      final e =
+          await errorFor(jsonResponse({'usageMetadata': <String, Object>{}}));
       expect(e.message, 'AI boş yanıt döndürdü. Tekrar deneyin.');
     });
 
@@ -492,7 +497,8 @@ void main() {
 
   group('yeniden denenmeyen HTTP hataları', () {
     final cases = <int, String>{
-      400: 'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
+      400:
+          'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
       401: 'Gemini API anahtarı geçersiz ya da yetkisiz.',
       402: 'Gemini bakiyesi ya da faturalandırma tükendi (402). '
           'AI Studio > Billing bölümünden kredi ekleyin.',
@@ -632,7 +638,7 @@ void main() {
         apiKey: '',
       );
       final e = await expectAiError(noKey.parse('metin', now: now));
-      expect(e.message, contains('AI sunucusu yapılandırılmamış'));
+      expect(e.message, contains('AI şu an kullanılamıyor'));
       expect(calls, 0);
     });
   });

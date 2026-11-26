@@ -55,6 +55,18 @@ class QuickAddResult {
       reminderCount;
 }
 
+/// RPC kalemleri yazıldı ama ayrı yazılan hatırlatıcılar yazılamadı.
+/// [saved] yazılanları taşır; çağıran onları tekrar göndermemelidir.
+class QuickAddPartialSaveException implements Exception {
+  const QuickAddPartialSaveException(this.saved, this.cause);
+
+  final QuickAddResult saved;
+  final Object cause;
+
+  @override
+  String toString() => 'QuickAddPartialSaveException: $cause';
+}
+
 class QuickAddRepository {
   const QuickAddRepository(this._client);
 
@@ -65,7 +77,8 @@ class QuickAddRepository {
   ///
   /// Hatırlatıcılar RPC'ye girmez; RPC başarılı olduktan sonra tek bir
   /// insert ile `reminders` tablosuna yazılır (yalnızca hatırlatıcı varsa
-  /// RPC hiç çağrılmaz).
+  /// RPC hiç çağrılmaz). RPC yazdıktan sonra hatırlatıcı insert'i
+  /// başarısız olursa [QuickAddPartialSaveException] fırlatılır.
   Future<QuickAddResult> saveAll(ParsedEntry entry) async {
     final Object? response = entry.rpcCount == 0
         ? null
@@ -74,10 +87,26 @@ class QuickAddRepository {
             params: {'payload': entry.toJson()},
           );
     if (entry.reminders.isNotEmpty) {
-      await _client.from('reminders').insert([
-        for (final r in entry.reminders) r.toDraft().toRow(),
-      ]);
+      try {
+        await _client.from('reminders').insert([
+          for (final r in entry.reminders) r.toDraft().toRow(),
+        ]);
+      } catch (e) {
+        if (entry.rpcCount == 0) rethrow;
+        throw QuickAddPartialSaveException(
+          parseResult(response, reminderCount: 0),
+          e,
+        );
+      }
     }
+    return parseResult(response, reminderCount: entry.reminders.length);
+  }
+
+  /// RPC yanıtını sonuca çevirir.
+  static QuickAddResult parseResult(
+    Object? response, {
+    required int reminderCount,
+  }) {
     final data = response is Map
         ? Map<String, dynamic>.from(response)
         : const <String, dynamic>{};
@@ -109,7 +138,7 @@ class QuickAddRepository {
       weightCount: count('weight_count'),
       noteCount: count('note_count'),
       routineCount: count('routine_count'),
-      reminderCount: entry.reminders.length,
+      reminderCount: reminderCount,
     );
   }
 }

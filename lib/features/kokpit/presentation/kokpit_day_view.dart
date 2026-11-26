@@ -124,10 +124,15 @@ List<KokpitTodayItem> kokpitTodayItems({
   final items = <KokpitTodayItem>[
     for (final o in routines) KokpitRoutineItem(o, day),
     for (final t in tasks)
-      if (!t.isDone)
-        if (KokpitTaskItem(t, now).time case final time?
-            when time.isBefore(tomorrow))
-          KokpitTaskItem(t, now),
+      if (t.isDone)
+        // Bugün tamamlanan görev üstü çizili satır olarak sayılır.
+        if (t.completedAt case final c? when !c.isBefore(day))
+          KokpitTaskItem(t, now)
+        else
+          ...const <KokpitTaskItem>[]
+      else if (KokpitTaskItem(t, now).time case final time?
+          when time.isBefore(tomorrow))
+        KokpitTaskItem(t, now),
   ];
   bool overdue(KokpitTodayItem i) {
     final t = i.time;
@@ -499,7 +504,7 @@ class _TodaySection extends ConsumerWidget {
                       title: task.title,
                       time: item.time,
                       now: now,
-                      done: false,
+                      done: task.isDone,
                       color: AppColors.ops,
                       onTap: () => completeKokpitTask(context, task),
                     ),

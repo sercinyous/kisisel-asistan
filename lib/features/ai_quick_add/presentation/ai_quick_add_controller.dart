@@ -154,42 +154,26 @@ class QuickAddController
     bool current() => queue.generation == generation;
     try {
       final result = await ref.read(quickAddRepositoryProvider).saveAll(entry);
-
-      // Tam eşitleme aşağıda tetiklenir ama yalnızca dinleyeni varsa çalışır;
-      // saatli görev o beklenmeden hemen planlanır. Bildirimler kapalıysa
-      // hiçbir şey planlanmaz.
-      final settings = ref.read(settingsOrDefaultProvider);
-      if (settings.notificationsEnabled) {
-        final notifications = ref.read(notificationServiceProvider);
-        for (final task in result.tasks) {
-          // buildNotificationPlan ile aynı kural: açık hatırlatma anı yoksa
-          // terminden "randevu kaç dk önce" süresi kadar önce.
-          final when = task.remindAt ??
-              task.dueAt?.subtract(
-                Duration(minutes: settings.eventRemindMinutes),
-              );
-          if (when == null) continue;
-          final reminder =
-              ReminderSchedule(taskId: task.id, title: task.title, when: when);
-          try {
-            // Eşitleme turlarıyla aynı sıradan geçer; oturum bittiyse düşer.
-            await queue.run(
-              current,
-              () => notifications.scheduleReminder(reminder),
-            );
-          } catch (_) {
-            // Bildirim planlanamasa da kayıt geçerlidir.
-          }
-        }
-      }
-
-      _refreshAfterSave(result);
-
+      await _afterWrite(result, queue, current);
+      final total = _savedEarlier + result.totalCount;
+      _savedEarlier = 0;
       state = state.copyWith(
         status: QuickAddStatus.saved,
-        savedCount: result.totalCount,
+        savedCount: total,
       );
       return true;
+    } on QuickAddPartialSaveException catch (e) {
+      // RPC kalemleri yazıldı; yalnızca hatırlatıcılar önizlemede kalır ki
+      // tekrar kaydetme diğerlerini ikinci kez yazmasın.
+      await _afterWrite(e.saved, queue, current);
+      _savedEarlier += e.saved.totalCount;
+      state = state.copyWith(
+        status: QuickAddStatus.preview,
+        entry: ParsedEntry(reminders: entry.reminders),
+        errorMessage: 'Hatırlatıcılar kaydedilemedi; diğer '
+            '${e.saved.totalCount} kayıt eklendi. Tekrar dene.',
+      );
+      return false;
     } on PostgrestException catch (e) {
       state = state.copyWith(
         status: QuickAddStatus.preview,
@@ -204,6 +188,46 @@ class QuickAddController
       );
       return false;
     }
+  }
+
+  /// Önceki denemede kısmen yazılmış kalem sayısı (hatırlatıcı hatası).
+  int _savedEarlier = 0;
+
+  /// Yazılan kalemler için bildirim planlar ve ekranları tazeler.
+  Future<void> _afterWrite(
+    QuickAddResult result,
+    NotificationSyncQueue queue,
+    bool Function() current,
+  ) async {
+    // Tam eşitleme aşağıda tetiklenir ama yalnızca dinleyeni varsa çalışır;
+    // saatli görev o beklenmeden hemen planlanır. Bildirimler kapalıysa
+    // hiçbir şey planlanmaz.
+    final settings = ref.read(settingsOrDefaultProvider);
+    if (settings.notificationsEnabled) {
+      final notifications = ref.read(notificationServiceProvider);
+      for (final task in result.tasks) {
+        // buildNotificationPlan ile aynı kural: açık hatırlatma anı yoksa
+        // terminden "randevu kaç dk önce" süresi kadar önce.
+        final when = task.remindAt ??
+            task.dueAt?.subtract(
+              Duration(minutes: settings.eventRemindMinutes),
+            );
+        if (when == null) continue;
+        final reminder =
+            ReminderSchedule(taskId: task.id, title: task.title, when: when);
+        try {
+          // Eşitleme turlarıyla aynı sıradan geçer; oturum bittiyse düşer.
+          await queue.run(
+            current,
+            () => notifications.scheduleReminder(reminder),
+          );
+        } catch (_) {
+          // Bildirim planlanamasa da kayıt geçerlidir.
+        }
+      }
+    }
+
+    _refreshAfterSave(result);
   }
 
   /// Yalnızca gerçekten yazılan türlerin beslediği sağlayıcılar tazelenir.

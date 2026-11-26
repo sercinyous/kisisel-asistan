@@ -19,6 +19,7 @@ import '../../reminders/presentation/reminders_providers.dart';
 import '../../reports/presentation/reports_providers.dart';
 import '../../reports/presentation/reports_screen.dart';
 import '../../routines/presentation/routines_providers.dart';
+import '../../stories/presentation/stories_providers.dart';
 
 /// + butonunun sekmeye göre açacağı giriş alanı. `null`: sekme bir alana
 /// bağlı değildir (Kokpit, Raporlar), kullanıcıya sorulur.
@@ -40,6 +41,35 @@ class _HomeShellState extends ConsumerState<HomeShell>
     with WidgetsBindingObserver {
   int _index = 0;
 
+  /// Uygulama açıkken dakika başında saati ilerletir; gün dönünce "bugün"e
+  /// bağlı veriler tazelenir.
+  Timer? _clockTimer;
+
+  void _scheduleClockTick() {
+    _clockTimer?.cancel();
+    final now = DateTime.now();
+    final next = DateTime(now.year, now.month, now.day, now.hour, now.minute)
+        .add(const Duration(minutes: 1));
+    _clockTimer = Timer(next.difference(now), () {
+      if (!mounted) return;
+      _tickClock();
+      _scheduleClockTick();
+    });
+  }
+
+  void _tickClock() {
+    final clock = ref.read(kokpitClockProvider.notifier);
+    final previous = clock.state;
+    final now = DateTime.now();
+    if (now.year != previous.year ||
+        now.month != previous.month ||
+        now.day != previous.day) {
+      _refreshForNewMoment();
+    } else {
+      clock.state = now;
+    }
+  }
+
   static const List<Widget> _tabs = [
     KokpitScreen(),
     OperationsScreen(),
@@ -51,6 +81,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scheduleClockTick();
     // Açılışta HealthKit'in son günleri gün sonu değerleriyle tamamlanır
     // (uygulama kapalıyken biten günleri başka okuyan yoktur).
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -64,6 +95,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _clockTimer?.cancel();
     super.dispose();
   }
 
@@ -72,10 +104,18 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
+    _refreshForNewMoment();
+    // Arka planda zamanlayıcı kaymış olabilir; dakika hizası yeniden kurulur.
+    _scheduleClockTick();
+  }
+
+  void _refreshForNewMoment() {
     final container = ProviderScope.containerOf(context, listen: false);
     ref.read(kokpitClockProvider.notifier).state = DateTime.now();
     ref.invalidate(todayOccurrencesProvider);
     ref.invalidate(upcomingRemindersProvider);
+    // Arkadaş hikâyeleri 24 saatte düşer; yenileri de gelmiş olabilir.
+    ref.invalidate(friendStoryGroupsProvider);
     // Sağlık sekmesi, Kokpit beslenme özeti ve Ay özeti: pencereleri (son N
     // gün, bu hafta, bugünün öğünleri) ve durum rozetleri bugüne göredir.
     invalidateHealthData(container);
