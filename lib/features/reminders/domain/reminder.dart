@@ -82,10 +82,10 @@ class ReminderDraft {
       return 'Başlık en fazla $maxTitleLength karakter olabilir.';
     }
     if (repeat == ReminderRepeat.once && onDate == null) {
-      return 'Bir kez çalacak hatırlatıcı için tarih seçin.';
+      return 'Bir kez çalacak hatırlatıcı için tarih seç.';
     }
     if (repeat == ReminderRepeat.custom && daysMask & 0x7F == 0) {
-      return 'En az bir gün seçin.';
+      return 'En az bir gün seç.';
     }
     return null;
   }

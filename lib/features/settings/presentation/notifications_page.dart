@@ -327,7 +327,7 @@ class _HealthNudgesCard extends ConsumerWidget {
         ref.watch(healthNudgePrefsProvider).valueOrNull ?? const {};
     return SettingsSection(
       icon: Icons.favorite_rounded,
-      title: 'Sağlık dürtüleri',
+      title: 'Sağlık hatırlatmaları',
       color: AppColors.fitness,
       children: [
         for (final kind in _subtitles.keys)

@@ -53,7 +53,7 @@ class RitimSegmented<T> extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: value == selected
@@ -132,7 +132,7 @@ class RitimChipTile extends StatelessWidget {
               ),
               Text(
                 value,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: AppType.chipValue,
@@ -376,6 +376,22 @@ class RitimPillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg = ghost ? AppColors.selection : (color ?? AppColors.accent);
     final fg = ghost ? AppColors.textPrimary : AppColors.onAccent;
+    // Görünen kapsül küçük kalır; dokunma alanı en az 44 pt (Apple HIG).
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Align(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: _pill(bg, fg),
+        ),
+      ),
+    );
+  }
+
+  Widget _pill(Color bg, Color fg) {
     return Opacity(
       opacity: onPressed == null ? 0.4 : 1,
       child: Material(

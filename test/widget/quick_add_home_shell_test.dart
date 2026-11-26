@@ -181,7 +181,7 @@ void main() {
       'Her pazartesi 11:00 ekip toplantısı',
     );
     await tester.pump();
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('1 kaydı kaydet'));
     await tester.pumpAndSettle();

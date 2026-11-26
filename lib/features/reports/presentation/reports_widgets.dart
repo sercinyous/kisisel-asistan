@@ -476,7 +476,7 @@ class ReportScorePair extends StatelessWidget {
         const SizedBox(width: AppSpacing.grid),
         Expanded(
           child: _Score(
-            label: 'Form',
+            label: 'Sağlık',
             rate: formRate,
             color: AppColors.sleep,
           ),

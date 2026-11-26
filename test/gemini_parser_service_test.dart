@@ -460,23 +460,23 @@ void main() {
         geminiOk('{"nutrition":[{"food_name":"yarım',
             finishReason: 'MAX_TOKENS'),
       );
-      expect(e.message, contains('Bölerek deneyin'));
+      expect(e.message, contains('Bölerek dene'));
     });
 
     test('boş candidates -> boş yanıt mesajı', () async {
       final e = await errorFor(jsonResponse({'candidates': <Object>[]}));
-      expect(e.message, 'AI boş yanıt döndürdü. Tekrar deneyin.');
+      expect(e.message, 'Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     });
 
     test('candidates alanı yok -> boş yanıt mesajı', () async {
       final e =
           await errorFor(jsonResponse({'usageMetadata': <String, Object>{}}));
-      expect(e.message, 'AI boş yanıt döndürdü. Tekrar deneyin.');
+      expect(e.message, 'Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     });
 
     test('parça metni boş -> boş yanıt mesajı', () async {
       final e = await errorFor(geminiOk('   '));
-      expect(e.message, 'AI boş yanıt döndürdü. Tekrar deneyin.');
+      expect(e.message, 'Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     });
 
     test('gövde JSON değil -> geçersiz yanıt', () async {
@@ -486,19 +486,19 @@ void main() {
 
     test('model metni JSON değil -> çözümlenemedi', () async {
       final e = await errorFor(geminiOk('Üzgünüm, anlayamadım.'));
-      expect(e.message, contains('çözümlenemedi'));
+      expect(e.message, contains('anlaşılamadı'));
     });
 
     test('model metni JSON dizisi -> beklenmeyen yanıt', () async {
       final e = await errorFor(geminiOk('[]'));
-      expect(e.message, contains('beklenmeyen bir yanıt'));
+      expect(e.message, contains('anlaşılamadı'));
     });
   });
 
   group('yeniden denenmeyen HTTP hataları', () {
     final cases = <int, String>{
       400:
-          'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
+          'Bu metin işlenemedi. Biraz değiştirip tekrar dene ya da elle ekle.',
       401: 'Gemini API anahtarı geçersiz ya da yetkisiz.',
       402: 'Gemini bakiyesi ya da faturalandırma tükendi (402). '
           'AI Studio > Billing bölümünden kredi ekleyin.',
@@ -536,7 +536,7 @@ void main() {
       expect(calls, 3);
       expect(e.statusCode, 429);
       expect(e.message,
-          'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.');
+          'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.');
     });
 
     test('503 -> 3 deneme, sonra servis hatası mesajı', () async {
@@ -548,7 +548,7 @@ void main() {
       final e = await expectAiError(service.parse('metin', now: now));
       expect(calls, 3);
       expect(e.statusCode, 503);
-      expect(e.message, 'AI servisi hata verdi (503). Lütfen tekrar deneyin.');
+      expect(e.message, 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
 
     test('503 sonra 200 -> ikinci denemede başarı', () async {
@@ -578,7 +578,7 @@ void main() {
       expect(calls, 3);
       expect(e.statusCode, isNull);
       expect(e.message,
-          'AI servisi zamanında yanıt vermedi. Lütfen tekrar deneyin.');
+          'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
 
     test('ağ hataları (SocketException / ClientException) yeniden denenir',
@@ -611,7 +611,7 @@ void main() {
     test('boş / yalnızca boşluk', () async {
       for (final input in ['', '   \n\t ']) {
         final e = await expectAiError(service.parse(input, now: now));
-        expect(e.message, 'Lütfen bir şeyler yazın.');
+        expect(e.message, 'Önce bir şeyler yaz.');
       }
       expect(calls, 0);
     });

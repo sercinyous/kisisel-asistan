@@ -200,7 +200,7 @@ void main() {
   Future<void> typeAndParse(WidgetTester tester, String text) async {
     await tester.enterText(find.byType(TextField), text);
     await tester.pump();
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pumpAndSettle();
   }
 
@@ -208,13 +208,13 @@ void main() {
     await openModal(tester);
 
     expect(find.text('İş girişi'), findsOneWidget);
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pumpAndSettle();
     expect(gemini.inputs, isEmpty);
 
     await tester.enterText(find.byType(TextField), '   ');
     await tester.pump();
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pumpAndSettle();
     expect(gemini.inputs, isEmpty);
   });
@@ -313,7 +313,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('İş girişi'), findsOneWidget);
-    expect(find.text('Ayrıştır'), findsOneWidget);
+    expect(find.text('Devam'), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       'not al',
@@ -327,7 +327,7 @@ void main() {
     await tester.tap(find.text('Düzenle'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ayrıştır'), findsOneWidget);
+    expect(find.text('Devam'), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       'ilk metin',
@@ -338,23 +338,23 @@ void main() {
   testWidgets('AiParseException mesajı hata bandında gösterilir',
       (tester) async {
     gemini.handler = (_) async => throw const AiParseException(
-          'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.',
+          'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.',
           statusCode: 429,
         );
     final host = await openModal(tester);
     await typeAndParse(tester, 'bir şeyler');
 
     expect(
-      find.text('Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.'),
+      find.text('AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.'),
       findsOneWidget,
     );
     expect(find.text('Bunları anladım'), findsNothing);
-    expect(find.text('Ayrıştır'), findsOneWidget);
+    expect(find.text('Devam'), findsOneWidget);
     expect(host.closed, isFalse);
 
     // İkinci deneme başarılı olursa hata bandı kaybolur.
     gemini.handler = (_) async => sampleEntry();
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pumpAndSettle();
     expect(find.textContaining('kota sınırına'), findsNothing);
     expect(find.text('Bunları anladım'), findsOneWidget);
@@ -365,7 +365,7 @@ void main() {
     await openModal(tester);
     await typeAndParse(tester, 'bir şeyler');
     expect(
-      find.text('Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'),
+      find.text('Bir şeyler ters gitti. Tekrar dene ya da elle ekle.'),
       findsOneWidget,
     );
   });
@@ -378,7 +378,7 @@ void main() {
       find.textContaining('Metinden kaydedilecek bir şey çıkaramadım'),
       findsOneWidget,
     );
-    expect(find.text('Ayrıştır'), findsOneWidget);
+    expect(find.text('Devam'), findsOneWidget);
   });
 
   testWidgets('ayrıştırma sürerken düğme meşgul görünür ve tekrar tetiklenmez',
@@ -388,11 +388,11 @@ void main() {
     await openModal(tester);
     await tester.enterText(find.byType(TextField), 'metin');
     await tester.pump();
-    await tester.tap(find.text('Ayrıştır'));
+    await tester.tap(find.text('Devam'));
     await tester.pump();
 
-    expect(find.text('Ayrıştırılıyor…'), findsOneWidget);
-    await tester.tap(find.text('Ayrıştırılıyor…'));
+    expect(find.text('Anlıyorum…'), findsOneWidget);
+    await tester.tap(find.text('Anlıyorum…'));
     await tester.pump();
     expect(gemini.inputs, hasLength(1));
 
@@ -506,7 +506,7 @@ void main() {
       await openModal(tester, initialText: 'Her cuma rapor');
       expect(fieldText(tester), 'Her cuma rapor');
 
-      await tester.tap(find.text('Ayrıştır'));
+      await tester.tap(find.text('Devam'));
       await tester.pumpAndSettle();
       expect(harness.work.inputs, ['Her cuma rapor']);
     });
@@ -523,7 +523,7 @@ void main() {
       expect(find.text('Aylık iş · İş · Finans'), findsOneWidget);
       expect(find.text('Maaş ödemeleri'), findsOneWidget);
       expect(find.text('Her ayın 15. günü · 10:00'), findsOneWidget);
-      expect(find.text('Tekrarlayan iş · İş · Operasyon'), findsOneWidget);
+      expect(find.text('Tekrarlayan iş · İş · İş'), findsOneWidget);
       expect(find.text('Ekip toplantısı'), findsOneWidget);
       expect(find.text('Her Pzt · 11:00'), findsOneWidget);
       expect(find.text('3 kaydı kaydet'), findsOneWidget);
@@ -587,7 +587,7 @@ void main() {
           reason: 'geçiş kendiliğinden ayrıştırmaz');
       expect(repository.saved, isEmpty);
 
-      await tester.tap(find.text('Ayrıştır'));
+      await tester.tap(find.text('Devam'));
       await tester.pumpAndSettle();
       expect(harness.work.inputs, ['Yarın 15:00 Ayşe ile toplantı var']);
       expect(find.text('Bunları anladım'), findsOneWidget);
@@ -614,7 +614,7 @@ void main() {
       expect(find.text('Sağlık & beslenme girişi'), findsOneWidget);
       expect(fieldText(tester), 'Öğlen 200 gr tavuk yedim');
 
-      await tester.tap(find.text('Ayrıştır'));
+      await tester.tap(find.text('Devam'));
       await tester.pumpAndSettle();
       expect(harness.health.inputs, ['Öğlen 200 gr tavuk yedim']);
       expect(find.text('Tavuk göğsü · 200 gr'), findsOneWidget);
@@ -699,7 +699,7 @@ void main() {
       expect(fieldText(tester), text);
       expect(find.textContaining('1 kayıt eklendi.'), findsOneWidget);
 
-      await tester.tap(find.text('Ayrıştır'));
+      await tester.tap(find.text('Devam'));
       await tester.pumpAndSettle();
       expect(harness.work.inputs, [text]);
       expect(find.text('3 kaydı kaydet'), findsOneWidget);
@@ -758,7 +758,7 @@ void main() {
       await tester.tap(find.byTooltip('Bu kaydı çıkar'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Ayrıştır'), findsOneWidget);
+      expect(find.text('Devam'), findsOneWidget);
       expect(find.text('Bu bir iş kaydı gibi görünüyor.'), findsOneWidget);
       expect(find.text('İş girişine geç'), findsOneWidget);
     });

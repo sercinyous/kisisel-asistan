@@ -142,7 +142,7 @@ class _NumbersGrid extends StatelessWidget {
           span: 1,
           child: ReportRateCard(
             icon: Icons.fitness_center_outlined,
-            label: 'Form',
+            label: 'Sağlık',
             color: AppColors.sleep,
             rate: m.formRate,
             caption: 'Antrenman ${m.workoutsDone} / ${m.workoutsPlanned} · '

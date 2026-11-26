@@ -11,7 +11,7 @@ import 'operations_widgets.dart';
 import 'routines_view.dart';
 
 const Map<String, String> _categoryLabels = {
-  'operasyon': 'Operasyon',
+  'operasyon': 'İş',
   'spor': 'Spor',
   'beslenme': 'Beslenme',
   'kisisel': 'Kişisel',
@@ -305,8 +305,11 @@ class _RoutineFormSheetState extends ConsumerState<RoutineFormSheet> {
           subtitle: !_isMonthly && time == null
               ? const Text('Bildirim için saat seç.')
               : null,
-          value: _notify,
-          onChanged: (value) => setState(() => _notify = value),
+          // Saat yokken anahtar devre dışı; görev formundaki "Hatırlat" gibi.
+          value: !_isMonthly && time == null ? false : _notify,
+          onChanged: !_isMonthly && time == null
+              ? null
+              : (value) => setState(() => _notify = value),
         ),
         if (widget.routine != null)
           SwitchListTile(

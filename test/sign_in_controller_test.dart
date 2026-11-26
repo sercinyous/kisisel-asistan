@@ -287,10 +287,10 @@ void main() {
       );
     });
 
-    test('tanınmayan sunucu hatası özgün metni korur', () {
+    test('tanınmayan sunucu hatası ham metni göstermez', () {
       expect(
         signInErrorMessage(const AuthApiException('Beklenmeyen', statusCode: '500')),
-        'Giriş başarısız: Beklenmeyen',
+        'Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene.',
       );
     });
   });

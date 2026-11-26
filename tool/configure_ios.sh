@@ -74,6 +74,21 @@ if ! grep -q "CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;" "$PBXPROJ"; 
 fi
 echo "✓ HealthKit entitlement bağlandı"
 
+# --- iPhone-only (iPad'de uyumluluk modunda çalışır) ------------------------
+perl -pi -e 's/TARGETED_DEVICE_FAMILY = "?[0-9,]+"?;/TARGETED_DEVICE_FAMILY = 1;/g' "$PBXPROJ"
+if grep -q "TARGETED_DEVICE_FAMILY" "$PBXPROJ" && grep "TARGETED_DEVICE_FAMILY" "$PBXPROJ" | grep -vq "TARGETED_DEVICE_FAMILY = 1;"; then
+  echo "HATA: TARGETED_DEVICE_FAMILY 1 değil." >&2
+  exit 1
+fi
+if ! grep -q "TARGETED_DEVICE_FAMILY = 1;" "$PBXPROJ"; then
+  perl -pi -e 's/^(\s*)(ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;)/$1$2\n$1TARGETED_DEVICE_FAMILY = 1;/' "$PBXPROJ"
+fi
+if ! grep -q "TARGETED_DEVICE_FAMILY = 1;" "$PBXPROJ"; then
+  echo "HATA: TARGETED_DEVICE_FAMILY = 1 ayarlanamadı." >&2
+  exit 1
+fi
+echo "✓ Yalnızca iPhone (TARGETED_DEVICE_FAMILY = 1)"
+
 # --- 2b) Uygulama ikonu ----------------------------------------------------
 # Tek 1024 px ikon (Xcode 14+ "single size"); diğer boyutları Xcode üretir.
 ICONSET="ios/Runner/Assets.xcassets/AppIcon.appiconset"

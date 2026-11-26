@@ -444,7 +444,7 @@ class _MeasurementRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadii.chip),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 34),
+          constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
             border: divider

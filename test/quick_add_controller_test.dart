@@ -530,7 +530,7 @@ void main() {
       expect(ok, isFalse);
       expect(
         stateOf(QuickAddMode.work).errorMessage,
-        'Kaydedilemedi: routines_monthly_day ihlali',
+        'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.',
       );
     });
 

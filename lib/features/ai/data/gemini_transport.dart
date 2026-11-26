@@ -114,15 +114,15 @@ class GeminiTransport {
         if (!_isRetryable(response.statusCode)) throw lastError;
       } on TimeoutException {
         lastError = const AiParseException(
-          'AI servisi zamanında yanıt vermedi. Lütfen tekrar deneyin.',
+          'Şu an yanıt alınamadı. Biraz sonra tekrar dene.',
         );
       } on SocketException {
         lastError = const AiParseException(
-          'İnternet bağlantısı kurulamadı. Bağlantınızı kontrol edin.',
+          'İnternete bağlanılamadı. Bağlantını kontrol edip tekrar dene.',
         );
       } on http.ClientException {
         lastError = const AiParseException(
-          'AI servisine ulaşılamadı. Bağlantınızı kontrol edin.',
+          'AI servisine ulaşılamadı. Bağlantını kontrol edip tekrar dene.',
         );
       }
 
@@ -210,23 +210,23 @@ class GeminiTransport {
 
   String _directMessage(int code) => switch (code) {
         400 =>
-          'AI isteği geçersiz bulundu (400). Model adını ve metni kontrol edin.',
+          'Bu metin işlenemedi. Biraz değiştirip tekrar dene ya da elle ekle.',
         401 || 403 => 'Gemini API anahtarı geçersiz ya da yetkisiz.',
         404 => 'Gemini modeli bulunamadı: $_model',
         402 => 'Gemini bakiyesi ya da faturalandırma tükendi (402). '
             'AI Studio > Billing bölümünden kredi ekleyin.',
-        429 => 'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.',
-        _ => 'AI servisi hata verdi ($code). Lütfen tekrar deneyin.',
+        429 => 'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.',
+        _ => 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.',
       };
 
   String _proxyMessage(int code, String? serverMessage) => switch (code) {
-        400 => 'AI isteği geçersiz bulundu (400). Metni kontrol edip tekrar '
-            'deneyin.',
+        400 => 'Bu metin işlenemedi. Biraz değiştirip tekrar dene '
+            'ya da elle ekle.',
         401 => _sessionMessage,
-        413 => 'Metin çok uzun. Kısaltıp tekrar deneyin.',
+        413 => 'Metin çok uzun. Kısaltıp tekrar dene.',
         429 => serverMessage ??
-            'Günlük AI kullanım sınırına ulaşıldı. Yarın tekrar deneyin.',
-        _ => 'AI servisi hata verdi ($code). Lütfen tekrar deneyin.',
+            'Bugünkü AI hakkın doldu. Yarın tekrar dene ya da elle ekle.',
+        _ => 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.',
       };
 
   /// Proxy hata gövdesindeki `{"error": "<Türkçe ileti>"}`; yoksa `null`.

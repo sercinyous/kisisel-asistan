@@ -11,7 +11,7 @@ const String signUpFailedMessage =
 const String confirmationSentMessage =
     'Onay e-postası gönderildi, gelen kutunu (ve spam) kontrol et.';
 
-const String connectionFailedMessage = 'Bağlantı kurulamadı. Tekrar deneyin.';
+const String connectionFailedMessage = 'Bağlantı kurulamadı. Tekrar dene.';
 
 /// Girişte gösterilecek Türkçe hata metni; kullanıcı Google penceresini
 /// kapattıysa `null` (hata gösterilmez).
@@ -55,5 +55,5 @@ String _authMessage(AuthException error) {
     return 'Google ile giriş sunucuda yapılandırılmamış. '
         'E-posta ile giriş yapabilirsin.';
   }
-  return 'Giriş başarısız: ${error.message}';
+  return 'Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene.';
 }

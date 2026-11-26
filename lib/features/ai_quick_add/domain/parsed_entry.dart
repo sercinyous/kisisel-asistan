@@ -413,7 +413,7 @@ class ParsedRoutine {
   bool get isMonthly => frequency == RoutineFrequency.monthly;
 
   String get categoryLabel => switch (category) {
-        'operasyon' => 'Operasyon',
+        'operasyon' => 'İş',
         'spor' => 'Spor',
         'beslenme' => 'Beslenme',
         'finans' => 'Finans',

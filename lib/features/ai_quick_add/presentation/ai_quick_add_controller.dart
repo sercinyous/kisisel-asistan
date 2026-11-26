@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/services/error_reporter.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
 import '../../health/presentation/energy_providers.dart';
@@ -114,7 +115,7 @@ class QuickAddController
     } catch (_) {
       state = state.copyWith(
         status: QuickAddStatus.idle,
-        errorMessage: 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+        errorMessage: 'Bir şeyler ters gitti. Tekrar dene ya da elle ekle.',
       );
     }
   }
@@ -174,10 +175,11 @@ class QuickAddController
             '${e.saved.totalCount} kayıt eklendi. Tekrar dene.',
       );
       return false;
-    } on PostgrestException catch (e) {
+    } on PostgrestException catch (e, st) {
+      ErrorReporter.current?.report(e, st);
       state = state.copyWith(
         status: QuickAddStatus.preview,
-        errorMessage: 'Kaydedilemedi: ${e.message}',
+        errorMessage: 'Kaydedilemedi. Bağlantını kontrol edip tekrar dene.',
       );
       return false;
     } catch (_) {

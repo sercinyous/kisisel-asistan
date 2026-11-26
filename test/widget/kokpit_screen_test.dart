@@ -231,7 +231,7 @@ void main() {
       expect(find.text('Gün'), findsNothing);
       expect(find.text('Ay'), findsNothing);
       expect(find.byTooltip('Ayarlar'), findsNothing);
-      expect(find.byTooltip('Hesap'), findsOneWidget);
+      expect(find.byTooltip('Hesap ve ayarlar'), findsOneWidget);
 
       await scrollThrough(tester);
       expect(find.text('Bugünün işleri'), findsOneWidget);

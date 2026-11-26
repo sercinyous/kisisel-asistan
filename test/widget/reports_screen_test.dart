@@ -400,7 +400,7 @@ void main() {
           (day) => dailyReport(day, summary: 'Bugünün özeti.');
       await openDaily(tester);
 
-      expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
+      expect(find.text('Bu tarihte rapor henüz oluşmadı'), findsOneWidget);
       await harness.tapText(tester, 'Raporu oluştur');
       await tester.pumpAndSettle();
 

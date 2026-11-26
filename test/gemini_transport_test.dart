@@ -276,7 +276,7 @@ void main() {
       ]) {
         final e = await errorFor(response);
         expect(e.message,
-            'Günlük AI kullanım sınırına ulaşıldı. Yarın tekrar deneyin.');
+            'Bugünkü AI hakkın doldu. Yarın tekrar dene ya da elle ekle.');
       }
     });
 
@@ -287,7 +287,7 @@ void main() {
 
     test('400 -> geçersiz istek (model adı önerisi yok)', () async {
       final e = await errorFor(json({'error': 'x'}, 400));
-      expect(e.message, contains('AI isteği geçersiz bulundu (400)'));
+      expect(e.message, contains('Bu metin işlenemedi'));
       expect(e.message, isNot(contains('Model adını')));
     });
 
@@ -298,7 +298,7 @@ void main() {
 
     test('sunucunun ham hata metni (500) kullanıcıya sızmaz', () async {
       final e = await errorFor(json({'error': 'iç ayrıntı: tablo yok'}, 500));
-      expect(e.message, 'AI servisi hata verdi (500). Lütfen tekrar deneyin.');
+      expect(e.message, 'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
   });
 
@@ -386,7 +386,7 @@ void main() {
       final e = await expectAiError(slow.post(geminiBody));
       expect(slowCalls, 3);
       expect(e.message,
-          'AI servisi zamanında yanıt vermedi. Lütfen tekrar deneyin.');
+          'Şu an yanıt alınamadı. Biraz sonra tekrar dene.');
     });
   });
 
@@ -434,7 +434,7 @@ void main() {
       final e = await expectAiError(transport.post(geminiBody));
       expect(calls, 3);
       expect(e.message,
-          'Gemini kota sınırına ulaşıldı. Biraz sonra tekrar deneyin.');
+          'AI şu an çok yoğun. Biraz sonra tekrar dene ya da elle ekle.');
     });
 
     test('504 doğrudan modda yeniden denenmez', () async {

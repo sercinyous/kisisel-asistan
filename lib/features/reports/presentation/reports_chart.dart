@@ -66,7 +66,7 @@ class ReportDailyCompletionCard extends StatelessWidget {
             runSpacing: 4,
             children: [
               _Legend(color: AppColors.accent, label: 'İş'),
-              _Legend(color: AppColors.sleep, label: 'Form'),
+              _Legend(color: AppColors.sleep, label: 'Sağlık'),
             ],
           ),
           if (days.isEmpty)

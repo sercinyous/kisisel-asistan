@@ -191,7 +191,7 @@ class _TaskCategoriesCardState extends ConsumerState<TaskCategoriesCard> {
             ),
           const SizedBox(height: 12),
           Text(
-            'Kategori Taslakları',
+            'Kategori taslakları',
             style: theme.textTheme.labelLarge
                 ?.copyWith(color: AppColors.textSecondary),
           ),

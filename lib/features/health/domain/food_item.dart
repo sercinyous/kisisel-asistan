@@ -63,7 +63,7 @@ class FoodMacros {
 abstract final class FoodCategories {
   static const List<String> all = [
     'İçecekler',
-    'Haşlanmış Yiyecekler',
+    'Haşlanmış yiyecekler',
     'Kızartılmış Yiyecekler',
     'Temel Gıdalar',
     'Meyveler',

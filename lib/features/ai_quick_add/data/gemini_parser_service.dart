@@ -92,11 +92,11 @@ class GeminiParserService {
   Future<ParsedEntry> parse(String input, {DateTime? now}) async {
     final text = input.trim();
     if (text.isEmpty) {
-      throw const AiParseException('Lütfen bir şeyler yazın.');
+      throw const AiParseException('Önce bir şeyler yaz.');
     }
     if (text.length > _maxInputLength) {
       throw const AiParseException(
-        'Metin çok uzun. Lütfen $_maxInputLength karakterin altında tutun.',
+        'Metin çok uzun. $_maxInputLength karakterin altında tut.',
       );
     }
 
@@ -121,12 +121,12 @@ class GeminiParserService {
       decoded = jsonDecode(_stripCodeFence(raw));
     } on FormatException {
       throw const AiParseException(
-        'AI yanıtı çözümlenemedi. Lütfen tekrar deneyin.',
+        'Yanıt anlaşılamadı. Tekrar dene ya da elle ekle.',
       );
     }
     if (decoded is! Map) {
       throw const AiParseException(
-        'AI beklenmeyen bir yanıt verdi. Lütfen tekrar deneyin.',
+        'Yanıt anlaşılamadı. Tekrar dene ya da elle ekle.',
       );
     }
     return ParsedEntry.fromJson(
@@ -512,15 +512,15 @@ $_commonRules''';
 
     final candidates = decoded['candidates'];
     if (candidates is! List || candidates.isEmpty) {
-      throw const AiParseException('AI boş yanıt döndürdü. Tekrar deneyin.');
+      throw const AiParseException('Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     }
     final first = candidates.first;
     if (first is! Map) {
-      throw const AiParseException('AI boş yanıt döndürdü. Tekrar deneyin.');
+      throw const AiParseException('Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     }
     if (first['finishReason'] == 'MAX_TOKENS') {
       throw const AiParseException(
-        'Metin tek seferde işlenemeyecek kadar uzun. Bölerek deneyin.',
+        'Metin tek seferde işlenemeyecek kadar uzun. Bölerek dene.',
       );
     }
 
@@ -536,7 +536,7 @@ $_commonRules''';
     }
     final text = buffer.toString().trim();
     if (text.isEmpty) {
-      throw const AiParseException('AI boş yanıt döndürdü. Tekrar deneyin.');
+      throw const AiParseException('Yanıt boş geldi. Tekrar dene ya da elle ekle.');
     }
     return text;
   }

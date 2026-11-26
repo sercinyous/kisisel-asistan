@@ -71,7 +71,7 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
     QuickAddMode.health: [
       'Öğlen 200 gr tavuk göğsü ve 2 dilim tam çavdar ekmeği yedim',
       'Bugün 45 dk ağırlık çalıştım',
-      'Sabah 83.9 kiloydum',
+      'Sabah 83,9 kiloydum',
     ],
   };
 
@@ -281,8 +281,8 @@ class _AiQuickAddModalState extends ConsumerState<AiQuickAddModal> {
                         icon: const Icon(Icons.auto_awesome_outlined),
                         label: Text(
                           state.status == QuickAddStatus.parsing
-                              ? 'Ayrıştırılıyor…'
-                              : 'Ayrıştır',
+                              ? 'Anlıyorum…'
+                              : 'Devam',
                         ),
                       ),
                     ],

@@ -68,7 +68,7 @@ class StreakTargets {
 enum StreakKind {
   steps('Adım', 'Adım serisi'),
   logging('Kayıt', 'Kayıt serisi'),
-  deficit('Açık', 'Açık serisi'),
+  deficit('Kalori açığı', 'Kalori açığı serisi'),
   target('Hedef', 'Hedef serisi');
 
   const StreakKind(this.label, this.semanticLabel);

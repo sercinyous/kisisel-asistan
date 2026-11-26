@@ -371,7 +371,7 @@ void main() {
     testWidgets('tek profil ikonu; ayrı Ayarlar ve görünüm seçici yok',
         (tester) async {
       await harness.pump(tester);
-      expect(find.byTooltip('Hesap'), findsOneWidget);
+      expect(find.byTooltip('Hesap ve ayarlar'), findsOneWidget);
       expect(find.byTooltip('Ayarlar'), findsNothing);
       expect(find.byTooltip('Arkadaşlar'), findsNothing);
       expect(find.text('Gün'), findsNothing);
@@ -379,7 +379,7 @@ void main() {
 
     testWidgets('profil ikonu Hesap ekranını açar', (tester) async {
       await harness.pump(tester);
-      await tester.tap(find.byTooltip('Hesap'));
+      await tester.tap(find.byTooltip('Hesap ve ayarlar'));
       await tester.pumpAndSettle();
       expect(find.byType(HesapScreen), findsOneWidget);
     });

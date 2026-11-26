@@ -29,6 +29,12 @@ class KisiselAsistanApp extends ConsumerWidget {
       locale: const Locale('tr', 'TR'),
       supportedLocales: const [Locale('tr', 'TR')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      // Erişilebilirlik yazı boyutu desteklenir ama düzen bozulmasın diye
+      // 1,35 katında sınırlanır.
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.35,
+        child: child!,
+      ),
       home: const AuthGate(),
     );
   }

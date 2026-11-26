@@ -352,13 +352,13 @@ abstract final class AppSpacing {
 abstract final class AppType {
   static const double value = 16; // metrik değeri 700
   static const double screenTitle = 22; // .title 700
-  static const double cardTitle = 12.5; // .h 600
-  static const double body = 12.5;
+  static const double cardTitle = 14; // .h 600
+  static const double body = 14;
   static const double chipValue = 13; // .chip b
-  static const double chip = 11.5; // .chip, .btn
-  static const double caption = 11; // .s
-  static const double badge = 10.5; // .badge
-  static const double micro = 9.5; // .days
+  static const double chip = 12.5; // .chip, .btn
+  static const double caption = 12; // .s
+  static const double badge = 11; // .badge
+  static const double micro = 11; // .days
   static const double storyTitle = 28; // story kartı başlığı 800
   static const double storyValue = 40; // story kartı değeri 800
   static const double storyBody = 16; // story kartı açıklaması
@@ -418,7 +418,7 @@ abstract final class AppTheme {
           titleLarge: t(bt.titleLarge, 17, FontWeight.w700, ls: -0.2),
           titleMedium: t(bt.titleMedium, 14, FontWeight.w600),
           titleSmall: t(bt.titleSmall, AppType.cardTitle, FontWeight.w600),
-          bodyLarge: t(bt.bodyLarge, 13.5, FontWeight.w400, height: 1.4),
+          bodyLarge: t(bt.bodyLarge, 15, FontWeight.w400, height: 1.4),
           bodyMedium:
               t(bt.bodyMedium, AppType.body, FontWeight.w400, height: 1.4),
           bodySmall: t(bt.bodySmall, AppType.caption, FontWeight.w400,
@@ -567,6 +567,7 @@ abstract final class AppTheme {
           color: p.textPrimary,
         ),
         checkmarkColor: p.accent,
+        showCheckmark: true,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(

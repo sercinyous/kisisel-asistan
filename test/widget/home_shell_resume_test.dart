@@ -288,13 +288,13 @@ void main() {
     await selectTab(tester, 'İçgörü');
     await tester.tap(find.text('Gün'));
     await tester.pumpAndSettle();
-    expect(find.text('Bu gün için rapor henüz oluşmadı'), findsOneWidget);
+    expect(find.text('Bu tarihte rapor henüz oluşmadı'), findsOneWidget);
 
     // 23:45 zamanlayıcısı raporu yazdı.
     reports.daily = [dailyReport(today)];
     await backgroundAndResume(tester);
 
-    expect(find.text('Bu gün için rapor henüz oluşmadı'), findsNothing);
+    expect(find.text('Bu tarihte rapor henüz oluşmadı'), findsNothing);
     expect(find.text('Gün özeti.'), findsOneWidget);
   });
 
