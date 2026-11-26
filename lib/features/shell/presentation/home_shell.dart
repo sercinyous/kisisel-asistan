@@ -19,6 +19,7 @@ import '../../reminders/presentation/reminders_providers.dart';
 import '../../reports/presentation/reports_providers.dart';
 import '../../reports/presentation/reports_screen.dart';
 import '../../routines/presentation/routines_providers.dart';
+import '../../friends/presentation/friends_providers.dart';
 import '../../stories/presentation/stories_providers.dart';
 
 /// + butonunun sekmeye göre açacağı giriş alanı. `null`: sekme bir alana
@@ -116,6 +117,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
     ref.invalidate(upcomingRemindersProvider);
     // Arkadaş hikâyeleri 24 saatte düşer; yenileri de gelmiş olabilir.
     ref.invalidate(friendStoryGroupsProvider);
+    ref
+      ..invalidate(friendsLeaderboardProvider)
+      ..invalidate(pendingFriendRequestCountProvider);
     // Sağlık sekmesi, Kokpit beslenme özeti ve Ay özeti: pencereleri (son N
     // gün, bu hafta, bugünün öğünleri) ve durum rozetleri bugüne göredir.
     invalidateHealthData(container);

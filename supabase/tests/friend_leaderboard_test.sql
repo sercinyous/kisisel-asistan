@@ -63,8 +63,8 @@ begin
     'id', me, 'self', true, 'name', 'Sercan Kılıç', 'email', 'lb-sercan@example.com',
     'avatar', 'https://example.com/s.png', 'st', 5000, 'sw', 5000, 'sl', 420, 'kc', 0));
   perform tf.eq('arkadaş: adım açık, uyku/kalori null', r -> 1, jsonb_build_object(
-    'id', 'f7200000-0000-0000-0000-000000000002', 'self', false, 'name', 'Deniz',
-    'email', 'lb-deniz@example.com', 'avatar', 'https://example.com/d.png',
+    'id', 'f7200000-0000-0000-0000-000000000002', 'self', false, 'name', 'l***@example.com',
+    'email', 'l***@example.com', 'avatar', null,
     'st', 1000, 'sw', 1000 * days, 'sl', null, 'kc', null));
 
   begin

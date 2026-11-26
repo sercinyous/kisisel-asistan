@@ -406,7 +406,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                   style: theme.textTheme.bodyLarge
                       ?.copyWith(fontWeight: FontWeight.w500),
                 ),
-                if (e.email.isNotEmpty && e.email != e.displayName)
+                if (e.isSelf && e.email.isNotEmpty && e.email != e.displayName)
                   Text(
                     e.email,
                     maxLines: 1,

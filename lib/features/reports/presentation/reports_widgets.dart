@@ -338,15 +338,23 @@ class ReportAiCard extends ConsumerWidget {
           else if (status == ReportAiStatus.pending)
             const _Notice(
               title: 'Yorum hazırlanıyor',
-              detail: 'Sayılar hazır. Yorum gelmezse yukarıdaki yenile '
-                  'simgesiyle raporu yeniden oluştur.',
+              detail: 'Sayılar hazır. Yorum gelmezse yukarıdaki yıldız '
+                  'simgesiyle yorumu yenile.',
             )
           else
             const _Notice(
               title: 'Yorum üretilemedi',
-              detail: 'Sayılar kaydedildi. Yorum için yukarıdaki yenile '
-                  'simgesiyle raporu yeniden oluştur.',
+              detail: 'Sayılar kaydedildi. Yorum için yukarıdaki yıldız '
+                  'simgesiyle yorumu yenile.',
             ),
+          if (text != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Yapay zekâ yorumu bilgilendirme amaçlıdır; tıbbi tavsiye değildir.',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: AppColors.textMuted),
+            ),
+          ],
           if (exists && generatedAt != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -427,7 +435,7 @@ class ReportRefreshButton extends ConsumerWidget {
     );
     return IconButton(
       key: const ValueKey('reports-refresh'),
-      tooltip: busy ? 'Oluşturuluyor…' : 'Raporu yeniden oluştur',
+      tooltip: busy ? 'Oluşturuluyor…' : 'Yorumu yenile (AI hakkı kullanır)',
       onPressed: busy ? null : () => runRegeneration(ref, kind, date),
       color: AppColors.textSecondary,
       icon: busy
@@ -438,7 +446,7 @@ class ReportRefreshButton extends ConsumerWidget {
                 color: AppColors.accent,
               ),
             )
-          : const Icon(Icons.refresh_outlined, size: 22),
+          : const Icon(Icons.auto_awesome_outlined, size: 22),
     );
   }
 }

@@ -3332,13 +3332,19 @@ begin
   )
   select b.pid,
          b.me,
-         coalesce(b.dn,
-                  nullif(btrim(b.meta ->> 'full_name'), ''),
-                  nullif(btrim(b.meta ->> 'name'), ''),
-                  b.mail, '')::text,
-         b.mail,
-         coalesce(nullif(btrim(b.meta ->> 'avatar_url'), ''),
-                  nullif(btrim(b.meta ->> 'picture'), ''))::text,
+         -- Gizlilik (gizlilik.md): arkadaş satırında tam e-posta, Google adı
+         -- ve foto URL'si dönmez; ad = görünen ad, yoksa maskeli e-posta.
+         (case when b.me then
+            coalesce(b.dn,
+                     nullif(btrim(b.meta ->> 'full_name'), ''),
+                     nullif(btrim(b.meta ->> 'name'), ''),
+                     b.mail, '')
+          else coalesce(b.dn, public.friend_mask_email(b.mail)) end)::text,
+         (case when b.me then b.mail else public.friend_mask_email(b.mail) end)::text,
+         (case when b.me then
+            coalesce(nullif(btrim(b.meta ->> 'avatar_url'), ''),
+                     nullif(btrim(b.meta ->> 'picture'), ''))
+          end)::text,
          b.me or b.gst, b.me or b.gsl, b.me or b.gca,
          case when b.sst then coalesce(h.st_today, 0) end,
          case when b.sst then coalesce(h.st_week, 0) end,

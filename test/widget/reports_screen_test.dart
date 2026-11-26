@@ -92,7 +92,8 @@ void main() {
           find.textContaining('İş tarafında güçlü bir hafta'), findsOneWidget);
       // Büyük düğme yok; yenileme başlıktaki simgede.
       expect(find.text('Raporu yeniden oluştur'), findsNothing);
-      expect(find.byTooltip('Raporu yeniden oluştur'), findsOneWidget);
+      expect(find.textContaining('tıbbi tavsiye değildir'), findsOneWidget);
+      expect(find.byTooltip('Yorumu yenile (AI hakkı kullanır)'), findsOneWidget);
       // Öneriler "Devamı" ile açılır.
       expect(find.text('Perşembe antrenmanını sabaha al.'), findsNothing);
       await harness.tapText(tester, 'Devamı');
@@ -136,7 +137,7 @@ void main() {
       expect(find.text('%78'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Yorum üretilemedi'), 200);
       expect(find.text('Yorum üretilemedi'), findsOneWidget);
-      expect(find.byTooltip('Raporu yeniden oluştur'), findsOneWidget);
+      expect(find.byTooltip('Yorumu yenile (AI hakkı kullanır)'), findsOneWidget);
     });
 
     testWidgets('rapor yoksa oluşturma çağrısı gösterilir', (tester) async {
