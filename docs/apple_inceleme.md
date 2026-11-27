@@ -47,7 +47,7 @@ Password: DEMO_SIFRE
 ```
 Ritim is a Turkish personal assistant (tasks, routines, reminders, meals and
 health goals). Anyone can sign up; please use the demo account provided above
-(e-mail + password on the sign-in screen, after tapping "E-posta ile devam et").
+(e-mail + password on the sign-in screen, after tapping "E-posta ile giriş").
 
 Sign-in options (Guideline 4.8): e-mail, Sign in with Apple ("Apple ile devam
 et", shown first on iOS) and Google. Sign in with Apple only asks for name and
