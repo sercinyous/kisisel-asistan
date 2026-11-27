@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../settings/domain/user_settings.dart';
 import '../../../settings/presentation/settings_providers.dart';
 import '../../data/health_repository.dart';
+import '../../domain/diet_preset.dart';
 import '../../domain/energy_balance.dart';
 import '../../domain/goal_mode.dart';
 import '../../domain/targets_engine.dart';
@@ -11,6 +12,7 @@ import '../energy_providers.dart' show energyWeightLookbackDays;
 import '../health_providers.dart' show weightSeriesProvider;
 import '../trend_providers.dart' show trendClockProvider;
 
+export '../../domain/diet_preset.dart';
 export '../../domain/goal_mode.dart';
 export '../../domain/safe_targets.dart';
 export '../../domain/targets_engine.dart';
@@ -106,10 +108,31 @@ final planSuggestionProvider = FutureProvider<ResolvedTargets?>((ref) async {
   return planSuggestion(settings, resolved);
 });
 
+/// "1800 kcal · Yüksek protein" paketinin bugünkü ayar ve kiloyla güvenlik
+/// denetimi (Plan kartı okur).
+final presetCheckProvider =
+    FutureProvider.family<PresetCheck, DietPreset>((ref, preset) async {
+  final settings = await ref.watch(userSettingsProvider.future);
+  final weight = await ref.watch(latestWeightProvider.future);
+  final now = ref.watch(trendClockProvider)();
+  return checkPreset(
+    preset: preset,
+    settings: settings,
+    latestWeightKg: weight?.weightKg,
+    age: ageFromSettings(settings, now),
+    sex: Sex.tryParse(settings.sex),
+  );
+});
+
+/// [PlanController.applyPreset] sonucu: denetim ve (uygulandıysa) "Geri al"
+/// için önceki ayar.
+typedef PresetApplyResult = ({PresetCheck check, UserSettings? previous});
+
 final planControllerProvider = Provider<PlanController>(PlanController.new);
 
 /// Hedef ve plan ayarlarının yazarı. `daily_*` sütunlarını yalnızca
-/// [applyPlan] (motor) ve [saveManualTargets] (Ayarlar > Hedeflerim) yazar.
+/// [applyPlan] (motor), [applyPreset] / [restorePrevious] (hazır paket) ve
+/// [saveManualTargets] (Ayarlar > Hedeflerim) yazar.
 class PlanController {
   PlanController(this._ref);
 
@@ -169,6 +192,31 @@ class PlanController {
     }
     await _save(write.settings);
     return write;
+  }
+
+  /// Hazır paketi uygular (motorun güvenlik denetiminden geçerse). Uygulandıysa
+  /// "Geri al" için önceki ayar döner.
+  Future<PresetApplyResult> applyPreset(DietPreset preset) async {
+    final current = await _settings();
+    final weight = (await _ref.read(latestWeightProvider.future))?.weightKg;
+    final now = _now();
+    final check = checkPreset(
+      preset: preset,
+      settings: current,
+      latestWeightKg: weight,
+      age: ageFromSettings(current, now),
+      sex: Sex.tryParse(current.sex),
+    );
+    final write = presetWrite(settings: current, check: check, now: now);
+    if (write == null) return (check: check, previous: null);
+    await _save(write.settings);
+    return (check: check, previous: current);
+  }
+
+  /// Paketten önceki hedefleri geri yazar ("Geri al").
+  Future<void> restorePrevious(UserSettings previous) async {
+    final current = await _settings();
+    await _save(restoreTargets(current, previous));
   }
 
   /// Ayarlar > Hedeflerim: değerler aynen yazılır, kaynak 'manual'.
