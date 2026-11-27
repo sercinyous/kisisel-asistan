@@ -15,6 +15,7 @@ import '../domain/fat_loss_plan.dart';
 import '../domain/fat_loss_rate.dart';
 import '../domain/goal_projection.dart';
 import '../domain/health_sources.dart';
+import 'diet_preset_card.dart';
 import 'health_format.dart';
 import 'health_widgets.dart';
 import 'providers/targets_providers.dart';
@@ -141,6 +142,7 @@ class _PlanBody extends ConsumerWidget {
           if (goalModeColumns)
             BentoCell(child: _GoalModeCard(resolved: resolved)),
           BentoCell(child: _TargetsCard(resolved: resolved)),
+          const BentoCell(child: DietPresetCard()),
           if (!resolved.locked && resolved.goal == GoalMode.fatLoss)
             BentoCell(child: _TempoCard(resolved: resolved)),
           BentoCell(child: _WhyCard(resolved: resolved)),
@@ -269,10 +271,12 @@ class _GoalCard extends ConsumerWidget {
     final hasWeight = ref.watch(latestWeightProvider).valueOrNull != null;
     final manual = targets.source == TargetsSource.manual;
     final updated = targets.updatedAt;
-    final source = manual
-        ? 'Elle ayarlandı'
-        : 'Otomatik (kiloya göre)'
-            '${updated == null ? '' : ' · ${DateFormat('d MMM', 'tr_TR').format(updated.toLocal())}'}';
+    final source = presetActive(settings, DietPreset.highProtein1800)
+        ? 'Hazır paket · ${DietPreset.highProtein1800.label}'
+        : manual
+            ? 'Elle ayarlandı'
+            : 'Otomatik (kiloya göre)'
+                '${updated == null ? '' : ' · ${DateFormat('d MMM', 'tr_TR').format(updated.toLocal())}'}';
     final tempo = resolved.locked
         ? 'Dengeli beslenme'
         : switch (resolved.mode) {

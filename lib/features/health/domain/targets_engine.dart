@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../../onboarding/domain/goal_suggestion.dart' show TargetLimits;
 import '../../settings/domain/user_settings.dart';
+import 'diet_preset.dart';
 import 'energy_balance.dart';
 import 'fat_loss_plan.dart' show FatLossRules, FatLossTargets, formatTr;
 import 'fat_loss_rate.dart';
@@ -509,3 +510,123 @@ ResolvedTargets? planSuggestion(
   ResolvedTargets resolved,
 ) =>
     targetsDiffer(settings, resolved) ? resolved : null;
+
+/// Hazır paket neden uygulanamıyor?
+enum PresetBlock {
+  /// 18 yaş altı ya da VKİ (şimdiki veya hedef) 18,5 altı.
+  locked,
+
+  /// Paket kalorisi tabanın (max(1.200, bazal)) altında.
+  belowFloor,
+}
+
+/// [checkPreset] sonucu: paket uygulanabilir mi, değilse neden.
+class PresetCheck {
+  const PresetCheck({
+    required this.preset,
+    required this.floorKcal,
+    this.block,
+  });
+
+  final DietPreset preset;
+
+  /// Kullanıcının kalori tabanı: max(1.200, bazal).
+  final int floorKcal;
+
+  /// `null` ise paket uygulanabilir.
+  final PresetBlock? block;
+
+  bool get allowed => block == null;
+
+  /// Uygulanamıyorsa gösterilecek uyarı; uygulanabiliyorsa `null`.
+  String? get warning => switch (block) {
+        null => null,
+        PresetBlock.locked =>
+          '${preset.label} paketi sana uygun değil (18 yaş altı ya da '
+              'VKİ 18,5 altı); dengeli beslenme hedeflerin korunuyor.',
+        PresetBlock.belowFloor =>
+          '${formatTr(preset.kcal)} kcal güvenli tabanının '
+              '(${formatTr(floorKcal)} kcal) altında; paket uygulanmadı.',
+      };
+}
+
+/// Paket güvenlik kurallarına uyuyor mu? Motorun kuralları aynen geçerlidir:
+/// kilit (ihtiyatlı yaş < 18 ya da VKİ < 18,5) ve taban max(1.200, bazal).
+/// Saf; yazmaz.
+PresetCheck checkPreset({
+  required DietPreset preset,
+  required UserSettings settings,
+  double? latestWeightKg,
+  int? age,
+  Sex? sex,
+}) {
+  final weight =
+      latestWeightKg != null && latestWeightKg.isFinite && latestWeightKg > 0
+          ? latestWeightKg
+          : settings.startWeightKg;
+  final basal = settingsBasal(settings, weightKg: weight, age: age, sex: sex);
+  final floor = kcalFloor(basal);
+  final locked = planLocked(
+    age: age == null ? null : age - 1,
+    weightKg: weight,
+    targetWeightKg: settings.targetWeightKg,
+    heightCm: settings.heightCm,
+  );
+  return PresetCheck(
+    preset: preset,
+    floorKcal: floor,
+    block: locked
+        ? PresetBlock.locked
+        : preset.kcal < floor
+            ? PresetBlock.belowFloor
+            : null,
+  );
+}
+
+/// Hazır paketin hedef yazımı; [check] izin vermiyorsa `null` (yazılmaz).
+/// Kaynak 'manual' olur: tartı ve profil kaydı paketi ezmez; hedef türü,
+/// tempo ya da "Önceki plana dön" motoru yeniden yazar.
+PlanWrite? presetWrite({
+  required UserSettings settings,
+  required PresetCheck check,
+  required DateTime now,
+}) {
+  if (!check.allowed) return null;
+  final p = check.preset;
+  final kcal =
+      p.kcal.clamp(TargetLimits.caloriesMin, TargetLimits.caloriesMax).toInt();
+  return PlanWrite(
+    previousKcal: settings.dailyCalories,
+    kcal: kcal,
+    settings: settings.copyWith(
+      dailyCalories: kcal,
+      dailyProteinG: p.proteinG
+          .clamp(TargetLimits.proteinMin, TargetLimits.proteinMax)
+          .toInt(),
+      dailyCarbsG:
+          p.carbsG.clamp(TargetLimits.carbsMin, TargetLimits.carbsMax).toInt(),
+      dailyFatG: p.fatG.clamp(TargetLimits.fatMin, TargetLimits.fatMax).toInt(),
+      targetsSource: TargetsSource.manual,
+      targetsUpdatedAt: now,
+    ),
+  );
+}
+
+/// Kayıtlı hedefler bu paket mi? (kaynak 'manual' ve dört değer aynı)
+bool presetActive(UserSettings settings, DietPreset preset) =>
+    settings.targetsSource == TargetsSource.manual &&
+    settings.dailyCalories == preset.kcal &&
+    settings.dailyProteinG == preset.proteinG &&
+    settings.dailyCarbsG == preset.carbsG &&
+    settings.dailyFatG == preset.fatG;
+
+/// "Geri al": paketten önceki hedefleri ve kaynağı aynen geri yazar.
+UserSettings restoreTargets(UserSettings current, UserSettings previous) =>
+    current.copyWith(
+      dailyCalories: previous.dailyCalories,
+      dailyProteinG: previous.dailyProteinG,
+      dailyCarbsG: previous.dailyCarbsG,
+      dailyFatG: previous.dailyFatG,
+      targetsSource: previous.targetsSource,
+      targetsUpdatedAt: previous.targetsUpdatedAt,
+    );
