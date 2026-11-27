@@ -27,6 +27,10 @@
 #     WEB OAuth istemci kimliği (…apps.googleusercontent.com; Supabase > Authentication >
 #     Providers > Google > "Authorized Client IDs"e de eklenir). Gizli değildir. Boşsa ya da
 #     GOOGLE_IOS_CLIENT_ID yoksa giriş ekranında Google düğmesi gizlenir (e-posta girişi kalır).
+#     İki iş akışı (ios-testflight ve ios-adhoc) aynı değeri kullanır: mağaza yapısı
+#     E-posta + Apple + Google girişiyle çıkar. "Apple ile devam et" ek değişken istemez;
+#     Runner.entitlements'a com.apple.developer.applesignin tool/configure_ios.sh ile eklenir
+#     (App ID'de "Sign in with Apple" yeteneği açık olmalı; ayrıntı: docs/STORE_HAZIRLIK.md §0).
 #  5) Aşağıdaki "vars" bloğunda BUNDLE_ID ve APP_STORE_APPLE_ID değerlerini doldur
 #     (imzalama ayarları BUNDLE_ID'yi buradan okur; başka yerde değiştirmek gerekmez).
 #
@@ -225,9 +229,9 @@ workflows:
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define=GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}" \
-            --dart-define=GOOGLE_WEB_CLIENT_ID=""
-          # Mağaza yapısında Google girişi kapalı: Sign in with Apple eklenene kadar
-          # Guideline 4.8 gereği yalnızca e-posta girişi sunulur (Google Health bağlantısı etkilenmez).
+            --dart-define=GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}"
+          # Mağaza yapısı E-posta + Apple + Google girişiyle çıkar (Guideline 4.8:
+          # Sign in with Apple, Google'la birlikte sunulur; Apple düğmesi yalnızca iOS'ta).
 
     artifacts: *artifacts
 

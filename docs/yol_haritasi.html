@@ -153,7 +153,7 @@ p{margin:0}
     <dl class="stats">
       <div><dt>tamamlanan faz (Faz 2'den Faz 5'e)</dt><dd>7</dd></div>
       <div><dt>bağımsız inceleme bulgusu kapatıldı</dt><dd>12</dd></div>
-      <div><dt>otomatik test geçiyor (Flutter)</dt><dd>1681</dd></div>
+      <div><dt>otomatik test geçiyor (Flutter)</dt><dd>1710</dd></div>
       <div><dt>kalan iş (1 sahipte: mağaza kurulumu)</dt><dd>2</dd></div>
     </dl>
 
@@ -232,6 +232,7 @@ p{margin:0}
       <li><b>Ürün hazırlığı · güvenlik<small>Tur 2</small></b><p>Kayıtta e-posta onayı uygulamada kodla (yeniden gönder); oturum Anahtar Zinciri'nde; haftalık hedef hikâyesi yeniden yayımlanıyor ve seri adı sabit listeden; engelleme e-posta sızdırmıyor; AI hızlı giriş tekrar denemede çift yazmıyor ve 50 kalem sınırlı; raporlar sayfa sayfa üretiliyor (çok kullanıcıya ölçeklenir); kullanıcı başına boyut sınırları; hata kayıtları 90 günde siliniyor.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>Yayın kapısı<small>Tur 3</small></b><p>Tüm testler yeşil; Gemini anahtarı derlemeye gömülmez (doluysa derleme durur); mağaza yapısı Google girişini gizler (Guideline 4.8); yapı numarası TestFlight ve App Store'un büyüğünden artar; sahip için sıralı App Store hazırlık listesi.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
       <li><b>Hazır paket<small>1800 kcal · Yüksek protein</small></b><p>Sağlık › Plan'da diyet için hazır paket: onaylı tek dokunuşla hedefler 1.800 kcal, 150 g protein, 165 g karbonhidrat, 60 g yağ olur (lif ~30 g); 4 öğünlük protein ağırlıklı menü (kahvaltı, öğle, akşam, ara öğün) kartta listelenir ve öğün formunda şablon çipi olur. Hedefleri yine motor yazar: 18 yaş altı, VKİ &lt; 18,5 ya da taban max(1.200, bazal) 1.800'ün üstündeyse uyarı gösterilir ve uygulanmaz; tartı paketi ezmez, "Geri al" ve "Önceki plana dön" var. Şema değişmedi.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
+      <li><b>Apple ile giriş<small>E-posta + Apple + Google</small></b><p>Mağaza yapısı üç girişle çıkar (Guideline 4.8): iOS'ta Google'ın üstünde "Apple ile devam et" (yerel akış, tek kullanımlık nonce), Google girişi mağaza yapısında yeniden açık. İlk Apple girişinde ad boş profil adına yazılır. Hesap silmede Apple kullanıcısı Apple'la yeniden onaylar; sunucu Apple erişimini iptal eder, iptal hatası silmeyi durdurmaz. Şema değişmedi.</p><span class="ok"><svg width="14" height="14" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="7.5" class="b-done"/><path class="g" d="M-3.2 .2l2.2 2.4 4-4.8"/></svg>Tamamlandı</span></li>
     </ol>
   </section>
 
@@ -265,7 +266,7 @@ p{margin:0}
   var N=[
     {x:250,y:26,w:180,h:46,b:["Sahip","tek kullanıcı"],a:["Çok kullanıcı","sahip + arkadaşlar","new"]},
     {x:24,y:138,w:184,h:46,a:["Açık kayıt","herkes Google/e-postayla kaydolur","new"]},
-    {x:248,y:138,w:184,h:46,b:["Google ile giriş",""],a:["Giriş","Google · e-posta kodu · şifre sıfırlama","done"]},
+    {x:248,y:138,w:184,h:46,b:["Google ile giriş",""],a:["Giriş","Apple, Google veya e-posta","done"]},
     {x:472,y:138,w:184,h:46,a:["İlk kurulum","tek işlem · Apple/Google seçimi","new"]},
     {x:456,y:260,w:200,h:46,a:["Arkadaşlar","sıralama · onay · engelle/bildir","new"]},
     {x:24,y:260,w:200,h:46,a:["Story'ler","özet · ipucu · arkadaş başarısı","new"]},

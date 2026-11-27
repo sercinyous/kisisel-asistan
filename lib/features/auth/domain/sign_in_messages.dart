@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/services/apple_auth.dart';
 import '../../../core/services/google_auth.dart';
 
 /// Kayıt, sıfırlama ve şifre değiştirmede en kısa şifre.
@@ -16,9 +17,12 @@ const String confirmationSentMessage =
 
 const String connectionFailedMessage = 'Bağlantı kurulamadı. Tekrar dene.';
 
-/// Girişte gösterilecek Türkçe hata metni; kullanıcı Google penceresini
-/// kapattıysa `null` (hata gösterilmez).
+/// Girişte gösterilecek Türkçe hata metni; kullanıcı Google ya da Apple
+/// penceresini kapattıysa `null` (hata gösterilmez).
 String? signInErrorMessage(Object error) {
+  if (error is AppleAuthException) {
+    return error.kind == AppleAuthErrorKind.canceled ? null : error.message;
+  }
   if (error is GoogleAuthException) {
     return error.kind == GoogleAuthErrorKind.canceled ? null : error.message;
   }
@@ -55,7 +59,7 @@ String _authMessage(AuthException error) {
       message.contains('audience') ||
       message.contains('provider is not enabled') ||
       message.contains('unsupported provider')) {
-    return 'Google ile giriş sunucuda yapılandırılmamış. '
+    return 'Bu giriş yöntemi sunucuda yapılandırılmamış. '
         'E-posta ile giriş yapabilirsin.';
   }
   return 'Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene.';

@@ -46,13 +46,21 @@ class AccountRepository {
   final SupabaseClient _client;
   final Future<SharedPreferences> Function() _openPrefs;
 
+  /// delete-account gövdesi. Apple kullanıcısında silmeden hemen önce
+  /// alınan taze yetki kodu eklenir; sunucu onu Apple'da iptal eder.
+  static Map<String, String> deletionBody({String? appleAuthorizationCode}) => {
+        'confirm': confirmWord,
+        if (appleAuthorizationCode != null && appleAuthorizationCode.isNotEmpty)
+          'apple_authorization_code': appleAuthorizationCode,
+      };
+
   /// Sunucuda hesabı ve tüm verisini siler (delete-account Edge Function).
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount({String? appleAuthorizationCode}) async {
     final FunctionResponse response;
     try {
       response = await _client.functions.invoke(
         'delete-account',
-        body: const {'confirm': confirmWord},
+        body: deletionBody(appleAuthorizationCode: appleAuthorizationCode),
       );
     } on FunctionException catch (e) {
       throw AccountActionException(_serverMessage(e.details) ??

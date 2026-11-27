@@ -6,12 +6,39 @@ Ayrıntılı inceleme notları: [apple_inceleme.md](apple_inceleme.md).
 
 ## 0. Karar: 1.0'da giriş yöntemi
 
-- Mağaza yapısı (`ios-testflight`) Google girişini **kapalı** derler (`GOOGLE_WEB_CLIENT_ID=""`).
-  Sign in with Apple olmadan Google girişi sunmak Guideline 4.8'e aykırıdır; 1.0 yalnızca e-posta
-  girişiyle çıkar. Google Health bağlantısı bir hesap girişi değildir ve bundan etkilenmez.
-- Google girişi sonraki sürümde Sign in with Apple ile birlikte açılacaksa: App ID'de "Sign in with Apple"
-  yeteneğini aç, Supabase > Auth > Providers > Apple'ı bundle id `com.sercinyous.kisiselasistan` ile
-  etkinleştir, Apple .p8 anahtarını hesap silmede token iptali için fonksiyon secret'ı olarak ekle.
+- Mağaza yapısı **E-posta + Apple + Google** girişiyle çıkar (Guideline 4.8). "Apple ile devam et"
+  yalnızca iOS'ta, Google düğmesinin üstünde görünür. `ios-testflight` artık `GOOGLE_WEB_CLIENT_ID`'yi
+  ad-hoc ile aynı `app_secrets` değerinden alır.
+- Hesap silmede (Guideline 5.1.1(v)) Apple kullanıcısından silmeden hemen önce Apple onayı istenir;
+  uygulama Apple'ın taze `authorizationCode`'unu `delete-account`'a gönderir, fonksiyon onu
+  refresh_token'a çevirip `https://appleid.apple.com/auth/revoke` ile iptal eder. İptal hatası ya da
+  eksik secret silmeyi engellemez, fonksiyon günlüğüne yazılır.
+
+Sahibin yapacakları (sırayla):
+
+1. **App ID yeteneği:** developer.apple.com > Certificates, Identifiers & Profiles > Identifiers >
+   `com.sercinyous.kisiselasistan` > **Sign in with Apple** kutusunu işaretle ("Enable as a primary App ID") > Save.
+   Ardından Codemagic'te App Store (ve Ad-Hoc) profilini yeniden çek ("Fetch profiles"); eski profil bu
+   yeteneği içermez. Entitlement'ı (`com.apple.developer.applesignin = [Default]`) `tool/configure_ios.sh` ekler.
+2. **Anahtar (.p8):** Keys > **+** > ad "Ritim SIWA" > **Sign in with Apple** işaretle > Configure >
+   Primary App ID `com.sercinyous.kisiselasistan` > Save > Continue > Register > **Download** (.p8 bir kez
+   indirilir). **Key ID**'yi ve sağ üstteki **Team ID**'yi not al.
+3. **Supabase > Authentication > Sign In / Providers > Apple:** Enable; **Client IDs** = `com.sercinyous.kisiselasistan`.
+   Yerel iOS girişi için Secret Key (OAuth) alanı **gerekmez**, boş bırak. Kaydet.
+4. **Fonksiyon secret'ları** (Supabase > Edge Functions > Secrets ya da CLI):
+   ```
+   supabase secrets set APPLE_TEAM_ID=XXXXXXXXXX APPLE_KEY_ID=YYYYYYYYYY \
+     APPLE_CLIENT_ID=com.sercinyous.kisiselasistan
+   supabase secrets set APPLE_PRIVATE_KEY="$(cat AuthKey_YYYYYYYYYY.p8)"
+   ```
+   Biri eksikse silme yine çalışır, yalnızca Apple iptali atlanır (günlükte "apple iptali atlandı").
+5. **Yeniden dağıt:** `supabase functions deploy delete-account --no-verify-jwt`
+   (ayrı `apple-token` fonksiyonu yok; şema değişmedi).
+6. **Google:** Codemagic `app_secrets` grubunda `GOOGLE_WEB_CLIENT_ID` ve `GOOGLE_IOS_CLIENT_ID` dolu olmalı
+   (§3); Supabase > Providers > Google açık ve Web istemci kimliği "Authorized Client IDs"te olmalı.
+7. TestFlight'ta dene: Apple ile ilk giriş (ad profil adına düşer), çıkış/yeniden giriş, Google ile giriş,
+   ayrı bir Apple test hesabıyla **Hesabımı sil** (Apple onayı çıkar; sonra Ayarlar > Apple Kimliği >
+   Apple ile Giriş listesinde Ritim görünmemeli).
 
 ## 1. İletişim ve yasal metinler
 

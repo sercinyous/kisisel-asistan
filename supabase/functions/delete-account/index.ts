@@ -5,11 +5,17 @@
 //   2) Storage `avatars` kovasındaki <uid>/avatar.jpg ve klasörde kalanlar silinir,
 //      ardından `body_photos` kovasındaki <uid>/<tarih>/<poz>.jpg nesneleri,
 //   3) auth.admin.deleteUser; diğer tüm public satırları ON DELETE CASCADE ile gider.
+// Apple kullanıcısında gövdede `apple_authorization_code` (istemcinin silmeden hemen
+// önce Apple'dan aldığı taze kod) varsa önce Apple belirteci iptal edilir
+// (/auth/token + /auth/revoke, ES256 client_secret). İptal hatası silmeyi engellemez.
 // Kimlik doğrulama burada yapılır; fonksiyon `--no-verify-jwt` ile dağıtılır.
 // Ortam: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Supabase kendisi verir; anahtar
-// uygulamaya ya da depoya hiç girmez).
+// uygulamaya ya da depoya hiç girmez); isteğe bağlı APPLE_TEAM_ID, APPLE_KEY_ID,
+// APPLE_PRIVATE_KEY (.p8 içeriği), APPLE_CLIENT_ID (paket kimliği). Biri eksikse
+// Apple iptali atlanır ve günlüğe yazılır.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+import { appleConfigFrom, revokeAppleAuthorization } from "./apple.ts";
 import { type AccountStore, createHandler } from "./handler.ts";
 import {
   AVATAR_BUCKET,
@@ -48,7 +54,14 @@ const store: AccountStore = {
   async userFromJwt(token) {
     const { data, error } = await admin.auth.getUser(token);
     if (error !== null || data.user === null) return null;
-    return { id: data.user.id, email: data.user.email ?? null };
+    const meta = data.user.app_metadata ?? {};
+    const providers = new Set<string>();
+    if (Array.isArray(meta.providers)) {
+      for (const p of meta.providers) if (typeof p === "string") providers.add(p);
+    }
+    if (typeof meta.provider === "string") providers.add(meta.provider);
+    for (const identity of data.user.identities ?? []) providers.add(identity.provider);
+    return { id: data.user.id, email: data.user.email ?? null, providers: [...providers] };
   },
 
   async deleteFriendships(userId) {
@@ -83,7 +96,15 @@ const store: AccountStore = {
   },
 };
 
-const handler = createHandler({ store, log: (message) => console.error(message) });
+const appleConfig = appleConfigFrom((name) => Deno.env.get(name));
+
+const handler = createHandler({
+  store,
+  log: (message) => console.error(message),
+  revokeApple: appleConfig === null
+    ? null
+    : (code) => revokeAppleAuthorization(appleConfig, code),
+});
 
 Deno.serve((req) => {
   if (supabaseUrl === "" || serviceRoleKey === "") {

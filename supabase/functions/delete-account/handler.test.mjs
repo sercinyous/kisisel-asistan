@@ -103,3 +103,72 @@ test("ilerleme fotoğrafı silme başarısızsa auth kullanıcısı silinmez", a
     ["avatars", "u1"],
   ]);
 });
+
+function appleSetup(revokeApple, providers = ["apple"]) {
+  const calls = [];
+  const log = [];
+  const store = {
+    userFromJwt: async () => ({ id: "u1", email: null, providers }),
+    deleteFriendships: async () => calls.push("friendships"),
+    deleteFriendRequests: async () => calls.push("requests"),
+    deleteAvatars: async () => calls.push("avatars"),
+    deleteBodyPhotos: async () => calls.push("body_photos"),
+    deleteAuthUser: async () => calls.push("auth"),
+  };
+  return { calls, log, handler: createHandler({ store, log: (m) => log.push(m), revokeApple }) };
+}
+
+test("Apple kullanıcısında kod iptal edilir, sonra silinir", async () => {
+  const revoked = [];
+  const { calls, handler } = appleSetup(async (code) => {
+    revoked.push(code);
+    calls.push("revoke");
+  });
+  const res = await handler(req({ confirm: "SİL", apple_authorization_code: "kod1" }));
+  assert.equal(res.status, 200);
+  assert.deepEqual(revoked, ["kod1"]);
+  assert.deepEqual(calls, ["revoke", "friendships", "requests", "avatars", "body_photos", "auth"]);
+});
+
+test("Apple iptali başarısızsa silme sürer ve günlüğe yazılır", async () => {
+  const { calls, log, handler } = appleSetup(async () => {
+    throw new Error("apple token 400 (invalid_grant)");
+  });
+  const res = await handler(req({ confirm: "SİL", apple_authorization_code: "kod1" }));
+  assert.equal(res.status, 200);
+  assert.ok(calls.includes("auth"));
+  assert.equal(log.length, 1);
+  assert.match(log[0], /apple iptali başarısız/);
+  assert.ok(!log[0].includes("u1"));
+});
+
+test("gizli anahtarlar eksikse Apple iptali atlanır, silme sürer", async () => {
+  const { calls, log, handler } = appleSetup(null);
+  const res = await handler(req({ confirm: "SİL", apple_authorization_code: "kod1" }));
+  assert.equal(res.status, 200);
+  assert.ok(calls.includes("auth"));
+  assert.match(log[0], /APPLE_\* gizli anahtarları eksik/);
+});
+
+test("Apple kullanıcısı kod göndermezse iptal atlanır, silme sürer", async () => {
+  let called = false;
+  const { calls, log, handler } = appleSetup(async () => {
+    called = true;
+  });
+  const res = await handler(req({ confirm: "SİL" }));
+  assert.equal(res.status, 200);
+  assert.equal(called, false);
+  assert.ok(calls.includes("auth"));
+  assert.match(log[0], /yetki kodu gönderilmedi/);
+});
+
+test("Apple kimliği olmayan kullanıcıda kod olsa da iptal çağrılmaz", async () => {
+  let called = false;
+  const { log, handler } = appleSetup(async () => {
+    called = true;
+  }, ["email", "google"]);
+  const res = await handler(req({ confirm: "SİL", apple_authorization_code: "kod1" }));
+  assert.equal(res.status, 200);
+  assert.equal(called, false);
+  assert.equal(log.length, 0);
+});

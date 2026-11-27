@@ -10,7 +10,7 @@ Verin Supabase üzerinde saklanır. Her kullanıcının satırları veritabanı 
 
 ## Topladığımız veriler
 
-Hesap: e-posta adresin ve giriş bilgilerin (şifre ya da Google ile giriş). Şifren yalnızca kimlik doğrulama servisinde, şifrelenmiş olarak tutulur.
+Hesap: e-posta adresin ve giriş bilgilerin (şifre, Apple ile giriş ya da Google ile giriş). Apple ile girişte Apple'ın verdiği kimlik ve (paylaşırsan) e-posta ile adın alınır; adın yalnızca profil adın boşsa oraya yazılır. Şifren yalnızca kimlik doğrulama servisinde, şifrelenmiş olarak tutulur.
 
 Profil: görünen adın, profil resmin (seçtiğin maskot ya da yüklediğin fotoğraf), boy, doğum yılı, cinsiyet, saat dilimi, hedeflerin (adım, uyku, kalori, su, kilo) ve uygulama ayarların. Profil fotoğrafı yüklemeden önce telefonunda kare kırpılıp küçültülür ve özel bir depolama alanında saklanır.
 
@@ -52,7 +52,7 @@ Hikâyeler: paylaşmayı açarsan hikâyelerin yalnızca kabul edilmiş arkadaş
 
 Uygulama sahibi: sunucu yöneticisi olarak teknik olarak veritabanına erişebilir; bunu yalnızca hata ayıklama ve hesap desteği için kullanır. Hata kayıtlarını ve geri bildirimleri okur.
 
-Hizmet sağlayıcılar: Supabase (veritabanı, kimlik doğrulama, sunucu fonksiyonları) ve Google Gemini (yalnızca yukarıda anlatılan AI istekleri). Google ile giriş ve Google Health kullanırsan Google hesabın da devreye girer.
+Hizmet sağlayıcılar: Supabase (veritabanı, kimlik doğrulama, sunucu fonksiyonları) ve Google Gemini (yalnızca yukarıda anlatılan AI istekleri). Apple ile giriş yaparsan Apple hesabın, Google ile giriş ve Google Health kullanırsan Google hesabın da devreye girer.
 
 ## Cihazda saklananlar
 
@@ -68,7 +68,7 @@ Hata kayıtları 90 gün sonra kendiliğinden silinir. Hata kayıtları ve geri 
 
 Hesap > Profil ve hedefler sayfasının en altındaki Hesabımı sil ekranında (Hesap ekranının en altından da açılır) SİL ya da SIL yazıp onayladığında hesabın ve sunucudaki tüm verin hemen ve kalıcı olarak silinir: profil, profil fotoğrafın, ilerleme fotoğrafların, vücut ölçülerin, haftalık check-in'lerin, hikâyelerin ve tepkilerin, sağlık özetleri, öğünler, görevler, notlar, rutinler, hatırlatıcılar, raporlar, arkadaşlıklar (iki taraftan da), davetler, paylaşım ayarları, hata kayıtları ve geri bildirimler.
 
-Apple Sağlık ya da Google Health'teki kendi kayıtların bu uygulamaya ait değildir ve silinmez.
+Apple ile giriş yaptıysan silmeden önce Apple onayı istenir ve uygulamanın Apple hesabındaki erişimi Apple'da iptal edilir. Apple Sağlık ya da Google Health'teki kendi kayıtların bu uygulamaya ait değildir ve silinmez.
 
 ## İletişim
 
