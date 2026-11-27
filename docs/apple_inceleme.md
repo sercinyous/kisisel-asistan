@@ -47,7 +47,13 @@ Password: DEMO_SIFRE
 ```
 Ritim is a Turkish personal assistant (tasks, routines, reminders, meals and
 health goals). Anyone can sign up; please use the demo account provided above
-(e-mail + password on the sign-in screen, after tapping "E-posta ile devam et").
+(e-mail + password on the sign-in screen, after tapping "E-posta ile giriş").
+
+Sign-in options (Guideline 4.8): e-mail, Sign in with Apple ("Apple ile devam
+et", shown first on iOS) and Google. Sign in with Apple only asks for name and
+e-mail (the user may hide the e-mail). Account deletion (Hesap > Hesabımı sil)
+asks Apple users to re-confirm with Apple and then revokes the app's Apple
+token via Apple's REST API before deleting all data (Guideline 5.1.1(v)).
 
 The demo account is pre-filled with sample, non-personal data (tasks, notes,
 routines, meals, workouts and 14 days of step/sleep/energy summaries).

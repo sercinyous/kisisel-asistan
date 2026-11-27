@@ -1,5 +1,6 @@
 // delete-account isteğinin akışı. Veritabanı dışarıdan verilir (index.ts
 // service_role istemcisini bağlar), böylece bu dosya Node ile sınanabilir.
+import { appleCodeFrom, hasAppleProvider } from "./apple.ts";
 import {
   type DeletionStep,
   DELETION_STEPS,
@@ -15,6 +16,8 @@ import {
 export interface AuthUser {
   id: string;
   email: string | null;
+  /** Bağlı kimlik sağlayıcıları (ör. "email", "google", "apple"). */
+  providers?: string[];
 }
 
 /** service_role ile yapılan işlemler (yalnızca sunucuda). */
@@ -36,6 +39,11 @@ export interface AccountStore {
 export interface HandlerDeps {
   store: AccountStore;
   log: (message: string) => void;
+  /**
+   * Apple yetki kodunu belirtece çevirip iptal eder. Gizli anahtarlar eksikse
+   * null: iptal atlanır ve günlüğe yazılır.
+   */
+  revokeApple?: ((authorizationCode: string) => Promise<void>) | null;
 }
 
 export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Response> {
@@ -66,6 +74,23 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       body = null;
     }
     if (!isConfirmed(body)) return jsonResponse(400, { ok: false, error: MESSAGES.badRequest });
+
+    // Apple belirteci iptali silmeden önce denenir; başarısızlık silmeyi engellemez.
+    if (hasAppleProvider(user.providers)) {
+      const code = appleCodeFrom(body);
+      const revoke = deps.revokeApple ?? null;
+      if (revoke === null) {
+        deps.log("delete-account: apple iptali atlandı: APPLE_* gizli anahtarları eksik");
+      } else if (code === null) {
+        deps.log("delete-account: apple iptali atlandı: yetki kodu gönderilmedi");
+      } else {
+        try {
+          await revoke(code);
+        } catch (e) {
+          deps.log(`delete-account: apple iptali başarısız: ${String(e)}`);
+        }
+      }
+    }
 
     const email = normalizeEmail(user.email);
     const run: Record<DeletionStep, () => Promise<void>> = {

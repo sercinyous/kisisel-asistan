@@ -105,4 +105,25 @@ configure >/dev/null
 [[ "$(grep -c 'PrivacyInfo.xcprivacy in Resources' "$PBX")" -eq 2 ]] || fail "PrivacyInfo iki kez eklendi"
 echo "tamam"
 
+echo "== Sign in with Apple entitlement (idempotent) =="
+ENT="$APP/ios/Runner/Runner.entitlements"
+apple_ent() {
+  python3 - "$ENT" <<'PY'
+import json, plistlib, sys
+with open(sys.argv[1], "rb") as f:
+    data = plistlib.load(f)
+print(json.dumps(data.get("com.apple.developer.applesignin")))
+PY
+}
+configure >/dev/null
+[[ "$(apple_ent)" == '["Default"]' ]] || fail "applesignin entitlement: $(apple_ent)"
+configure >/dev/null
+[[ "$(apple_ent)" == '["Default"]' ]] || fail "applesignin ikinci çalıştırmada bozuldu: $(apple_ent)"
+python3 - "$ENT" <<'PY' || fail "HealthKit entitlement kayboldu"
+import plistlib, sys
+with open(sys.argv[1], "rb") as f:
+    assert plistlib.load(f).get("com.apple.developer.healthkit") is True
+PY
+echo "tamam"
+
 echo "TÜM configure_ios TESTLERİ GEÇTİ"

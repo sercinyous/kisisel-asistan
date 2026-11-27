@@ -72,6 +72,18 @@ class _Backend implements SignInBackend {
     return false;
   }
 
+  final List<({String idToken, String rawNonce, String? fullName})> appleCalls =
+      [];
+
+  @override
+  Future<void> signInWithAppleIdToken({
+    required String idToken,
+    required String rawNonce,
+    String? fullName,
+  }) async {
+    appleCalls.add((idToken: idToken, rawNonce: rawNonce, fullName: fullName));
+  }
+
   @override
   Future<void> signInWithGoogleIdToken({
     required String idToken,

@@ -14,7 +14,7 @@ const List<PrivacySection> privacySections = [
     'Verin Supabase üzerinde saklanır. Her kullanıcının satırları veritabanı kurallarıyla (satır düzeyi güvenlik) ayrıdır; başka bir kullanıcı senin kayıtlarını okuyamaz.',
   ]),
   PrivacySection('Topladığımız veriler', [
-    'Hesap: e-posta adresin ve giriş bilgilerin (şifre ya da Google ile giriş). Şifren yalnızca kimlik doğrulama servisinde, şifrelenmiş olarak tutulur.',
+    'Hesap: e-posta adresin ve giriş bilgilerin (şifre, Apple ile giriş ya da Google ile giriş). Apple ile girişte Apple\'ın verdiği kimlik ve (paylaşırsan) e-posta ile adın alınır; adın yalnızca profil adın boşsa oraya yazılır. Şifren yalnızca kimlik doğrulama servisinde, şifrelenmiş olarak tutulur.',
     'Profil: görünen adın, profil resmin (seçtiğin maskot ya da yüklediğin fotoğraf), boy, doğum yılı, cinsiyet, saat dilimi, hedeflerin (adım, uyku, kalori, su, kilo) ve uygulama ayarların. Profil fotoğrafı yüklemeden önce telefonunda kare kırpılıp küçültülür ve özel bir depolama alanında saklanır.',
     'Sağlık verileri: izin verirsen Apple Sağlık\'tan (iPhone) ya da Google Health\'ten adım, uyku, aktif enerji, antrenman, boy ve kilo okunur. Uygulamada günlük özetler (günlük adım, uyku süresi, yakılan kalori) ve antrenman kayıtları saklanır; ham dakika dakika veri sunucuya gönderilmez. Apple Sağlık içe aktarımı her hesap için ayrıca onaylanır.',
     'Kendi girdiğin kayıtlar: öğünler ve besin değerleri, su, kilo, görevler, notlar, rutinler, hatırlatıcılar ve onların tamamlanma kayıtları.',
@@ -37,7 +37,7 @@ const List<PrivacySection> privacySections = [
     'Arkadaşların: yalnızca senin açtığın kadarını. Adım, uyku ve kalori anahtarları ayrı ayrıdır ve varsayılan kapalıdır; açarsan arkadaşların yalnızca hedefini tutturduğun gün sayısını ve sıralamayı görür. Gerçek değerler (ör. kaç adım attığın) ayrıca "ayrıntıları paylaş" onayı verirsen görünür. Görevlerin, notların, öğünlerin, rutinlerin ve hatırlatıcıların hiçbir arkadaşla paylaşılmaz. Arkadaşlar senin e-postanı maskeli görür. Görünen adın ve profil resmin (maskot ya da fotoğraf) yalnızca kabul edilmiş arkadaşlarına görünür; fotoğrafın herkese açık bir adreste durmaz.',
     'Hikâyeler: paylaşmayı açarsan hikâyelerin yalnızca kabul edilmiş arkadaşlarına ve oluştuktan sonra 24 saat görünür; süre dolunca kimse göremez. Hikâyene tepki veren arkadaşın adı sana görünür. Paylaşımı Hesap ekranından istediğin zaman kapatabilirsin.',
     'Uygulama sahibi: sunucu yöneticisi olarak teknik olarak veritabanına erişebilir; bunu yalnızca hata ayıklama ve hesap desteği için kullanır. Hata kayıtlarını ve geri bildirimleri okur.',
-    'Hizmet sağlayıcılar: Supabase (veritabanı, kimlik doğrulama, sunucu fonksiyonları) ve Google Gemini (yalnızca yukarıda anlatılan AI istekleri). Google ile giriş ve Google Health kullanırsan Google hesabın da devreye girer.',
+    'Hizmet sağlayıcılar: Supabase (veritabanı, kimlik doğrulama, sunucu fonksiyonları) ve Google Gemini (yalnızca yukarıda anlatılan AI istekleri). Apple ile giriş yaparsan Apple hesabın, Google ile giriş ve Google Health kullanırsan Google hesabın da devreye girer.',
   ]),
   PrivacySection('Cihazda saklananlar', [
     'Görünüm tercihi, seçili sağlık kaynağı, Apple Sağlık onayı, Google Health bağlantı bilgisi, son eklenen besinler ve planlanmış bildirimler telefonunda saklanır. Çıkış yaptığında bekleyen bildirimler silinir; hesabını sildiğinde bu tercihler de silinir.',
@@ -48,7 +48,7 @@ const List<PrivacySection> privacySections = [
   ]),
   PrivacySection('Hesabını ve verilerini silme', [
     'Hesap > Profil ve hedefler sayfasının en altındaki Hesabımı sil ekranında (Hesap ekranının en altından da açılır) SİL ya da SIL yazıp onayladığında hesabın ve sunucudaki tüm verin hemen ve kalıcı olarak silinir: profil, profil fotoğrafın, ilerleme fotoğrafların, vücut ölçülerin, haftalık check-in\'lerin, hikâyelerin ve tepkilerin, sağlık özetleri, öğünler, görevler, notlar, rutinler, hatırlatıcılar, raporlar, arkadaşlıklar (iki taraftan da), davetler, paylaşım ayarları, hata kayıtları ve geri bildirimler.',
-    'Apple Sağlık ya da Google Health\'teki kendi kayıtların bu uygulamaya ait değildir ve silinmez.',
+    'Apple ile giriş yaptıysan silmeden önce Apple onayı istenir ve uygulamanın Apple hesabındaki erişimi Apple\'da iptal edilir. Apple Sağlık ya da Google Health\'teki kendi kayıtların bu uygulamaya ait değildir ve silinmez.',
   ]),
   PrivacySection('İletişim', [
     'Soru, düzeltme ya da silme talebin için uygulama sahibine uygulama içinden Hesap > "Sorun bildir" ile yazabilirsin.',

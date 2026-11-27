@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/apple_auth.dart';
 import '../../../core/services/google_auth.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/notification_sync.dart';
@@ -71,8 +72,25 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
       _busy = true;
       _error = null;
     });
+    // Apple kullanıcısı: Apple belirtecinin iptali için taze yetki kodu.
+    final user = client.auth.currentUser;
+    String? appleCode;
     try {
-      await repository.deleteAccount();
+      appleCode = await appleCodeForDeletion(
+        isAppleUser: userHasAppleIdentity(
+          appMetadata: user?.appMetadata,
+          identityProviders:
+              (user?.identities ?? const []).map((i) => i.provider),
+        ),
+        client: ref.read(appleIdentityClientProvider),
+      );
+    } on AppleAuthException {
+      // Kullanıcı Apple onayından vazgeçti: silme yapılmaz, hata gösterilmez.
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
+    try {
+      await repository.deleteAccount(appleAuthorizationCode: appleCode);
     } on AccountActionException catch (e) {
       if (mounted) {
         setState(() {
@@ -158,6 +176,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   ),
                 const SizedBox(height: AppSpacing.md),
                 Text(
+                  'Apple ile giriş yaptıysan silmeden önce Apple onayı istenir ve '
+                  'uygulamanın Apple hesabındaki erişimi iptal edilir. '
                   'Apple Sağlık ya da Google Health\'teki kayıtların bu '
                   'uygulamaya ait değildir, onlara dokunulmaz. Arkadaşların '
                   'artık seni listelerinde görmez.',

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# iOS projesini HealthKit + yerel bildirimler + Google ile giriş için yapılandırır.
+# iOS projesini HealthKit + Sign in with Apple + yerel bildirimler + Google ile giriş için yapılandırır.
 # macOS'ta, proje kökünden çalıştırılır:  bash tool/configure_ios.sh
 # Tekrar tekrar çalıştırılabilir (idempotent). Codemagic de her derlemede çağırır.
 #
@@ -76,6 +76,21 @@ if ! grep -q "CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;" "$PBXPROJ"; 
   exit 1
 fi
 echo "✓ HealthKit entitlement bağlandı"
+
+# --- 2b) Sign in with Apple entitlement ------------------------------------
+# com.apple.developer.applesignin = [Default]; varsa dokunulmaz (idempotent).
+APPLE_SIGNIN_KEY="com.apple.developer.applesignin"
+if [[ "$("$BUDDY" -c "Print :$APPLE_SIGNIN_KEY:0" "$ENTITLEMENTS" 2>/dev/null)" != "Default" ]]; then
+  "$BUDDY" -c "Delete :$APPLE_SIGNIN_KEY" "$ENTITLEMENTS" 2>/dev/null || true
+  "$BUDDY" -c "Add :$APPLE_SIGNIN_KEY array" "$ENTITLEMENTS"
+  "$BUDDY" -c "Add :$APPLE_SIGNIN_KEY:0 string Default" "$ENTITLEMENTS"
+fi
+if [[ "$("$BUDDY" -c "Print :$APPLE_SIGNIN_KEY:0" "$ENTITLEMENTS" 2>/dev/null)" != "Default" ]]; then
+  echo "HATA: $APPLE_SIGNIN_KEY Runner.entitlements dosyasına eklenemedi." >&2
+  echo "Xcode > Runner > Signing & Capabilities > + Capability > Sign in with Apple ile elle ekle." >&2
+  exit 1
+fi
+echo "✓ Sign in with Apple entitlement eklendi"
 
 # --- iPhone-only (iPad'de uyumluluk modunda çalışır) ------------------------
 perl -pi -e 's/TARGETED_DEVICE_FAMILY = "?[0-9,]+"?;/TARGETED_DEVICE_FAMILY = 1;/g' "$PBXPROJ"

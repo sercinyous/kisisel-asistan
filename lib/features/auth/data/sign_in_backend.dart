@@ -23,6 +23,14 @@ abstract interface class SignInBackend {
     String? accessToken,
   });
 
+  /// Apple kimlik belirteci ve ham nonce ile giriş; ilk girişte hesap açılır.
+  /// [fullName] verilirse ve profilde görünen ad boşsa oraya yazılır.
+  Future<void> signInWithAppleIdToken({
+    required String idToken,
+    required String rawNonce,
+    String? fullName,
+  });
+
   /// Şifre sıfırlama kodunu e-postayla gönderir. Adres kayıtlı olmasa da
   /// hata vermez (hesap varlığı sızmaz).
   Future<void> sendPasswordReset({required String email});
@@ -45,9 +53,11 @@ abstract interface class SignInBackend {
 }
 
 class SupabaseSignInBackend implements SignInBackend {
-  SupabaseSignInBackend(this._auth);
+  SupabaseSignInBackend(this._client);
 
-  final GoTrueClient _auth;
+  final SupabaseClient _client;
+
+  GoTrueClient get _auth => _client.auth;
 
   @override
   Future<void> signInWithPassword({
@@ -76,6 +86,33 @@ class SupabaseSignInBackend implements SignInBackend {
       idToken: idToken,
       accessToken: accessToken,
     );
+  }
+
+  @override
+  Future<void> signInWithAppleIdToken({
+    required String idToken,
+    required String rawNonce,
+    String? fullName,
+  }) async {
+    final response = await _auth.signInWithIdToken(
+      provider: OAuthProvider.apple,
+      idToken: idToken,
+      nonce: rawNonce,
+    );
+    final userId = response.user?.id;
+    final name = fullName?.trim() ?? '';
+    if (userId == null || name.isEmpty) return;
+    try {
+      // Apple adı yalnızca ilk yetkilendirmede verir: profil adı boşsa yazılır.
+      await _client
+          .from('user_settings')
+          .update(
+              {'display_name': name.length > 60 ? name.substring(0, 60) : name})
+          .eq('user_id', userId)
+          .or('display_name.is.null,display_name.eq.');
+    } catch (_) {
+      // Ad yazılamasa da giriş geçerlidir; kullanıcı Ayarlar'dan girebilir.
+    }
   }
 
   @override
@@ -113,5 +150,5 @@ class SupabaseSignInBackend implements SignInBackend {
 }
 
 final signInBackendProvider = Provider<SignInBackend>(
-  (ref) => SupabaseSignInBackend(ref.watch(supabaseClientProvider).auth),
+  (ref) => SupabaseSignInBackend(ref.watch(supabaseClientProvider)),
 );

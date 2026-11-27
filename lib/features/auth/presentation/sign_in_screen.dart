@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../../../core/services/apple_auth.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/ritim_top/ritim_top.dart';
 import '../../../core/widgets/sunset_stripe.dart';
@@ -12,9 +14,10 @@ import 'password_reset_screen.dart';
 import 'sign_in_controller.dart';
 import 'signup_confirm_screen.dart';
 
-/// Giriş ekranı: "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
-/// Google yapılandırılmamışsa (ya da tarayıcı demosunda) yalnızca e-posta
-/// formu görünür. Kayıt herkese açıktır: Google ilk girişte hesap açar, e-posta
+/// Giriş ekranı: "Apple ile devam et" (yalnızca iOS, Apple HIG: Google'ın
+/// üstünde) ve "Google ile devam et" ana yoldur, e-posta/şifre ikincildir.
+/// İkisi de yoksa (ya da tarayıcı demosunda) yalnızca e-posta formu görünür.
+/// Kayıt herkese açıktır: Apple/Google ilk girişte hesap açar, e-posta
 /// formunda "Kayıt ol" ile yeni hesap oluşturulur.
 /// Yeni hesap şifresinin en kısa uzunluğu.
 
@@ -67,8 +70,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final theme = Theme.of(context);
     final state = ref.watch(signInControllerProvider);
     final googleAvailable = ref.watch(googleLoginAvailableProvider);
+    final appleAvailable = ref.watch(appleLoginAvailableProvider);
+    final socialAvailable = googleAvailable || appleAvailable;
     final busy = state.isBusy;
-    final showForm = !googleAvailable || _emailOpen;
+    final showForm = !socialAvailable || _emailOpen;
     final submitLabel = state.busy == SignInMethod.password
         ? (_signUp ? 'Hesap oluşturuluyor…' : 'Giriş yapılıyor…')
         : (_signUp ? 'Hesap oluştur' : 'Giriş yap');
@@ -98,6 +103,27 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         ?.copyWith(color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: AppSpacing.xl),
+                  if (appleAvailable) ...[
+                    SignInWithAppleButton(
+                      key: const Key('sign-in-apple'),
+                      text: state.busy == SignInMethod.apple
+                          ? 'Apple ile giriş yapılıyor…'
+                          : 'Apple ile devam et',
+                      height: 48,
+                      style: theme.brightness == Brightness.dark
+                          ? SignInWithAppleButtonStyle.white
+                          : SignInWithAppleButtonStyle.black,
+                      borderRadius: const BorderRadius.all(
+                          Radius.circular(AppRadii.pill)),
+                      onPressed: () {
+                        if (busy) return;
+                        ref
+                            .read(signInControllerProvider.notifier)
+                            .signInWithApple();
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   if (googleAvailable) ...[
                     FilledButton.icon(
                       key: const Key('sign-in-google'),
@@ -118,6 +144,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
+                  ],
+                  if (socialAvailable) ...[
                     if (!_emailOpen)
                       OutlinedButton(
                         key: const Key('sign-in-email-toggle'),
@@ -132,7 +160,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       ),
                   ],
                   if (showForm) ...[
-                    if (googleAvailable) ...[
+                    if (socialAvailable) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         'veya e-posta ile',
@@ -194,7 +222,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 if (value == null || value.isEmpty) {
                                   return 'Şifreni gir.';
                                 }
-                                if (_signUp && value.length < minPasswordLength) {
+                                if (_signUp &&
+                                    value.length < minPasswordLength) {
                                   return 'Şifre en az $minPasswordLength '
                                       'karakter olmalı.';
                                 }
@@ -240,7 +269,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ],
                   if (showForm) ...[
                     const SizedBox(height: AppSpacing.lg),
-                    googleAvailable
+                    socialAvailable
                         ? OutlinedButton(
                             key: const Key('sign-in-submit'),
                             onPressed: busy ? null : _submit,

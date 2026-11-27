@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/apple_auth.dart';
 import '../../../core/services/google_auth.dart';
 import '../data/google_identity_client.dart';
 import '../data/sign_in_backend.dart';
 import '../domain/sign_in_messages.dart';
 
-enum SignInMethod { google, password }
+enum SignInMethod { apple, google, password }
 
 class SignInState {
   const SignInState({this.busy, this.error, this.info});
@@ -36,7 +37,7 @@ final googleLoginAvailableProvider = Provider<bool>(
       ref.watch(googleServerClientIdProvider).isNotEmpty,
 );
 
-/// Giriş ekranının mantığı: Google ve e-posta/şifre girişi, e-posta kaydı, tek seferde bir
+/// Giriş ekranının mantığı: Apple, Google ve e-posta/şifre girişi, e-posta kaydı, tek seferde bir
 /// deneme, hataların Türkçe metne çevrilmesi. Başarıda oturum Supabase'ten
 /// gelir ([authSessionProvider]); ekran değişimini kapı yapar.
 class SignInController extends Notifier<SignInState> {
@@ -48,6 +49,17 @@ class SignInController extends Notifier<SignInState> {
     if (state.isBusy) return;
     state = const SignInState();
   }
+
+  /// Başarıda `true`. Vazgeçmede `false`, hata metni gösterilmez.
+  Future<bool> signInWithApple() => _run(SignInMethod.apple, () async {
+        final credential = await ref.read(appleIdentityClientProvider).signIn();
+        await ref.read(signInBackendProvider).signInWithAppleIdToken(
+              idToken: credential.idToken,
+              rawNonce: credential.rawNonce,
+              fullName: credential.fullName,
+            );
+        return null;
+      });
 
   /// Başarıda `true`.
   Future<bool> signInWithGoogle() => _run(SignInMethod.google, () async {
